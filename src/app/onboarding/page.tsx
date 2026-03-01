@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
+import { AvatarUploader } from "@/components/profile/AvatarUploader";
+import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
+import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Edit Profile — Patronage" };
@@ -29,7 +32,34 @@ export default async function OnboardingPage() {
         </p>
       </div>
 
-      <section className="space-y-6">
+      {/* Visuals — shown only once profile exists */}
+      {profile && (
+        <section className="space-y-8">
+          <h2 className="text-base font-semibold">Visuals</h2>
+
+          <div className="space-y-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Profile Picture</p>
+              <p className="text-xs text-muted-foreground">
+                Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
+              </p>
+            </div>
+            <AvatarUploader profileId={user.id} />
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Featured Artwork</p>
+              <p className="text-xs text-muted-foreground">
+                Displayed as the background of your directory card. Landscape works best.
+              </p>
+            </div>
+            <FeaturedImageUploader profileId={user.id} />
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-6 border-t border-border pt-12">
         <h2 className="text-base font-semibold">Profile details</h2>
         <ProfileForm profile={profile} />
       </section>
@@ -39,8 +69,8 @@ export default async function OnboardingPage() {
           <div className="space-y-1">
             <h2 className="text-base font-semibold">Portfolio</h2>
             <p className="text-xs text-muted-foreground">
-              Upload up to 10 images. JPEG or PNG, max 10 MB each. Images are
-              resized to 1200px before uploading.
+              Upload up to 10 images. JPEG or PNG, max 10 MB each. Resized to 1600px before
+              uploading. Add a caption to each image by clicking below it.
             </p>
           </div>
           <PortfolioUploader profileId={user.id} />
@@ -56,6 +86,20 @@ export default async function OnboardingPage() {
             </p>
           </div>
           <PortfolioUploader profileId={user.id} mode="cv" />
+        </section>
+      )}
+
+      {/* ── Danger Zone ── */}
+      {profile && (
+        <section className="space-y-4 border-t border-black pt-12 mt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
+            <p className="text-xs text-muted-foreground">
+              Terminating your account is permanent. Your profile, portfolio
+              images, and all data will be deleted immediately and cannot be recovered.
+            </p>
+          </div>
+          <TerminateAccountButton />
         </section>
       )}
     </div>

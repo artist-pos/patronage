@@ -1,4 +1,4 @@
-import { PartnerCTA } from "@/components/partners/PartnerCTA";
+import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 
 export const metadata = {
   title: "For Partners — Patronage",
@@ -8,88 +8,100 @@ export const metadata = {
 
 export default function PartnersPage() {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-20 space-y-20">
-      <header className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">For Partners</h1>
-        <p className="text-muted-foreground text-base leading-relaxed max-w-xl">
-          Patronage works with arts organisations, councils, foundations, and
-          private patrons to connect opportunities with the artists who need
-          them most.
-        </p>
-      </header>
+    <div className="max-w-[1600px] mx-auto px-6 py-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20">
 
-      {/* Section 1 — List an Opportunity */}
-      <section className="space-y-6 border-t border-border pt-12">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold tracking-tight">
-            List an Opportunity
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-lg">
-            We accept listings for grants, residencies, commissions, open calls,
-            prizes, and display opportunities open to artists based in New
-            Zealand or Australia.
-          </p>
-        </div>
-        <ul className="text-sm space-y-2 text-foreground">
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">01</span>
-            <span>Send us your opportunity details — title, organiser, deadline, eligibility, and a link.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">02</span>
-            <span>We review and verify the listing within two business days.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">03</span>
-            <span>Your listing appears on the board, visible to all registered artists and visitors.</span>
-          </li>
-        </ul>
-        <PartnerCTA
-          label="Submit an Opportunity"
-          subject="Opportunity Submission"
-          body="Organisation / Funder name:
-Opportunity title:
-Type (Grant / Residency / Commission / Open Call / Prize / Display):
-Deadline:
-Eligibility notes:
-URL:"
-        />
-      </section>
+        {/* ── Left: Value proposition ── */}
+        <div className="space-y-16">
+          <header className="space-y-4">
+            <h1 className="text-3xl font-semibold tracking-tight">For Partners</h1>
+            <p className="text-muted-foreground text-base leading-relaxed max-w-lg">
+              Patronage connects arts organisations, councils, foundations, and
+              private patrons with verified New Zealand and Australian artists.
+            </p>
+          </header>
 
-      {/* Section 2 — Managed Submissions */}
-      <section className="space-y-6 border-t border-border pt-12">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold tracking-tight">
-            Managed Submissions
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-lg">
-            Looking for artists rather than advertising to them? Our curated
-            directory lets you search verified artist profiles by medium, career
-            stage, and location — then reach out directly.
-          </p>
+          <section className="space-y-8">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+              Why Patronage
+            </h2>
+
+            <div className="space-y-0">
+              <ValuePoint
+                index="01"
+                heading="Verified artist directory"
+                body="Every profile is manually reviewed. Partners access a curated pool of working artists — not a self-selected public listing."
+              />
+              <ValuePoint
+                index="02"
+                heading="Targeted reach"
+                body="Filter by medium, career stage, and location. Your opportunity reaches the artists most likely to apply and succeed."
+              />
+              <ValuePoint
+                index="03"
+                heading="Weekly digest"
+                body="Active opportunities are distributed to our subscriber list every week. Your listing gets seen, not buried."
+              />
+              <ValuePoint
+                index="04"
+                heading="Two business day review"
+                body="We review and verify every submission before publishing. Quality control on both sides."
+              />
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-black pt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+              Managed Discovery
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-lg">
+              Looking for artists rather than advertising to them? Browse the
+              verified directory directly — profiles include bios, portfolio
+              work, and CVs. For high-volume or recurring discovery, contact us
+              about a managed partnership arrangement.
+            </p>
+            <a
+              href="mailto:hello@patronage.nz?subject=Partnership%20Enquiry"
+              className="inline-block text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
+            >
+              Enquire about partnerships →
+            </a>
+          </section>
         </div>
-        <ul className="text-sm space-y-2 text-foreground">
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">01</span>
-            <span>Browse the Patronage artist directory — profiles include bios, portfolios, and CVs.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">02</span>
-            <span>All listed artists have opted in to being contacted by partners.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="text-muted-foreground select-none">03</span>
-            <span>For high-volume or recurring discovery, contact us about a managed partnership arrangement.</span>
-          </li>
-        </ul>
-        <PartnerCTA
-          label="Enquire About Partnerships"
-          subject="Partnership Enquiry"
-          body="Organisation / Company name:
-What you are looking for:
-Timeline:"
-        />
-      </section>
+
+        {/* ── Right: Submission form ── */}
+        <div className="space-y-6">
+          <div className="space-y-1 border-b border-black pb-6">
+            <h2 className="text-xl font-semibold tracking-tight">Submit an Opportunity</h2>
+            <p className="text-sm text-muted-foreground">
+              Fill in the details below. We review every submission within two
+              business days before publishing.
+            </p>
+          </div>
+          <OpportunitySubmissionForm />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function ValuePoint({
+  index,
+  heading,
+  body,
+}: {
+  index: string;
+  heading: string;
+  body: string;
+}) {
+  return (
+    <div className="border-t border-black py-5 grid grid-cols-[2rem_1fr] gap-4">
+      <span className="font-mono text-xs text-muted-foreground pt-0.5">{index}</span>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold">{heading}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
+      </div>
     </div>
   );
 }

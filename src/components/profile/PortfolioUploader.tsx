@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { PortfolioImage } from "@/types/database";
 
 const MAX_IMAGES = 10;
-const MAX_PX = 1200;
+const MAX_PX = 1600;
 
 async function resizeToJpeg(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -164,23 +164,39 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   return (
     <div className="space-y-4">
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
           {images.map((img) => (
-            <div key={img.id} className="relative group aspect-square border border-border overflow-hidden">
-              <Image
-                src={img.url}
-                alt="Portfolio image"
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 33vw, 25vw"
+            <div key={img.id} className="space-y-1.5">
+              <div className="relative group aspect-square border border-border overflow-hidden">
+                <Image
+                  src={img.url}
+                  alt="Portfolio image"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 33vw, 25vw"
+                />
+                <button
+                  onClick={() => handleRemoveImage(img)}
+                  disabled={isPending}
+                  className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                >
+                  Remove
+                </button>
+              </div>
+              <input
+                type="text"
+                defaultValue={img.caption ?? ""}
+                placeholder="Work Description / Title"
+                maxLength={120}
+                onBlur={async (e) => {
+                  const caption = e.target.value.trim() || null;
+                  await supabase
+                    .from("portfolio_images")
+                    .update({ caption })
+                    .eq("id", img.id);
+                }}
+                className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
               />
-              <button
-                onClick={() => handleRemoveImage(img)}
-                disabled={isPending}
-                className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-              >
-                Remove
-              </button>
             </div>
           ))}
         </div>

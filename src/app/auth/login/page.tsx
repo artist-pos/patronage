@@ -26,7 +26,7 @@ export default async function LoginPage({ searchParams }: Props) {
             Something went wrong. Please try again.
           </p>
         )}
-        <AuthForm mode="login" next={next ?? "/onboarding"} />
+        <AuthForm mode="login" next={next ?? "/profile/edit"} />
       </div>
     </div>
   );

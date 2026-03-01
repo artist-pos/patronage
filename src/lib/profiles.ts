@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, ProfileFilters, PortfolioImage } from "@/types/database";
+import type { Profile, ProfileFilters, ProfileWithImage, PortfolioImage } from "@/types/database";
 
 export async function getProfile(username: string): Promise<Profile | null> {
   const supabase = await createClient();
@@ -23,8 +23,9 @@ export async function getProfileById(id: string): Promise<Profile | null> {
 }
 
 export async function getProfiles(
-  filters: ProfileFilters = {}
-): Promise<Profile[]> {
+  filters: ProfileFilters = {},
+  limit?: number
+): Promise<ProfileWithImage[]> {
   const supabase = await createClient();
   let query = supabase
     .from("profiles")
@@ -34,10 +35,16 @@ export async function getProfiles(
 
   if (filters.country) query = query.eq("country", filters.country);
   if (filters.career_stage) query = query.eq("career_stage", filters.career_stage);
+  if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []) as Profile[];
+  const profiles = (data ?? []) as Profile[];
+
+  return profiles.map((p) => ({
+    ...p,
+    primary_image_url: p.featured_image_url ?? null,
+  }));
 }
 
 export async function getPortfolioImages(

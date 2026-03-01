@@ -21,14 +21,13 @@ export async function Header() {
 
   return (
     <header className="border-b border-border relative">
-      <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-base font-semibold tracking-tight">
           Patronage
         </Link>
         <NavBar
           isLoggedIn={!!user}
-          profileHref={profile?.username ? `/${profile.username}` : "/onboarding"}
-          profileLabel={profile?.username ?? "My profile"}
+          username={profile?.username ?? null}
           signOut={signOut}
         />
       </div>

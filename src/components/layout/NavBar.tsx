@@ -2,11 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavBarProps {
-  profileHref: string;
-  profileLabel: string;
   isLoggedIn: boolean;
+  username: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -16,7 +23,7 @@ const NAV_LINKS = [
   { href: "/partners", label: "For Partners" },
 ];
 
-export function NavBar({ profileHref, profileLabel, isLoggedIn, signOut }: NavBarProps) {
+export function NavBar({ isLoggedIn, username, signOut }: NavBarProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,22 +39,29 @@ export function NavBar({ profileHref, profileLabel, isLoggedIn, signOut }: NavBa
             {l.label}
           </Link>
         ))}
+
         {isLoggedIn ? (
-          <div className="flex items-center gap-4 border-l border-border pl-6">
-            <Link
-              href={profileHref}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {profileLabel}
-            </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Sign out
-              </button>
-            </form>
+          <div className="border-l border-border pl-6">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
+                {username ?? "My Account"}
+                <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 border border-black">
+                {username && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${username}`}>View Public Profile</Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/edit">Edit Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => signOut()}>
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : (
           <Link
@@ -59,7 +73,7 @@ export function NavBar({ profileHref, profileLabel, isLoggedIn, signOut }: NavBa
         )}
       </nav>
 
-      {/* ── Mobile hamburger button ───────────────────── */}
+      {/* ── Mobile hamburger ─────────────────────────── */}
       <button
         className="sm:hidden flex flex-col gap-1.5 p-1"
         onClick={() => setOpen((o) => !o)}
@@ -86,12 +100,21 @@ export function NavBar({ profileHref, profileLabel, isLoggedIn, signOut }: NavBa
           <div className="border-t border-border pt-4 flex flex-col gap-3">
             {isLoggedIn ? (
               <>
+                {username && (
+                  <Link
+                    href={`/${username}`}
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    View Public Profile
+                  </Link>
+                )}
                 <Link
-                  href={profileHref}
+                  href="/profile/edit"
                   onClick={() => setOpen(false)}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {profileLabel}
+                  Edit Profile
                 </Link>
                 <form action={signOut}>
                   <button

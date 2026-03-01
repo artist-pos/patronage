@@ -29,6 +29,8 @@ export async function upsertProfileAction(
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  const website_url = (formData.get("website_url") as string)?.trim() || null;
+  const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
 
   // Validate username
   if (!username) return { fieldErrors: { username: "Username is required." } };
@@ -58,6 +60,8 @@ export async function upsertProfileAction(
     country: country || null,
     career_stage: career_stage || null,
     medium: medium.length > 0 ? medium : null,
+    website_url,
+    instagram_handle,
   });
 
   if (error) return { error: error.message };

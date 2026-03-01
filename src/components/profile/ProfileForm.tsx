@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { MediumInput } from "./MediumInput";
 import type { Profile } from "@/types/database";
 
+
 const COUNTRIES = ["NZ", "AUS", "Global"] as const;
 const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 
@@ -108,6 +109,32 @@ export function ProfileForm({ profile }: Props) {
       <div className="space-y-2">
         <Label>Medium</Label>
         <MediumInput defaultValue={profile?.medium ?? []} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="website_url">Website</Label>
+          <Input
+            id="website_url"
+            name="website_url"
+            type="url"
+            defaultValue={profile?.website_url ?? ""}
+            placeholder="https://yoursite.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="instagram_handle">Instagram</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">@</span>
+            <Input
+              id="instagram_handle"
+              name="instagram_handle"
+              defaultValue={profile?.instagram_handle ?? ""}
+              placeholder="handle"
+              className="pl-7"
+            />
+          </div>
+        </div>
       </div>
 
       <Button type="submit" disabled={isPending}>
