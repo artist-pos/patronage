@@ -7,6 +7,7 @@ const TOOLS = [
   { href: "/admin/artists", label: "Manage Artists", description: "Activate, deactivate, mark as Patronage Supported, or delete." },
   { href: "/admin/opportunities", label: "Manage Opportunities", description: "Activate, deactivate, or delete listings." },
   { href: "/admin/upload", label: "CSV Upload", description: "Bulk-import opportunities from a CSV file." },
+  { href: "/admin/digest", label: "Weekly Digest", description: "Preview, export subscribers, and send the digest email." },
 ];
 
 function Stat({ label, value, sub }: { label: string; value: number; sub?: string }) {
