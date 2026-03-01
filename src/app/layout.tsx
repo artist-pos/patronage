@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   description:
     "Patronage curates grants, residencies, commissions, and open calls for New Zealand and Australian artists.",
   icons: { icon: "/Favicon.png" },
+  verification: { google: "b1uNttMPg-mggBe-7YRYuCrdH_qyy0fWGTdCQX3fY30" },
 };
 
 export default function RootLayout({
