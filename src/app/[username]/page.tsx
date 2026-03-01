@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile, getPortfolioImages } from "@/lib/profiles";
 import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
+import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
+import { TrackedLink } from "@/components/profile/TrackedLink";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 interface Props {
@@ -49,6 +51,7 @@ export default async function ArtistProfilePage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const canMessage = !!user && user.id !== profile.id;
+  const isOwner = !!user && user.id === profile.id;
 
   const images = await getPortfolioImages(profile.id);
   const displayName = profile.full_name ?? profile.username;
@@ -60,6 +63,7 @@ export default async function ArtistProfilePage({ params }: Props) {
 
   return (
     <div className="max-w-[1600px] mx-auto">
+      <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
       {/* ── Banner ── */}
       {profile.featured_image_url && (
@@ -141,14 +145,15 @@ export default async function ArtistProfilePage({ params }: Props) {
                   Links
                 </p>
                 {profile.website_url && (
-                  <a
+                  <TrackedLink
                     href={profile.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    profileId={profile.id}
+                    username={profile.username}
+                    eventType="website_click"
                     className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
                   >
                     {profile.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                  </a>
+                  </TrackedLink>
                 )}
                 {profile.instagram_handle && (
                   <a
@@ -161,14 +166,15 @@ export default async function ArtistProfilePage({ params }: Props) {
                   </a>
                 )}
                 {profile.cv_url && (
-                  <a
+                  <TrackedLink
                     href={profile.cv_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    profileId={profile.id}
+                    username={profile.username}
+                    eventType="cv_click"
                     className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
                   >
                     Download CV →
-                  </a>
+                  </TrackedLink>
                 )}
               </div>
             )}
@@ -265,14 +271,15 @@ export default async function ArtistProfilePage({ params }: Props) {
                   {item.link && (
                     <>
                       {". "}
-                      <a
+                      <TrackedLink
                         href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        profileId={profile.id}
+                        username={profile.username}
+                        eventType="bib_click"
                         className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
                       >
                         Read →
-                      </a>
+                      </TrackedLink>
                     </>
                   )}
                 </p>

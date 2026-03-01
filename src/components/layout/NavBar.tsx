@@ -60,6 +60,9 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
                 <DropdownMenuItem asChild>
                   <Link href="/profile/edit">Edit Profile</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/analytics">My Analytics</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => signOut()}>
                   Sign Out
@@ -119,6 +122,13 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Edit Profile
+                </Link>
+                <Link
+                  href="/profile/analytics"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  My Analytics
                 </Link>
                 <Link
                   href="/messages"
