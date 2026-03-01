@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PROTECTED = ["/onboarding", "/admin"];
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -25,8 +27,29 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the session so it doesn't expire
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // Redirect unauthenticated users away from protected routes
+  if (PROTECTED.some((p) => pathname.startsWith(p)) && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/auth/login";
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup")) {
+    if (user) {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      homeUrl.search = "";
+      return NextResponse.redirect(homeUrl);
+    }
+  }
 
   return supabaseResponse;
 }

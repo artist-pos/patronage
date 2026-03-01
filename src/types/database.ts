@@ -24,3 +24,34 @@ export interface OpportunityFilters {
   type?: OppTypeEnum;
   country?: CountryEnum;
 }
+
+export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";
+
+export interface Profile {
+  id: string;
+  username: string;
+  full_name: string | null;
+  bio: string | null;
+  country: CountryEnum | null;
+  role: "artist" | "admin";
+  career_stage: CareerStageEnum | null;
+  medium: string[] | null;
+  cv_url: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  is_patronage_supported: boolean;
+  created_at: string;
+}
+
+export interface PortfolioImage {
+  id: string;
+  profile_id: string;
+  url: string;
+  position: number;
+  created_at: string;
+}
+
+export interface ProfileFilters {
+  country?: CountryEnum;
+  career_stage?: CareerStageEnum;
+}
