@@ -63,6 +63,17 @@ export async function getMarketplaceStats(): Promise<{
   return { count, totalFunding };
 }
 
+export async function getOpportunityById(id: string): Promise<Opportunity | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("opportunities")
+    .select("*")
+    .eq("id", id)
+    .eq("is_active", true)
+    .single();
+  return data as Opportunity | null;
+}
+
 export async function insertOpportunities(rows: OpportunityInsert[]) {
   const supabase = await createClient();
   const { data, error } = await supabase

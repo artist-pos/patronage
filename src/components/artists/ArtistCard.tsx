@@ -75,7 +75,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
   return (
     <Link
       href={`/${artist.username}`}
-      className={`group flex flex-col sm:flex-row border border-black ${compact ? "h-[200px]" : "min-h-[320px]"}`}
+      className={`group flex flex-col sm:flex-row border border-black ${compact ? "sm:h-[200px]" : "min-h-[320px]"}`}
     >
       {/* Left – featured image */}
       <div className={`relative sm:aspect-auto shrink-0 overflow-hidden ${compact ? "hidden sm:block sm:w-1/2" : "aspect-[4/3] sm:w-3/5"}`}>

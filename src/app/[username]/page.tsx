@@ -15,9 +15,29 @@ export async function generateMetadata({ params }: Props) {
   const { username } = await params;
   const profile = await getProfile(username);
   if (!profile) return { title: "Artist not found — Patronage" };
+
+  const displayName = profile.full_name ?? profile.username;
+  const description = profile.bio
+    ? profile.bio.slice(0, 160)
+    : `View ${displayName}'s artist portfolio on Patronage.`;
+
   return {
-    title: `${profile.full_name ?? profile.username} — Patronage`,
-    description: profile.bio ?? undefined,
+    title: `${displayName} | Artist Portfolio | Patronage`,
+    description,
+    openGraph: {
+      title: `${displayName} | Artist Portfolio | Patronage`,
+      description,
+      ...(profile.featured_image_url && {
+        images: [
+          {
+            url: profile.featured_image_url,
+            width: 3840,
+            height: 823,
+            alt: `${displayName} featured artwork`,
+          },
+        ],
+      }),
+    },
   };
 }
 
@@ -58,13 +78,13 @@ export default async function ArtistProfilePage({ params }: Props) {
         </div>
       )}
 
-      <div className="px-6 space-y-12">
+      <div className="px-4 sm:px-6 space-y-8 sm:space-y-12">
 
         {/* ── Identity block — two-column on desktop ── */}
-        <div className={profile.featured_image_url ? "-mt-[100px]" : "pt-12"}>
+        <div className={profile.featured_image_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
           {/* Avatar */}
           {profile.avatar_url && (
-            <div className="relative w-[200px] h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
+            <div className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
               <Image
                 src={profile.avatar_url}
                 alt={displayName}

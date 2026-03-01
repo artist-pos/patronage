@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Opportunity } from "@/types/database";
 import { DescriptionAccordion } from "./DescriptionAccordion";
 
@@ -96,11 +97,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
       </div>
     );
 
-    if (isPreview || !opp.url) return row;
+    if (isPreview) return row;
     return (
-      <a href={opp.url} target="_blank" rel="noopener noreferrer">
+      <Link href={`/opportunities/${opp.id}`}>
         {row}
-      </a>
+      </Link>
     );
   }
 
@@ -117,7 +118,6 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
               alt={opp.title}
               width={800}
               height={450}
-              priority
               unoptimized
               className="w-full h-auto max-h-[300px] object-contain"
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
@@ -178,7 +178,15 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
         </div>
 
         {/* Title */}
-        <h2 className="text-sm font-semibold leading-snug">{opp.title}</h2>
+        {isPreview ? (
+          <h2 className="text-sm font-semibold leading-snug">{opp.title}</h2>
+        ) : (
+          <Link href={`/opportunities/${opp.id}`} className="group/title">
+            <h2 className="text-sm font-semibold leading-snug group-hover/title:underline underline-offset-2">
+              {opp.title}
+            </h2>
+          </Link>
+        )}
 
         {/* Organiser + days */}
         <div className="flex items-center justify-between gap-3">

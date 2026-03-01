@@ -30,7 +30,7 @@ export async function Header() {
 
   return (
     <header className="border-b border-border relative">
-      <div className="max-w-[1600px] mx-auto px-6 py-4 grid grid-cols-3 items-center">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between sm:grid sm:grid-cols-3">
 
         {/* ── Left: Logo ── */}
         <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight">

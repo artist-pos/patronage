@@ -21,17 +21,18 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
       href={opp.url ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="group border border-black flex h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
+      className="group border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
     >
       {/* Partner logo — wider container, object-contain so logos breathe */}
       {opp.featured_image_url && (
-        <div className="relative w-36 shrink-0 bg-white border-r border-black overflow-hidden">
+        <div className="w-36 shrink-0 bg-white border-r border-black overflow-hidden flex items-center justify-center self-stretch">
           <Image
             src={opp.featured_image_url}
             alt={opp.title}
-            fill
+            width={120}
+            height={120}
             unoptimized
-            className="object-contain p-3"
+            className="w-full h-auto max-h-full object-contain p-3"
             sizes="144px"
           />
         </div>
