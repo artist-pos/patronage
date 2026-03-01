@@ -2,15 +2,32 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { track } from "@vercel/analytics";
+import { trackEvent } from "@/actions/trackEvent";
 
 interface Props {
   fullDescription: string | null;
+  opportunityId?: string;
+  title?: string;
+  organiser?: string;
 }
 
-export function DescriptionAccordion({ fullDescription }: Props) {
+export function DescriptionAccordion({ fullDescription, opportunityId, title, organiser }: Props) {
   const [open, setOpen] = useState(false);
 
   if (!fullDescription?.trim()) return null;
+
+  function handleOpen() {
+    setOpen(true);
+    if (opportunityId) {
+      track("read_more", { title: title ?? "", organiser: organiser ?? "" });
+      trackEvent("opportunity_engagement", {
+        opportunity_id: opportunityId,
+        title: title ?? "",
+        organiser: organiser ?? "",
+      });
+    }
+  }
 
   return (
     <div className="space-y-1.5">
@@ -18,7 +35,7 @@ export function DescriptionAccordion({ fullDescription }: Props) {
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={handleOpen}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <span>Read more</span>
@@ -26,7 +43,7 @@ export function DescriptionAccordion({ fullDescription }: Props) {
         </button>
       )}
 
-      {/* Smooth CSS grid accordion */}
+      {/* Smooth CSS grid accordion — no CLS (user-interaction triggered) */}
       <div
         style={{
           display: "grid",

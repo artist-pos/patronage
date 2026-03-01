@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
+import { track } from "@vercel/analytics";
+import { trackEvent } from "@/actions/trackEvent";
 import {
   Select,
   SelectContent,
@@ -63,6 +65,10 @@ export function ArtistFilters() {
   );
 
   function toggleMedium(medium: string) {
+    if (currentMedium !== medium) {
+      track("filter_medium", { medium });
+      trackEvent("medium_filter", { medium });
+    }
     updateParam("medium", currentMedium === medium ? null : medium);
   }
 

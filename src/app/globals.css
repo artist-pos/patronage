@@ -70,3 +70,8 @@
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+@media print {
+  header, footer, nav { display: none !important; }
+  body { background: white !important; }
+}

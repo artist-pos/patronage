@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity } from "@/types/database";
 import { DescriptionAccordion } from "./DescriptionAccordion";
+import { OpportunityCTALink } from "./OpportunityCTALink";
 
 export function formatFunding(amount: number): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(0)}M+`;
@@ -225,19 +226,24 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
           )}
 
           {/* Accordion: only renders if full_description exists */}
-          {!isPreview && <DescriptionAccordion fullDescription={opp.full_description} />}
+          {!isPreview && (
+            <DescriptionAccordion
+              fullDescription={opp.full_description}
+              opportunityId={opp.id}
+              title={opp.title}
+              organiser={opp.organiser}
+            />
+          )}
         </div>
 
-        {/* CTA — the only element that navigates to the external URL */}
+        {/* CTA — tracked link to external URL */}
         {opp.url && !isPreview && (
-          <a
+          <OpportunityCTALink
             href={opp.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs underline underline-offset-2 mt-auto hover:text-muted-foreground transition-colors"
-          >
-            View opportunity →
-          </a>
+            opportunityId={opp.id}
+            title={opp.title}
+            organiser={opp.organiser}
+          />
         )}
       </div>
     </article>

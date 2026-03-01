@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   toggleOpportunityActive,
   deleteOpportunity,
@@ -42,7 +43,8 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               <th className="py-3 pr-4 font-medium text-muted-foreground">Country</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Deadline</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Status</th>
-              <th className="py-3 font-medium text-muted-foreground">Actions</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Actions</th>
+              <th className="py-3 font-medium text-muted-foreground">Report</th>
             </tr>
           </thead>
           <tbody>
@@ -85,7 +87,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       {o.is_active ? "Deactivate" : "Activate"}
                     </Button>
                   </td>
-                  <td className="py-3">
+                  <td className="py-3 pr-4">
                     <Button
                       size="sm"
                       variant="outline"
@@ -95,6 +97,14 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                     >
                       Delete
                     </Button>
+                  </td>
+                  <td className="py-3">
+                    <Link
+                      href={`/admin/opportunities/${o.id}/report`}
+                      className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Report →
+                    </Link>
                   </td>
                 </tr>
               );
