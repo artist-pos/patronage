@@ -1,66 +1,69 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+
+const MEDIUMS = [
+  "Painting",
+  "Sculpture",
+  "Photography",
+  "Public Art",
+  "Installation",
+  "Film / Video",
+  "Poetry / Literature",
+  "Music / Sound",
+  "Performance",
+  "Digital Art",
+  "Textiles",
+  "Ceramics",
+];
 
 interface Props {
   defaultValue?: string[];
 }
 
 export function MediumInput({ defaultValue = [] }: Props) {
-  const [tags, setTags] = useState<string[]>(defaultValue);
-  const [inputVal, setInputVal] = useState("");
+  // Normalise stored values so existing free-text entries still match tiles
+  const [selected, setSelected] = useState<string[]>(defaultValue);
 
-  function addTag(value: string) {
-    const tag = value.trim().toLowerCase();
-    if (tag && !tags.includes(tag) && tags.length < 10) {
-      setTags([...tags, tag]);
-    }
-    setInputVal("");
-  }
-
-  function removeTag(tag: string) {
-    setTags(tags.filter((t) => t !== tag));
-  }
-
-  function handleKey(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag(inputVal);
-    } else if (e.key === "Backspace" && !inputVal && tags.length > 0) {
-      setTags(tags.slice(0, -1));
-    }
+  function toggle(medium: string) {
+    setSelected((prev) =>
+      prev.includes(medium) ? prev.filter((m) => m !== medium) : [...prev, medium]
+    );
   }
 
   return (
-    <div className="space-y-2">
-      {/* Hidden field carries comma-separated values to the form */}
-      <input type="hidden" name="medium" value={tags.join(",")} />
-      <div className="flex flex-wrap gap-2 min-h-[2.25rem] border border-border p-2">
-        {tags.map((tag) => (
-          <Badge
-            key={tag}
-            variant="outline"
-            className="cursor-pointer select-none text-xs font-normal"
-            onClick={() => removeTag(tag)}
-            title="Click to remove"
-          >
-            {tag} ×
-          </Badge>
-        ))}
-        <Input
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          onKeyDown={handleKey}
-          onBlur={() => addTag(inputVal)}
-          placeholder={tags.length === 0 ? "e.g. painting, sculpture — press Enter" : ""}
-          className="border-0 p-0 h-auto text-sm flex-1 min-w-[120px] focus-visible:ring-0 shadow-none"
-        />
+    <div className="space-y-3">
+      {/* Hidden field carries comma-separated values to the server action */}
+      <input type="hidden" name="medium" value={selected.join(",")} />
+
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        {MEDIUMS.map((m) => {
+          const active = selected.includes(m);
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => toggle(m)}
+              className={`relative flex flex-col items-center justify-center text-center px-2 py-3 border text-xs leading-snug transition-colors select-none ${
+                active
+                  ? "border-black bg-black text-white"
+                  : "border-border bg-background text-foreground hover:border-black hover:bg-muted"
+              }`}
+            >
+              {active && (
+                <span className="absolute top-1.5 right-1.5 text-[10px] leading-none">✓</span>
+              )}
+              {m}
+            </button>
+          );
+        })}
       </div>
-      <p className="text-xs text-muted-foreground">
-        Press Enter or comma to add. Click a tag to remove.
-      </p>
+
+      {selected.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Selected: {selected.join(", ")}
+        </p>
+      )}
     </div>
   );
 }

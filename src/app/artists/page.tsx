@@ -10,15 +10,23 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ country?: string; stage?: string }>;
+  searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string }>;
 }
 
 export default async function ArtistsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const country = params.country as CountryEnum | undefined;
   const career_stage = params.stage as CareerStageEnum | undefined;
+  const medium = params.medium;
+  const view = params.view === "list" ? "list" : "gallery";
 
-  const artists = await getProfiles({ country, career_stage });
+  const artists = await getProfiles({ country, career_stage, medium });
+
+  const activeFilters = [
+    country,
+    career_stage,
+    medium ? `Medium: ${medium}` : null,
+  ].filter(Boolean);
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">
@@ -26,9 +34,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
         <h1 className="text-2xl font-semibold tracking-tight">Artists</h1>
         <p className="text-sm text-muted-foreground">
           {artists.length} artist{artists.length !== 1 ? "s" : ""}
-          {country || career_stage
-            ? ` · filtered by${country ? ` ${country}` : ""}${career_stage ? ` · ${career_stage}` : ""}`
-            : ""}
+          {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
         </p>
       </div>
 
@@ -40,10 +46,16 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
         <p className="text-sm text-muted-foreground py-12 text-center">
           No artists match the current filters.
         </p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : view === "list" ? (
+        <div className="border-t border-black">
           {artists.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} />
+            <ArtistCard key={artist.id} artist={artist} view="list" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {artists.map((artist) => (
+            <ArtistCard key={artist.id} artist={artist} view="gallery" />
           ))}
         </div>
       )}

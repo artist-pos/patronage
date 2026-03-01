@@ -1,7 +1,7 @@
 import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 
 export const metadata = {
-  title: "For Partners — Patronage",
+  title: "Partners — Patronage",
   description:
     "List an opportunity or discover verified artists through the Patronage platform.",
 };
@@ -14,7 +14,7 @@ export default function PartnersPage() {
         {/* ── Left: Value proposition ── */}
         <div className="space-y-16">
           <header className="space-y-4">
-            <h1 className="text-3xl font-semibold tracking-tight">For Partners</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Partners</h1>
             <p className="text-muted-foreground text-base leading-relaxed max-w-lg">
               Patronage connects arts organisations, councils, foundations, and
               private patrons with verified New Zealand and Australian artists.

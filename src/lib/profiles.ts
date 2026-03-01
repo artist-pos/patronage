@@ -35,6 +35,7 @@ export async function getProfiles(
 
   if (filters.country) query = query.eq("country", filters.country);
   if (filters.career_stage) query = query.eq("career_stage", filters.career_stage);
+  if (filters.medium) query = query.contains("medium", [filters.medium]);
   if (limit) query = query.limit(limit);
 
   const { data, error } = await query;

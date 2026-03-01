@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Patronage — Opportunities for NZ & AUS Artists",
   description:
     "Patronage curates grants, residencies, commissions, and open calls for New Zealand and Australian artists.",
+  icons: { icon: "/Favicon.png" },
 };
 
 export default function RootLayout({

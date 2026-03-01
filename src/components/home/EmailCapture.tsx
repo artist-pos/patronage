@@ -19,14 +19,14 @@ export function EmailCapture() {
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3 flex flex-col items-center">
       <p className="text-xs uppercase tracking-widest text-muted-foreground">
         Weekly digest
       </p>
       <p className="text-sm text-muted-foreground">
         New and closing-soon opportunities, delivered every week.
       </p>
-      <div className="flex gap-2 max-w-sm">
+      <div className="flex gap-2 w-full max-w-sm">
         <Input
           name="email"
           type="email"

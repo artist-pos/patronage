@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmailCapture } from "@/components/home/EmailCapture";
@@ -20,31 +21,58 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
       href={opp.url ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="group border border-black p-4 flex flex-col gap-2 hover:bg-muted/30 transition-colors"
+      className="group border border-black flex h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold group-hover:underline underline-offset-2 leading-snug">
-          {opp.title}
-        </p>
-        {days !== null && days <= 7 && (
-          <Badge className="text-xs font-normal bg-foreground text-background shrink-0">
-            Closing soon
-          </Badge>
+      {/* Partner logo — wider container, object-contain so logos breathe */}
+      {opp.featured_image_url && (
+        <div className="relative w-36 shrink-0 bg-white border-r border-black overflow-hidden">
+          <Image
+            src={opp.featured_image_url}
+            alt={opp.title}
+            fill
+            unoptimized
+            className="object-contain p-3"
+            sizes="144px"
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="p-4 flex flex-col gap-2 flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-bold group-hover:underline underline-offset-2 leading-snug line-clamp-2">
+            {opp.title}
+          </p>
+          {days !== null && days <= 7 && (
+            <Badge className="text-xs font-normal bg-foreground text-background shrink-0">
+              Closing soon
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground truncate">{opp.organiser}</p>
+        {opp.caption && (
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 flex-1">
+            {opp.caption}
+          </p>
         )}
-      </div>
-      <p className="text-xs text-muted-foreground">{opp.organiser}</p>
-      <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
-        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
-          {opp.type}
-        </span>
-        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
-          {opp.country}
-        </span>
-        {opp.deadline && (
-          <span className="text-xs text-muted-foreground">
-            {days !== null && days >= 0 ? `${days}d remaining` : opp.deadline}
+        <div className="flex flex-wrap gap-1.5 mt-auto">
+          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+            {opp.type}
           </span>
-        )}
+          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+            {opp.country}
+          </span>
+          {opp.funding_range && (
+            <span className="text-xs font-mono font-bold">
+              {opp.funding_range}
+            </span>
+          )}
+          {opp.deadline && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              {days !== null && days >= 0 ? `${days}d remaining` : opp.deadline}
+            </span>
+          )}
+        </div>
       </div>
     </a>
   );
@@ -61,7 +89,7 @@ export default async function Home() {
       <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-16">
 
         {/* ── Hero ── */}
-        <div className="space-y-6">
+        <div className="space-y-6 flex flex-col items-center text-center">
           <div className="space-y-1.5">
             <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
             <p className="text-lg text-muted-foreground">
@@ -69,19 +97,19 @@ export default async function Home() {
               artists — curated and verified.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 justify-center">
             <Button asChild>
               <Link href="/opportunities">Browse Opportunities</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/artists">Join as Artist</Link>
+              <Link href="/artists">Join as an Artist</Link>
             </Button>
           </div>
         </div>
 
         {/* ── Active Directory ── */}
         <div className="space-y-8 border-t border-border pt-16">
-          <div className="space-y-1">
+          <div className="space-y-1 text-center">
             <h2 className="text-xl font-semibold tracking-tight">Active Directory</h2>
             <p className="text-sm text-muted-foreground">
               Recently joined artists and opportunities closing soon.
@@ -104,7 +132,7 @@ export default async function Home() {
               </div>
               <div className="flex flex-col gap-3">
                 {artists.length > 0 ? (
-                  artists.map((a) => <ArtistCard key={a.id} artist={a} />)
+                  artists.map((a) => <ArtistCard key={a.id} artist={a} compact />)
                 ) : (
                   <p className="text-sm text-muted-foreground">No artists yet.</p>
                 )}
@@ -138,8 +166,8 @@ export default async function Home() {
       </div>
 
       {/* ── Weekly Digest – above footer ── */}
-      <div className="border-t border-border px-6 py-12">
-        <div className="max-w-xl mx-auto">
+      <div className="border-t border-border px-6 py-12 text-center">
+        <div className="max-w-md mx-auto">
           <EmailCapture />
         </div>
       </div>

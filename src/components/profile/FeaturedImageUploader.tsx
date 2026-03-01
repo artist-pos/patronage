@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
-const MAX_PX = 2400;
+const MAX_PX = 3840;
 
 async function resizeToJpeg(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -35,19 +35,26 @@ interface Props {
 
 export function FeaturedImageUploader({ profileId }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [focusY, setFocusY] = useState(50);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [isPending, startTransition] = useTransition();
   const supabase = createClient();
 
   useEffect(() => {
     supabase
       .from("profiles")
-      .select("featured_image_url")
+      .select("featured_image_url, banner_focus_y")
       .eq("id", profileId)
       .single()
-      .then(({ data }) => setImageUrl(data?.featured_image_url ?? null));
+      .then(({ data }) => {
+        setImageUrl(data?.featured_image_url ?? null);
+        setFocusY(data?.banner_focus_y ?? 50);
+      });
   }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleFile(file: File | null) {
@@ -73,13 +80,79 @@ export function FeaturedImageUploader({ profileId }: Props) {
     setUploading(false);
   }
 
+  function handleFocusChange(value: number) {
+    setFocusY(value);
+    // Debounce the DB write — only save 600ms after the user stops dragging
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      supabase.from("profiles").update({ banner_focus_y: value }).eq("id", profileId);
+    }, 600);
+  }
+
+  function handleRemove() {
+    startTransition(async () => {
+      const path = `${profileId}/__featured.jpg`;
+      await supabase.storage.from("portfolio").remove([path]);
+      await supabase.from("profiles").update({ featured_image_url: null }).eq("id", profileId);
+      setImageUrl(null);
+    });
+  }
+
   return (
     <div className="space-y-4">
       {imageUrl && (
-        <div className="relative w-full aspect-[16/9] max-w-sm overflow-hidden border border-black">
-          <Image src={imageUrl} alt="Featured artwork" fill className="object-cover" sizes="384px" />
+        <div className="space-y-3">
+          {/* Letterbox preview — same aspect ratio as the public banner */}
+          <div
+            className="group relative w-full overflow-hidden border border-black bg-neutral-100"
+            style={{ aspectRatio: "42 / 9" }}
+          >
+            <Image
+              src={imageUrl}
+              alt="Featured artwork preview"
+              fill
+              unoptimized
+              className="object-cover"
+              style={{ objectPosition: `center ${focusY}%` }}
+              sizes="100vw"
+            />
+            {/* Focal point indicator line */}
+            <div
+              className="absolute left-0 right-0 h-px bg-white/70 pointer-events-none"
+              style={{ top: `${focusY}%` }}
+            />
+            {/* Remove floater */}
+            <button
+              onClick={handleRemove}
+              disabled={isPending}
+              className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+            >
+              Remove
+            </button>
+          </div>
+
+          {/* Focal point slider */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Top</span>
+              <span className="font-mono">{focusY}%</span>
+              <span>Bottom</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={focusY}
+              onChange={(e) => handleFocusChange(Number(e.target.value))}
+              className="w-full accent-black cursor-pointer"
+            />
+            <p className="text-xs text-muted-foreground">
+              Drag to choose which part of the image is visible in the banner.
+            </p>
+          </div>
         </div>
       )}
+
       <div className="space-y-2">
         <input
           ref={inputRef}
@@ -89,7 +162,7 @@ export function FeaturedImageUploader({ profileId }: Props) {
           className="text-sm file:mr-4 file:border file:border-black file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted"
         />
         <p className="text-xs text-muted-foreground">
-          Displayed on your directory card. Landscape images work best. Resized to max 1600px.
+          Landscape images work best. Resized to max 3840px (4K).
         </p>
         {uploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}

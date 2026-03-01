@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
@@ -42,6 +42,7 @@ export function AvatarUploader({ profileId }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [isPending, startTransition] = useTransition();
   const supabase = createClient();
 
   useEffect(() => {
@@ -76,11 +77,29 @@ export function AvatarUploader({ profileId }: Props) {
     setUploading(false);
   }
 
+  function handleRemove() {
+    startTransition(async () => {
+      const path = `${profileId}/__avatar.jpg`;
+      await supabase.storage.from("portfolio").remove([path]);
+      await supabase.from("profiles").update({ avatar_url: null }).eq("id", profileId);
+      setAvatarUrl(null);
+    });
+  }
+
   return (
     <div className="flex items-center gap-6">
-      <div className="relative w-20 h-20 shrink-0 border border-black overflow-hidden bg-muted">
+      <div className="group relative w-20 h-20 shrink-0 border border-black overflow-hidden bg-muted">
         {avatarUrl ? (
-          <Image src={avatarUrl} alt="Profile picture" fill className="object-cover" sizes="80px" />
+          <>
+            <Image src={avatarUrl} alt="Profile picture" fill className="object-cover" sizes="80px" />
+            <button
+              onClick={handleRemove}
+              disabled={isPending}
+              className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+            >
+              Remove
+            </button>
+          </>
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
             No photo

@@ -6,12 +6,14 @@ export async function getOpportunities(
 ): Promise<Opportunity[]> {
   const supabase = await createClient();
 
+  const today = new Date().toISOString().split("T")[0];
+
   let query = supabase
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
-    .gte("deadline", new Date().toISOString().split("T")[0]) // hide past deadlines
-    .order("deadline", { ascending: true });
+    .or(`deadline.gte.${today},deadline.is.null`) // include open-ended (no deadline)
+    .order("deadline", { ascending: true, nullsFirst: false });
 
   if (filters.type) {
     query = query.eq("type", filters.type);
@@ -35,8 +37,8 @@ export async function getClosingSoonOpportunities(
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
-    .gte("deadline", today)
-    .order("deadline", { ascending: true })
+    .or(`deadline.gte.${today},deadline.is.null`)
+    .order("deadline", { ascending: true, nullsFirst: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return (data ?? []) as Opportunity[];

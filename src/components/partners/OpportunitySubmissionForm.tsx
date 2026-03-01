@@ -12,6 +12,7 @@ import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
 const TYPES: OppTypeEnum[] = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display"];
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 const GRANT_TYPES = ["Project Grant", "Travel Stipend", "Residency Award", "Commissioning Fee", "Emergency Fund", "Other"];
+const FOCUS_TAGS = ["Research", "Development", "Living Costs", "Travel", "Community", "International", "Emerging Artists", "Māori & Pasifika"];
 
 const MAX_IMG_PX = 1600;
 
@@ -50,6 +51,8 @@ export function OpportunitySubmissionForm() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imgUrl, setImgUrl] = useState("");
+  const [selectedFocus, setSelectedFocus] = useState<string[]>([]);
+  const [locationType, setLocationType] = useState<"local" | "global">("local");
 
   // Live preview state — mirrors key form fields
   const [preview, setPreview] = useState<Partial<Opportunity>>({
@@ -65,10 +68,10 @@ export function OpportunitySubmissionForm() {
       const blob = await resizeToJpeg(file);
       const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
       const { error } = await supabase.storage
-        .from("submissions")
+        .from("opportunity-images")
         .upload(path, blob, { contentType: "image/jpeg", upsert: false });
       if (!error) {
-        const { data } = supabase.storage.from("submissions").getPublicUrl(path);
+        const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
         setImgUrl(data.publicUrl);
         setPreview((p) => ({ ...p, featured_image_url: data.publicUrl }));
       }
@@ -84,20 +87,33 @@ export function OpportunitySubmissionForm() {
     if (file && file.type.startsWith("image/")) handleImageFile(file);
   }
 
-  function upd(key: keyof Opportunity, value: string | number | null) {
+  function upd(key: keyof Opportunity, value: string | number | string[] | null) {
     setPreview((p) => ({ ...p, [key]: value }));
+  }
+
+  function toggleFocus(tag: string) {
+    setSelectedFocus((prev) => {
+      const next = prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag];
+      upd("sub_categories", next);
+      return next;
+    });
   }
 
   const previewOpp: Opportunity = {
     id: "",
     title: (preview.title as string) || "Opportunity Title",
     organiser: (preview.organiser as string) || "Organisation",
-    description: (preview.description as string) ?? null,
+    description: null,
+    caption: (preview.caption as string) ?? null,
+    full_description: (preview.full_description as string) ?? null,
     type: (preview.type as OppTypeEnum) ?? "Grant",
     country: (preview.country as CountryEnum) ?? "NZ",
+    city: (preview.city as string) ?? null,
     deadline: (preview.deadline as string) ?? null,
     url: null,
-    funding_amount: (preview.funding_amount as number) ?? null,
+    funding_amount: null,
+    funding_range: (preview.funding_range as string) ?? null,
+    sub_categories: selectedFocus.length > 0 ? selectedFocus : null,
     featured_image_url: imgUrl || null,
     grant_type: (preview.grant_type as string) ?? null,
     recipients_count: (preview.recipients_count as number) ?? null,
@@ -134,8 +150,9 @@ export function OpportunitySubmissionForm() {
           <p className="text-xs text-destructive mb-4">{state.error}</p>
         )}
 
-        {/* Hidden field for uploaded image */}
+        {/* Hidden fields */}
         <input type="hidden" name="featured_image_url" value={imgUrl} />
+        <input type="hidden" name="sub_categories" value={selectedFocus.join(",")} />
 
         <Field label="Grant Title *">
           <Input
@@ -202,14 +219,13 @@ export function OpportunitySubmissionForm() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2">
-          <Field label="Funding Amount ($)">
+          <Field label="Funding Range">
             <Input
-              name="funding_amount"
-              type="number"
-              min={0}
-              placeholder="e.g. 5000"
+              name="funding_range"
+              type="text"
+              placeholder="e.g. $5,000 – $25,000"
               className={FIELD}
-              onChange={(e) => upd("funding_amount", e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) => upd("funding_range", e.target.value || null)}
             />
           </Field>
           <Field label="Number of Recipients">
@@ -224,6 +240,59 @@ export function OpportunitySubmissionForm() {
           </Field>
         </div>
 
+        {/* Grant Focus multi-select */}
+        <Field label="Grant Focus">
+          <div className="flex flex-wrap gap-2 pt-1">
+            {FOCUS_TAGS.map((tag) => {
+              const active = selectedFocus.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleFocus(tag)}
+                  className={`text-xs px-2.5 py-1 border leading-none transition-colors ${
+                    active
+                      ? "border-black bg-black text-white"
+                      : "border-black bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        {/* Location */}
+        <Field label="Location">
+          {/* Local / Global toggle */}
+          <div className="flex border border-black w-fit mb-3">
+            <button
+              type="button"
+              onClick={() => setLocationType("local")}
+              className={`text-xs px-3 py-1.5 transition-colors ${locationType === "local" ? "bg-black text-white" : "hover:bg-muted"}`}
+            >
+              Local / In-Person
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocationType("global")}
+              className={`text-xs px-3 py-1.5 border-l border-black transition-colors ${locationType === "global" ? "bg-black text-white" : "hover:bg-muted"}`}
+            >
+              Global / Remote
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
+            <Input
+              name="city"
+              type="text"
+              placeholder={locationType === "local" ? "e.g. Auckland" : "e.g. Multiple Locations"}
+              className={FIELD}
+              onChange={(e) => upd("city" as keyof Opportunity, e.target.value || null)}
+            />
+          </div>
+        </Field>
+
         <Field label="Application URL">
           <Input
             name="url"
@@ -233,14 +302,35 @@ export function OpportunitySubmissionForm() {
           />
         </Field>
 
-        <Field label="Description">
-          <textarea
-            name="description"
-            rows={3}
-            placeholder="Brief overview of the opportunity and eligibility criteria…"
-            className={`${FIELD} resize-none`}
-            onChange={(e) => upd("description", e.target.value)}
-          />
+        <Field label="Caption (shown on card — max 160 characters)">
+          <div className="space-y-1">
+            <Input
+              name="caption"
+              type="text"
+              maxLength={160}
+              placeholder="One-sentence summary of the opportunity…"
+              className={FIELD}
+              onChange={(e) => upd("caption", e.target.value || null)}
+            />
+            <p className="text-xs text-muted-foreground font-mono">
+              Visible by default on the listing card.
+            </p>
+          </div>
+        </Field>
+
+        <Field label="Full Description">
+          <div className="space-y-1">
+            <textarea
+              name="full_description"
+              rows={5}
+              placeholder="Full details, eligibility criteria, how to apply…"
+              className={`${FIELD} resize-none`}
+              onChange={(e) => upd("description", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground font-mono">
+              Revealed when visitors click &ldquo;Read more&rdquo;.
+            </p>
+          </div>
         </Field>
 
         {/* Featured image drag-and-drop */}

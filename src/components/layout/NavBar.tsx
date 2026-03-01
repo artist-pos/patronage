@@ -14,36 +14,40 @@ import {
 interface NavBarProps {
   isLoggedIn: boolean;
   username: string | null;
+  unreadCount: number;
   signOut: () => Promise<void>;
 }
 
+// Duplicated here for the mobile drawer only
 const NAV_LINKS = [
   { href: "/opportunities", label: "Opportunities" },
   { href: "/artists", label: "Artists" },
-  { href: "/partners", label: "For Partners" },
+  { href: "/partners", label: "Partners" },
 ];
 
-export function NavBar({ isLoggedIn, username, signOut }: NavBarProps) {
+export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* ── Desktop nav ──────────────────────────────── */}
-      <nav className="hidden sm:flex items-center gap-6 text-sm">
-        {NAV_LINKS.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {l.label}
-          </Link>
-        ))}
-
+      {/* ── Desktop right column ──────────────────────── */}
+      <div className="hidden sm:flex items-center gap-4 text-sm">
         {isLoggedIn ? (
-          <div className="border-l border-border pl-6">
+          <>
+            {/* Messages with unread dot */}
+            <Link
+              href="/messages"
+              className="relative text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Messages
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-2.5 w-1.5 h-1.5 bg-black rounded-full" />
+              )}
+            </Link>
+
+            {/* Account dropdown */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
+              <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
                 {username ?? "My Account"}
                 <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
@@ -62,7 +66,7 @@ export function NavBar({ isLoggedIn, username, signOut }: NavBarProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </>
         ) : (
           <Link
             href="/auth/login"
@@ -71,7 +75,7 @@ export function NavBar({ isLoggedIn, username, signOut }: NavBarProps) {
             Sign in
           </Link>
         )}
-      </nav>
+      </div>
 
       {/* ── Mobile hamburger ─────────────────────────── */}
       <button
@@ -115,6 +119,16 @@ export function NavBar({ isLoggedIn, username, signOut }: NavBarProps) {
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Edit Profile
+                </Link>
+                <Link
+                  href="/messages"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="w-1.5 h-1.5 bg-black rounded-full" />
+                  )}
                 </Link>
                 <form action={signOut}>
                   <button

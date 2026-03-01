@@ -5,7 +5,10 @@ import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
+import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
+import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { redirect } from "next/navigation";
+import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
@@ -86,6 +89,36 @@ export default async function OnboardingPage() {
             </p>
           </div>
           <PortfolioUploader profileId={user.id} mode="cv" />
+        </section>
+      )}
+
+      {profile && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Exhibition History</h2>
+            <p className="text-xs text-muted-foreground">
+              List solo and group exhibitions. Displayed on your public profile grouped by type.
+            </p>
+          </div>
+          <ExhibitionEditor
+            profileId={user.id}
+            initial={(profile.exhibition_history ?? []) as ExhibitionEntry[]}
+          />
+        </section>
+      )}
+
+      {profile && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Selected Bibliography</h2>
+            <p className="text-xs text-muted-foreground">
+              Reviews, interviews, and features. Displayed as bibliographic citations on your public profile.
+            </p>
+          </div>
+          <BibliographyEditor
+            profileId={user.id}
+            initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
+          />
         </section>
       )}
 

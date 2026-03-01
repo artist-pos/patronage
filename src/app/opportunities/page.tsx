@@ -12,18 +12,24 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ type?: string; country?: string }>;
+  searchParams: Promise<{ type?: string; country?: string; view?: string }>;
 }
 
 export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const type = params.type as OppTypeEnum | undefined;
   const country = params.country as CountryEnum | undefined;
+  const view = params.view === "list" ? "list" : "gallery";
 
   const [opportunities, stats] = await Promise.all([
     getOpportunities({ type, country }),
     getMarketplaceStats(),
   ]);
+
+  const activeFilters = [
+    type,
+    country,
+  ].filter(Boolean);
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">
@@ -33,9 +39,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         <h1 className="text-2xl font-semibold tracking-tight">Opportunities</h1>
         <p className="text-sm text-muted-foreground">
           {opportunities.length} listing{opportunities.length !== 1 ? "s" : ""}
-          {type || country
-            ? ` · filtered by${type ? ` ${type}` : ""}${country ? ` · ${country}` : ""}`
-            : ""}
+          {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
         </p>
       </div>
 
@@ -59,15 +63,21 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         <OpportunityFilters />
       </Suspense>
 
-      {/* Grid */}
+      {/* Grid or List */}
       {opportunities.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
           No opportunities match the current filters.
         </p>
+      ) : view === "list" ? (
+        <div className="border-t border-black">
+          {opportunities.map((opp) => (
+            <OpportunityCard key={opp.id} opp={opp} view="list" />
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {opportunities.map((opp) => (
-            <OpportunityCard key={opp.id} opp={opp} />
+            <OpportunityCard key={opp.id} opp={opp} view="gallery" />
           ))}
         </div>
       )}
