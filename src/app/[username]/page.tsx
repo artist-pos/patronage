@@ -3,11 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getPortfolioImages } from "@/lib/profiles";
+import { getArtistUpdates } from "@/lib/feed";
 import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
+import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 interface Props {
@@ -54,7 +56,11 @@ export default async function ArtistProfilePage({ params }: Props) {
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
 
-  const images = await getPortfolioImages(profile.id);
+  const [images, studioUpdates] = await Promise.all([
+    getPortfolioImages(profile.id),
+    getArtistUpdates(profile.id),
+  ]);
+
   const displayName = profile.full_name ?? profile.username;
 
   const exhibitions = (profile.exhibition_history ?? []) as ExhibitionEntry[];
@@ -85,9 +91,8 @@ export default async function ArtistProfilePage({ params }: Props) {
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-12">
 
-        {/* ── Identity block — two-column on desktop ── */}
+        {/* ── Identity block ── */}
         <div className={profile.featured_image_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
-          {/* Avatar */}
           {profile.avatar_url && (
             <div className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
               <Image
@@ -102,7 +107,7 @@ export default async function ArtistProfilePage({ params }: Props) {
 
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
 
-            {/* Left: name, tags, bio, message */}
+            {/* Left: name, tags, bio, actions */}
             <div className="space-y-3 max-w-3xl">
               <div className="space-y-1">
                 <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
@@ -185,6 +190,39 @@ export default async function ArtistProfilePage({ params }: Props) {
           </div>
         </div>
 
+        {/* ── Selected Bibliography — immediately below bio ── */}
+        {bibliography.length > 0 && (
+          <section className="space-y-6 border-t border-border pt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+              Selected Bibliography
+            </h2>
+            <div className="space-y-2">
+              {bibliography.map((item, i) => (
+                <p key={i} className="text-sm leading-relaxed">
+                  {item.author && <span>{item.author}. </span>}
+                  {item.title && <span>&ldquo;{item.title}.&rdquo; </span>}
+                  {item.publication && <span className="italic">{item.publication}</span>}
+                  {item.date && <span>, {item.date}</span>}
+                  {item.link && (
+                    <>
+                      {". "}
+                      <TrackedLink
+                        href={item.link}
+                        profileId={profile.id}
+                        username={profile.username}
+                        eventType="bib_click"
+                        className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
+                      >
+                        Read →
+                      </TrackedLink>
+                    </>
+                  )}
+                </p>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Portfolio ── */}
         {images.length > 0 && (
           <section className="space-y-6 border-t border-border pt-10">
@@ -211,6 +249,9 @@ export default async function ArtistProfilePage({ params }: Props) {
             </div>
           </section>
         )}
+
+        {/* ── Studio Updates Carousel — below portfolio ── */}
+        <StudioCarousel updates={studioUpdates} />
 
         {/* ── Exhibition History ── */}
         {exhibitions.length > 0 && (
@@ -256,39 +297,6 @@ export default async function ArtistProfilePage({ params }: Props) {
                 </div>
               </div>
             )}
-          </section>
-        )}
-
-        {/* ── Selected Bibliography ── */}
-        {bibliography.length > 0 && (
-          <section className="space-y-6 border-t border-border pt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Selected Bibliography
-            </h2>
-            <div className="space-y-2">
-              {bibliography.map((item, i) => (
-                <p key={i} className="text-sm leading-relaxed">
-                  {item.author && <span>{item.author}. </span>}
-                  {item.title && <span>&ldquo;{item.title}.&rdquo; </span>}
-                  {item.publication && <span className="italic">{item.publication}</span>}
-                  {item.date && <span>, {item.date}</span>}
-                  {item.link && (
-                    <>
-                      {". "}
-                      <TrackedLink
-                        href={item.link}
-                        profileId={profile.id}
-                        username={profile.username}
-                        eventType="bib_click"
-                        className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                      >
-                        Read →
-                      </TrackedLink>
-                    </>
-                  )}
-                </p>
-              ))}
-            </div>
           </section>
         )}
 

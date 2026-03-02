@@ -31,38 +31,38 @@ export async function Header() {
   const unreadCount = user ? await getUnreadCount() : 0;
 
   return (
-    <header className="border-b border-border relative">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between sm:grid sm:grid-cols-3">
+    <header className="border-b border-border sticky top-0 z-40 bg-background">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-6">
 
-        {/* ── Left: Logo ── */}
-        <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight">
+        {/* ── Logo ── */}
+        <Link href="/" className="flex items-center gap-2 shrink-0 text-base font-semibold tracking-tight">
           <Image src="/Favicon.png" alt="Patronage" width={24} height={24} />
-          Patronage
+          <span className="hidden sm:inline">Patronage</span>
         </Link>
 
-        {/* ── Center: Primary nav links (desktop only) ── */}
-        <nav className="hidden sm:flex items-center justify-center gap-12 text-sm">
+        {/* ── Search bar (desktop, flex-1 after logo) ── */}
+        <SearchCommand />
+
+        {/* ── Center nav (desktop only) ── */}
+        <nav className="hidden sm:flex items-center gap-8 text-sm ml-auto">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               {l.label}
             </Link>
           ))}
         </nav>
 
-        {/* ── Right: Search + account + mobile hamburger ── */}
-        <div className="flex items-center justify-end gap-2">
-          <SearchCommand />
-          <NavBar
-            isLoggedIn={!!user}
-            username={profile?.username ?? null}
-            unreadCount={unreadCount}
-            signOut={signOut}
-          />
-        </div>
+        {/* ── Account + mobile hamburger ── */}
+        <NavBar
+          isLoggedIn={!!user}
+          username={profile?.username ?? null}
+          unreadCount={unreadCount}
+          signOut={signOut}
+        />
 
       </div>
     </header>
