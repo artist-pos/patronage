@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile, getPortfolioImages } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { isFollowing } from "@/lib/follows";
+import { getArtistProjects } from "@/lib/projects";
 import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
@@ -58,9 +59,10 @@ export default async function ArtistProfilePage({ params }: Props) {
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
 
-  const [images, studioUpdates, alreadyFollowing] = await Promise.all([
+  const [images, studioUpdates, artistProjects, alreadyFollowing] = await Promise.all([
     getPortfolioImages(profile.id),
     getArtistUpdates(profile.id),
+    getArtistProjects(profile.id),
     user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
   ]);
 
@@ -226,6 +228,36 @@ export default async function ArtistProfilePage({ params }: Props) {
                     </>
                   )}
                 </p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Projects ── */}
+        {artistProjects.length > 0 && (
+          <section className="space-y-4 border-t border-border pt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+              Projects
+            </h2>
+            <div className="flex flex-col gap-2">
+              {artistProjects.map((proj) => (
+                <Link
+                  key={proj.id}
+                  href={`/threads/${proj.id}`}
+                  className="group flex items-center justify-between border border-border px-4 py-3 hover:border-black transition-colors"
+                >
+                  <div>
+                    <p className="text-sm font-semibold group-hover:underline underline-offset-2">
+                      {proj.title}
+                    </p>
+                    {proj.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {proj.description}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0 ml-4">View thread →</span>
+                </Link>
               ))}
             </div>
           </section>

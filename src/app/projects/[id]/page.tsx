@@ -10,7 +10,7 @@ import { AddNoteForm } from "@/components/projects/AddNoteForm";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string; u?: string }>;
+  searchParams: Promise<{ from?: string; u?: string; t?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProjectPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { from, u } = await searchParams;
+  const { from, u, t } = await searchParams;
   const [update, notes] = await Promise.all([
     getUpdateById(id),
     getVisibleNotes(id),
@@ -41,8 +41,14 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const isOwner = !!user && user.id === update.artist_id;
 
   // Back button — context-aware
-  const backHref = from === "profile" && u ? `/${u}` : "/feed";
-  const backLabel = from === "profile" && u ? `← Back to profile` : "← Back to feed";
+  const backHref =
+    from === "thread" && t ? `/threads/${t}` :
+    from === "profile" && u ? `/${u}` :
+    "/feed";
+  const backLabel =
+    from === "thread" ? "← Back to thread" :
+    from === "profile" && u ? "← Back to profile" :
+    "← Back to feed";
   // Non-owners who are logged in can leave notes
   const canNote = !!user && !isOwner;
 

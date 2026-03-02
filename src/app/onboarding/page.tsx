@@ -8,6 +8,9 @@ import { TerminateAccountButton } from "@/components/profile/TerminateAccountBut
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { ProjectUpdateUploader } from "@/components/profile/ProjectUpdateUploader";
+import { ProjectManager } from "@/components/profile/ProjectManager";
+import { getArtistProjects } from "@/lib/projects";
+import { getArtistUpdates } from "@/lib/feed";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
@@ -22,6 +25,9 @@ export default async function OnboardingPage() {
   if (!user) redirect("/auth/login");
 
   const profile = await getProfileById(user.id);
+  const [artistProjects, artistUpdates] = profile
+    ? await Promise.all([getArtistProjects(user.id), getArtistUpdates(user.id)])
+    : [[], []];
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-12">
@@ -132,6 +138,18 @@ export default async function OnboardingPage() {
             </p>
           </div>
           <ProjectUpdateUploader profileId={user.id} />
+        </section>
+      )}
+
+      {profile && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Project Threads</h2>
+            <p className="text-xs text-muted-foreground">
+              Group your studio updates into named threads — e.g. &lsquo;Fabrication Diary&rsquo; or &lsquo;Installation 2026&rsquo;. Each thread gets its own public timeline page.
+            </p>
+          </div>
+          <ProjectManager projects={artistProjects} updates={artistUpdates} />
         </section>
       )}
 
