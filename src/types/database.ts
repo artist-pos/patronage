@@ -129,6 +129,20 @@ export interface Message {
   created_at: string;
 }
 
+export interface ProjectUpdate {
+  id: string;
+  artist_id: string;
+  image_url: string;
+  caption: string | null;
+  created_at: string;
+}
+
+export interface ProjectUpdateWithArtist extends ProjectUpdate {
+  artist_username: string;
+  artist_full_name: string | null;
+  artist_avatar_url: string | null;
+}
+
 export interface ConversationWithOther {
   id: string;
   other_user_id: string;

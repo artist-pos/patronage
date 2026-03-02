@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getUnreadCount } from "@/lib/messages";
 import { NavBar } from "./NavBar";
+import { SearchCommand } from "@/components/search/SearchCommand";
 
 async function signOut() {
   "use server";
@@ -51,8 +52,9 @@ export async function Header() {
           ))}
         </nav>
 
-        {/* ── Right: Messages + account + mobile hamburger ── */}
-        <div className="flex justify-end">
+        {/* ── Right: Search + account + mobile hamburger ── */}
+        <div className="flex items-center justify-end gap-2">
+          <SearchCommand />
           <NavBar
             isLoggedIn={!!user}
             username={profile?.username ?? null}

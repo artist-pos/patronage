@@ -7,6 +7,7 @@ import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploade
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
+import { ProjectUpdateUploader } from "@/components/profile/ProjectUpdateUploader";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
@@ -119,6 +120,18 @@ export default async function OnboardingPage() {
             profileId={user.id}
             initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
           />
+        </section>
+      )}
+
+      {profile && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Studio Updates</h2>
+            <p className="text-xs text-muted-foreground">
+              Share work-in-progress, recent projects, or studio shots. Shown in the &lsquo;Latest from the Studio&rsquo; feed on the homepage. Max 120-character caption.
+            </p>
+          </div>
+          <ProjectUpdateUploader profileId={user.id} />
         </section>
       )}
 

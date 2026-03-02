@@ -6,6 +6,7 @@ import { EmailCapture } from "@/components/home/EmailCapture";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { getProfiles } from "@/lib/profiles";
 import { getClosingSoonOpportunities } from "@/lib/opportunities";
+import { getLatestUpdates } from "@/lib/feed";
 import type { Opportunity } from "@/types/database";
 
 function daysUntil(deadline: string | null): number | null {
@@ -80,9 +81,10 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
 }
 
 export default async function Home() {
-  const [artists, opportunities] = await Promise.all([
+  const [artists, opportunities, updates] = await Promise.all([
     getProfiles({}, 4),
     getClosingSoonOpportunities(4),
+    getLatestUpdates(12),
   ]);
 
   return (
@@ -163,6 +165,43 @@ export default async function Home() {
             </div>
           </div>
         </div>
+
+        {/* ── Latest from the Studio ── */}
+        {updates.length > 0 && (
+          <div className="space-y-6 border-t border-border pt-16">
+            <div className="space-y-1 text-center">
+              <h2 className="text-xl font-semibold tracking-tight">Latest from the Studio</h2>
+              <p className="text-sm text-muted-foreground">Work in progress from the Patronage community.</p>
+            </div>
+
+            {/* Horizontal scroll on mobile, grid on desktop */}
+            <div className="flex sm:grid sm:grid-cols-4 md:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-none">
+              {updates.map((u) => (
+                <Link
+                  key={u.id}
+                  href={`/updates/${u.id}`}
+                  className="group relative shrink-0 w-48 sm:w-auto aspect-square border border-border overflow-hidden bg-muted block"
+                >
+                  <Image
+                    src={u.image_url}
+                    alt={u.caption ?? `Update by ${u.artist_full_name ?? u.artist_username}`}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 192px, (max-width: 1024px) 25vw, 16vw"
+                  />
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                    {u.caption && (
+                      <p className="text-xs leading-snug line-clamp-3 mb-1">{u.caption}</p>
+                    )}
+                    <p className="text-xs font-semibold truncate">
+                      {u.artist_full_name ?? u.artist_username}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
