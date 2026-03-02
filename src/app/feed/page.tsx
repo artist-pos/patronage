@@ -26,6 +26,7 @@ function FeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   return (
     <Link
       href={`/projects/${u.id}?from=feed`}
+      scroll={false}
       className="group block mb-2 border border-border break-inside-avoid bg-background"
     >
       {/* Image — own overflow-hidden so zoom stays clipped */}

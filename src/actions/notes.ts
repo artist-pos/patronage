@@ -16,6 +16,20 @@ export async function addNote(updateId: string, artistId: string, content: strin
   revalidatePath(`/projects/${updateId}`);
 }
 
+export async function deleteNote(noteId: string, updateId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  await supabase
+    .from("project_notes")
+    .delete()
+    .eq("id", noteId)
+    .eq("sender_id", user.id); // only own notes
+
+  revalidatePath(`/projects/${updateId}`);
+}
+
 export async function toggleNoteVisibility(noteId: string, isVisible: boolean) {
   const supabase = await createClient();
   const { error } = await supabase

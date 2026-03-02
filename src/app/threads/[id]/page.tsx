@@ -39,7 +39,7 @@ export default async function ThreadPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isOwner = !!user && user.id === thread.project.artist_id;
-  const canNote = !!user && !isOwner;
+  const canNote = !!user; // any authenticated user, including artist (for context/specs)
 
   const { project, posts } = thread;
   const artistName = project.artist_full_name ?? project.artist_username;
@@ -106,6 +106,7 @@ export default async function ThreadPage({ params }: Props) {
               post={post}
               isFirst={i === 0}
               canNote={canNote}
+              currentUserId={user?.id}
             />
           ))}
         </div>
@@ -118,10 +119,12 @@ function ThreadPostItem({
   post,
   isFirst,
   canNote,
+  currentUserId,
 }: {
   post: ThreadPost;
   isFirst: boolean;
   canNote: boolean;
+  currentUserId?: string;
 }) {
   return (
     <div className="relative pl-10 pb-12">
@@ -170,7 +173,7 @@ function ThreadPostItem({
         {/* Notes */}
         {(post.notes.length > 0 || canNote) && (
           <div className="space-y-4 border-t border-border pt-4">
-            <NotesList notes={post.notes} />
+            <NotesList notes={post.notes} currentUserId={currentUserId} />
             {canNote && (
               <AddNoteForm updateId={post.id} artistId={post.artist_id} />
             )}

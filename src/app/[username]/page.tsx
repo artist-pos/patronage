@@ -272,7 +272,7 @@ export default async function ArtistProfilePage({ params }: Props) {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 md:gap-2">
               {images.map((img) => (
                 <div key={img.id} className="space-y-1.5">
-                  <div className="relative aspect-square border border-border overflow-hidden">
+                  <div className="relative h-[300px] border border-border overflow-hidden">
                     <Image
                       src={img.url}
                       alt={img.caption ?? "Portfolio work"}
@@ -291,7 +291,7 @@ export default async function ArtistProfilePage({ params }: Props) {
         )}
 
         {/* ── Studio Updates Carousel — below portfolio ── */}
-        <StudioCarousel updates={studioUpdates} artistUsername={profile.username} />
+        <StudioCarousel updates={studioUpdates} artistUsername={profile.username} isOwner={isOwner} />
 
         {/* ── Exhibition History ── */}
         {exhibitions.length > 0 && (

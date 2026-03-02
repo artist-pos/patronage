@@ -49,8 +49,8 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     from === "thread" ? "← Back to thread" :
     from === "profile" && u ? "← Back to profile" :
     "← Back to feed";
-  // Non-owners who are logged in can leave notes
-  const canNote = !!user && !isOwner;
+  // Any authenticated user can leave a note (including the artist — for context/specs)
+  const canNote = !!user;
 
   const name = update.artist_full_name ?? update.artist_username;
   const date = new Date(update.created_at).toLocaleDateString("en-NZ", {
@@ -62,8 +62,8 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 space-y-8">
 
-      {/* Back — context-aware */}
-      <Link href={backHref} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+      {/* Back — context-aware; scroll={false} preserves scroll position on the source page */}
+      <Link href={backHref} scroll={false} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
         {backLabel}
       </Link>
 
@@ -113,7 +113,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
       {/* Notes */}
       {(notes.length > 0 || canNote) && (
         <div className="space-y-6 border-t border-border pt-8">
-          <NotesList notes={notes} />
+          <NotesList notes={notes} currentUserId={user?.id} />
           {canNote && (
             <AddNoteForm updateId={update.id} artistId={update.artist_id} />
           )}
