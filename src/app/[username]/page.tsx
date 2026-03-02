@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
+import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 interface Props {
@@ -136,6 +137,9 @@ export default async function ArtistProfilePage({ params }: Props) {
               )}
 
               {canMessage && <MessageButton otherUserId={profile.id} />}
+              {isOwner && (
+                <CreateUpdateModal profileId={profile.id} label="Post a studio update +" />
+              )}
             </div>
 
             {/* Right sidecar: socials + CV link */}

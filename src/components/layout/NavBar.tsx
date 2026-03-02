@@ -22,6 +22,7 @@ interface NavBarProps {
 const NAV_LINKS = [
   { href: "/opportunities", label: "Opportunities" },
   { href: "/artists", label: "Artists" },
+  { href: "/feed", label: "Feed" },
   { href: "/partners", label: "Partners" },
 ];
 
