@@ -143,6 +143,27 @@ export interface ProjectUpdateWithArtist extends ProjectUpdate {
   artist_avatar_url: string | null;
 }
 
+export interface ProjectNote {
+  id: string;
+  update_id: string;
+  artist_id: string;
+  sender_id: string;
+  content: string;
+  is_visible: boolean;
+  created_at: string;
+}
+
+export interface NoteWithSender extends ProjectNote {
+  sender_name: string;
+}
+
+export interface Follow {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
 export interface ConversationWithOther {
   id: string;
   other_user_id: string;

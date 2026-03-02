@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
+import { getVisibleNotes } from "@/lib/notes";
+import { NotesList } from "@/components/projects/NotesList";
+import { AddNoteForm } from "@/components/projects/AddNoteForm";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -24,8 +28,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProjectPage({ params }: Props) {
   const { id } = await params;
-  const update = await getUpdateById(id);
+  const [update, notes] = await Promise.all([
+    getUpdateById(id),
+    getVisibleNotes(id),
+  ]);
   if (!update) notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = !!user && user.id === update.artist_id;
+  // Non-owners who are logged in can leave notes
+  const canNote = !!user && !isOwner;
 
   const name = update.artist_full_name ?? update.artist_username;
   const date = new Date(update.created_at).toLocaleDateString("en-NZ", {
@@ -84,6 +97,17 @@ export default async function ProjectPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Notes */}
+      {(notes.length > 0 || canNote) && (
+        <div className="space-y-6 border-t border-border pt-8">
+          <NotesList notes={notes} />
+          {canNote && (
+            <AddNoteForm updateId={update.id} artistId={update.artist_id} />
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

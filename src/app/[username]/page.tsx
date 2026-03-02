@@ -4,12 +4,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getPortfolioImages } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
+import { isFollowing } from "@/lib/follows";
 import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
+import { FollowButton } from "@/components/profile/FollowButton";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 interface Props {
@@ -56,9 +58,10 @@ export default async function ArtistProfilePage({ params }: Props) {
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
 
-  const [images, studioUpdates] = await Promise.all([
+  const [images, studioUpdates, alreadyFollowing] = await Promise.all([
     getPortfolioImages(profile.id),
     getArtistUpdates(profile.id),
+    user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
   ]);
 
   const displayName = profile.full_name ?? profile.username;
@@ -141,7 +144,12 @@ export default async function ArtistProfilePage({ params }: Props) {
                 <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
               )}
 
-              {canMessage && <MessageButton otherUserId={profile.id} />}
+              {canMessage && (
+                <div className="flex items-center gap-3">
+                  <MessageButton otherUserId={profile.id} />
+                  <FollowButton followingId={profile.id} initialIsFollowing={alreadyFollowing} />
+                </div>
+              )}
               {isOwner && (
                 <CreateUpdateModal profileId={profile.id} label="Post a studio update +" />
               )}

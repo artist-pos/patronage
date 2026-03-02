@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getProfileStats } from "@/lib/profileAnalytics";
+import { getFollowerCount } from "@/lib/follows";
 
 export const metadata = { title: "My Analytics — Patronage" };
 
@@ -35,7 +36,10 @@ export default async function ProfileAnalyticsPage() {
   const profile = await getProfileById(user.id);
   if (!profile) redirect("/onboarding");
 
-  const stats = await getProfileStats(user.id);
+  const [stats, followerCount] = await Promise.all([
+    getProfileStats(user.id),
+    getFollowerCount(user.id),
+  ]);
   const displayName = profile.full_name ?? profile.username;
 
   return (
@@ -74,6 +78,11 @@ export default async function ProfileAnalyticsPage() {
           label="Messages Received"
           value={stats.messagesReceived}
           description="Messages sent to you through Patronage"
+        />
+        <StatCard
+          label="Followers"
+          value={followerCount}
+          description="Artists and patrons following your work (not shown publicly)"
         />
       </div>
 
