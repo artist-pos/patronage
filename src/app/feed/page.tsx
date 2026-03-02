@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getLatestUpdates } from "@/lib/feed";
+import { getArtistProjects } from "@/lib/projects";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
@@ -25,7 +26,7 @@ function FeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   const name = u.artist_full_name ?? u.artist_username;
   return (
     <Link
-      href={`/projects/${u.id}?from=feed`}
+      href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`}
       scroll={false}
       className="group block mb-2 border border-border break-inside-avoid bg-background"
     >
@@ -85,7 +86,10 @@ export default async function FeedPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const profile = user ? await getProfileById(user.id) : null;
 
-  const updates = await getLatestUpdates(60);
+  const [updates, userProjects] = await Promise.all([
+    getLatestUpdates(60),
+    profile ? getArtistProjects(profile.id) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
@@ -97,7 +101,11 @@ export default async function FeedPage() {
           <p className="text-sm text-muted-foreground">Work in progress from the Patronage community.</p>
         </div>
         {profile && (
-          <CreateUpdateModal profileId={profile.id} label="New update +" />
+          <CreateUpdateModal
+            profileId={profile.id}
+            label="New update +"
+            projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+          />
         )}
       </div>
 

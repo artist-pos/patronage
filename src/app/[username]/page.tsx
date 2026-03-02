@@ -145,55 +145,62 @@ export default async function ArtistProfilePage({ params }: Props) {
               {profile.bio && (
                 <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
               )}
-
-              {canMessage && (
-                <div className="flex items-center gap-3">
-                  <MessageButton otherUserId={profile.id} />
-                  <FollowButton followingId={profile.id} initialIsFollowing={alreadyFollowing} />
-                </div>
-              )}
-              {isOwner && (
-                <CreateUpdateModal profileId={profile.id} label="Post a studio update +" />
-              )}
             </div>
 
-            {/* Right sidecar: socials + CV link */}
-            {(profile.website_url || profile.instagram_handle || profile.cv_url) && (
+            {/* Right sidecar: action buttons + links */}
+            {(isOwner || canMessage || profile.website_url || profile.instagram_handle || profile.cv_url) && (
               <div className="flex flex-col gap-2 lg:text-right lg:items-end shrink-0 pt-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-                  Links
-                </p>
-                {profile.website_url && (
-                  <TrackedLink
-                    href={profile.website_url}
+                {isOwner && (
+                  <CreateUpdateModal
                     profileId={profile.id}
-                    username={profile.username}
-                    eventType="website_click"
-                    className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                  >
-                    {profile.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                  </TrackedLink>
+                    label="Post a studio update +"
+                    projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+                  />
                 )}
-                {profile.instagram_handle && (
-                  <a
-                    href={`https://instagram.com/${profile.instagram_handle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                  >
-                    @{profile.instagram_handle}
-                  </a>
+                {canMessage && (
+                  <div className="flex items-center gap-2">
+                    <FollowButton followingId={profile.id} initialIsFollowing={alreadyFollowing} />
+                    <MessageButton otherUserId={profile.id} />
+                  </div>
                 )}
-                {profile.cv_url && (
-                  <TrackedLink
-                    href={profile.cv_url}
-                    profileId={profile.id}
-                    username={profile.username}
-                    eventType="cv_click"
-                    className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                  >
-                    Download CV →
-                  </TrackedLink>
+                {(profile.website_url || profile.instagram_handle || profile.cv_url) && (
+                  <div className="flex flex-col gap-2 lg:items-end mt-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                      Links
+                    </p>
+                    {profile.website_url && (
+                      <TrackedLink
+                        href={profile.website_url}
+                        profileId={profile.id}
+                        username={profile.username}
+                        eventType="website_click"
+                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
+                      >
+                        {profile.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                      </TrackedLink>
+                    )}
+                    {profile.instagram_handle && (
+                      <a
+                        href={`https://instagram.com/${profile.instagram_handle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
+                      >
+                        @{profile.instagram_handle}
+                      </a>
+                    )}
+                    {profile.cv_url && (
+                      <TrackedLink
+                        href={profile.cv_url}
+                        profileId={profile.id}
+                        username={profile.username}
+                        eventType="cv_click"
+                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
+                      >
+                        Download CV →
+                      </TrackedLink>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -233,52 +240,23 @@ export default async function ArtistProfilePage({ params }: Props) {
           </section>
         )}
 
-        {/* ── Projects ── */}
-        {artistProjects.length > 0 && (
-          <section className="space-y-4 border-t border-border pt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Projects
-            </h2>
-            <div className="flex flex-col gap-2">
-              {artistProjects.map((proj) => (
-                <Link
-                  key={proj.id}
-                  href={`/threads/${proj.id}`}
-                  className="group flex items-center justify-between border border-border px-4 py-3 hover:border-black transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-semibold group-hover:underline underline-offset-2">
-                      {proj.title}
-                    </p>
-                    {proj.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {proj.description}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-4">View thread →</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ── Portfolio ── */}
         {images.length > 0 && (
           <section className="space-y-6 border-t border-border pt-10">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
               Portfolio
             </h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 md:gap-2">
+            <div className="flex flex-wrap gap-2">
               {images.map((img) => (
                 <div key={img.id} className="space-y-1.5">
-                  <div className="relative h-[300px] border border-border overflow-hidden">
+                  <div className="h-[300px] border border-border overflow-hidden">
                     <Image
                       src={img.url}
                       alt={img.caption ?? "Portfolio work"}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                      width={600}
+                      height={300}
+                      unoptimized
+                      style={{ height: "300px", width: "auto", display: "block" }}
                     />
                   </div>
                   {img.caption && (
@@ -291,7 +269,13 @@ export default async function ArtistProfilePage({ params }: Props) {
         )}
 
         {/* ── Studio Updates Carousel — below portfolio ── */}
-        <StudioCarousel updates={studioUpdates} artistUsername={profile.username} isOwner={isOwner} />
+        <StudioCarousel
+          updates={studioUpdates}
+          artistUsername={profile.username}
+          isOwner={isOwner}
+          profileId={profile.id}
+          projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+        />
 
         {/* ── Exhibition History ── */}
         {exhibitions.length > 0 && (

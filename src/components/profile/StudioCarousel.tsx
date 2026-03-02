@@ -6,15 +6,19 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { deleteUpdate } from "@/actions/updates";
+import { AssignProjectButton } from "./AssignProjectButton";
+import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
   updates: ProjectUpdateWithArtist[];
   artistUsername: string;
   isOwner?: boolean;
+  projects?: { id: string; title: string }[];
+  profileId?: string;
 }
 
-// Portfolio grid height is h-[300px]; carousel is 75% = 225px
+// Portfolio height is h-[300px]; carousel is 75% = 225px
 const CAROUSEL_H = 225;
 const ROW_SIZE = 8;
 
@@ -27,7 +31,7 @@ function formatTimestamp(iso: string): string {
   return `${hh}:${mm}, ${dd} ${mon}`;
 }
 
-export function StudioCarousel({ updates, artistUsername, isOwner = false }: Props) {
+export function StudioCarousel({ updates, artistUsername, isOwner = false, projects = [], profileId }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
@@ -45,23 +49,34 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false }: Pro
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           Studio Updates
         </h2>
-        {visible.length > ROW_SIZE && (
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-          >
-            {expanded ? "Show less" : `View all ${visible.length}`}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {visible.length > ROW_SIZE && (
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              {expanded ? "Show less" : `View all ${visible.length}`}
+            </button>
+          )}
+          {isOwner && profileId && (
+            <CreateUpdateModal
+              profileId={profileId}
+              label="+"
+              projects={projects}
+              className="bg-black text-white px-3 py-1 text-xs hover:opacity-80 transition-opacity"
+            />
+          )}
+        </div>
       </div>
 
       {expanded ? (
-        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+        <div className="flex flex-wrap gap-2 items-start">
           {visible.map((u) => (
             <Tile
               key={u.id}
               u={u}
               isOwner={isOwner}
+              projects={projects}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed={false}
@@ -69,12 +84,13 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false }: Pro
           ))}
         </div>
       ) : (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none items-start">
           {visible.slice(0, ROW_SIZE).map((u) => (
             <Tile
               key={u.id}
               u={u}
               isOwner={isOwner}
+              projects={projects}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed
@@ -98,19 +114,27 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false }: Pro
 function Tile({
   u,
   isOwner,
+  projects,
   from,
   onDeleted,
   fixed,
 }: {
   u: ProjectUpdateWithArtist;
   isOwner: boolean;
+  projects: { id: string; title: string }[];
   from?: string;
   onDeleted: (id: string) => void;
   fixed: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const href = from ? `/projects/${u.id}?from=${from}` : `/projects/${u.id}`;
+
+  // Project updates → thread; standalone updates → single update page
+  const href = u.project_id
+    ? `/threads/${u.project_id}`
+    : from
+    ? `/projects/${u.id}?from=${from}`
+    : `/projects/${u.id}`;
 
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
@@ -122,50 +146,60 @@ function Tile({
     });
   }
 
-  const style = fixed ? { width: CAROUSEL_H, height: CAROUSEL_H } : {};
-
   return (
-    <div
-      className={`group relative border border-border overflow-hidden bg-muted${fixed ? " shrink-0" : " aspect-square"}`}
-      style={style}
-    >
-      <Link href={href} className="block w-full h-full">
-        <Image
-          src={u.image_url}
-          alt={u.caption ?? "Studio update"}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes={fixed ? `${CAROUSEL_H}px` : "(max-width: 640px) 25vw, 12vw"}
-        />
-        {/* Caption + timestamp: always visible for owner, hover for visitors */}
-        {(isOwner || u.caption) && (
-          <div
-            className={`absolute inset-0 bg-background/80 flex flex-col justify-end p-2 transition-opacity ${
-              isOwner ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            }`}
-          >
-            {isOwner && (
-              <p className="text-[9px] font-mono text-muted-foreground leading-tight">
-                {formatTimestamp(u.created_at)}
-              </p>
-            )}
-            {u.caption && (
-              <p className="text-[10px] line-clamp-2 leading-snug mt-0.5">{u.caption}</p>
-            )}
-          </div>
-        )}
-      </Link>
+    <div className={`flex-none flex flex-col gap-1${fixed ? "" : ""}`}>
+      {/* Image — no overlay, natural aspect ratio at fixed height */}
+      <div
+        className="group relative border border-border overflow-hidden bg-muted"
+        style={{ height: CAROUSEL_H, width: "fit-content" }}
+      >
+        <Link href={href} className="block h-full">
+          <Image
+            src={u.image_url}
+            alt={u.caption ?? "Studio update"}
+            width={400}
+            height={CAROUSEL_H}
+            unoptimized
+            style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
+          />
+        </Link>
 
-      {/* Owner delete button */}
-      {isOwner && (
-        <button
-          onClick={handleDelete}
-          disabled={pending}
-          aria-label="Delete update"
-          className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white disabled:opacity-40"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        {/* Owner controls: assign to project (top-left) + delete (top-right) */}
+        {isOwner && (
+          <>
+            <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              <AssignProjectButton
+                updateId={u.id}
+                currentProjectId={u.project_id}
+                projects={projects}
+              />
+            </div>
+            <button
+              onClick={handleDelete}
+              disabled={pending}
+              aria-label="Delete update"
+              className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white disabled:opacity-40"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Caption + timestamp below the image — no overlay */}
+      {(u.caption || isOwner) && (
+        <div className="space-y-0.5" style={{ maxWidth: CAROUSEL_H }}>
+          {u.caption && (
+            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
+              {u.caption}
+            </p>
+          )}
+          {isOwner && (
+            <p className="text-[9px] font-mono text-muted-foreground">
+              {formatTimestamp(u.created_at)}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

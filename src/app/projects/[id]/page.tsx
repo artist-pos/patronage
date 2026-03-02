@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
 import { getVisibleNotes } from "@/lib/notes";
-import { NotesList } from "@/components/projects/NotesList";
-import { AddNoteForm } from "@/components/projects/AddNoteForm";
+import { getProfileById } from "@/lib/profiles";
+import { NotesSection } from "@/components/projects/NotesSection";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,7 +38,11 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const isOwner = !!user && user.id === update.artist_id;
+
+  const currentUserProfile = user ? await getProfileById(user.id) : null;
+  const currentUserName = currentUserProfile?.full_name ?? currentUserProfile?.username;
+  const currentUserUsername = currentUserProfile?.username;
+  const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
 
   // Back button — context-aware
   const backHref =
@@ -49,6 +53,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     from === "thread" ? "← Back to thread" :
     from === "profile" && u ? "← Back to profile" :
     "← Back to feed";
+
   // Any authenticated user can leave a note (including the artist — for context/specs)
   const canNote = !!user;
 
@@ -113,10 +118,15 @@ export default async function ProjectPage({ params, searchParams }: Props) {
       {/* Notes */}
       {(notes.length > 0 || canNote) && (
         <div className="space-y-6 border-t border-border pt-8">
-          <NotesList notes={notes} currentUserId={user?.id} />
-          {canNote && (
-            <AddNoteForm updateId={update.id} artistId={update.artist_id} />
-          )}
+          <NotesSection
+            initialNotes={notes}
+            updateId={update.id}
+            artistId={update.artist_id}
+            currentUserId={user?.id}
+            currentUserName={currentUserName}
+            currentUserUsername={currentUserUsername}
+            currentUserAvatarUrl={currentUserAvatarUrl}
+          />
         </div>
       )}
 

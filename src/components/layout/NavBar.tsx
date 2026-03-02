@@ -18,12 +18,10 @@ interface NavBarProps {
   signOut: () => Promise<void>;
 }
 
-// Duplicated here for the mobile drawer only
 const NAV_LINKS = [
-  { href: "/opportunities", label: "Opportunities" },
-  { href: "/artists", label: "Artists" },
   { href: "/feed", label: "Feed" },
-  { href: "/partners", label: "Partners" },
+  { href: "/artists", label: "Artists" },
+  { href: "/opportunities", label: "Opportunities" },
 ];
 
 export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarProps) {
@@ -34,46 +32,40 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
       {/* ── Desktop right column ──────────────────────── */}
       <div className="hidden sm:flex items-center gap-4 text-sm">
         {isLoggedIn ? (
-          <>
-            {/* Messages with unread dot */}
-            <Link
-              href="/messages"
-              className="relative text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Messages
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-2.5 w-1.5 h-1.5 bg-black rounded-full" />
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
+              {username ?? "My Account"}
+              <ChevronDown className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 border border-black">
+              {username && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/${username}`}>View Profile</Link>
+                </DropdownMenuItem>
               )}
-            </Link>
-
-            {/* Account dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
-                {username ?? "My Account"}
-                <ChevronDown className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 border border-black">
-                {username && (
-                  <DropdownMenuItem asChild>
-                    <Link href={`/${username}`}>View Public Profile</Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link href="/profile/edit">Edit Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile/analytics">My Analytics</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile/notes">Manage Notes</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => signOut()}>
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
+              <DropdownMenuItem asChild>
+                <Link href="/messages" className="flex items-center gap-2">
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="w-1.5 h-1.5 bg-black rounded-full" />
+                  )}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile/analytics">Analytics</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile/notes">Manage Notes</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile/edit">Edit Profile</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => signOut()}>
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <Link
             href="/auth/login"
@@ -86,7 +78,7 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
 
       {/* ── Mobile hamburger ─────────────────────────── */}
       <button
-        className="sm:hidden flex flex-col gap-1.5 p-1"
+        className="sm:hidden flex flex-col gap-1.5 p-1 shrink-0"
         onClick={() => setOpen((o) => !o)}
         aria-label="Toggle menu"
       >
@@ -117,30 +109,9 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
                     onClick={() => setOpen(false)}
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    View Public Profile
+                    View Profile
                   </Link>
                 )}
-                <Link
-                  href="/profile/edit"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Edit Profile
-                </Link>
-                <Link
-                  href="/profile/analytics"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  My Analytics
-                </Link>
-                <Link
-                  href="/profile/notes"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Manage Notes
-                </Link>
                 <Link
                   href="/messages"
                   onClick={() => setOpen(false)}
@@ -150,6 +121,27 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
                   {unreadCount > 0 && (
                     <span className="w-1.5 h-1.5 bg-black rounded-full" />
                   )}
+                </Link>
+                <Link
+                  href="/profile/analytics"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Analytics
+                </Link>
+                <Link
+                  href="/profile/notes"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Manage Notes
+                </Link>
+                <Link
+                  href="/profile/edit"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Edit Profile
                 </Link>
                 <form action={signOut}>
                   <button

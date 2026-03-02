@@ -8,6 +8,7 @@ export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArt
     .select(`
       id,
       artist_id,
+      project_id,
       image_url,
       caption,
       created_at,
@@ -25,7 +26,7 @@ export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArt
   return (data ?? []).map((row: any) => ({
     id: row.id,
     artist_id: row.artist_id,
-    project_id: null,
+    project_id: row.project_id ?? null,
     image_url: row.image_url,
     caption: row.caption,
     created_at: row.created_at,
@@ -76,6 +77,7 @@ export async function getUpdateById(id: string): Promise<ProjectUpdateWithArtist
     .select(`
       id,
       artist_id,
+      project_id,
       image_url,
       caption,
       created_at,
@@ -93,7 +95,7 @@ export async function getUpdateById(id: string): Promise<ProjectUpdateWithArtist
   return {
     id: row.id,
     artist_id: row.artist_id,
-    project_id: null,
+    project_id: row.project_id ?? null,
     image_url: row.image_url,
     caption: row.caption,
     created_at: row.created_at,

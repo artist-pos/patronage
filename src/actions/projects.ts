@@ -15,7 +15,7 @@ export async function createProject(title: string, description: string | null) {
     .single();
 
   if (error) throw new Error(error.message);
-  revalidatePath("/profile/edit");
+  revalidatePath("/feed");
   return data.id as string;
 }
 
@@ -27,5 +27,4 @@ export async function assignUpdateToProject(updateId: string, projectId: string 
     .eq("id", updateId);
 
   if (error) throw new Error(error.message);
-  revalidatePath("/profile/edit");
 }

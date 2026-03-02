@@ -15,10 +15,9 @@ async function signOut() {
 }
 
 const NAV_LINKS = [
-  { href: "/opportunities", label: "Opportunities" },
-  { href: "/artists", label: "Artists" },
   { href: "/feed", label: "Feed" },
-  { href: "/partners", label: "Partners" },
+  { href: "/artists", label: "Artists" },
+  { href: "/opportunities", label: "Opportunities" },
 ];
 
 export async function Header() {
@@ -32,7 +31,7 @@ export async function Header() {
 
   return (
     <header className="border-b border-border sticky top-0 z-40 bg-background">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-6">
+      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-6">
 
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-2 shrink-0 text-base font-semibold tracking-tight">
@@ -40,11 +39,11 @@ export async function Header() {
           <span className="hidden sm:inline">Patronage</span>
         </Link>
 
-        {/* ── Search bar (desktop, flex-1 after logo) ── */}
+        {/* ── Search bar ── */}
         <SearchCommand />
 
-        {/* ── Center nav (desktop only) ── */}
-        <nav className="hidden sm:flex items-center gap-8 text-sm ml-auto">
+        {/* ── Center nav (desktop only, absolutely centered) ── */}
+        <nav className="hidden sm:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 text-sm pointer-events-auto">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.href}
@@ -57,12 +56,14 @@ export async function Header() {
         </nav>
 
         {/* ── Account + mobile hamburger ── */}
-        <NavBar
-          isLoggedIn={!!user}
-          username={profile?.username ?? null}
-          unreadCount={unreadCount}
-          signOut={signOut}
-        />
+        <div className="ml-auto">
+          <NavBar
+            isLoggedIn={!!user}
+            username={profile?.username ?? null}
+            unreadCount={unreadCount}
+            signOut={signOut}
+          />
+        </div>
 
       </div>
     </header>

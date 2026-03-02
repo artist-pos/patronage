@@ -2,12 +2,31 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { PortfolioImage } from "@/types/database";
 
 const MAX_IMAGES = 10;
 const MAX_PX = 1600;
+const THUMB_H = 112; // h-28 in px
 
 async function resizeToJpeg(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -32,6 +51,82 @@ async function resizeToJpeg(file: File): Promise<Blob> {
   });
 }
 
+// ── Sortable thumbnail item ──────────────────────────────────────────────────
+function SortableThumb({
+  img,
+  isPending,
+  onRemove,
+  onCaptionBlur,
+}: {
+  img: PortfolioImage;
+  isPending: boolean;
+  onRemove: (img: PortfolioImage) => void;
+  onCaptionBlur: (id: string, caption: string | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: img.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.25 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex-none flex flex-col gap-1.5"
+    >
+      {/* Thumbnail — fixed height, width follows natural aspect ratio */}
+      <div
+        className="relative group border border-border overflow-hidden bg-muted"
+        style={{ height: THUMB_H, width: "fit-content" }}
+      >
+        <Image
+          src={img.url}
+          alt="Portfolio image"
+          width={300}
+          height={THUMB_H}
+          unoptimized
+          style={{ height: THUMB_H, width: "auto", display: "block" }}
+        />
+
+        {/* Drag handle — always visible, top-left */}
+        <div
+          {...listeners}
+          {...attributes}
+          className="absolute top-1 left-1 bg-background/80 p-0.5 cursor-grab active:cursor-grabbing touch-none"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+        </div>
+
+        {/* Remove overlay — on hover */}
+        <button
+          onClick={() => onRemove(img)}
+          disabled={isPending}
+          className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+        >
+          Remove
+        </button>
+      </div>
+
+      {/* Caption — width matches thumbnail */}
+      <input
+        type="text"
+        defaultValue={img.caption ?? ""}
+        placeholder="Title / Description"
+        maxLength={120}
+        onBlur={(e) => onCaptionBlur(img.id, e.target.value.trim() || null)}
+        className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
+        style={{ minWidth: "80px" }}
+      />
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
 interface Props {
   profileId: string;
   mode?: "portfolio" | "cv";
@@ -48,10 +143,13 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
   const supabase = createClient();
 
-  // Load existing portfolio images
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   useEffect(() => {
     if (!isPortfolio) {
-      // Load CV url from profile
       supabase
         .from("profiles")
         .select("cv_url")
@@ -74,10 +172,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
     if (isPortfolio) {
       const remaining = MAX_IMAGES - images.length;
-      if (remaining <= 0) {
-        setError(`Maximum ${MAX_IMAGES} images reached.`);
-        return;
-      }
+      if (remaining <= 0) { setError(`Maximum ${MAX_IMAGES} images reached.`); return; }
       const toUpload = Array.from(files).slice(0, remaining);
       setUploading(true);
 
@@ -107,7 +202,6 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       setImages((prev) => [...prev, ...uploaded]);
       setUploading(false);
     } else {
-      // CV upload
       const file = files[0];
       if (!file) return;
       setUploading(true);
@@ -133,6 +227,27 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       await supabase.from("portfolio_images").delete().eq("id", img.id);
       setImages((prev) => prev.filter((i) => i.id !== img.id));
     });
+  }
+
+  async function handleCaptionBlur(id: string, caption: string | null) {
+    await supabase.from("portfolio_images").update({ caption }).eq("id", id);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = images.findIndex((i) => i.id === active.id);
+    const newIndex = images.findIndex((i) => i.id === over.id);
+    const reordered = arrayMove(images, oldIndex, newIndex);
+    setImages(reordered);
+
+    // Persist new positions to Supabase
+    await Promise.all(
+      reordered.map((img, i) =>
+        supabase.from("portfolio_images").update({ position: i }).eq("id", img.id)
+      )
+    );
   }
 
   if (!isPortfolio) {
@@ -164,42 +279,29 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   return (
     <div className="space-y-4">
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-          {images.map((img) => (
-            <div key={img.id} className="space-y-1.5">
-              <div className="relative group aspect-square border border-border overflow-hidden">
-                <Image
-                  src={img.url}
-                  alt="Portfolio image"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 33vw, 25vw"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={images.map((i) => i.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {/* Flex row — variable width thumbnails at fixed height */}
+            <div className="flex flex-wrap gap-3 items-start">
+              {images.map((img) => (
+                <SortableThumb
+                  key={img.id}
+                  img={img}
+                  isPending={isPending}
+                  onRemove={handleRemoveImage}
+                  onCaptionBlur={handleCaptionBlur}
                 />
-                <button
-                  onClick={() => handleRemoveImage(img)}
-                  disabled={isPending}
-                  className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                >
-                  Remove
-                </button>
-              </div>
-              <input
-                type="text"
-                defaultValue={img.caption ?? ""}
-                placeholder="Work Description / Title"
-                maxLength={120}
-                onBlur={async (e) => {
-                  const caption = e.target.value.trim() || null;
-                  await supabase
-                    .from("portfolio_images")
-                    .update({ caption })
-                    .eq("id", img.id);
-                }}
-                className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
-              />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {images.length < MAX_IMAGES && (
@@ -216,9 +318,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {images.length}/{MAX_IMAGES} images
-      </p>
+      <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images</p>
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {images.length >= MAX_IMAGES && (

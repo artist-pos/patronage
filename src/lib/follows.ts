@@ -1,5 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
 
+export interface FollowerProfile {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
+export async function getFollowers(artistId: string): Promise<FollowerProfile[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("follows")
+    .select(`
+      follower_id,
+      profiles!follows_follower_id_fkey (
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq("following_id", artistId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((row: any) => ({
+    id: row.follower_id,
+    username: row.profiles?.username ?? "",
+    full_name: row.profiles?.full_name ?? null,
+    avatar_url: row.profiles?.avatar_url ?? null,
+  }));
+}
+
 export async function getFollowerCount(artistId: string): Promise<number> {
   const supabase = await createClient();
   const { count } = await supabase

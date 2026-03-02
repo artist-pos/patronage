@@ -71,71 +71,112 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
     );
   }
 
-  /* ── Gallery card ── */
+  /* ── Compact card (homepage landing, side-by-side) ── */
+  if (compact) {
+    return (
+      <Link
+        href={`/${artist.username}`}
+        className="group flex flex-col sm:flex-row border border-black sm:h-[200px]"
+      >
+        {/* Image (desktop only) */}
+        <div className="relative hidden sm:block sm:w-1/2 overflow-hidden">
+          {artist.primary_image_url ? (
+            <Image
+              src={artist.primary_image_url}
+              alt={displayName}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="50vw"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-muted flex items-center justify-center text-4xl text-muted-foreground font-medium">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="bg-white border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden sm:w-1/2 p-4 gap-2">
+          <div className="flex items-start gap-3">
+            {artist.avatar_url && (
+              <div className="relative w-20 h-20 shrink-0 border border-black overflow-hidden">
+                <Image src={artist.avatar_url} alt={displayName} fill className="object-cover" sizes="80px" />
+              </div>
+            )}
+            <div className="flex flex-col gap-1 pt-1 min-w-0">
+              <p className="font-bold leading-snug truncate">{displayName}</p>
+              {artist.is_patronage_supported && (
+                <Badge className="text-xs font-normal bg-foreground text-background w-fit">With Patronage</Badge>
+              )}
+              {artist.country && <span className="text-xs text-muted-foreground">{artist.country}</span>}
+            </div>
+          </div>
+          {(artist.medium ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {(artist.medium ?? []).slice(0, 2).map((m) => (
+                <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">{m}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </Link>
+    );
+  }
+
+  /* ── Gallery card — horizontal bar, avatar inside info block ── */
   return (
     <Link
       href={`/${artist.username}`}
-      className={`group flex flex-col sm:flex-row border border-black ${compact ? "sm:h-[200px]" : "min-h-[320px]"}`}
+      className="group flex flex-row border border-black h-[220px]"
     >
-      {/* Left – featured image */}
-      <div className={`relative sm:aspect-auto shrink-0 overflow-hidden ${compact ? "hidden sm:block sm:w-1/2" : "aspect-[4/3] sm:w-3/5"}`}>
+      {/* Left: image strip */}
+      <div className="relative w-1/2 shrink-0 overflow-hidden bg-muted">
         {artist.primary_image_url ? (
           <Image
             src={artist.primary_image_url}
             alt={displayName}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes={compact ? "50vw" : "(max-width: 640px) 100vw, 60vw"}
+            sizes="(max-width: 1024px) 25vw, 17vw"
           />
         ) : (
-          <div className="absolute inset-0 bg-muted flex items-center justify-center text-4xl text-muted-foreground font-medium">
+          <div className="absolute inset-0 bg-muted flex items-center justify-center text-2xl text-muted-foreground font-medium">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
 
-      {/* Right – metadata */}
-      <div className={`bg-white border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden ${compact ? "sm:w-1/2 p-4 gap-2" : "sm:w-2/5 p-5 pb-6 gap-3"}`}>
-
-        {/* Avatar + name/badge */}
+      {/* Right: info block — avatar lives here, no straddle */}
+      <div className="bg-white border-l border-black flex flex-col w-1/2 p-4 gap-2 overflow-hidden">
         <div className="flex items-start gap-3">
           {artist.avatar_url && (
-            <div className={`relative shrink-0 border border-black overflow-hidden ${compact ? "w-[100px] h-[100px]" : "w-[100px] h-[100px]"}`}>
+            <div className="relative w-14 h-14 shrink-0 border border-black overflow-hidden">
               <Image
                 src={artist.avatar_url}
                 alt={displayName}
                 fill
                 className="object-cover"
-                sizes="100px"
+                sizes="56px"
               />
             </div>
           )}
           <div className="flex flex-col gap-1 pt-1 min-w-0">
-            <p className="font-bold leading-snug truncate">{displayName}</p>
+            <p className="font-bold leading-snug truncate text-sm">{displayName}</p>
             {artist.is_patronage_supported && (
               <Badge className="text-xs font-normal bg-foreground text-background w-fit">
                 With Patronage
               </Badge>
             )}
             {artist.country && (
-              <span className="text-xs text-muted-foreground">{artist.country}</span>
+              <span className="text-xs text-muted-foreground truncate">{artist.country}</span>
             )}
           </div>
         </div>
 
-        {!compact && bioTaster && (
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {bioTaster}
-          </p>
-        )}
-
         {(artist.medium ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {(compact ? (artist.medium ?? []).slice(0, 2) : (artist.medium ?? [])).map((m) => (
-              <span
-                key={m}
-                className="text-xs border border-black px-1.5 py-0.5 leading-none"
-              >
+            {(artist.medium ?? []).slice(0, 3).map((m) => (
+              <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
                 {m}
               </span>
             ))}

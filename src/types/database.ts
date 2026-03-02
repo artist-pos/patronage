@@ -164,6 +164,8 @@ export interface ProjectNote {
 
 export interface NoteWithSender extends ProjectNote {
   sender_name: string;
+  sender_username: string;
+  sender_avatar_url: string | null;
 }
 
 export interface Follow {

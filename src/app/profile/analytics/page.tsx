@@ -3,7 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getProfileStats } from "@/lib/profileAnalytics";
-import { getFollowerCount } from "@/lib/follows";
+import { getFollowerCount, getFollowers } from "@/lib/follows";
+import { FollowerAccordion } from "@/components/profile/FollowerAccordion";
 
 export const metadata = { title: "My Analytics — Patronage" };
 
@@ -36,11 +37,11 @@ export default async function ProfileAnalyticsPage() {
   const profile = await getProfileById(user.id);
   if (!profile) redirect("/onboarding");
 
-  const [stats, followerCount] = await Promise.all([
+  const [stats, followerCount, followers] = await Promise.all([
     getProfileStats(user.id),
     getFollowerCount(user.id),
+    getFollowers(user.id),
   ]);
-  const displayName = profile.full_name ?? profile.username;
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-10">
@@ -50,6 +51,17 @@ export default async function ProfileAnalyticsPage() {
         <p className="text-sm text-muted-foreground">
           How your profile is performing — last 30 days.
         </p>
+      </div>
+
+      {/* ── Followers ── */}
+      <div className="space-y-4 border-b border-border pb-8">
+        <div className="space-y-0.5">
+          <p className="text-6xl font-bold tabular-nums">{followerCount.toLocaleString()}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Total Followers
+          </p>
+        </div>
+        <FollowerAccordion followers={followers} />
       </div>
 
       {/* Stats grid */}
@@ -79,11 +91,6 @@ export default async function ProfileAnalyticsPage() {
           value={stats.messagesReceived}
           description="Messages sent to you through Patronage"
         />
-        <StatCard
-          label="Followers"
-          value={followerCount}
-          description="Artists and patrons following your work (not shown publicly)"
-        />
       </div>
 
       {/* Callout if no data yet */}
@@ -91,7 +98,7 @@ export default async function ProfileAnalyticsPage() {
         stats.cvClicks === 0 &&
         stats.websiteClicks === 0 &&
         stats.bibClicks === 0 && (
-          <p className="text-xs text-muted-foreground border border-dashed border-border rounded p-4">
+          <p className="text-xs text-muted-foreground border border-dashed border-border p-4">
             No activity recorded yet. Data starts tracking once visitors view your public profile.
             Make sure your profile is active and discoverable in the{" "}
             <Link href="/artists" className="underline underline-offset-2">
@@ -106,7 +113,7 @@ export default async function ProfileAnalyticsPage() {
         <Link href={`/${profile.username}`} className="underline underline-offset-2 hover:text-foreground transition-colors">
           View public profile →
         </Link>
-        <Link href="/onboarding" className="underline underline-offset-2 hover:text-foreground transition-colors">
+        <Link href="/profile/edit" className="underline underline-offset-2 hover:text-foreground transition-colors">
           Edit profile →
         </Link>
       </div>

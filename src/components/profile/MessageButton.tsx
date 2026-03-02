@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getOrCreateConversation } from "@/app/messages/actions";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   otherUserId: string;
@@ -27,13 +26,12 @@ export function MessageButton({ otherUserId }: Props) {
   }
 
   return (
-    <Button
+    <button
       onClick={handleClick}
       disabled={isPending}
-      variant="outline"
-      className="border-black"
+      className="bg-white text-black border border-black px-4 py-1.5 text-xs hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {isPending ? "…" : "Message"}
-    </Button>
+    </button>
   );
 }

@@ -27,7 +27,11 @@ export function FollowButton({ followingId, initialIsFollowing }: Props) {
     <button
       onClick={toggle}
       disabled={pending}
-      className="border border-black px-4 py-1.5 text-xs hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className={`px-4 py-1.5 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+        following
+          ? "bg-white text-black border border-black hover:bg-muted/50"
+          : "bg-black text-white hover:opacity-80"
+      }`}
     >
       {following ? "Unfollow" : "Follow"}
     </button>

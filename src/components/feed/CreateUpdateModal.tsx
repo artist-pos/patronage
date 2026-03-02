@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { createProject } from "@/actions/projects";
 
 const MAX_PX = 1600;
-const MAX_CAPTION = 120;
+const MAX_CAPTION = 140;
+const MAX_PROJ_TITLE = 140;
+const MAX_PROJ_LEAD = 280;
 
 async function resizeImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -36,15 +39,28 @@ interface Props {
   profileId: string;
   label?: string;
   className?: string;
+  projects?: { id: string; title: string }[];
 }
 
-export function CreateUpdateModal({ profileId, label = "New update +", className }: Props) {
+export function CreateUpdateModal({
+  profileId,
+  label = "New update +",
+  className,
+  projects = [],
+}: Props) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Project selection
+  const [projectMode, setProjectMode] = useState<"none" | "existing" | "new">("none");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [newProjectLead, setNewProjectLead] = useState("");
+
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -55,6 +71,10 @@ export function CreateUpdateModal({ profileId, label = "New update +", className
     setBlob(null);
     setCaption("");
     setError(null);
+    setProjectMode("none");
+    setSelectedProjectId("");
+    setNewProjectTitle("");
+    setNewProjectLead("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -77,24 +97,56 @@ export function CreateUpdateModal({ profileId, label = "New update +", className
       if (upErr) { setError(upErr.message); setUploading(false); return; }
 
       const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
+
+      let projectId: string | null = null;
+      if (projectMode === "existing" && selectedProjectId) {
+        projectId = selectedProjectId;
+      } else if (projectMode === "new" && newProjectTitle.trim()) {
+        projectId = await createProject(
+          newProjectTitle.trim(),
+          newProjectLead.trim() || null
+        );
+      }
+
       const { error: dbErr } = await supabase
         .from("project_updates")
-        .insert({ artist_id: profileId, image_url: urlData.publicUrl, caption: caption.trim() || null });
+        .insert({
+          artist_id: profileId,
+          image_url: urlData.publicUrl,
+          caption: caption.trim() || null,
+          project_id: projectId,
+        });
       if (dbErr) { setError(dbErr.message); setUploading(false); return; }
 
       handleClose();
       router.refresh();
-    } catch {
-      setError("Failed to post update.");
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to post update.");
     }
     setUploading(false);
   }
+
+  function handleProjectSelectChange(value: string) {
+    if (value === "none") {
+      setProjectMode("none");
+    } else if (value === "new") {
+      setProjectMode("new");
+    } else {
+      setProjectMode("existing");
+      setSelectedProjectId(value);
+    }
+  }
+
+  const selectValue =
+    projectMode === "none" ? "none" :
+    projectMode === "new" ? "new" :
+    selectedProjectId;
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className={className ?? "border border-black px-4 py-2 text-sm hover:bg-black hover:text-white transition-colors"}
+        className={className ?? "bg-black text-white px-4 py-2 text-sm hover:opacity-80 transition-opacity"}
       >
         {label}
       </button>
@@ -104,7 +156,7 @@ export function CreateUpdateModal({ profileId, label = "New update +", className
           className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-4"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="w-full max-w-md bg-background border border-black">
+          <div className="w-full max-w-md bg-background border border-black max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <p className="text-sm font-semibold">Post a Studio Update</p>
               <button onClick={handleClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -157,6 +209,53 @@ export function CreateUpdateModal({ profileId, label = "New update +", className
                 </span>
               </div>
 
+              {/* Project dropdown */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Project
+                </p>
+                <select
+                  value={selectValue}
+                  onChange={(e) => handleProjectSelectChange(e.target.value)}
+                  className="w-full border border-black text-sm px-3 py-2 outline-none bg-background"
+                >
+                  <option value="none">None / Standalone Update</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                  <option value="new">+ Create New Project</option>
+                </select>
+
+                {projectMode === "new" && (
+                  <div className="space-y-2 pl-3 border-l-2 border-black">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newProjectTitle}
+                        onChange={(e) => setNewProjectTitle(e.target.value.slice(0, MAX_PROJ_TITLE))}
+                        placeholder="Project title…"
+                        className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                        {newProjectTitle.length}/{MAX_PROJ_TITLE}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <textarea
+                        value={newProjectLead}
+                        onChange={(e) => setNewProjectLead(e.target.value.slice(0, MAX_PROJ_LEAD))}
+                        placeholder="Project description… (optional)"
+                        rows={2}
+                        className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+                      />
+                      <span className="absolute bottom-2 right-2 text-xs text-muted-foreground font-mono">
+                        {newProjectLead.length}/{MAX_PROJ_LEAD}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {error && <p className="text-xs text-destructive">{error}</p>}
 
               <div className="flex items-center justify-end gap-4">
@@ -168,7 +267,7 @@ export function CreateUpdateModal({ profileId, label = "New update +", className
                 </button>
                 <button
                   onClick={handlePost}
-                  disabled={!blob || uploading}
+                  disabled={!blob || uploading || (projectMode === "new" && !newProjectTitle.trim())}
                   className="border border-black px-5 py-2 text-sm hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {uploading ? "Posting…" : "Post"}

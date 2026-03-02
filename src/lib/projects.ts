@@ -70,38 +70,41 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
 
   const updates = (updatesData ?? []) as any[];
 
-  // Fetch all visible notes for all updates in one query
+  // Fetch all visible notes for all updates — two-step to avoid broken join
+  // (project_notes.sender_id → auth.users, not profiles directly)
   const updateIds = updates.map((u) => u.id);
   let allNotes: any[] = [];
   if (updateIds.length > 0) {
     const { data: notesData } = await supabase
       .from("project_notes")
-      .select(`
-        id,
-        update_id,
-        artist_id,
-        sender_id,
-        content,
-        is_visible,
-        created_at,
-        profiles!project_notes_sender_id_fkey (
-          full_name,
-          username
-        )
-      `)
+      .select("id, update_id, artist_id, sender_id, content, is_visible, created_at")
       .in("update_id", updateIds)
       .eq("is_visible", true)
       .order("created_at", { ascending: true });
     allNotes = notesData ?? [];
   }
 
+  // Fetch profiles for all note senders in one query
+  let profileMap = new Map<string, any>();
+  if (allNotes.length > 0) {
+    const senderIds = [...new Set(allNotes.map((n) => n.sender_id))];
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .in("id", senderIds);
+    profileMap = new Map((profilesData ?? []).map((p: any) => [p.id, p]));
+  }
+
   const notesByUpdate = allNotes.reduce<Record<string, NoteWithSender[]>>((acc, n) => {
+    const profile = profileMap.get(n.sender_id);
     const mapped: NoteWithSender = {
       id: n.id,
       update_id: n.update_id,
       artist_id: n.artist_id,
       sender_id: n.sender_id,
-      sender_name: n.profiles?.full_name ?? n.profiles?.username ?? "Anonymous",
+      sender_name: profile?.full_name ?? profile?.username ?? "Anonymous",
+      sender_username: profile?.username ?? "",
+      sender_avatar_url: profile?.avatar_url ?? null,
       content: n.content,
       is_visible: n.is_visible,
       created_at: n.created_at,
