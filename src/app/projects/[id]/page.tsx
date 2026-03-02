@@ -10,6 +10,7 @@ import { AddNoteForm } from "@/components/projects/AddNoteForm";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string; u?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -26,8 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProjectPage({ params }: Props) {
+export default async function ProjectPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { from, u } = await searchParams;
   const [update, notes] = await Promise.all([
     getUpdateById(id),
     getVisibleNotes(id),
@@ -37,6 +39,10 @@ export default async function ProjectPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isOwner = !!user && user.id === update.artist_id;
+
+  // Back button — context-aware
+  const backHref = from === "profile" && u ? `/${u}` : "/feed";
+  const backLabel = from === "profile" && u ? `← Back to profile` : "← Back to feed";
   // Non-owners who are logged in can leave notes
   const canNote = !!user && !isOwner;
 
@@ -50,9 +56,9 @@ export default async function ProjectPage({ params }: Props) {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 space-y-8">
 
-      {/* Back */}
-      <Link href="/feed" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-        ← Back to feed
+      {/* Back — context-aware */}
+      <Link href={backHref} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+        {backLabel}
       </Link>
 
       {/* Image */}

@@ -259,7 +259,7 @@ export default async function ArtistProfilePage({ params }: Props) {
         )}
 
         {/* ── Studio Updates Carousel — below portfolio ── */}
-        <StudioCarousel updates={studioUpdates} />
+        <StudioCarousel updates={studioUpdates} artistUsername={profile.username} />
 
         {/* ── Exhibition History ── */}
         {exhibitions.length > 0 && (

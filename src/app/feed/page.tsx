@@ -25,7 +25,7 @@ function FeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   const name = u.artist_full_name ?? u.artist_username;
   return (
     <Link
-      href={`/projects/${u.id}`}
+      href={`/projects/${u.id}?from=feed`}
       className="group block mb-2 border border-border break-inside-avoid bg-background"
     >
       {/* Image — own overflow-hidden so zoom stays clipped */}

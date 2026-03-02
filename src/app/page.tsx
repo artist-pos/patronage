@@ -179,7 +179,7 @@ export default async function Home() {
               {updates.map((u) => (
                 <Link
                   key={u.id}
-                  href={`/projects/${u.id}`}
+                  href={`/projects/${u.id}?from=feed`}
                   className="group relative shrink-0 w-48 sm:w-auto aspect-square border border-border overflow-hidden bg-muted block"
                 >
                   <Image

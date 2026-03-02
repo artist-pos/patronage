@@ -7,11 +7,12 @@ import type { ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
   updates: ProjectUpdateWithArtist[];
+  artistUsername: string;
 }
 
 const ROW_SIZE = 8; // tiles visible in collapsed single-row mode
 
-export function StudioCarousel({ updates }: Props) {
+export function StudioCarousel({ updates, artistUsername }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   if (updates.length === 0) return null;
@@ -36,14 +37,14 @@ export function StudioCarousel({ updates }: Props) {
         /* 2-row grid (wraps naturally) */
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
           {updates.map((u) => (
-            <Tile key={u.id} u={u} sizes="(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw" />
+            <Tile key={u.id} u={u} sizes="(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw" from={`profile&u=${artistUsername}`} />
           ))}
         </div>
       ) : (
         /* Single horizontal scroll row */
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {updates.slice(0, ROW_SIZE).map((u) => (
-            <Tile key={u.id} u={u} sizes="128px" fixed />
+            <Tile key={u.id} u={u} sizes="128px" fixed from={`profile&u=${artistUsername}`} />
           ))}
           {updates.length > ROW_SIZE && (
             <button
@@ -63,14 +64,17 @@ function Tile({
   u,
   sizes,
   fixed,
+  from,
 }: {
   u: ProjectUpdateWithArtist;
   sizes: string;
   fixed?: boolean;
+  from?: string;
 }) {
+  const href = from ? `/projects/${u.id}?from=${from}` : `/projects/${u.id}`;
   return (
     <Link
-      href={`/projects/${u.id}`}
+      href={href}
       className={`group relative border border-border overflow-hidden bg-muted block aspect-square${fixed ? " w-28 sm:w-32 shrink-0" : ""}`}
     >
       <Image
