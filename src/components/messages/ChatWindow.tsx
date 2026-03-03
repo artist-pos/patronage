@@ -6,14 +6,14 @@ import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Message, PortfolioImage } from "@/types/database";
+import type { Message, Artwork } from "@/types/database";
 
 interface Props {
   conversationId: string;
   currentUserId: string;
   initialMessages: Message[];
   otherName: string;
-  workMap?: Record<string, PortfolioImage>;
+  workMap?: Record<string, Artwork>;
 }
 
 function formatTime(iso: string): string {
