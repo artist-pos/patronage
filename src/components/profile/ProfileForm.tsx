@@ -89,20 +89,22 @@ export function ProfileForm({ profile, role }: Props) {
           </select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="career_stage">Career stage</Label>
-          <select
-            id="career_stage"
-            name="career_stage"
-            defaultValue={profile?.career_stage ?? ""}
-            className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
-          >
-            <option value="">— Select —</option>
-            {STAGES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+        {isArtist && (
+          <div className="space-y-2">
+            <Label htmlFor="career_stage">Career stage</Label>
+            <select
+              id="career_stage"
+              name="career_stage"
+              defaultValue={profile?.career_stage ?? ""}
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
+            >
+              <option value="">— Select —</option>
+              {STAGES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
