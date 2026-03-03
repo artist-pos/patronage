@@ -26,6 +26,7 @@ export interface Opportunity {
   grant_type: string | null;
   recipients_count: number | null;
   is_active: boolean;
+  profile_id: string | null;
   created_at: string;
 }
 

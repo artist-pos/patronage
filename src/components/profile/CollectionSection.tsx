@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
 import type { PortfolioImage } from "@/types/database";
 
@@ -23,17 +24,20 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
   const [isPublic, setIsPublic] = useState(collectionPublic);
   const [toggling, setToggling] = useState<string | null>(null);
 
-  // Non-owner sees nothing if private
   if (!isOwner && !isPublic) return null;
-  // Non-owner sees nothing if no works
-  if (!isOwner && works.length === 0) return null;
+  if (!isOwner && works.filter((w) => w.collection_visible).length === 0) return null;
 
-  async function toggleCollectionVisible(workId: string, current: boolean) {
+  async function toggleVisible(workId: string, current: boolean) {
     setToggling(workId);
     await updateWorkPrivacy(workId, "collection_visible", !current);
-    setWorks((prev) =>
-      prev.map((w) => (w.id === workId ? { ...w, collection_visible: !current } : w))
-    );
+    setWorks((prev) => prev.map((w) => w.id === workId ? { ...w, collection_visible: !current } : w));
+    setToggling(null);
+  }
+
+  async function toggleHidePrice(workId: string, current: boolean) {
+    setToggling(`price-${workId}`);
+    await updateWorkPrivacy(workId, "hide_price", !current);
+    setWorks((prev) => prev.map((w) => w.id === workId ? { ...w, hide_price: !current } : w));
     setToggling(null);
   }
 
@@ -62,7 +66,7 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
       </div>
 
       {visibleWorks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No works collected yet.</p>
+        <p className="text-sm text-muted-foreground">No acquired works in collection.</p>
       ) : (
         <div
           className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
@@ -71,11 +75,12 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
           {visibleWorks.map((work) => {
             const creatorName = work.creator_profile?.full_name ?? work.creator_profile?.username;
             const creatorUsername = work.creator_profile?.username;
+            const isHidden = !work.collection_visible;
 
             return (
               <div
                 key={work.id}
-                className="flex-none flex flex-row border border-border bg-background snap-start overflow-hidden"
+                className={`flex-none flex flex-row border border-border bg-background snap-start overflow-hidden ${isOwner && isHidden ? "opacity-50" : ""}`}
                 style={{ height: CARD_H, boxSizing: "border-box" }}
               >
                 {/* Image */}
@@ -95,10 +100,12 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
                 >
                   <div className="flex flex-col gap-1.5 flex-1 min-h-0">
                     {work.caption && (
-                      <p className="text-sm font-semibold leading-snug line-clamp-3">
+                      <p className="text-sm font-semibold leading-snug line-clamp-2">
                         {work.caption.slice(0, 140)}
                       </p>
                     )}
+
+                    {/* Always show creator attribution */}
                     {creatorName && creatorUsername && (
                       <Link
                         href={`/${creatorUsername}`}
@@ -107,20 +114,36 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
                         Created by {creatorName}
                       </Link>
                     )}
-                    {work.price && !work.hide_price && (
-                      <p className="text-xs text-muted-foreground">{work.price}</p>
+
+                    {/* Price or "Private Collection" */}
+                    {work.price && (
+                      <p className="text-xs text-muted-foreground">
+                        {work.hide_price ? "Private Collection" : work.price}
+                      </p>
                     )}
                   </div>
 
-                  {/* Owner-only: visibility toggle */}
+                  {/* Owner-only toggles */}
                   {isOwner && (
-                    <button
-                      onClick={() => toggleCollectionVisible(work.id, work.collection_visible)}
-                      disabled={toggling === work.id}
-                      className="mt-auto text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
-                    >
-                      {work.collection_visible ? "👁 Visible" : "🙈 Hidden"}
-                    </button>
+                    <div className="mt-auto flex flex-col gap-1">
+                      <button
+                        onClick={() => toggleVisible(work.id, work.collection_visible)}
+                        disabled={toggling === work.id}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                      >
+                        {work.collection_visible
+                          ? <><Eye className="w-3 h-3" /> Visible</>
+                          : <><EyeOff className="w-3 h-3" /> Hidden</>
+                        }
+                      </button>
+                      <button
+                        onClick={() => toggleHidePrice(work.id, work.hide_price)}
+                        disabled={toggling === `price-${work.id}`}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                      >
+                        {work.hide_price ? "Show price" : "Hide price"}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

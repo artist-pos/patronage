@@ -14,9 +14,11 @@ const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 
 interface Props {
   profile: Profile | null;
+  role: Profile["role"];
 }
 
-export function ProfileForm({ profile }: Props) {
+export function ProfileForm({ profile, role }: Props) {
+  const isArtist = role === "artist" || role === "owner";
   const [state, action, isPending] = useActionState<ProfileFormState, FormData>(
     upsertProfileAction,
     {}
@@ -65,7 +67,7 @@ export function ProfileForm({ profile }: Props) {
           name="bio"
           defaultValue={profile?.bio ?? ""}
           rows={4}
-          placeholder="A short description of your practice…"
+          placeholder={isArtist ? "A short description of your practice…" : "Describe your mission or interest in supporting the arts…"}
           className="w-full border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
         />
       </div>
@@ -107,7 +109,7 @@ export function ProfileForm({ profile }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label>Medium</Label>
+        <Label>{isArtist ? "Medium" : "Taste"}</Label>
         <MediumInput defaultValue={profile?.medium ?? []} />
       </div>
 

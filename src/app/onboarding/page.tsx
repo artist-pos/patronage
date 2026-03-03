@@ -22,8 +22,9 @@ export default async function OnboardingPage() {
 
   const profile = await getProfileById(user.id);
 
-  // Force role selection before profile setup
   if (!profile?.role) redirect("/onboarding/role");
+
+  const isArtist = profile.role === "artist" || profile.role === "owner";
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-12">
@@ -33,12 +34,14 @@ export default async function OnboardingPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {profile
-            ? "Update your public artist profile."
-            : "Complete your profile to appear in the artist directory."}
+            ? isArtist
+              ? "Update your public artist profile."
+              : "Update your profile."
+            : "Complete your profile to get started."}
         </p>
       </div>
 
-      {/* Visuals — shown only once profile exists */}
+      {/* Visuals */}
       {profile && (
         <section className="space-y-8">
           <h2 className="text-base font-semibold">Visuals</h2>
@@ -55,7 +58,7 @@ export default async function OnboardingPage() {
 
           <div className="space-y-3">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium">Featured Artwork</p>
+              <p className="text-sm font-medium">Featured Image</p>
               <p className="text-xs text-muted-foreground">
                 Displayed as the background of your directory card. Landscape works best.
               </p>
@@ -67,10 +70,11 @@ export default async function OnboardingPage() {
 
       <section className="space-y-6 border-t border-border pt-12">
         <h2 className="text-base font-semibold">Profile details</h2>
-        <ProfileForm profile={profile} />
+        <ProfileForm profile={profile} role={profile.role} />
       </section>
 
-      {profile && (
+      {/* Artist-only: Portfolio */}
+      {profile && isArtist && (
         <section className="space-y-6 border-t border-border pt-12">
           <div className="space-y-1">
             <h2 className="text-base font-semibold">Portfolio</h2>
@@ -83,7 +87,8 @@ export default async function OnboardingPage() {
         </section>
       )}
 
-      {profile && (
+      {/* Artist-only: CV */}
+      {profile && isArtist && (
         <section className="space-y-6 border-t border-border pt-12">
           <div className="space-y-1">
             <h2 className="text-base font-semibold">CV</h2>
@@ -95,7 +100,8 @@ export default async function OnboardingPage() {
         </section>
       )}
 
-      {profile && (
+      {/* Artist-only: Exhibition History */}
+      {profile && isArtist && (
         <section className="space-y-6 border-t border-border pt-12">
           <div className="space-y-1">
             <h2 className="text-base font-semibold">Exhibition History</h2>
@@ -110,12 +116,17 @@ export default async function OnboardingPage() {
         </section>
       )}
 
+      {/* Bibliography — "Selected Bibliography" for artists, "Media & Press" for others */}
       {profile && (
         <section className="space-y-6 border-t border-border pt-12">
           <div className="space-y-1">
-            <h2 className="text-base font-semibold">Selected Bibliography</h2>
+            <h2 className="text-base font-semibold">
+              {isArtist ? "Selected Bibliography" : "Media & Press"}
+            </h2>
             <p className="text-xs text-muted-foreground">
-              Reviews, interviews, and features. Displayed as bibliographic citations on your public profile.
+              {isArtist
+                ? "Reviews, interviews, and features. Displayed as bibliographic citations on your public profile."
+                : "Press coverage, interviews, and features relevant to your work."}
             </p>
           </div>
           <BibliographyEditor
@@ -125,7 +136,7 @@ export default async function OnboardingPage() {
         </section>
       )}
 
-      {/* ── Danger Zone ── */}
+      {/* Danger Zone */}
       {profile && (
         <section className="space-y-4 border-t border-black pt-12 mt-12">
           <div className="space-y-1">

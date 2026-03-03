@@ -17,7 +17,8 @@ import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
-import type { ExhibitionEntry, BibliographyEntry, Profile } from "@/types/database";
+import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity } from "@/types/database";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -76,7 +77,7 @@ export default async function ArtistProfilePage({ params }: Props) {
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks] =
+  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks, profileOpportunities] =
     await Promise.all([
       // Bucket A: archival portfolio — not for sale, still owned by the creator
       isArtistProfile
@@ -137,6 +138,16 @@ export default async function ArtistProfilePage({ params }: Props) {
             .order("created_at", { ascending: false })
             .then(({ data }) => (data ?? []))
         : Promise.resolve([]),
+      // Patron/partner profile opportunities
+      !isArtistProfile
+        ? supabase
+            .from("opportunities")
+            .select("*")
+            .eq("profile_id", profile.id)
+            .eq("is_active", true)
+            .order("created_at", { ascending: false })
+            .then(({ data }) => (data ?? []) as Opportunity[])
+        : Promise.resolve([] as Opportunity[]),
     ]);
 
   const images = portfolioImages;
@@ -409,6 +420,12 @@ export default async function ArtistProfilePage({ params }: Props) {
               initialWorks={collectionWorks as any}
               isOwner={isOwner}
               collectionPublic={profile.collection_public ?? true}
+            />
+
+            {/* Live Opportunities */}
+            <LiveOpportunitiesSection
+              initialOpportunities={profileOpportunities}
+              isOwner={isOwner}
             />
           </>
         )}
