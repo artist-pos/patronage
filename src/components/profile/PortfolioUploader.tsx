@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
+import { toggleHidePortfolioWork } from "@/app/profile/available-work-actions";
 import { Button } from "@/components/ui/button";
 import type { PortfolioImage } from "@/types/database";
 
@@ -94,6 +95,16 @@ function SortableThumb({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: img.id });
   const [descLen, setDescLen] = useState((img.description ?? "").length);
+  const [hiddenFromArchive, setHiddenFromArchive] = useState(img.hide_from_archive);
+  const [togglingHide, setTogglingHide] = useState(false);
+
+  async function handleHideToggle() {
+    setTogglingHide(true);
+    const next = !hiddenFromArchive;
+    setHiddenFromArchive(next);
+    await toggleHidePortfolioWork(img.id, next);
+    setTogglingHide(false);
+  }
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -169,6 +180,20 @@ function SortableThumb({
       <span className="text-[10px] text-muted-foreground tabular-nums self-end">
         {descLen}/560
       </span>
+
+      {/* Hide / Show toggle */}
+      {hiddenFromArchive && (
+        <span className="text-[10px] font-mono uppercase tracking-widest border border-border px-1.5 py-0.5 self-start leading-none text-muted-foreground">
+          Hidden
+        </span>
+      )}
+      <button
+        onClick={handleHideToggle}
+        disabled={togglingHide}
+        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start disabled:opacity-40"
+      >
+        {hiddenFromArchive ? "Show" : "Hide"}
+      </button>
     </div>
   );
 }

@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { MediumInput } from "./MediumInput";
 import type { Profile } from "@/types/database";
 
-
 const COUNTRIES = ["NZ", "AUS", "Global"] as const;
 const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 
@@ -41,6 +40,7 @@ export function ProfileForm({ profile, role }: Props) {
           placeholder="yourname"
           pattern="[a-z0-9_-]{3,30}"
           required
+          className="border-black"
         />
         {state.fieldErrors?.username && (
           <p className="text-xs text-destructive">{state.fieldErrors.username}</p>
@@ -57,6 +57,7 @@ export function ProfileForm({ profile, role }: Props) {
           name="full_name"
           defaultValue={profile?.full_name ?? ""}
           placeholder="Your name"
+          className="border-black"
         />
       </div>
 
@@ -68,7 +69,7 @@ export function ProfileForm({ profile, role }: Props) {
           defaultValue={profile?.bio ?? ""}
           rows={4}
           placeholder={isArtist ? "A short description of your practice…" : "Describe your mission or interest in supporting the arts…"}
-          className="w-full border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
         />
       </div>
 
@@ -79,13 +80,11 @@ export function ProfileForm({ profile, role }: Props) {
             id="country"
             name="country"
             defaultValue={profile?.country ?? ""}
-            className="w-full border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
           >
             <option value="">— Select —</option>
             {COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -96,13 +95,11 @@ export function ProfileForm({ profile, role }: Props) {
             id="career_stage"
             name="career_stage"
             defaultValue={profile?.career_stage ?? ""}
-            className="w-full border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
           >
             <option value="">— Select —</option>
             {STAGES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
@@ -122,6 +119,7 @@ export function ProfileForm({ profile, role }: Props) {
             type="url"
             defaultValue={profile?.website_url ?? ""}
             placeholder="https://yoursite.com"
+            className="border-black"
           />
         </div>
         <div className="space-y-2">
@@ -133,7 +131,7 @@ export function ProfileForm({ profile, role }: Props) {
               name="instagram_handle"
               defaultValue={profile?.instagram_handle ?? ""}
               placeholder="handle"
-              className="pl-7"
+              className="pl-7 border-black"
             />
           </div>
         </div>

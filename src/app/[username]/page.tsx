@@ -80,15 +80,19 @@ export default async function ArtistProfilePage({ params }: Props) {
   const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks, profileOpportunities] =
     await Promise.all([
       // Bucket A: archival portfolio — not for sale, still owned by the creator
+      // Non-owners only see works with hide_from_archive = false
       isArtistProfile
-        ? supabase
-            .from("portfolio_images")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("is_available", false)
-            .eq("current_owner_id", profile.id)
-            .order("position", { ascending: true })
-            .then(({ data }) => (data ?? []))
+        ? (async () => {
+            const q = supabase
+              .from("portfolio_images")
+              .select("*")
+              .eq("profile_id", profile.id)
+              .eq("is_available", false)
+              .eq("current_owner_id", profile.id);
+            const { data } = await (!isOwner ? q.eq("hide_from_archive", false) : q)
+              .order("position", { ascending: true });
+            return data ?? [];
+          })()
         : Promise.resolve([]),
       // Bucket B: available for sale — hide soft-hidden works from non-owners
       isArtistProfile
@@ -242,7 +246,7 @@ export default async function ArtistProfilePage({ params }: Props) {
             {/* Right sidecar: action buttons + links */}
             {(isOwner || canMessage || profile.website_url || profile.instagram_handle || profile.cv_url) && (
               <div className="flex flex-col gap-2 lg:text-right lg:items-end shrink-0 pt-1">
-                {isOwner && (
+                {isOwner && isArtistProfile && (
                   <CreateUpdateModal
                     profileId={profile.id}
                     label="Post a studio update +"

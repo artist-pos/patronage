@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { postOpportunity } from "@/app/profile/opportunity-actions";
 import type { Opportunity } from "@/types/database";
@@ -10,10 +11,11 @@ const DESC_MAX = 500;
 const TYPES = ["Grant", "Commission", "Residency", "Open Call"] as const;
 
 interface Props {
-  onSuccess: (opp: Opportunity) => void;
+  onSuccess?: (opp: Opportunity) => void;
+  triggerLabel?: string;
 }
 
-export function PostOpportunityModal({ onSuccess }: Props) {
+export function PostOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportunity" }: Props) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<typeof TYPES[number]>("Grant");
@@ -47,7 +49,6 @@ export function PostOpportunityModal({ onSuccess }: Props) {
       return;
     }
 
-    // Build an optimistic opportunity object to pass back
     const optimistic: Opportunity = {
       id: `opt-${Date.now()}`,
       title: title.trim(),
@@ -71,7 +72,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
       created_at: new Date().toISOString(),
     };
 
-    onSuccess(optimistic);
+    onSuccess?.(optimistic);
     setOpen(false);
   }
 
@@ -83,7 +84,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
         onClick={() => setOpen(true)}
         className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
       >
-        + Post Opportunity
+        {triggerLabel}
       </button>
 
       {open && (
@@ -94,7 +95,13 @@ export function PostOpportunityModal({ onSuccess }: Props) {
           <div className="bg-background border border-black w-full max-w-md mx-4 p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-widest">Post an Opportunity</h2>
-              <button onClick={() => handleOpenChange(false)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+              <button
+                onClick={() => handleOpenChange(false)}
+                aria-label="Close"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,7 +116,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
                   placeholder="e.g. Community Arts Grant 2026"
-                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                  className="w-full border border-black bg-transparent px-3 py-2 text-sm focus:outline-none placeholder:text-muted-foreground"
                 />
               </div>
 
@@ -119,7 +126,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as typeof TYPES[number])}
-                  className="w-full border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+                  className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none"
                 >
                   {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -133,7 +140,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="e.g. $5,000 or In-kind"
-                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                  className="w-full border border-black bg-transparent px-3 py-2 text-sm focus:outline-none placeholder:text-muted-foreground"
                 />
               </div>
 
@@ -148,7 +155,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
                   onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
                   rows={4}
                   placeholder="Eligibility, focus areas, how to apply…"
-                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground resize-none"
+                  className="w-full border border-black bg-transparent px-3 py-2 text-sm focus:outline-none placeholder:text-muted-foreground resize-none"
                 />
               </div>
 
@@ -159,7 +166,7 @@ export function PostOpportunityModal({ onSuccess }: Props) {
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+                  className="w-full border border-black bg-transparent px-3 py-2 text-sm focus:outline-none"
                 />
               </div>
 
