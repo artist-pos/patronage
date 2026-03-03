@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PostOpportunityModal } from "./PostOpportunityModal";
+import { RichOpportunityModal } from "./RichOpportunityModal";
 import type { Opportunity } from "@/types/database";
 
 const CARD_H = 225;
@@ -43,7 +43,7 @@ export function LiveOpportunitiesSection({ initialOpportunities, isOwner }: Prop
       {opps.length === 0 && isOwner ? (
         <div className="flex items-center gap-4">
           <p className="text-sm text-muted-foreground">No active opportunities at this time.</p>
-          <PostOpportunityModal onSuccess={handleOppAdded} />
+          <RichOpportunityModal onSuccess={handleOppAdded} />
         </div>
       ) : opps.length === 0 ? (
         <p className="text-sm text-muted-foreground">No active opportunities at this time.</p>
@@ -95,7 +95,7 @@ export function LiveOpportunitiesSection({ initialOpportunities, isOwner }: Prop
               className="flex-none flex items-center justify-center border border-dashed border-border snap-start"
               style={{ height: CARD_H, width: CARD_H }}
             >
-              <PostOpportunityModal onSuccess={handleOppAdded} />
+              <RichOpportunityModal onSuccess={handleOppAdded} />
             </div>
           )}
         </div>

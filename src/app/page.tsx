@@ -138,6 +138,9 @@ export default async function Home() {
               Grants, residencies, and open calls for New Zealand and Australian
               artists — curated and verified.
             </p>
+            <p className="text-sm text-muted-foreground">
+              A community for artists, patrons, and partners.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3 justify-center">
             <Button asChild>
@@ -209,8 +212,8 @@ export default async function Home() {
         {updates.length > 0 && (
           <div className="space-y-6 border-t border-border pt-16">
             <div className="space-y-1 text-center">
-              <h2 className="text-xl font-semibold tracking-tight">Latest from the Studio</h2>
-              <p className="text-sm text-muted-foreground">Work in progress from the Patronage community.</p>
+              <h2 className="text-xl font-semibold tracking-tight">Updates from the Patronage community.</h2>
+              <p className="text-sm text-muted-foreground">Work in progress from our artists.</p>
             </div>
 
             {/* Single-row horizontal carousel */}

@@ -212,11 +212,16 @@ export default async function ArtistProfilePage({ params }: Props) {
             <div className="space-y-3 max-w-3xl">
               <div className="space-y-1">
                 <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
-                {profile.is_patronage_supported && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {profile.is_patronage_supported && (
+                    <Badge className="text-xs font-normal bg-foreground text-background">
+                      With Patronage
+                    </Badge>
+                  )}
                   <Badge className="text-xs font-normal bg-foreground text-background">
-                    With Patronage
+                    {profile.role === "owner" ? "Artist" : profile.role === "admin" ? "Admin" : profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                   </Badge>
-                )}
+                </div>
                 <p className="text-sm text-muted-foreground">@{profile.username}</p>
               </div>
 
@@ -231,12 +236,26 @@ export default async function ArtistProfilePage({ params }: Props) {
                     {profile.career_stage}
                   </span>
                 )}
-                {(profile.medium ?? []).map((m) => (
+                {isArtistProfile && (profile.medium ?? []).map((m) => (
                   <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
                     {m}
                   </span>
                 ))}
               </div>
+
+              {/* Taste chips — patron/partner only */}
+              {!isArtistProfile && (profile.medium ?? []).length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Taste</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(profile.medium ?? []).map((m) => (
+                      <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {profile.bio && (
                 <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
@@ -379,10 +398,16 @@ export default async function ArtistProfilePage({ params }: Props) {
           </>
         )}
 
-        {/* ── Patron / Partner "Taste" sections ── */}
+        {/* ── Patron / Partner sections ── */}
         {!isArtistProfile && (
           <>
-            {/* Artists I Follow */}
+            {/* 1. Live Opportunities — top */}
+            <LiveOpportunitiesSection
+              initialOpportunities={profileOpportunities}
+              isOwner={isOwner}
+            />
+
+            {/* 2. Artists I Follow */}
             <section className="space-y-4 border-t border-border pt-10">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
                 Artists I Follow
@@ -421,18 +446,12 @@ export default async function ArtistProfilePage({ params }: Props) {
               )}
             </section>
 
-            {/* Collection */}
+            {/* 3. Collection */}
             <CollectionSection
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               initialWorks={collectionWorks as any}
               isOwner={isOwner}
               collectionPublic={profile.collection_public ?? true}
-            />
-
-            {/* Live Opportunities */}
-            <LiveOpportunitiesSection
-              initialOpportunities={profileOpportunities}
-              isOwner={isOwner}
             />
           </>
         )}

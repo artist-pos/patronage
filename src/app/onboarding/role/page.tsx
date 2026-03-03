@@ -20,8 +20,10 @@ async function setRole(formData: FormData) {
     .replace(/[^a-z0-9_]/g, "_")
     .slice(0, 30) ?? user.id.slice(0, 8);
 
+  // Patrons and partners don't require admin approval — activate immediately.
+  // Artists default to is_active: true too (admin can deactivate if needed).
   await supabase.from("profiles").upsert(
-    { id: user.id, username: fallbackUsername, role },
+    { id: user.id, username: fallbackUsername, role, is_active: true },
     { onConflict: "id", ignoreDuplicates: false }
   );
 

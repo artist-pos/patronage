@@ -7,7 +7,7 @@ import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploade
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
-import { PostOpportunityModal } from "@/components/profile/PostOpportunityModal";
+import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
@@ -130,7 +130,7 @@ export default async function OnboardingPage() {
               Post an open call, commission, grant, or other opportunity for artists. Listings appear on your public profile.
             </p>
           </div>
-          <PostOpportunityModal triggerLabel="List an Opportunity" />
+          <RichOpportunityModal triggerLabel="List an Opportunity" />
         </section>
       )}
 

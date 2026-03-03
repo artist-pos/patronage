@@ -7,7 +7,6 @@ export async function getProfile(username: string): Promise<Profile | null> {
     .from("profiles")
     .select("*")
     .eq("username", username)
-    .eq("is_active", true)
     .single();
   return data as Profile | null;
 }
@@ -31,6 +30,7 @@ export async function getProfiles(
     .from("profiles")
     .select("*")
     .eq("is_active", true)
+    .in("role", ["artist", "owner"])
     .order("created_at", { ascending: false });
 
   if (filters.country) query = query.eq("country", filters.country);

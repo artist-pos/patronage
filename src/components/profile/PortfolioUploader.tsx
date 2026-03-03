@@ -242,6 +242,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       .select("*")
       .eq("profile_id", profileId)
       .eq("is_available", false)
+      .eq("current_owner_id", profileId)
       .order("position", { ascending: true })
       .then(({ data }) => setImages((data ?? []) as PortfolioImage[]));
   }, [profileId, isPortfolio]); // eslint-disable-line react-hooks/exhaustive-deps
