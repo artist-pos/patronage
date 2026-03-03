@@ -86,7 +86,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                 className={`flex-none flex flex-row border border-border bg-background snap-start ${
                   isOwner && work.hide_from_archive ? "opacity-50" : ""
                 }`}
-                style={{ height: CARD_H }}
+                style={{ height: CARD_H, boxSizing: "border-box" }}
               >
                 {/* Image */}
                 <div className="overflow-hidden bg-muted flex-none" style={{ height: CARD_H }}>

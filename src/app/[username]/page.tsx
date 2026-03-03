@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getProfile, getPortfolioImages } from "@/lib/profiles";
+import { getProfile } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { isFollowing } from "@/lib/follows";
 import { getArtistProjects } from "@/lib/projects";
@@ -76,9 +76,20 @@ export default async function ArtistProfilePage({ params }: Props) {
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [allPortfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks] =
+  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks] =
     await Promise.all([
-      isArtistProfile ? getPortfolioImages(profile.id) : Promise.resolve([]), // includes all; filtered below
+      // Bucket A: archival portfolio — not for sale, still owned by the creator
+      isArtistProfile
+        ? supabase
+            .from("portfolio_images")
+            .select("*")
+            .eq("profile_id", profile.id)
+            .eq("is_available", false)
+            .eq("current_owner_id", profile.id)
+            .order("position", { ascending: true })
+            .then(({ data }) => (data ?? []))
+        : Promise.resolve([]),
+      // Bucket B: available for sale
       isArtistProfile
         ? supabase
             .from("portfolio_images")
@@ -107,7 +118,7 @@ export default async function ArtistProfilePage({ params }: Props) {
               return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
             })
         : Promise.resolve([]),
-      // Artist sold works (transferred to others)
+      // Bucket C: sold works — transferred to a different owner
       isArtistProfile
         ? supabase
             .from("portfolio_images")
@@ -117,7 +128,7 @@ export default async function ArtistProfilePage({ params }: Props) {
             .order("created_at", { ascending: false })
             .then(({ data }) => (data ?? []))
         : Promise.resolve([]),
-      // Patron/partner collection (works they own but didn't create)
+      // Patron/partner collection (works they currently own)
       !isArtistProfile
         ? supabase
             .from("portfolio_images")
@@ -128,8 +139,7 @@ export default async function ArtistProfilePage({ params }: Props) {
         : Promise.resolve([]),
     ]);
 
-  // Portfolio excludes available works — those appear only in the Available Works section
-  const images = allPortfolioImages.filter((img) => !img.is_available);
+  const images = portfolioImages;
 
   // Narrow types for downstream use
   const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];

@@ -76,7 +76,7 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
               <div
                 key={work.id}
                 className="flex-none flex flex-row border border-border bg-background snap-start"
-                style={{ height: CARD_H }}
+                style={{ height: CARD_H, boxSizing: "border-box" }}
               >
                 {/* Image */}
                 <div className="overflow-hidden bg-muted flex-none" style={{ height: CARD_H }}>
