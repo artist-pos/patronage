@@ -83,11 +83,13 @@ function SortableThumb({
   isPending,
   onRemove,
   onCaptionBlur,
+  onDescriptionBlur,
 }: {
   img: PortfolioImage;
   isPending: boolean;
   onRemove: (img: PortfolioImage) => void;
   onCaptionBlur: (id: string, caption: string | null) => void;
+  onDescriptionBlur: (id: string, description: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: img.id });
@@ -145,10 +147,21 @@ function SortableThumb({
       <input
         type="text"
         defaultValue={img.caption ?? ""}
-        placeholder="Title / Description"
+        placeholder="Title"
         maxLength={120}
         onBlur={(e) => onCaptionBlur(img.id, e.target.value.trim() || null)}
         className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
+        style={{ minWidth: "80px" }}
+      />
+
+      {/* Description — short prose note saved on blur */}
+      <textarea
+        defaultValue={img.description ?? ""}
+        placeholder="Short description…"
+        maxLength={280}
+        rows={2}
+        onBlur={(e) => onDescriptionBlur(img.id, e.target.value.trim() || null)}
+        className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground resize-none leading-snug"
         style={{ minWidth: "80px" }}
       />
     </div>
@@ -270,6 +283,10 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
     await supabase.from("portfolio_images").update({ caption }).eq("id", id);
   }
 
+  async function handleDescriptionBlur(id: string, description: string | null) {
+    await supabase.from("portfolio_images").update({ description }).eq("id", id);
+  }
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
   }
@@ -348,6 +365,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
                   isPending={isPending}
                   onRemove={handleRemoveImage}
                   onCaptionBlur={handleCaptionBlur}
+                  onDescriptionBlur={handleDescriptionBlur}
                 />
               ))}
             </div>

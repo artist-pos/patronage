@@ -90,15 +90,18 @@ export default async function ArtistProfilePage({ params }: Props) {
             .order("position", { ascending: true })
             .then(({ data }) => (data ?? []))
         : Promise.resolve([]),
-      // Bucket B: available for sale
+      // Bucket B: available for sale — hide soft-hidden works from non-owners
       isArtistProfile
-        ? supabase
-            .from("portfolio_images")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("is_available", true)
-            .order("position", { ascending: true })
-            .then(({ data }) => (data ?? []))
+        ? (async () => {
+            const q = supabase
+              .from("portfolio_images")
+              .select("*")
+              .eq("profile_id", profile.id)
+              .eq("is_available", true);
+            const { data } = await (!isOwner ? q.eq("hide_available", false) : q)
+              .order("position", { ascending: true });
+            return data ?? [];
+          })()
         : Promise.resolve([]),
       isArtistProfile ? getArtistUpdates(profile.id) : Promise.resolve([]),
       isArtistProfile ? getArtistProjects(profile.id) : Promise.resolve([]),
@@ -338,7 +341,7 @@ export default async function ArtistProfilePage({ params }: Props) {
                 <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
                   Portfolio
                 </h2>
-                <PortfolioGrid images={images} />
+                <PortfolioGrid images={images} artistName={displayName} viewerRole={viewerRole} />
               </section>
             )}
 

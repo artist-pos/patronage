@@ -95,6 +95,7 @@ export interface PortfolioImage {
   hide_from_archive: boolean;
   hide_price: boolean;
   collection_visible: boolean;
+  hide_available: boolean;
   created_at: string;
 }
 

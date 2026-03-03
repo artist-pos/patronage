@@ -6,6 +6,8 @@ import { AvailableWorkCard } from "./AvailableWorkCard";
 import { AddAvailableWorkModal } from "./AddAvailableWorkModal";
 import type { PortfolioImage } from "@/types/database";
 
+const CARD_H = 225;
+
 interface Props {
   initialWorks: PortfolioImage[];
   profileId: string;
@@ -26,8 +28,11 @@ export function AvailableWorksSection({
 
   function handleWorkAdded(newWork: PortfolioImage) {
     setWorks((prev) => [...prev, newWork]);
-    // Background server sync so subsequent page loads reflect the new row
     router.refresh();
+  }
+
+  function handleWorkRemoved(id: string) {
+    setWorks((prev) => prev.filter((w) => w.id !== id));
   }
 
   // Non-owners only see this section if there are works to display
@@ -35,21 +40,24 @@ export function AvailableWorksSection({
 
   return (
     <section className="space-y-4 border-t border-border pt-10">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          Available Works
-        </h2>
-        {isOwner && (
-          <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
-        )}
-      </div>
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+        Available Works
+      </h2>
 
-      {works.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No works listed yet. Click &ldquo;+ Add Available Work&rdquo; to publish your first listing.
-        </p>
+      {works.length === 0 && isOwner ? (
+        // Empty state: just show the add button inline
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            No works listed yet.
+          </p>
+          <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
+        </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none items-start">
+        // Carousel track
+        <div
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+          style={{ height: CARD_H }}
+        >
           {works.map((img) => (
             <AvailableWorkCard
               key={img.id}
@@ -58,8 +66,19 @@ export function AvailableWorksSection({
               artistName={artistName}
               viewerRole={viewerRole}
               isOwner={isOwner}
+              onRemove={handleWorkRemoved}
             />
           ))}
+
+          {/* Add button as a card at the end of the track (owner only) */}
+          {isOwner && (
+            <div
+              className="flex-none flex items-center justify-center border border-dashed border-border snap-start"
+              style={{ height: CARD_H, width: CARD_H }}
+            >
+              <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
+            </div>
+          )}
         </div>
       )}
     </section>
