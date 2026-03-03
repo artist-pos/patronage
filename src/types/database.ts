@@ -99,6 +99,24 @@ export interface PortfolioImage {
   created_at: string;
 }
 
+export interface Artwork {
+  id: string;
+  profile_id: string;
+  creator_id: string;
+  current_owner_id: string;
+  url: string;
+  caption: string | null;
+  price: string | null;
+  description: string | null;
+  is_available: boolean;
+  hide_available: boolean;
+  hide_from_archive: boolean;
+  hide_price: boolean;
+  collection_visible: boolean;
+  position: number;
+  created_at: string;
+}
+
 export interface ProfileWithImage extends Profile {
   primary_image_url: string | null;
 }

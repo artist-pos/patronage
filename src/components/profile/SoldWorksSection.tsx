@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 const CARD_H = 225;
 const META_W = 200;
 
-interface SoldWork extends PortfolioImage {
+interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
 }
 

@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { initiateTransfer } from "@/app/messages/transfer-actions";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 interface Props {
   conversationId: string;
-  artistAvailableWorks: PortfolioImage[];
+  artistAvailableWorks: Artwork[];
 }
 
 export function TransferWorkButton({ conversationId, artistAvailableWorks }: Props) {
   const [open, setOpen] = useState(false);
-  const [selectedWork, setSelectedWork] = useState<PortfolioImage | null>(null);
+  const [selectedWork, setSelectedWork] = useState<Artwork | null>(null);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 

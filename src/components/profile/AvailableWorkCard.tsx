@@ -4,13 +4,13 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { EnquireButton } from "./EnquireButton";
 import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 const CARD_H = 225;
 const META_W = 200;
 
 interface Props {
-  img: PortfolioImage;
+  img: Artwork;
   artistId: string;
   artistName: string;
   viewerRole: string | null;

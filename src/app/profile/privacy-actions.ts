@@ -13,7 +13,7 @@ export async function updateWorkPrivacy(
 
   // Fetch the work to verify ownership
   const { data: work } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("id, creator_id, current_owner_id")
     .eq("id", workId)
     .maybeSingle();
@@ -31,7 +31,7 @@ export async function updateWorkPrivacy(
   }
 
   const { error } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .update({ [field]: value })
     .eq("id", workId);
 

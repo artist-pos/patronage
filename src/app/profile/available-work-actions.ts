@@ -8,7 +8,7 @@ export async function unlistWork(workId: string): Promise<{ error?: string }> {
   if (!user) return { error: "Not authenticated" };
 
   const { error } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .update({ is_available: false })
     .eq("id", workId)
     .eq("creator_id", user.id);
@@ -38,7 +38,7 @@ export async function toggleHideAvailable(workId: string, hide: boolean): Promis
   if (!user) return { error: "Not authenticated" };
 
   const { error } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .update({ hide_available: hide })
     .eq("id", workId)
     .eq("creator_id", user.id);

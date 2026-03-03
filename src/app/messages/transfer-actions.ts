@@ -13,7 +13,7 @@ export async function initiateTransfer(
 
   // Verify caller is creator_id of the work
   const { data: work } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("id, creator_id, caption, is_available")
     .eq("id", workId)
     .maybeSingle();
@@ -87,7 +87,7 @@ export async function acceptTransfer(
 
   // Verify work is still available (guard against double-accept)
   const { data: work } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("id, caption, is_available, creator_id")
     .eq("id", message.work_id)
     .maybeSingle();
@@ -95,9 +95,9 @@ export async function acceptTransfer(
   if (!work) return { error: "Work not found" };
   if (!work.is_available) return { error: "This work has already been transferred" };
 
-  // Update ownership — allowed by the portfolio_images_accept_transfer RLS policy (migration 024)
+  // Update ownership
   const { error: updateError } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .update({ current_owner_id: user.id, is_available: false })
     .eq("id", message.work_id);
 

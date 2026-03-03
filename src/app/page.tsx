@@ -18,10 +18,8 @@ function daysUntil(deadline: string | null): number | null {
 function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   const days = daysUntil(opp.deadline);
   return (
-    <a
-      href={opp.url ?? "#"}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/opportunities/${opp.id}`}
       className="group border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
     >
       {/* Partner logo — wider container, object-contain so logos breathe */}
@@ -76,7 +74,7 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
           )}
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -211,9 +209,14 @@ export default async function Home() {
         {/* ── Latest from the Studio ── */}
         {updates.length > 0 && (
           <div className="space-y-6 border-t border-border pt-16">
-            <div className="space-y-1 text-center">
-              <h2 className="text-xl font-semibold tracking-tight">Updates from the Patronage community.</h2>
-              <p className="text-sm text-muted-foreground">Work in progress from our artists.</p>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1 text-center flex-1">
+                <h2 className="text-xl font-semibold tracking-tight">Latest from the Studio.</h2>
+                <p className="text-sm text-muted-foreground">Updates from our artists.</p>
+              </div>
+              <Link href="/feed" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
+                View all
+              </Link>
             </div>
 
             {/* Single-row horizontal carousel */}

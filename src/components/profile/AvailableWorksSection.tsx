@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AvailableWorkCard } from "./AvailableWorkCard";
 import { AddAvailableWorkModal } from "./AddAvailableWorkModal";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 const CARD_H = 225;
 
 interface Props {
-  initialWorks: PortfolioImage[];
+  initialWorks: Artwork[];
   profileId: string;
   artistName: string;
   viewerRole: string | null;
@@ -23,10 +23,10 @@ export function AvailableWorksSection({
   viewerRole,
   isOwner,
 }: Props) {
-  const [works, setWorks] = useState<PortfolioImage[]>(initialWorks);
+  const [works, setWorks] = useState<Artwork[]>(initialWorks);
   const router = useRouter();
 
-  function handleWorkAdded(newWork: PortfolioImage) {
+  function handleWorkAdded(newWork: Artwork) {
     setWorks((prev) => [...prev, newWork]);
     router.refresh();
   }

@@ -18,7 +18,7 @@ import { AvailableWorksSection } from "@/components/profile/AvailableWorksSectio
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork } from "@/types/database";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -98,7 +98,7 @@ export default async function ArtistProfilePage({ params }: Props) {
       isArtistProfile
         ? (async () => {
             const q = supabase
-              .from("portfolio_images")
+              .from("artworks")
               .select("*")
               .eq("profile_id", profile.id)
               .eq("is_available", true);
@@ -129,7 +129,7 @@ export default async function ArtistProfilePage({ params }: Props) {
       // Bucket C: sold works — transferred to a different owner
       isArtistProfile
         ? supabase
-            .from("portfolio_images")
+            .from("artworks")
             .select("*, owner_profile:current_owner_id(username, full_name)")
             .eq("creator_id", profile.id)
             .neq("current_owner_id", profile.id)
@@ -139,7 +139,7 @@ export default async function ArtistProfilePage({ params }: Props) {
       // Patron/partner collection (works they currently own)
       !isArtistProfile
         ? supabase
-            .from("portfolio_images")
+            .from("artworks")
             .select("*, creator_profile:creator_id(username, full_name)")
             .eq("current_owner_id", profile.id)
             .order("created_at", { ascending: false })
@@ -390,8 +390,8 @@ export default async function ArtistProfilePage({ params }: Props) {
 
             {/* Sold Works — works transferred to others (bottom of profile) */}
             <SoldWorksSection
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              initialWorks={soldWorks as any}
+              initialWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
+
               isOwner={isOwner}
               hideSoldSection={profile.hide_sold_section ?? false}
             />
@@ -448,8 +448,8 @@ export default async function ArtistProfilePage({ params }: Props) {
 
             {/* 3. Collection */}
             <CollectionSection
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              initialWorks={collectionWorks as any}
+              initialWorks={collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null } | null })[]}
+
               isOwner={isOwner}
               collectionPublic={profile.collection_public ?? true}
             />

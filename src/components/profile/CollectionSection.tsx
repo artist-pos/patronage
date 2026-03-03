@@ -4,12 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 const CARD_H = 225;
 const META_W = 200;
 
-interface CollectionWork extends PortfolioImage {
+interface CollectionWork extends Artwork {
   creator_profile: { username: string; full_name: string | null } | null;
 }
 

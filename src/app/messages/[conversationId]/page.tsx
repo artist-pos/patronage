@@ -5,7 +5,7 @@ import { getMessages } from "@/lib/messages";
 import { markConversationRead } from "@/app/messages/actions";
 import { ChatWindow } from "@/components/messages/ChatWindow";
 import { TransferWorkButton } from "@/components/messages/TransferWorkButton";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 interface Props {
   params: Promise<{ conversationId: string }>;
@@ -54,15 +54,15 @@ export default async function ChatPage({ params }: Props) {
     viewerProfile?.role === "artist" || viewerProfile?.role === "owner";
 
   // If viewer is artist, fetch their available works for transfer
-  let artistAvailableWorks: PortfolioImage[] = [];
+  let artistAvailableWorks: Artwork[] = [];
   if (viewerIsArtist) {
     const { data } = await supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("*")
       .eq("creator_id", user.id)
       .eq("is_available", true)
       .order("position", { ascending: true });
-    artistAvailableWorks = (data ?? []) as PortfolioImage[];
+    artistAvailableWorks = (data ?? []) as Artwork[];
   }
 
   // Build workMap for any transfer_request or transfer_accepted messages
@@ -70,14 +70,14 @@ export default async function ChatPage({ params }: Props) {
     .filter((m) => m.work_id)
     .map((m) => m.work_id as string);
 
-  let workMap: Record<string, PortfolioImage> = {};
+  let workMap: Record<string, Artwork> = {};
   if (workIds.length > 0) {
     const { data: works } = await supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("*")
       .in("id", workIds);
     for (const w of works ?? []) {
-      workMap[w.id] = w as PortfolioImage;
+      workMap[w.id] = w as Artwork;
     }
   }
 

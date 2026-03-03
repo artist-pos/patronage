@@ -11,7 +11,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { PortfolioImage } from "@/types/database";
+import type { Artwork } from "@/types/database";
 
 const MAX_PX = 1600;
 const NAME_MAX = 140;
@@ -47,7 +47,7 @@ function formatSize(bytes: number): string {
 
 interface Props {
   profileId: string;
-  onSuccess: (work: PortfolioImage) => void;
+  onSuccess: (work: Artwork) => void;
 }
 
 export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
@@ -97,9 +97,9 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
 
       const { data: { publicUrl } } = supabase.storage.from("portfolio").getPublicUrl(path);
 
-      // Insert portfolio_images row
+      // Insert artworks row
       const { data: row, error: dbErr } = await supabase
-        .from("portfolio_images")
+        .from("artworks")
         .insert({
           profile_id: profileId,
           creator_id: profileId,
@@ -117,7 +117,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
       if (dbErr || !row) throw new Error(dbErr?.message ?? "Failed to save listing.");
 
       toast.success(`Work "${name.trim()}" is now listed as available.`);
-      onSuccess(row as PortfolioImage);
+      onSuccess(row as Artwork);
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
