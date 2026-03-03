@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted } from "@/lib/email";
 
 export async function initiateTransfer(
@@ -96,14 +95,8 @@ export async function acceptTransfer(
   if (!work) return { error: "Work not found" };
   if (!work.is_available) return { error: "This work has already been transferred" };
 
-  // Update ownership — use admin client because portfolio_images has no UPDATE RLS policy
-  let admin;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return { error: "Server configuration error — admin client unavailable" };
-  }
-  const { error: updateError } = await admin
+  // Update ownership — allowed by the portfolio_images_accept_transfer RLS policy (migration 024)
+  const { error: updateError } = await supabase
     .from("portfolio_images")
     .update({ current_owner_id: user.id, is_available: false })
     .eq("id", message.work_id);
