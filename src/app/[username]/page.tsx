@@ -14,7 +14,8 @@ import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
-import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
+import { AvailableWorkCard } from "@/components/profile/AvailableWorkCard";
+import type { ExhibitionEntry, BibliographyEntry, Profile } from "@/types/database";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -60,12 +61,54 @@ export default async function ArtistProfilePage({ params }: Props) {
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
 
-  const [images, studioUpdates, artistProjects, alreadyFollowing] = await Promise.all([
-    getPortfolioImages(profile.id),
-    getArtistUpdates(profile.id),
-    getArtistProjects(profile.id),
-    user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
-  ]);
+  // Fetch current viewer's role for conditional UI (e.g. "Enquire to Buy")
+  let viewerRole: string | null = null;
+  if (user && !isOwner) {
+    const { data: viewerProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    viewerRole = viewerProfile?.role ?? null;
+  }
+
+  const isArtistProfile = profile.role === "artist";
+
+  const [images, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData] =
+    await Promise.all([
+      isArtistProfile ? getPortfolioImages(profile.id) : Promise.resolve([]),
+      isArtistProfile
+        ? supabase
+            .from("portfolio_images")
+            .select("*")
+            .eq("profile_id", profile.id)
+            .eq("is_available", true)
+            .order("position", { ascending: true })
+            .then(({ data }) => (data ?? []))
+        : Promise.resolve([]),
+      isArtistProfile ? getArtistUpdates(profile.id) : Promise.resolve([]),
+      isArtistProfile ? getArtistProjects(profile.id) : Promise.resolve([]),
+      user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
+      // For patron/partner profiles: get the artists they follow
+      !isArtistProfile
+        ? supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", profile.id)
+            .then(async ({ data: follows }) => {
+              const ids = (follows ?? []).map((f: { following_id: string }) => f.following_id);
+              if (ids.length === 0) return [];
+              const { data: artists } = await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url")
+                .in("id", ids);
+              return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
+            })
+        : Promise.resolve([]),
+    ]);
+
+  // Narrow types for downstream use
+  const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
 
   const displayName = profile.full_name ?? profile.username;
 
@@ -241,24 +284,102 @@ export default async function ArtistProfilePage({ params }: Props) {
           </section>
         )}
 
-        {/* ── Portfolio ── */}
-        {images.length > 0 && (
-          <section className="space-y-6 border-t border-border pt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Portfolio
-            </h2>
-            <PortfolioGrid images={images} />
-          </section>
+        {/* ── Artist-only sections ── */}
+        {isArtistProfile && (
+          <>
+            {/* Portfolio */}
+            {images.length > 0 && (
+              <section className="space-y-6 border-t border-border pt-10">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                  Portfolio
+                </h2>
+                <PortfolioGrid images={images} />
+              </section>
+            )}
+
+            {/* Available Works */}
+            {availableWorks.length > 0 && (
+              <section className="space-y-4 border-t border-border pt-10">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                  Available Works
+                </h2>
+                <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none items-start">
+                  {availableWorks.map((img) => (
+                    <AvailableWorkCard
+                      key={img.id}
+                      img={img}
+                      artistId={profile.id}
+                      artistName={profile.full_name ?? profile.username}
+                      viewerRole={viewerRole}
+                      isOwner={isOwner}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Studio Updates Carousel */}
+            <StudioCarousel
+              updates={studioUpdates}
+              artistUsername={profile.username}
+              isOwner={isOwner}
+              profileId={profile.id}
+              projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+            />
+          </>
         )}
 
-        {/* ── Studio Updates Carousel — below portfolio ── */}
-        <StudioCarousel
-          updates={studioUpdates}
-          artistUsername={profile.username}
-          isOwner={isOwner}
-          profileId={profile.id}
-          projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
-        />
+        {/* ── Patron / Partner "Taste" sections ── */}
+        {!isArtistProfile && (
+          <>
+            {/* Artists I Follow */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                Artists I Follow
+              </h2>
+              {followingArtists.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Not following anyone yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-4">
+                  {followingArtists.map((a) => (
+                    <Link
+                      key={a.id}
+                      href={`/${a.username}`}
+                      className="flex flex-col items-center gap-1.5 group"
+                    >
+                      <div className="relative w-14 h-14 border border-black overflow-hidden bg-muted">
+                        {a.avatar_url ? (
+                          <Image
+                            src={a.avatar_url}
+                            alt={a.full_name ?? a.username}
+                            fill
+                            className="object-cover"
+                            sizes="56px"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-lg font-medium text-muted-foreground">
+                            {(a.full_name ?? a.username).charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors text-center leading-tight">
+                        {a.full_name ?? a.username}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Collection */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                Collection
+              </h2>
+              <p className="text-sm text-muted-foreground">No works collected yet.</p>
+            </section>
+          </>
+        )}
 
         {/* ── Exhibition History ── */}
         {exhibitions.length > 0 && (

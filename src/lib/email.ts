@@ -33,6 +33,21 @@ export async function notifyMessageRecipient(
   const recipientId =
     conv.participant_a === senderId ? conv.participant_b : conv.participant_a;
 
+  // Role-conditional: only notify if receiver is an artist, or patron initiated the thread
+  const [{ data: receiverProfile }, { data: firstMsg }] = await Promise.all([
+    admin.from("profiles").select("role").eq("id", recipientId).single(),
+    admin
+      .from("messages")
+      .select("sender_id")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single(),
+  ]);
+
+  const patronInitiated = firstMsg?.sender_id !== senderId;
+  if (receiverProfile?.role !== "artist" && !patronInitiated) return;
+
   // Spam guard: only notify on the first unread message from this sender
   const { count } = await admin
     .from("messages")

@@ -61,7 +61,7 @@ export interface Profile {
   full_name: string | null;
   bio: string | null;
   country: CountryEnum | null;
-  role: "artist" | "admin";
+  role: "artist" | "admin" | "patron" | "partner";
   career_stage: CareerStageEnum | null;
   medium: string[] | null;
   cv_url: string | null;
@@ -74,6 +74,7 @@ export interface Profile {
   press_bibliography: BibliographyEntry[];
   is_active: boolean;
   is_patronage_supported: boolean;
+  acquired_works: string[];
   created_at: string;
 }
 
@@ -83,6 +84,8 @@ export interface PortfolioImage {
   url: string;
   caption: string | null;
   position: number;
+  is_available: boolean;
+  price: string | null;
   created_at: string;
 }
 

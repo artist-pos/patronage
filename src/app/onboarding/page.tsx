@@ -22,6 +22,9 @@ export default async function OnboardingPage() {
 
   const profile = await getProfileById(user.id);
 
+  // Force role selection before profile setup
+  if (!profile?.role) redirect("/onboarding/role");
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-12">
       <div className="space-y-1 border-b border-border pb-6">
