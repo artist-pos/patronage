@@ -97,7 +97,12 @@ export async function acceptTransfer(
   if (!work.is_available) return { error: "This work has already been transferred" };
 
   // Update ownership — use admin client because portfolio_images has no UPDATE RLS policy
-  const admin = createAdminClient();
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { error: "Server configuration error — admin client unavailable" };
+  }
   const { error: updateError } = await admin
     .from("portfolio_images")
     .update({ current_owner_id: user.id, is_available: false })

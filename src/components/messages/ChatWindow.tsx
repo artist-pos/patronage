@@ -100,12 +100,17 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
 
   async function handleAcceptTransfer(messageId: string) {
     setAcceptingId(messageId);
-    const result = await acceptTransfer(messageId);
-    setAcceptingId(null);
-    if (result.error) {
-      showToast(`Error: ${result.error}`);
-    } else {
-      showToast("Transfer accepted — work added to your collection");
+    try {
+      const result = await acceptTransfer(messageId);
+      if (result.error) {
+        showToast(`Error: ${result.error}`);
+      } else {
+        showToast("Transfer accepted — work added to your collection");
+      }
+    } catch (err) {
+      showToast(`Error: ${err instanceof Error ? err.message : "Something went wrong"}`);
+    } finally {
+      setAcceptingId(null);
     }
   }
 
