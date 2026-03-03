@@ -83,6 +83,7 @@ export interface PortfolioImage {
   profile_id: string;
   url: string;
   caption: string | null;
+  description: string | null;
   position: number;
   is_available: boolean;
   price: string | null;

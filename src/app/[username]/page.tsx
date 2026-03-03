@@ -14,7 +14,7 @@ import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
-import { AvailableWorkCard } from "@/components/profile/AvailableWorkCard";
+import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import type { ExhibitionEntry, BibliographyEntry, Profile } from "@/types/database";
 
 interface Props {
@@ -297,25 +297,15 @@ export default async function ArtistProfilePage({ params }: Props) {
               </section>
             )}
 
-            {/* Available Works */}
-            {availableWorks.length > 0 && (
-              <section className="space-y-4 border-t border-border pt-10">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Available Works
-                </h2>
-                <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none items-start">
-                  {availableWorks.map((img) => (
-                    <AvailableWorkCard
-                      key={img.id}
-                      img={img}
-                      artistId={profile.id}
-                      artistName={profile.full_name ?? profile.username}
-                      viewerRole={viewerRole}
-                      isOwner={isOwner}
-                    />
-                  ))}
-                </div>
-              </section>
+            {/* Available Works — always shown to owner, shown to others only if works exist */}
+            {(isOwner || availableWorks.length > 0) && (
+              <AvailableWorksSection
+                initialWorks={availableWorks}
+                profileId={profile.id}
+                artistName={profile.full_name ?? profile.username}
+                viewerRole={viewerRole}
+                isOwner={isOwner}
+              />
             )}
 
             {/* Studio Updates Carousel */}

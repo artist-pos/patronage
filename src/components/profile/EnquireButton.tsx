@@ -8,9 +8,10 @@ interface Props {
   artistId: string;
   artistName: string;
   workTitle: string | null;
+  workDescription?: string | null;
 }
 
-export function EnquireButton({ artistId, artistName, workTitle }: Props) {
+export function EnquireButton({ artistId, artistName, workTitle, workDescription }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +21,14 @@ export function EnquireButton({ artistId, artistName, workTitle }: Props) {
       const result = await getOrCreateConversation(artistId);
       if ("error" in result) return;
 
-      const body = workTitle
+      // Pre-fill message with work title + description context
+      const intro = workTitle
         ? `Hi ${artistName}, I'm interested in "${workTitle}".`
         : `Hi ${artistName}, I'm interested in your work.`;
+
+      const body = workDescription
+        ? `${intro}\n\n${workDescription}`
+        : intro;
 
       await sendMessage(result.id, body);
       router.push(`/messages/${result.id}`);
