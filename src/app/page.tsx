@@ -145,7 +145,7 @@ export default async function Home() {
               <Link href="/opportunities">Browse Opportunities</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/auth/signup">Join the community</Link>
+              <Link href="/auth/signup">Join the Community</Link>
             </Button>
           </div>
         </div>

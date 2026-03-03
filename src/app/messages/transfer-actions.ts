@@ -96,12 +96,14 @@ export async function acceptTransfer(
   if (!work.is_available) return { error: "This work has already been transferred" };
 
   // Update ownership
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("artworks")
     .update({ current_owner_id: user.id, is_available: false })
-    .eq("id", message.work_id);
+    .eq("id", message.work_id)
+    .select("id");
 
   if (updateError) return { error: updateError.message };
+  if (!updated || updated.length === 0) return { error: "Transfer failed — permission denied. Please ensure migration 028 has been applied." };
 
   // Append work id to buyer's acquired_works array
   const { data: buyerProfile } = await supabase
