@@ -17,7 +17,7 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
 
   return (
     <div
-      className="flex-none flex flex-row border border-border bg-background snap-start"
+      className="flex-none flex flex-row border border-border bg-background snap-start overflow-hidden"
       style={{ height: CARD_H, boxSizing: "border-box" }}
     >
       {/* Left: image — natural aspect ratio, fixed height */}

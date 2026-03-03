@@ -83,7 +83,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
             return (
               <div
                 key={work.id}
-                className={`flex-none flex flex-row border border-border bg-background snap-start ${
+                className={`flex-none flex flex-row border border-border bg-background snap-start overflow-hidden ${
                   isOwner && work.hide_from_archive ? "opacity-50" : ""
                 }`}
                 style={{ height: CARD_H, boxSizing: "border-box" }}
