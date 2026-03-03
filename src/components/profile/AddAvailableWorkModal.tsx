@@ -129,7 +129,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <button className="text-xs border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors font-medium">
+        <button className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium">
           + Add Available Work
         </button>
       </DialogTrigger>
@@ -210,7 +210,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between">
               <label className="text-sm font-medium">
-                Description / Inquiry Context
+                Description / Enquiry Context
                 <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
               </label>
               <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -221,7 +221,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
               rows={4}
-              placeholder="Medium, dimensions, year, condition… This will be included in patron enquiry messages."
+              placeholder="Medium, dimensions, year, condition… This will be included in patron enquiry messages automatically."
               className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground resize-none"
             />
           </div>

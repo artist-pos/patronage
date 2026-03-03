@@ -74,9 +74,9 @@ export default async function ArtistProfilePage({ params }: Props) {
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [images, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData] =
+  const [allPortfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData] =
     await Promise.all([
-      isArtistProfile ? getPortfolioImages(profile.id) : Promise.resolve([]),
+      isArtistProfile ? getPortfolioImages(profile.id) : Promise.resolve([]), // includes all; filtered below
       isArtistProfile
         ? supabase
             .from("portfolio_images")
@@ -106,6 +106,9 @@ export default async function ArtistProfilePage({ params }: Props) {
             })
         : Promise.resolve([]),
     ]);
+
+  // Portfolio excludes available works — those appear only in the Available Works section
+  const images = allPortfolioImages.filter((img) => !img.is_available);
 
   // Narrow types for downstream use
   const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
