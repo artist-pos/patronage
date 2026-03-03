@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/messages";
 import { markConversationRead } from "@/app/messages/actions";
 import { ChatWindow } from "@/components/messages/ChatWindow";
+import { TransferWorkButton } from "@/components/messages/TransferWorkButton";
+import type { PortfolioImage } from "@/types/database";
 
 interface Props {
   params: Promise<{ conversationId: string }>;
@@ -27,11 +29,17 @@ export default async function ChatPage({ params }: Props) {
   const otherId =
     conv.participant_a === user.id ? conv.participant_b : conv.participant_a;
 
-  const [otherProfile, messages] = await Promise.all([
+  const [otherProfile, viewerProfile, messages] = await Promise.all([
     supabase
       .from("profiles")
-      .select("username, full_name, avatar_url")
+      .select("username, full_name, avatar_url, role")
       .eq("id", otherId)
+      .maybeSingle()
+      .then((r) => r.data),
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
       .maybeSingle()
       .then((r) => r.data),
     getMessages(conversationId),
@@ -41,6 +49,37 @@ export default async function ChatPage({ params }: Props) {
   await markConversationRead(conversationId);
 
   const otherName = otherProfile?.full_name ?? otherProfile?.username ?? "Unknown";
+
+  const viewerIsArtist =
+    viewerProfile?.role === "artist" || viewerProfile?.role === "owner";
+
+  // If viewer is artist, fetch their available works for transfer
+  let artistAvailableWorks: PortfolioImage[] = [];
+  if (viewerIsArtist) {
+    const { data } = await supabase
+      .from("portfolio_images")
+      .select("*")
+      .eq("creator_id", user.id)
+      .eq("is_available", true)
+      .order("position", { ascending: true });
+    artistAvailableWorks = (data ?? []) as PortfolioImage[];
+  }
+
+  // Build workMap for any transfer_request or transfer_accepted messages
+  const workIds = messages
+    .filter((m) => m.work_id)
+    .map((m) => m.work_id as string);
+
+  let workMap: Record<string, PortfolioImage> = {};
+  if (workIds.length > 0) {
+    const { data: works } = await supabase
+      .from("portfolio_images")
+      .select("*")
+      .in("id", workIds);
+    for (const w of works ?? []) {
+      workMap[w.id] = w as PortfolioImage;
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8" style={{ height: "calc(100svh - 5rem)", display: "flex", flexDirection: "column" }}>
@@ -62,6 +101,12 @@ export default async function ChatPage({ params }: Props) {
             View profile →
           </Link>
         )}
+        {viewerIsArtist && artistAvailableWorks.length > 0 && (
+          <TransferWorkButton
+            conversationId={conversationId}
+            artistAvailableWorks={artistAvailableWorks}
+          />
+        )}
       </div>
 
       <ChatWindow
@@ -69,6 +114,7 @@ export default async function ChatPage({ params }: Props) {
         currentUserId={user.id}
         initialMessages={messages}
         otherName={otherName}
+        workMap={workMap}
       />
     </div>
   );

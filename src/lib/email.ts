@@ -96,6 +96,143 @@ export async function notifyMessageRecipient(
   });
 }
 
+/**
+ * Notify a buyer that an artist has offered them an artwork via transfer request.
+ */
+export async function notifyTransferRequest(
+  buyerId: string,
+  artistName: string,
+  workTitle: string,
+  conversationId: string
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: { user: buyerUser } } = await admin.auth.admin.getUserById(buyerId);
+  if (!buyerUser?.email) return;
+
+  await getResend().emails.send({
+    from: FROM,
+    to: buyerUser.email,
+    subject: `${artistName} has offered you an artwork`,
+    html: buildTransferRequestHtml({ artistName, workTitle, conversationUrl: `${SITE_URL}/messages/${conversationId}` }),
+  });
+}
+
+/**
+ * Notify an artist that their transfer offer was accepted.
+ */
+export async function notifyTransferAccepted(
+  artistId: string,
+  buyerName: string,
+  workTitle: string
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: { user: artistUser } } = await admin.auth.admin.getUserById(artistId);
+  if (!artistUser?.email) return;
+
+  await getResend().emails.send({
+    from: FROM,
+    to: artistUser.email,
+    subject: `${buyerName} accepted your transfer of ${workTitle}`,
+    html: buildTransferAcceptedHtml({ buyerName, workTitle, messagesUrl: `${SITE_URL}/messages` }),
+  });
+}
+
+function buildTransferRequestHtml({
+  artistName,
+  workTitle,
+  conversationUrl,
+}: {
+  artistName: string;
+  workTitle: string;
+  conversationUrl: string;
+}): string {
+  const escapedTitle = workTitle
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const escapedArtist = artistName
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">You have received an artwork offer</p>
+
+      <p style="margin:0 0 8px;font-size:15px;"><strong>${escapedArtist}</strong> has offered you:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">
+        ${escapedTitle}
+      </blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">Open the conversation to accept or discuss the transfer.</p>
+
+      <a href="${conversationUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        View offer →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You're receiving this because you have an account at
+        <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildTransferAcceptedHtml({
+  buyerName,
+  workTitle,
+  messagesUrl,
+}: {
+  buyerName: string;
+  workTitle: string;
+  messagesUrl: string;
+}): string {
+  const escapedTitle = workTitle
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const escapedBuyer = buyerName
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Transfer confirmed</p>
+
+      <p style="margin:0 0 8px;font-size:15px;"><strong>${escapedBuyer}</strong> has accepted your transfer of:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">
+        ${escapedTitle}
+      </blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">The work is now listed in their collection.</p>
+
+      <a href="${messagesUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        View messages →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You're receiving this because you have an account at
+        <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 function buildMessageNotificationHtml({
   senderName,
   preview,

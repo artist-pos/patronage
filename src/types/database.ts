@@ -75,6 +75,8 @@ export interface Profile {
   is_active: boolean;
   is_patronage_supported: boolean;
   acquired_works: string[];
+  hide_sold_section: boolean;
+  collection_public: boolean;
   created_at: string;
 }
 
@@ -87,6 +89,11 @@ export interface PortfolioImage {
   position: number;
   is_available: boolean;
   price: string | null;
+  creator_id: string;
+  current_owner_id: string;
+  hide_from_archive: boolean;
+  hide_price: boolean;
+  collection_visible: boolean;
   created_at: string;
 }
 
@@ -130,6 +137,8 @@ export interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
+  message_type: 'text' | 'transfer_request' | 'transfer_accepted';
+  work_id: string | null;
   created_at: string;
 }
 

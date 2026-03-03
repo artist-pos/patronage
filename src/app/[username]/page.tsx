@@ -15,6 +15,8 @@ import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
+import { CollectionSection } from "@/components/profile/CollectionSection";
+import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import type { ExhibitionEntry, BibliographyEntry, Profile } from "@/types/database";
 
 interface Props {
@@ -74,7 +76,7 @@ export default async function ArtistProfilePage({ params }: Props) {
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [allPortfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData] =
+  const [allPortfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks] =
     await Promise.all([
       isArtistProfile ? getPortfolioImages(profile.id) : Promise.resolve([]), // includes all; filtered below
       isArtistProfile
@@ -104,6 +106,25 @@ export default async function ArtistProfilePage({ params }: Props) {
                 .in("id", ids);
               return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
             })
+        : Promise.resolve([]),
+      // Artist sold works (transferred to others)
+      isArtistProfile
+        ? supabase
+            .from("portfolio_images")
+            .select("*, owner_profile:current_owner_id(username, full_name)")
+            .eq("creator_id", profile.id)
+            .neq("current_owner_id", profile.id)
+            .order("created_at", { ascending: false })
+            .then(({ data }) => (data ?? []))
+        : Promise.resolve([]),
+      // Patron/partner collection (works they own but didn't create)
+      !isArtistProfile
+        ? supabase
+            .from("portfolio_images")
+            .select("*, creator_profile:creator_id(username, full_name)")
+            .eq("current_owner_id", profile.id)
+            .order("created_at", { ascending: false })
+            .then(({ data }) => (data ?? []))
         : Promise.resolve([]),
     ]);
 
@@ -311,6 +332,14 @@ export default async function ArtistProfilePage({ params }: Props) {
               />
             )}
 
+            {/* Sold Works — works transferred to others */}
+            <SoldWorksSection
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              initialWorks={soldWorks as any}
+              isOwner={isOwner}
+              hideSoldSection={profile.hide_sold_section ?? false}
+            />
+
             {/* Studio Updates Carousel */}
             <StudioCarousel
               updates={studioUpdates}
@@ -365,12 +394,12 @@ export default async function ArtistProfilePage({ params }: Props) {
             </section>
 
             {/* Collection */}
-            <section className="space-y-4 border-t border-border pt-10">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                Collection
-              </h2>
-              <p className="text-sm text-muted-foreground">No works collected yet.</p>
-            </section>
+            <CollectionSection
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              initialWorks={collectionWorks as any}
+              isOwner={isOwner}
+              collectionPublic={profile.collection_public ?? true}
+            />
           </>
         )}
 

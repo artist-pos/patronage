@@ -60,7 +60,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("messages")
-    .select("id, conversation_id, sender_id, content, is_read, created_at")
+    .select("id, conversation_id, sender_id, content, is_read, message_type, work_id, created_at")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   return (data ?? []) as Message[];
