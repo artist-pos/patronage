@@ -93,7 +93,7 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
           {/* Description */}
           {img.description && (
             <p className="text-[11px] text-muted-foreground leading-snug line-clamp-5">
-              {img.description.slice(0, 280)}
+              {img.description.slice(0, 560)}
             </p>
           )}
         </div>

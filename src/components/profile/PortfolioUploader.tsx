@@ -93,6 +93,7 @@ function SortableThumb({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: img.id });
+  const [descLen, setDescLen] = useState((img.description ?? "").length);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -154,16 +155,20 @@ function SortableThumb({
         style={{ minWidth: "80px" }}
       />
 
-      {/* Description — short prose note saved on blur */}
+      {/* Description — prose note saved on blur */}
       <textarea
         defaultValue={img.description ?? ""}
-        placeholder="Short description…"
-        maxLength={280}
-        rows={2}
+        placeholder="Description…"
+        maxLength={560}
+        rows={3}
+        onChange={(e) => setDescLen(e.target.value.length)}
         onBlur={(e) => onDescriptionBlur(img.id, e.target.value.trim() || null)}
         className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground resize-none leading-snug"
         style={{ minWidth: "80px" }}
       />
+      <span className="text-[10px] text-muted-foreground tabular-nums self-end">
+        {descLen}/560
+      </span>
     </div>
   );
 }
