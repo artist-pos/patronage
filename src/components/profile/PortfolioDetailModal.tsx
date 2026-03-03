@@ -25,17 +25,17 @@ export function PortfolioDetailModal({ img, onClose, artistName, viewerRole }: P
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-background border border-black w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col sm:flex-row">
         {/* Image */}
-        <div className="flex-1 bg-muted overflow-hidden flex items-center justify-center min-h-0">
+        <div className="relative flex-1 bg-muted overflow-hidden min-h-[300px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={img.url}
             alt={img.caption ?? "Portfolio work"}
-            className="max-h-[70vh] w-auto block"
+            className="absolute inset-0 w-full h-full object-contain"
           />
         </div>
 
@@ -53,7 +53,7 @@ export function PortfolioDetailModal({ img, onClose, artistName, viewerRole }: P
           </button>
 
           {img.caption && (
-            <p className="text-sm font-semibold leading-snug">{img.caption}</p>
+            <p className="text-sm font-bold leading-snug">{img.caption}</p>
           )}
 
           {img.price && (
@@ -68,7 +68,7 @@ export function PortfolioDetailModal({ img, onClose, artistName, viewerRole }: P
 
           {showCredit && (
             <p className="text-xs text-muted-foreground mt-auto pt-4 border-t border-border">
-              Created by {artistName}
+              by {artistName}
             </p>
           )}
         </div>

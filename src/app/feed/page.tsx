@@ -112,6 +112,8 @@ export default async function FeedPage() {
         )}
       </div>
 
+      <hr className="border-t border-border" />
+
       {/* Masonry grid */}
       {updates.length > 0 ? (
         <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-2">
