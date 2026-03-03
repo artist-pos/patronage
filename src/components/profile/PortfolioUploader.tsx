@@ -83,18 +83,12 @@ function SortableThumb({
   isPending,
   onRemove,
   onCaptionBlur,
-  onAvailableChange,
-  onPriceBlur,
 }: {
   img: PortfolioImage;
   isPending: boolean;
   onRemove: (img: PortfolioImage) => void;
   onCaptionBlur: (id: string, caption: string | null) => void;
-  onAvailableChange: (id: string, value: boolean) => void;
-  onPriceBlur: (id: string, price: string | null) => void;
 }) {
-  const [isAvailable, setIsAvailable] = useState(img.is_available);
-
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: img.id });
 
@@ -157,37 +151,6 @@ function SortableThumb({
         className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
         style={{ minWidth: "80px" }}
       />
-
-      {/* Available for sale toggle */}
-      <label
-        className="flex items-center gap-1.5 cursor-pointer"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <input
-          type="checkbox"
-          checked={isAvailable}
-          onChange={(e) => {
-            setIsAvailable(e.target.checked);
-            onAvailableChange(img.id, e.target.checked);
-          }}
-          className="w-3 h-3 accent-black"
-        />
-        <span className="text-[10px] text-muted-foreground">Available for sale</span>
-      </label>
-
-      {/* Price — only shown when available */}
-      {isAvailable && (
-        <input
-          type="text"
-          defaultValue={img.price ?? ""}
-          placeholder="Price (e.g. $1,200)"
-          maxLength={40}
-          onPointerDown={(e) => e.stopPropagation()}
-          onBlur={(e) => onPriceBlur(img.id, e.target.value.trim() || null)}
-          className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
-          style={{ minWidth: "80px" }}
-        />
-      )}
     </div>
   );
 }
@@ -235,6 +198,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       .from("portfolio_images")
       .select("*")
       .eq("profile_id", profileId)
+      .eq("is_available", false)
       .order("position", { ascending: true })
       .then(({ data }) => setImages((data ?? []) as PortfolioImage[]));
   }, [profileId, isPortfolio]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,7 +228,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
           const { data: row } = await supabase
             .from("portfolio_images")
-            .insert({ profile_id: profileId, url, position: images.length + uploaded.length })
+            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, position: images.length + uploaded.length })
             .select()
             .single();
           if (row) uploaded.push(row as PortfolioImage);
@@ -304,14 +268,6 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
   async function handleCaptionBlur(id: string, caption: string | null) {
     await supabase.from("portfolio_images").update({ caption }).eq("id", id);
-  }
-
-  async function handleAvailableChange(id: string, is_available: boolean) {
-    await supabase.from("portfolio_images").update({ is_available }).eq("id", id);
-  }
-
-  async function handlePriceBlur(id: string, price: string | null) {
-    await supabase.from("portfolio_images").update({ price }).eq("id", id);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -392,8 +348,6 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
                   isPending={isPending}
                   onRemove={handleRemoveImage}
                   onCaptionBlur={handleCaptionBlur}
-                  onAvailableChange={handleAvailableChange}
-                  onPriceBlur={handlePriceBlur}
                 />
               ))}
             </div>

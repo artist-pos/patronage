@@ -102,6 +102,8 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
         .from("portfolio_images")
         .insert({
           profile_id: profileId,
+          creator_id: profileId,
+          current_owner_id: profileId,
           url: publicUrl,
           caption: name.trim(),
           price: price.trim(),
