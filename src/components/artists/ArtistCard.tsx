@@ -127,10 +127,10 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
   return (
     <Link
       href={`/${artist.username}`}
-      className="group flex flex-row border border-black h-[220px]"
+      className="group flex flex-row border border-black h-[154px]"
     >
-      {/* Left: image strip */}
-      <div className="relative w-1/2 shrink-0 overflow-hidden bg-muted">
+      {/* Left: image strip — 40% width */}
+      <div className="relative w-2/5 shrink-0 overflow-hidden bg-muted">
         {artist.primary_image_url ? (
           <Image
             src={artist.primary_image_url}
@@ -146,22 +146,22 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
         )}
       </div>
 
-      {/* Right: info block — avatar lives here, no straddle */}
-      <div className="bg-white border-l border-black flex flex-col w-1/2 p-4 gap-2 overflow-hidden">
-        <div className="flex items-start gap-3">
+      {/* Right: info block — 60% width, 12px left padding */}
+      <div className="bg-white border-l border-black flex flex-col w-3/5 pl-3 pr-2 py-3 gap-2 overflow-hidden">
+        <div className="flex items-start gap-2">
           {artist.avatar_url && (
-            <div className="relative w-14 h-14 shrink-0 border border-black overflow-hidden">
+            <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
               <Image
                 src={artist.avatar_url}
                 alt={displayName}
                 fill
                 className="object-cover"
-                sizes="56px"
+                sizes="40px"
               />
             </div>
           )}
           <div className="flex flex-col gap-1 pt-1 min-w-0">
-            <p className="font-bold leading-snug truncate text-sm">{displayName}</p>
+            <p className="font-bold leading-snug break-words text-sm">{displayName}</p>
             {artist.is_patronage_supported && (
               <Badge className="text-xs font-normal bg-foreground text-background w-fit">
                 With Patronage

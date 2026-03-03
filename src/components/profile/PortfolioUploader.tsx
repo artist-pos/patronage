@@ -2,20 +2,22 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { GripVertical } from "lucide-react";
+import { X } from "lucide-react";
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   PointerSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
@@ -51,7 +53,31 @@ async function resizeToJpeg(file: File): Promise<Blob> {
   });
 }
 
-// ── Sortable thumbnail item ──────────────────────────────────────────────────
+// ── Static preview used inside DragOverlay (floating copy while dragging) ───
+function ThumbPreview({ img }: { img: PortfolioImage }) {
+  return (
+    <div
+      className="border border-border overflow-hidden bg-muted shadow-2xl"
+      style={{
+        height: THUMB_H,
+        width: "fit-content",
+        transform: "scale(1.05)",
+        transformOrigin: "top left",
+      }}
+    >
+      <Image
+        src={img.url}
+        alt="Portfolio image"
+        width={300}
+        height={THUMB_H}
+        unoptimized
+        style={{ height: THUMB_H, width: "auto", display: "block" }}
+      />
+    </div>
+  );
+}
+
+// ── Sortable thumbnail ───────────────────────────────────────────────────────
 function SortableThumb({
   img,
   isPending,
@@ -69,7 +95,8 @@ function SortableThumb({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.25 : 1,
+    // Invisible placeholder — holds space exactly while DragOverlay floats above
+    opacity: isDragging ? 0 : 1,
   };
 
   return (
@@ -78,9 +105,15 @@ function SortableThumb({
       style={style}
       className="flex-none flex flex-col gap-1.5"
     >
-      {/* Thumbnail — fixed height, width follows natural aspect ratio */}
+      {/*
+        Image block = drag handle.
+        listeners/attributes go here — NOT on the outer wrapper — so clicking the
+        caption input or the delete button never starts a drag.
+      */}
       <div
-        className="relative group border border-border overflow-hidden bg-muted"
+        {...listeners}
+        {...attributes}
+        className="relative group border border-border overflow-hidden bg-muted cursor-grab active:cursor-grabbing touch-none"
         style={{ height: THUMB_H, width: "fit-content" }}
       >
         <Image
@@ -92,27 +125,23 @@ function SortableThumb({
           style={{ height: THUMB_H, width: "auto", display: "block" }}
         />
 
-        {/* Drag handle — always visible, top-left */}
-        <div
-          {...listeners}
-          {...attributes}
-          className="absolute top-1 left-1 bg-background/80 p-0.5 cursor-grab active:cursor-grabbing touch-none"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-        </div>
-
-        {/* Remove overlay — on hover */}
+        {/*
+          Delete button — top-right corner.
+          onPointerDown stops propagation so it never triggers the drag handle.
+          This is the ONLY way to remove an image.
+        */}
         <button
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onRemove(img)}
           disabled={isPending}
-          className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+          aria-label="Remove image"
+          className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white disabled:opacity-40"
         >
-          Remove
+          <X className="w-3 h-3" />
         </button>
       </div>
 
-      {/* Caption — width matches thumbnail */}
+      {/* Caption — below the image, not part of the drag handle */}
       <input
         type="text"
         defaultValue={img.caption ?? ""}
@@ -141,10 +170,17 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // DnD state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Track unsaved reorders — only write to Supabase when the user clicks Save
+  const [orderDirty, setOrderDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const supabase = createClient();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // distance: 8 — requires intentional drag, prevents accidental drags on tap/click
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -233,23 +269,35 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
     await supabase.from("portfolio_images").update({ caption }).eq("id", id);
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     const oldIndex = images.findIndex((i) => i.id === active.id);
     const newIndex = images.findIndex((i) => i.id === over.id);
-    const reordered = arrayMove(images, oldIndex, newIndex);
-    setImages(reordered);
+    setImages(arrayMove(images, oldIndex, newIndex));
+    setOrderDirty(true);
+  }
 
-    // Persist new positions to Supabase
+  async function handleSaveOrder() {
+    setSaving(true);
     await Promise.all(
-      reordered.map((img, i) =>
+      images.map((img, i) =>
         supabase.from("portfolio_images").update({ position: i }).eq("id", img.id)
       )
     );
+    setSaving(false);
+    setOrderDirty(false);
   }
 
+  const activeImage = activeId ? images.find((i) => i.id === activeId) : null;
+
+  // ── CV mode ─────────────────────────────────────────────────────────────────
   if (!isPortfolio) {
     return (
       <div className="space-y-4">
@@ -276,19 +324,21 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
     );
   }
 
+  // ── Portfolio mode ───────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       {images.length > 0 && (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={rectIntersection}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
             items={images.map((i) => i.id)}
-            strategy={horizontalListSortingStrategy}
+            strategy={rectSortingStrategy}
           >
-            {/* Flex row — variable width thumbnails at fixed height */}
+            {/* flex-wrap so images sit at natural width; rectSortingStrategy handles the 2D layout */}
             <div className="flex flex-wrap gap-3 items-start">
               {images.map((img) => (
                 <SortableThumb
@@ -301,7 +351,28 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
               ))}
             </div>
           </SortableContext>
+
+          {/*
+            DragOverlay renders the floating "ghost" above everything.
+            The sortable item underneath becomes opacity-0, holding its exact width as
+            a placeholder — so the surrounding images don't jump around.
+          */}
+          <DragOverlay>
+            {activeImage ? <ThumbPreview img={activeImage} /> : null}
+          </DragOverlay>
         </DndContext>
+      )}
+
+      {/* Save order button — only shown when there are unsaved reorder changes */}
+      {orderDirty && (
+        <Button
+          onClick={handleSaveOrder}
+          disabled={saving}
+          size="sm"
+          className="bg-black text-white hover:opacity-80"
+        >
+          {saving ? "Saving…" : "Save order"}
+        </Button>
       )}
 
       {images.length < MAX_IMAGES && (

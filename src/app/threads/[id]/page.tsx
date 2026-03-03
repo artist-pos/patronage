@@ -181,7 +181,7 @@ function ThreadPostItem({
 
         {/* Caption */}
         {post.caption && (
-          <p className="text-sm leading-relaxed">{post.caption}</p>
+          <p className="text-base leading-relaxed">{post.caption}</p>
         )}
 
         {/* Notes */}

@@ -13,6 +13,7 @@ import { TrackedLink } from "@/components/profile/TrackedLink";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { FollowButton } from "@/components/profile/FollowButton";
+import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 interface Props {
@@ -246,25 +247,7 @@ export default async function ArtistProfilePage({ params }: Props) {
             <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
               Portfolio
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {images.map((img) => (
-                <div key={img.id} className="space-y-1.5">
-                  <div className="h-[300px] border border-border overflow-hidden">
-                    <Image
-                      src={img.url}
-                      alt={img.caption ?? "Portfolio work"}
-                      width={600}
-                      height={300}
-                      unoptimized
-                      style={{ height: "300px", width: "auto", display: "block" }}
-                    />
-                  </div>
-                  {img.caption && (
-                    <p className="text-xs text-muted-foreground leading-snug font-mono">{img.caption}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <PortfolioGrid images={images} />
           </section>
         )}
 

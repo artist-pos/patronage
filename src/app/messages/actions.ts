@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { notifyMessageRecipient } from "@/lib/email";
 
 export async function getOrCreateConversation(
   otherUserId: string
@@ -47,6 +48,14 @@ export async function sendMessage(
   });
 
   if (error) return { error: error.message };
+
+  // Fire-and-forget: email notification for recipient (failure must not fail the send)
+  try {
+    await notifyMessageRecipient(conversationId, user.id);
+  } catch {
+    // swallow — email is best-effort
+  }
+
   return {};
 }
 

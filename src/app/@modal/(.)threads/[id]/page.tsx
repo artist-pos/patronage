@@ -148,7 +148,7 @@ function ModalThreadPost({
         </div>
 
         {post.caption && (
-          <p className="text-sm leading-relaxed">{post.caption}</p>
+          <p className="text-base leading-relaxed">{post.caption}</p>
         )}
 
         {(post.notes.length > 0 || canNote) && (

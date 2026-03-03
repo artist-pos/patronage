@@ -73,7 +73,7 @@ export default async function OnboardingPage() {
             <h2 className="text-base font-semibold">Portfolio</h2>
             <p className="text-xs text-muted-foreground">
               Upload up to 10 images. JPEG or PNG, max 10 MB each. Resized to 1600px before
-              uploading. Add a caption to each image by clicking below it.
+              uploading. Add a caption to each image by clicking below it. Drag images to reorder.
             </p>
           </div>
           <PortfolioUploader profileId={user.id} />

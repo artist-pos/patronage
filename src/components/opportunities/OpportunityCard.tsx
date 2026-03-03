@@ -1,8 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity } from "@/types/database";
-import { DescriptionAccordion } from "./DescriptionAccordion";
-import { OpportunityCTALink } from "./OpportunityCTALink";
 
 export function formatFunding(amount: number): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(0)}M+`;
@@ -29,11 +27,6 @@ function isClosingSoon(deadline: string | null): boolean {
   return d <= 7;
 }
 
-function locationString(opp: Opportunity): string | null {
-  if (opp.city) return `${opp.city}, ${opp.country}`;
-  return null;
-}
-
 interface Props {
   opp: Opportunity;
   isPreview?: boolean;
@@ -43,7 +36,6 @@ interface Props {
 export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Props) {
   const closing = isClosingSoon(opp.deadline);
   const days = daysLeft(opp.deadline);
-  const location = locationString(opp);
   const fundingLabel =
     opp.funding_range?.trim() ||
     (opp.funding_amount != null ? formatFunding(opp.funding_amount) : null);
@@ -154,7 +146,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
       </div>
 
       {/* ── Content ── */}
-      <div className="p-5 flex flex-col gap-3 flex-1">
+      <div className="p-5 flex flex-col gap-2 flex-1">
 
         {/* ── Always-visible vital stats ── */}
 
@@ -179,15 +171,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
         </div>
 
         {/* Title */}
-        {isPreview ? (
-          <h2 className="text-sm font-semibold leading-snug">{opp.title}</h2>
-        ) : (
-          <Link href={`/opportunities/${opp.id}`} className="group/title">
-            <h2 className="text-sm font-semibold leading-snug group-hover/title:underline underline-offset-2">
-              {opp.title}
-            </h2>
-          </Link>
-        )}
+        <h2 className="text-sm font-semibold leading-snug">{opp.title}</h2>
 
         {/* Organiser + days */}
         <div className="flex items-center justify-between gap-3">
@@ -196,11 +180,6 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
             {days}
           </span>
         </div>
-
-        {/* Location */}
-        {location && (
-          <p className="text-xs text-muted-foreground font-mono">{location}</p>
-        )}
 
         {/* Sub-category focus tags — always visible, above the fold */}
         {(opp.sub_categories ?? []).length > 0 && (
@@ -216,38 +195,20 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
           </div>
         )}
 
-        {/* ── Caption (default visible) + Read more accordion ── */}
-        <div className="flex flex-col gap-1.5 flex-1">
-          {/* Caption — short summary, always shown */}
-          {(opp.caption || opp.description) && (
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {opp.caption ?? opp.description}
-            </p>
-          )}
-
-          {/* Accordion: only renders if full_description exists */}
-          {!isPreview && (
-            <DescriptionAccordion
-              fullDescription={opp.full_description}
-              opportunityId={opp.id}
-              title={opp.title}
-              organiser={opp.organiser}
-            />
-          )}
-        </div>
-
-        {/* CTA — tracked link to external URL */}
-        {opp.url && !isPreview && (
-          <OpportunityCTALink
-            href={opp.url}
-            opportunityId={opp.id}
-            title={opp.title}
-            organiser={opp.organiser}
-          />
+        {/* Caption */}
+        {(opp.caption || opp.description) && (
+          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+            {opp.caption ?? opp.description}
+          </p>
         )}
       </div>
     </article>
   );
 
-  return <div className="h-full">{inner}</div>;
+  if (isPreview) return <div className="h-full">{inner}</div>;
+  return (
+    <Link href={`/opportunities/${opp.id}`} className="block h-full">
+      {inner}
+    </Link>
+  );
 }

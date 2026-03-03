@@ -7,7 +7,7 @@ import { ArtistCard } from "@/components/artists/ArtistCard";
 import { getProfiles } from "@/lib/profiles";
 import { getClosingSoonOpportunities } from "@/lib/opportunities";
 import { getLatestUpdates } from "@/lib/feed";
-import type { Opportunity } from "@/types/database";
+import type { Opportunity, ProjectUpdateWithArtist } from "@/types/database";
 
 function daysUntil(deadline: string | null): number | null {
   if (!deadline) return null;
@@ -77,6 +77,45 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
         </div>
       </div>
     </a>
+  );
+}
+
+function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
+  const name = u.artist_full_name ?? u.artist_username;
+  return (
+    <Link
+      href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`}
+      scroll={false}
+      className="group shrink-0 flex flex-col border border-border overflow-hidden bg-background"
+    >
+      <div className="overflow-hidden bg-muted">
+        <Image
+          src={u.image_url}
+          alt={u.caption ?? `Update by ${name}`}
+          width={320}
+          height={180}
+          unoptimized
+          className="h-[170px] w-auto block transition-transform duration-500 group-hover:scale-105"
+        />
+      </div>
+      <div className="px-2 py-1.5 border-t border-border bg-background shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {u.artist_avatar_url ? (
+            <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
+              <Image src={u.artist_avatar_url} alt={name} fill className="object-cover" sizes="20px" />
+            </div>
+          ) : (
+            <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
+              {name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
+        </div>
+        {u.caption && (
+          <p className="text-[10px] text-muted-foreground truncate mt-0.5">{u.caption}</p>
+        )}
+      </div>
+    </Link>
   );
 }
 
@@ -174,31 +213,10 @@ export default async function Home() {
               <p className="text-sm text-muted-foreground">Work in progress from the Patronage community.</p>
             </div>
 
-            {/* Horizontal scroll on mobile, grid on desktop */}
-            <div className="flex sm:grid sm:grid-cols-4 md:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 scrollbar-none">
+            {/* Single-row horizontal carousel */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
               {updates.map((u) => (
-                <Link
-                  key={u.id}
-                  href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`}
-                  scroll={false}
-                  className="group relative shrink-0 w-48 sm:w-auto aspect-square border border-border overflow-hidden bg-muted block"
-                >
-                  <Image
-                    src={u.image_url}
-                    alt={u.caption ?? `Update by ${u.artist_full_name ?? u.artist_username}`}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 192px, (max-width: 1024px) 25vw, 16vw"
-                  />
-                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                    {u.caption && (
-                      <p className="text-xs leading-snug line-clamp-3 mb-1">{u.caption}</p>
-                    )}
-                    <p className="text-xs font-semibold truncate">
-                      {u.artist_full_name ?? u.artist_username}
-                    </p>
-                  </div>
-                </Link>
+                <StudioFeedCard key={u.id} u={u} />
               ))}
             </div>
           </div>

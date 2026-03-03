@@ -70,7 +70,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
       </div>
 
       {expanded ? (
-        <div className="flex flex-wrap gap-2 items-start">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           {visible.map((u) => (
             <Tile
               key={u.id}
@@ -147,21 +147,36 @@ function Tile({
   }
 
   return (
-    <div className={`flex-none flex flex-col gap-1${fixed ? "" : ""}`}>
-      {/* Image — no overlay, natural aspect ratio at fixed height */}
+    <div className="flex-none flex flex-col gap-1">
+      {/*
+        Carousel (fixed=true): natural width at CAROUSEL_H — variable-width tiles suit horizontal scroll.
+        Expanded grid (fixed=false): fill container with object-cover for a clean aligned grid.
+      */}
       <div
         className="group relative border border-border overflow-hidden bg-muted"
-        style={{ height: CAROUSEL_H, width: "fit-content" }}
+        style={fixed
+          ? { height: CAROUSEL_H, width: "fit-content" }
+          : { height: CAROUSEL_H }}
       >
-        <Link href={href} className="block h-full">
-          <Image
-            src={u.image_url}
-            alt={u.caption ?? "Studio update"}
-            width={400}
-            height={CAROUSEL_H}
-            unoptimized
-            style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
-          />
+        <Link href={href} className={fixed ? "block h-full" : "absolute inset-0"}>
+          {fixed ? (
+            <Image
+              src={u.image_url}
+              alt={u.caption ?? "Studio update"}
+              width={400}
+              height={CAROUSEL_H}
+              unoptimized
+              style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
+            />
+          ) : (
+            <Image
+              src={u.image_url}
+              alt={u.caption ?? "Studio update"}
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          )}
         </Link>
 
         {/* Owner controls: assign to project (top-left) + delete (top-right) */}
@@ -186,9 +201,9 @@ function Tile({
         )}
       </div>
 
-      {/* Caption + timestamp below the image — no overlay */}
+      {/* Caption + timestamp */}
       {(u.caption || isOwner) && (
-        <div className="space-y-0.5" style={{ maxWidth: CAROUSEL_H }}>
+        <div className="space-y-0.5" style={fixed ? { maxWidth: CAROUSEL_H } : undefined}>
           {u.caption && (
             <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
               {u.caption}

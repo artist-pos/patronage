@@ -8,26 +8,39 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const p = `%${q}%`;
 
-  const [{ data: opportunities }, { data: artists }] = await Promise.all([
+  const oppSelect = "id, title, organiser, type, country, city, deadline, featured_image_url";
+  const [{ data: byFields }, { data: bySubCats }, { data: artists }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, title, organiser, type, country, city, deadline, featured_image_url")
+      .select(oppSelect)
       .eq("is_active", true)
       .or(
-        `title.ilike.${p},organiser.ilike.${p},description.ilike.${p},caption.ilike.${p},city.ilike.${p},type.ilike.${p},country.ilike.${p},grant_type.ilike.${p}`
+        `title.ilike.${p},organiser.ilike.${p},description.ilike.${p},caption.ilike.${p},city.ilike.${p},grant_type.ilike.${p}`
       )
+      .order("deadline", { ascending: true, nullsFirst: false })
+      .limit(5),
+    supabase
+      .from("opportunities")
+      .select(oppSelect)
+      .eq("is_active", true)
+      .filter("sub_categories::text", "ilike", p)
       .order("deadline", { ascending: true, nullsFirst: false })
       .limit(5),
     supabase
       .from("profiles")
       .select("id, username, full_name, avatar_url, medium, country, career_stage")
       .eq("is_active", true)
-      .or(`full_name.ilike.${p},username.ilike.${p},bio.ilike.${p},country.ilike.${p}`)
+      .or(`full_name.ilike.${p},username.ilike.${p},bio.ilike.${p}`)
       .limit(5),
   ]);
 
+  const seen = new Set<string>();
+  const opportunities = [...(byFields ?? []), ...(bySubCats ?? [])]
+    .filter((o) => { if (seen.has(o.id)) return false; seen.add(o.id); return true; })
+    .slice(0, 5);
+
   return NextResponse.json({
-    opportunities: opportunities ?? [],
+    opportunities,
     artists: artists ?? [],
   });
 }
