@@ -28,7 +28,7 @@ function FeedCard({ u }: { u: ProjectUpdateWithArtist }) {
     <Link
       href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`}
       scroll={false}
-      className="group block mb-2 border border-border break-inside-avoid bg-background"
+      className="group block border border-border bg-background"
     >
       {/* Image — own overflow-hidden so zoom stays clipped */}
       <div className="overflow-hidden bg-muted">
@@ -116,7 +116,7 @@ export default async function FeedPage() {
 
       {/* Masonry grid */}
       {updates.length > 0 ? (
-        <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           {updates.map((u) => (
             <FeedCard key={u.id} u={u} />
           ))}
