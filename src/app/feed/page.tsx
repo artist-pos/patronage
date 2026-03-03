@@ -116,11 +116,24 @@ export default async function FeedPage() {
 
       {/* Masonry grid */}
       {updates.length > 0 ? (
-        <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-2">
-          {updates.map((u) => (
-            <FeedCard key={u.id} u={u} />
-          ))}
-        </div>
+        <>
+          {/* Mobile: flex column-split — avoids iOS Safari CSS columns bug */}
+          <div className="flex gap-2 items-start sm:hidden">
+            {[0, 1].map((col) => (
+              <div key={col} className="flex flex-col gap-2 flex-1 min-w-0">
+                {updates.filter((_, i) => i % 2 === col).map((u) => (
+                  <FeedCard key={u.id} u={u} />
+                ))}
+              </div>
+            ))}
+          </div>
+          {/* sm+: CSS columns masonry */}
+          <div className="hidden sm:block columns-3 lg:columns-4 xl:columns-5 gap-2">
+            {updates.map((u) => (
+              <FeedCard key={u.id} u={u} />
+            ))}
+          </div>
+        </>
       ) : (
         <p className="text-sm text-muted-foreground">No updates yet. Be the first to post.</p>
       )}
