@@ -36,18 +36,18 @@ export async function getOrCreateConversation(
 export async function sendMessage(
   conversationId: string,
   content: string
-): Promise<{ error?: string }> {
+): Promise<{ message?: import("@/types/database").Message; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
 
-  const { error } = await supabase.from("messages").insert({
+  const { data: msg, error } = await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_id: user.id,
     content: content.trim(),
-  });
+  }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, created_at").single();
 
-  if (error) return { error: error.message };
+  if (error || !msg) return { error: error?.message ?? "Failed to send" };
 
   // Fire-and-forget: email notification for recipient (failure must not fail the send)
   try {
@@ -56,7 +56,7 @@ export async function sendMessage(
     // swallow — email is best-effort
   }
 
-  return {};
+  return { message: msg as import("@/types/database").Message };
 }
 
 export async function markConversationRead(conversationId: string): Promise<void> {

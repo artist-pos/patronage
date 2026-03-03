@@ -52,13 +52,13 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
         },
         (payload) => {
           const msg = payload.new as Message;
+          // Own messages are already in state via optimistic update — skip them
+          if (msg.sender_id === currentUserId) return;
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
-          if (msg.sender_id !== currentUserId) {
-            markConversationRead(conversationId);
-          }
+          markConversationRead(conversationId);
         }
       )
       .subscribe();
@@ -94,6 +94,9 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
     if (result.error) {
       setError(result.error);
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    } else if (result.message) {
+      // Replace the optimistic entry with the real persisted message
+      setMessages((prev) => prev.map((m) => m.id === optimistic.id ? result.message! : m));
     }
     setSending(false);
   }
