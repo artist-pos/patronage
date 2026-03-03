@@ -11,6 +11,15 @@ export function Footer() {
           <span>© {new Date().getFullYear()} Patronage</span>
           <span>Connecting artists with opportunity in Aotearoa and beyond.</span>
         </div>
+        <div className="flex flex-col sm:flex-row items-center gap-x-3 gap-y-1 opacity-60">
+          <Link href="/terms" className="hover:opacity-100 transition-opacity">
+            Terms of Service
+          </Link>
+          <span className="hidden sm:inline">·</span>
+          <Link href="/privacy" className="hover:opacity-100 transition-opacity">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </footer>
   );
