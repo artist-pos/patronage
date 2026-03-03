@@ -342,14 +342,6 @@ export default async function ArtistProfilePage({ params }: Props) {
               />
             )}
 
-            {/* Sold Works — works transferred to others */}
-            <SoldWorksSection
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              initialWorks={soldWorks as any}
-              isOwner={isOwner}
-              hideSoldSection={profile.hide_sold_section ?? false}
-            />
-
             {/* Studio Updates Carousel */}
             <StudioCarousel
               updates={studioUpdates}
@@ -357,6 +349,14 @@ export default async function ArtistProfilePage({ params }: Props) {
               isOwner={isOwner}
               profileId={profile.id}
               projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+            />
+
+            {/* Sold Works — works transferred to others (bottom of profile) */}
+            <SoldWorksSection
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              initialWorks={soldWorks as any}
+              isOwner={isOwner}
+              hideSoldSection={profile.hide_sold_section ?? false}
             />
           </>
         )}
