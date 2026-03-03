@@ -61,7 +61,7 @@ export interface Profile {
   full_name: string | null;
   bio: string | null;
   country: CountryEnum | null;
-  role: "artist" | "admin" | "patron" | "partner";
+  role: "artist" | "admin" | "owner" | "patron" | "partner";
   career_stage: CareerStageEnum | null;
   medium: string[] | null;
   cv_url: string | null;

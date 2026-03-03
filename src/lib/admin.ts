@@ -13,7 +13,7 @@ export async function isAdmin(): Promise<boolean> {
     .select("role")
     .eq("id", user.id)
     .single();
-  return data?.role === "admin";
+  return data?.role === "admin" || data?.role === "owner";
 }
 
 export async function getAllProfiles(): Promise<Profile[]> {

@@ -72,7 +72,7 @@ export default async function ArtistProfilePage({ params }: Props) {
     viewerRole = viewerProfile?.role ?? null;
   }
 
-  const isArtistProfile = profile.role === "artist";
+  const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
   const [images, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData] =
     await Promise.all([
