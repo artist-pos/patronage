@@ -9,6 +9,7 @@ export async function updateOpportunityAdmin(
   id: string,
   data: {
     caption?: string | null;
+    full_description?: string | null;
     url?: string | null;
     type?: string;
     country?: string;

@@ -30,6 +30,7 @@ interface Props {
 export function AdminEditOpportunityModal({ opp }: Props) {
   const [open, setOpen] = useState(false);
   const [caption, setCaption] = useState(opp.caption ?? "");
+  const [fullDescription, setFullDescription] = useState(opp.full_description ?? "");
   const [url, setUrl] = useState(opp.url ?? "");
   const [type, setType] = useState(opp.type);
   const [country, setCountry] = useState(opp.country);
@@ -71,6 +72,7 @@ export function AdminEditOpportunityModal({ opp }: Props) {
     try {
       await updateOpportunityAdmin(opp.id, {
         caption: caption.trim() || null,
+        full_description: fullDescription.trim() || null,
         url: url.trim() || null,
         type,
         country,
@@ -120,17 +122,31 @@ export function AdminEditOpportunityModal({ opp }: Props) {
               {/* Caption */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-widest">
-                  Description <span className="text-muted-foreground font-normal normal-case tracking-normal">(250–500 chars)</span>
+                  Caption <span className="text-muted-foreground font-normal normal-case tracking-normal">— shown on card (max 500 chars)</span>
                 </label>
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  rows={5}
+                  rows={3}
                   maxLength={500}
-                  placeholder="Plain-English summary of the opportunity, who it's for, and what's offered…"
+                  placeholder="Short summary shown on the listing card…"
                   className={`${FIELD} resize-none`}
                 />
                 <p className="text-xs text-muted-foreground tabular-nums text-right">{caption.length}/500</p>
+              </div>
+
+              {/* Full description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest">
+                  Description <span className="text-muted-foreground font-normal normal-case tracking-normal">— shown on detail page</span>
+                </label>
+                <textarea
+                  value={fullDescription}
+                  onChange={(e) => setFullDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Full details, eligibility, how to apply…"
+                  className={`${FIELD} resize-none`}
+                />
               </div>
 
               {/* Type + Region */}
