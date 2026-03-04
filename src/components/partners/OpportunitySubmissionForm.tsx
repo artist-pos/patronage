@@ -109,7 +109,7 @@ export function OpportunitySubmissionForm() {
     type: (preview.type as OppTypeEnum) ?? "Grant",
     country: (preview.country as CountryEnum) ?? "NZ",
     city: (preview.city as string) ?? null,
-    opens_at: null,
+    opens_at: (preview.opens_at as string) ?? null,
     deadline: (preview.deadline as string) ?? null,
     url: null,
     funding_amount: null,
@@ -202,23 +202,32 @@ export function OpportunitySubmissionForm() {
           </Field>
         </div>
 
+        <Field label="Country">
+          <select
+            name="country"
+            className={FIELD}
+            defaultValue="NZ"
+            onChange={(e) => upd("country", e.target.value)}
+          >
+            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+
         <div className="grid grid-cols-1 sm:grid-cols-2">
-          <Field label="Country">
-            <select
-              name="country"
+          <Field label="Opening Date">
+            <Input
+              name="opens_at"
+              type="date"
               className={FIELD}
-              defaultValue="NZ"
-              onChange={(e) => upd("country", e.target.value)}
-            >
-              {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+              onChange={(e) => upd("opens_at", e.target.value || null)}
+            />
           </Field>
           <Field label="Deadline">
             <Input
               name="deadline"
               type="date"
               className={FIELD}
-              onChange={(e) => upd("deadline", e.target.value)}
+              onChange={(e) => upd("deadline", e.target.value || null)}
             />
           </Field>
         </div>

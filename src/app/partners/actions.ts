@@ -17,6 +17,7 @@ export async function submitOpportunityAction(
   const organiser = (formData.get("organiser") as string)?.trim();
   if (!title || !organiser) return { error: "Title and organiser are required." };
 
+  const opens_at = (formData.get("opens_at") as string) || null;
   const deadline = (formData.get("deadline") as string) || null;
   const recipientsRaw = formData.get("recipients_count") as string;
   const subCatsRaw = (formData.get("sub_categories") as string)?.trim();
@@ -34,6 +35,7 @@ export async function submitOpportunityAction(
     type: (formData.get("type") as string) || "Grant",
     country: (formData.get("country") as string) || "NZ",
     city: (formData.get("city") as string)?.trim() || null,
+    opens_at: opens_at || null,
     deadline: deadline || null,
     url: (formData.get("url") as string)?.trim() || null,
     funding_range: (formData.get("funding_range") as string)?.trim() || null,
