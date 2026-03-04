@@ -111,7 +111,7 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
                         href={`/${creatorUsername}`}
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Created by {creatorName}
+                        By {creatorName}
                       </Link>
                     )}
 

@@ -114,7 +114,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                         href={`/${ownerUsername}`}
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Owned by {ownerName}
+                        Collection of {ownerName}
                       </Link>
                     )}
                     {!work.hide_price && work.price && (
