@@ -68,6 +68,8 @@ export function PostOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       grant_type: null,
       recipients_count: null,
       is_active: true,
+      status: "published",
+      source_url: null,
       profile_id: null,
       created_at: new Date().toISOString(),
     };

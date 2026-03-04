@@ -118,6 +118,8 @@ export function OpportunitySubmissionForm() {
     grant_type: (preview.grant_type as string) ?? null,
     recipients_count: (preview.recipients_count as number) ?? null,
     is_active: true,
+    status: "published",
+    source_url: null,
     profile_id: null,
     created_at: new Date().toISOString(),
   };
