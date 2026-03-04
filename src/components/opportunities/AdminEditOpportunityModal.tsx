@@ -31,6 +31,7 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
   const [tags, setTags] = useState<string[]>(opp.sub_categories ?? []);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -152,9 +153,23 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                 )}
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="border border-black border-dashed p-4 text-center cursor-pointer text-xs text-muted-foreground hover:bg-muted/40 transition-colors"
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith("image/")) handleImageFile(file);
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  className={`border border-black border-dashed p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${dragOver ? "bg-muted" : "hover:bg-muted/40"}`}
                 >
-                  {uploading ? "Uploading…" : imgUrl ? "Click to replace image" : "Click to upload image"}
+                  {uploading
+                    ? "Uploading…"
+                    : dragOver
+                    ? "Drop to upload"
+                    : imgUrl
+                    ? "Drop a new image or click to replace"
+                    : "Drop an image here, or click to browse"}
                 </div>
                 <input
                   ref={fileRef}
