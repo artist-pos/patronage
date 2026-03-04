@@ -15,6 +15,7 @@ export async function updateOpportunityAdmin(
     country?: string;
     featured_image_url?: string | null;
     sub_categories?: string[] | null;
+    opens_at?: string | null;
     deadline?: string | null;
     funding_range?: string | null;
   }

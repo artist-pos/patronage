@@ -9,22 +9,34 @@ export function formatFunding(amount: number): string {
   return `$${amount.toLocaleString("en-NZ")}`;
 }
 
-function daysLeft(deadline: string | null): string {
+function daysLeft(opensAt: string | null, deadline: string | null): string {
+  const now = Date.now();
+  if (opensAt) {
+    const openMs = new Date(opensAt + "T00:00:00").getTime();
+    if (openMs > now) {
+      const d = Math.ceil((openMs - now) / 86_400_000);
+      if (d === 1) return "Opens tomorrow";
+      return `Opens in ${d} days`;
+    }
+  }
   if (!deadline) return "Open";
-  const d = Math.ceil(
-    (new Date(deadline + "T00:00:00").getTime() - Date.now()) / 86_400_000
-  );
+  const d = Math.ceil((new Date(deadline + "T00:00:00").getTime() - now) / 86_400_000);
   if (d <= 0) return "Closing today";
   if (d === 1) return "1 day left";
   return `${d} days left`;
 }
 
-function isClosingSoon(deadline: string | null): boolean {
+function isClosingSoon(opensAt: string | null, deadline: string | null): boolean {
   if (!deadline) return false;
-  const d = Math.ceil(
-    (new Date(deadline + "T00:00:00").getTime() - Date.now()) / 86_400_000
-  );
+  const now = Date.now();
+  if (opensAt && new Date(opensAt + "T00:00:00").getTime() > now) return false;
+  const d = Math.ceil((new Date(deadline + "T00:00:00").getTime() - now) / 86_400_000);
   return d <= 7;
+}
+
+function isPreOpen(opensAt: string | null): boolean {
+  if (!opensAt) return false;
+  return new Date(opensAt + "T00:00:00").getTime() > Date.now();
 }
 
 interface Props {
@@ -34,8 +46,9 @@ interface Props {
 }
 
 export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Props) {
-  const closing = isClosingSoon(opp.deadline);
-  const days = daysLeft(opp.deadline);
+  const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
+  const preOpen = isPreOpen(opp.opens_at ?? null);
+  const days = daysLeft(opp.opens_at ?? null, opp.deadline);
   const fundingLabel =
     opp.funding_range?.trim() ||
     (opp.funding_amount != null ? formatFunding(opp.funding_amount) : null);
@@ -123,8 +136,12 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
               </div>
             )}
 
-            {/* Closing soon — top-left overlay */}
-            {closing && (
+            {/* Status badge — top-left overlay */}
+            {preOpen ? (
+              <div className="absolute top-0 left-0 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
+                Not yet open
+              </div>
+            ) : closing && (
               <div className="absolute top-0 left-0 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
                 Closing soon
               </div>
@@ -138,7 +155,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
                 {fundingLabel}
               </div>
             )}
-            {closing && (
+            {preOpen ? (
+              <div className="absolute top-0 left-0 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
+                Not yet open
+              </div>
+            ) : closing && (
               <div className="absolute top-0 left-0 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
                 Closing soon
               </div>

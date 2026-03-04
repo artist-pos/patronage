@@ -91,6 +91,7 @@ function buildRecord(opp: ScrapedOpportunity, sourceUrl: string, ogImage: string
     caption: opp.caption?.slice(0, 400) ?? null,
     type: normaliseType(opp.type),
     country: opp.country || "Global",
+    opens_at: opp.opens_at ?? null,
     deadline: opp.deadline ?? null,
     url: opp.url ?? null,
     funding_range: opp.funding_range ?? null,

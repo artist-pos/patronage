@@ -137,6 +137,16 @@ export default async function OpportunityPage({ params }: Props) {
             <p className="font-mono font-bold text-sm">{fundingLabel}</p>
           </div>
         )}
+        {opp.opens_at && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Opens</p>
+            <p className="font-mono text-sm">
+              {new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", {
+                day: "numeric", month: "long", year: "numeric",
+              })}
+            </p>
+          </div>
+        )}
         {deadline && (
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Deadline</p>

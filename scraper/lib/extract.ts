@@ -11,6 +11,7 @@ Each item in the array must have:
 - "caption": string — 250–500 character plain-English summary. Include: what it is, who it's for, what's offered, and any eligibility highlights. Write in third person, no markdown.
 - "type": one of "Grant" | "Residency" | "Commission" | "Open Call" | "Prize" | "Display"
 - "country": the primary country or eligibility — use "NZ", "AUS", "UK", "US", "EU", or "Global"
+- "opens_at": "YYYY-MM-DD" if the application window hasn't opened yet (i.e. a future open date is explicitly stated), otherwise null
 - "deadline": "YYYY-MM-DD" or null
 - "url": direct link to the opportunity page, or null
 - "funding_range": e.g. "up to $10,000" or "$5,000–$25,000" or null

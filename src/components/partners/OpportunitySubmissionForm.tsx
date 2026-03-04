@@ -109,6 +109,7 @@ export function OpportunitySubmissionForm() {
     type: (preview.type as OppTypeEnum) ?? "Grant",
     country: (preview.country as CountryEnum) ?? "NZ",
     city: (preview.city as string) ?? null,
+    opens_at: null,
     deadline: (preview.deadline as string) ?? null,
     url: null,
     funding_amount: null,

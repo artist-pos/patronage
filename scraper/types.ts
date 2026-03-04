@@ -13,6 +13,7 @@ export interface ScrapedOpportunity {
   caption: string | null;
   type: string; // Grant | Residency | Commission | Open Call | Prize | Display
   country: string;
+  opens_at: string | null; // YYYY-MM-DD — when applications open (null if already open or unknown)
   deadline: string | null; // YYYY-MM-DD
   url: string | null;
   funding_range: string | null;

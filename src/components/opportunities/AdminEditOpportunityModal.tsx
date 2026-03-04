@@ -34,6 +34,7 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [url, setUrl] = useState(opp.url ?? "");
   const [type, setType] = useState(opp.type);
   const [country, setCountry] = useState(opp.country);
+  const [opensAt, setOpensAt] = useState(opp.opens_at ?? "");
   const [deadline, setDeadline] = useState(opp.deadline ?? "");
   const [fundingRange, setFundingRange] = useState(opp.funding_range ?? "");
   const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
@@ -78,6 +79,7 @@ export function AdminEditOpportunityModal({ opp }: Props) {
         country,
         featured_image_url: imgUrl.trim() || null,
         sub_categories: tags.length > 0 ? tags : null,
+        opens_at: opensAt || null,
         deadline: deadline || null,
         funding_range: fundingRange.trim() || null,
       });
@@ -177,8 +179,17 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                 />
               </div>
 
-              {/* Deadline + Funding */}
+              {/* Opens + Deadline */}
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Opens</label>
+                  <input
+                    type="date"
+                    value={opensAt}
+                    onChange={(e) => setOpensAt(e.target.value)}
+                    className={FIELD}
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-widest">Deadline</label>
                   <input
@@ -188,16 +199,18 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                     className={FIELD}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Funding</label>
-                  <input
-                    type="text"
-                    value={fundingRange}
-                    onChange={(e) => setFundingRange(e.target.value)}
-                    placeholder="e.g. up to $10,000"
-                    className={FIELD}
-                  />
-                </div>
+              </div>
+
+              {/* Funding */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest">Funding</label>
+                <input
+                  type="text"
+                  value={fundingRange}
+                  onChange={(e) => setFundingRange(e.target.value)}
+                  placeholder="e.g. up to $10,000"
+                  className={FIELD}
+                />
               </div>
 
               {/* Featured image */}

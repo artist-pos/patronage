@@ -17,6 +17,7 @@ export interface Opportunity {
   type: OppTypeEnum;
   country: string;                 // "NZ" | "AUS" | "Global" | "UK" | "US" | "EU" etc.
   city: string | null;             // free-text e.g. "Auckland" or "Multiple Locations"
+  opens_at: string | null;         // ISO date when applications open e.g. "2026-05-01"
   deadline: string | null;         // ISO date string e.g. "2026-06-30"
   url: string | null;
   funding_amount: number | null;
