@@ -15,7 +15,7 @@ export interface Opportunity {
   caption: string | null;          // short summary ≤160 chars, shown on card
   full_description: string | null; // expanded detail, revealed via accordion
   type: OppTypeEnum;
-  country: CountryEnum;
+  country: string;                 // "NZ" | "AUS" | "Global" | "UK" | "US" | "EU" etc.
   city: string | null;             // free-text e.g. "Auckland" or "Multiple Locations"
   deadline: string | null;         // ISO date string e.g. "2026-06-30"
   url: string | null;
@@ -26,6 +26,8 @@ export interface Opportunity {
   grant_type: string | null;
   recipients_count: number | null;
   is_active: boolean;
+  status: string;                  // "pending" | "published" | "rejected"
+  source_url: string | null;       // page the scraper found this on
   profile_id: string | null;
   created_at: string;
 }
