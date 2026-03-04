@@ -117,6 +117,7 @@ export function OpportunitySubmissionForm() {
     featured_image_url: imgUrl || null,
     grant_type: (preview.grant_type as string) ?? null,
     recipients_count: (preview.recipients_count as number) ?? null,
+    slug: null,
     is_active: true,
     status: "published",
     source_url: null,
