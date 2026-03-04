@@ -14,42 +14,19 @@ async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
   return (data ?? []) as Opportunity[];
 }
 
-interface PageProps {
-  searchParams: Promise<{ status?: string }>;
-}
-
-export default async function QueuePage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const tab = params.status === "rejected" ? "rejected" : "pending";
-
-  const opps = await getQueueOpportunities(tab);
+export default async function QueuePage() {
+  const opps = await getQueueOpportunities("pending");
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">Scraper Queue</h1>
         <p className="text-xs text-muted-foreground">
-          Review opportunities found by the scraper before they go live.
+          Review opportunities found by the scraper before they go live. Rejected opportunities are permanently deleted.
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-border pb-2 text-sm">
-        <a
-          href="/admin/opportunities/queue"
-          className={tab === "pending" ? "font-semibold" : "text-muted-foreground hover:text-foreground"}
-        >
-          Pending
-        </a>
-        <a
-          href="/admin/opportunities/queue?status=rejected"
-          className={tab === "rejected" ? "font-semibold" : "text-muted-foreground hover:text-foreground"}
-        >
-          Rejected
-        </a>
-      </div>
-
-      <QueueControls opps={opps} tab={tab} />
+      <QueueControls opps={opps} tab="pending" />
     </div>
   );
 }

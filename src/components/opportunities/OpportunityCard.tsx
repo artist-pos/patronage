@@ -131,15 +131,17 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
             )}
           </div>
         ) : (
-          /* No image: placeholder box with funding badge inline */
-          <div className="flex items-center justify-between px-4 py-6">
-            <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-              {opp.type}
-            </span>
+          /* No image: solid grey placeholder with overlaid badges */
+          <div className="relative w-full h-40 bg-[#E5E7EB]">
             {fundingLabel && (
-              <span className="bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
+              <div className="absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
                 {fundingLabel}
-              </span>
+              </div>
+            )}
+            {closing && (
+              <div className="absolute top-0 left-0 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
+                Closing soon
+              </div>
             )}
           </div>
         )}

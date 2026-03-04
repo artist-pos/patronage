@@ -75,9 +75,11 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="columns-2 lg:columns-3 gap-4">
           {opportunities.map((opp) => (
-            <OpportunityCard key={opp.id} opp={opp} view="gallery" />
+            <div key={opp.id} className="break-inside-avoid mb-4">
+              <OpportunityCard opp={opp} view="gallery" />
+            </div>
           ))}
         </div>
       )}

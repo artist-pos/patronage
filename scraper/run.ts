@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { sources } from "./sources/index.js";
-import { fetchPageContent, fetchRssFeed, sleep } from "./lib/fetch.js";
+import { fetchPageContent, fetchWithBrowser, fetchRssFeed, resolveOrgImage, closeBrowser, sleep } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
 import { upsertOpportunity } from "./lib/upsert.js";
 
@@ -17,7 +17,8 @@ async function main() {
 
   for (const [i, source] of sources.entries()) {
     const prefix = `[${i + 1}/${sources.length}]`;
-    console.log(`${prefix} ${source.name}`);
+    const browserTag = source.needsBrowser ? " 🌐" : "";
+    console.log(`${prefix} ${source.name}${browserTag}`);
 
     try {
       if (source.isRss) {
@@ -28,22 +29,30 @@ async function main() {
         for (const item of items) {
           const opps = await extractFromRssItem(item, source.url, source.country);
           for (const opp of opps) {
-            // Use the item's own link as the opportunity URL if extraction didn't find one
             if (!opp.url && item.link) opp.url = item.link;
-            const result = await upsertOpportunity(opp, source.url, null);
+            const image =
+              opp.featured_image_url ??
+              (await resolveOrgImage(opp.url, source.url));
+            const result = await upsertOpportunity(opp, source.url, image);
             if (result === "inserted") inserted++;
             else if (result === "updated") updated++;
             else skipped++;
           }
         }
       } else {
-        // ── HTML page ───────────────────────────────────────────────────────
-        const { text, ogImage } = await fetchPageContent(source.url);
+        // ── HTML page (static or browser) ───────────────────────────────────
+        const { text, ogImage } = source.needsBrowser
+          ? await fetchWithBrowser(source.url)
+          : await fetchPageContent(source.url);
         const opps = await extractFromPage(text, source.url, source.country);
         console.log(`  ↳ ${opps.length} opportunities extracted`);
 
         for (const opp of opps) {
-          const result = await upsertOpportunity(opp, source.url, ogImage);
+          const image =
+            opp.featured_image_url ??
+            ogImage ??
+            (await resolveOrgImage(opp.url, source.url));
+          const result = await upsertOpportunity(opp, source.url, image);
           if (result === "inserted") inserted++;
           else if (result === "updated") updated++;
           else skipped++;
@@ -54,9 +63,10 @@ async function main() {
       errors++;
     }
 
-    // Rate limit between sources
     if (i < sources.length - 1) await sleep(RATE_LIMIT_MS);
   }
+
+  await closeBrowser();
 
   console.log(`\n✅ Done`);
   console.log(`   Inserted : ${inserted}`);

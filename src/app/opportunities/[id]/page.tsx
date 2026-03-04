@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getOpportunityById } from "@/lib/opportunities";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
+import { isAdmin } from "@/lib/admin";
+import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -24,14 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${opp.title} | Art Funding | Patronage`,
       description,
       ...(opp.featured_image_url && {
-        images: [
-          {
-            url: opp.featured_image_url,
-            width: 1200,
-            height: 630,
-            alt: opp.title,
-          },
-        ],
+        images: [{ url: opp.featured_image_url, width: 1200, height: 630, alt: opp.title }],
       }),
     },
   };
@@ -39,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function OpportunityPage({ params }: Props) {
   const { id } = await params;
-  const opp = await getOpportunityById(id);
+  const [opp, adminUser] = await Promise.all([getOpportunityById(id), isAdmin()]);
   if (!opp) notFound();
 
   const fundingLabel =
@@ -59,17 +54,35 @@ export default async function OpportunityPage({ params }: Props) {
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
 
-      {/* Breadcrumb */}
-      <Link
-        href="/opportunities"
-        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        ← Back to opportunities
-      </Link>
+      {/* Header: breadcrumb + admin edit + X close */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/opportunities"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Opportunities
+        </Link>
+        <div className="flex items-center gap-3">
+          {adminUser && <AdminEditOpportunityModal opp={opp} />}
+          <Link
+            href="/opportunities"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </Link>
+        </div>
+      </div>
 
-      {/* Featured image */}
-      {opp.featured_image_url && (
-        <div className="w-full border border-black bg-white overflow-hidden">
+      {/* Featured image with backdrop-blur background */}
+      {opp.featured_image_url ? (
+        <div className="relative w-full border border-black overflow-hidden bg-black">
+          {/* Blurred background fill */}
+          <div
+            className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-40"
+            style={{ backgroundImage: `url(${opp.featured_image_url})` }}
+          />
+          {/* Actual image */}
           <Image
             src={opp.featured_image_url}
             alt={opp.title}
@@ -77,9 +90,11 @@ export default async function OpportunityPage({ params }: Props) {
             height={630}
             unoptimized
             priority
-            className="w-full h-auto max-h-[360px] object-contain"
+            className="relative z-10 w-full h-auto max-h-[360px] object-contain"
           />
         </div>
+      ) : (
+        <div className="w-full h-48 bg-[#E5E7EB] border border-black" />
       )}
 
       {/* Tags */}
@@ -132,27 +147,33 @@ export default async function OpportunityPage({ params }: Props) {
         )}
       </div>
 
-      {/* Description */}
-      {(opp.full_description || opp.description) && (
+      {/* Description — caption is the primary short description */}
+      {(opp.caption || opp.full_description || opp.description) && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             About
           </h2>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {opp.full_description ?? opp.description}
+            {opp.caption ?? opp.full_description ?? opp.description}
           </p>
+          {/* Extended detail below caption if available */}
+          {opp.caption && (opp.full_description || opp.description) && (
+            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+              {opp.full_description ?? opp.description}
+            </p>
+          )}
         </div>
       )}
 
-      {/* CTA */}
+      {/* Apply CTA */}
       {opp.url && (
         <a
           href={opp.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
         >
-          Visit grant website →
+          Apply on Official Site →
         </a>
       )}
 

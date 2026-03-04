@@ -32,7 +32,7 @@ const TOOLS = [
   { href: "/admin/digest", label: "Weekly Digest", description: "Preview, export subscribers, and send the digest email." },
 ];
 
-function Stat({ label, value, sub }: { label: string; value: number; sub?: string }) {
+function Stat({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
     <div className="border border-border p-4 space-y-1">
       <p className="text-2xl font-semibold tracking-tight">{value}</p>
@@ -62,12 +62,20 @@ export default async function AdminPage() {
           Overview
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          <Stat label="Active artists" value={a.profilesActive} />
-          <Stat label="Inactive artists" value={a.profilesInactive} />
+          <Stat label="Artists" value={a.artistCount} />
+          <Stat label="Patrons" value={a.patronCount} />
+          <Stat label="Partners" value={a.partnerCount} />
           <Stat
             label="New this week"
             value={a.profilesThisWeek}
-            sub="artist signups"
+            sub="signups"
+          />
+          <Stat label="Active profiles" value={a.profilesActive} />
+          <Stat label="Inactive profiles" value={a.profilesInactive} />
+          <Stat label="Art transfers" value={a.transferCount} />
+          <Stat
+            label="Transfer value"
+            value={`$${a.transferValue.toLocaleString()}`}
           />
           <Stat label="Active listings" value={a.opportunitiesActive} />
           <Stat label="Inactive / expired" value={a.opportunitiesInactive} />

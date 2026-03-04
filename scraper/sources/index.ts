@@ -32,9 +32,7 @@ export const sources: Source[] = [
 
   // ── Tier 2: NZ Government & Funded Bodies ───────────────────────────────
 
-  { name: "Creative NZ Grants", url: "https://www.creativenz.govt.nz/funding-and-support", country: "NZ", isListPage: true },
-  { name: "Creative Communities Scheme", url: "https://www.creativenz.govt.nz/funding-and-support/creative-communities-scheme", country: "NZ" },
-  { name: "Creative NZ International Residencies", url: "https://www.creativenz.govt.nz/funding-and-support/categories/travel-and-international-residencies", country: "NZ", isListPage: true },
+  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true },
   { name: "NZ On Air", url: "https://www.nzonair.govt.nz/music/funding/", country: "NZ", isListPage: true },
   { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding", country: "NZ", isListPage: true },
   { name: "Foundation North", url: "https://foundationnorth.org.nz/grants/", country: "NZ", isListPage: true },

@@ -31,6 +31,7 @@ export async function getAllOpportunities(): Promise<Opportunity[]> {
   const { data, error } = await supabase
     .from("opportunities")
     .select("*")
+    .eq("status", "published")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Opportunity[];
@@ -40,9 +41,14 @@ export interface Analytics {
   profilesActive: number;
   profilesInactive: number;
   profilesThisWeek: number;
+  artistCount: number;
+  patronCount: number;
+  partnerCount: number;
   opportunitiesActive: number;
   opportunitiesInactive: number;
   opportunitiesExpiringSoon: number;
+  transferCount: number;
+  transferValue: number;
   byType: Record<string, number>;
   byCountry: Record<string, number>;
 }
@@ -146,9 +152,10 @@ export async function getGrantReport(opportunityId: string): Promise<GrantReport
 export async function getAnalytics(): Promise<Analytics> {
   const supabase = await createClient();
 
-  const [{ data: profiles }, { data: opps }] = await Promise.all([
-    supabase.from("profiles").select("is_active, created_at"),
+  const [{ data: profiles }, { data: opps }, { data: artworks }] = await Promise.all([
+    supabase.from("profiles").select("is_active, created_at, role"),
     supabase.from("opportunities").select("type, country, is_active, deadline"),
+    supabase.from("artworks").select("is_available, creator_id, current_owner_id, price"),
   ]);
 
   const today = new Date().toISOString().split("T")[0];
@@ -157,6 +164,7 @@ export async function getAnalytics(): Promise<Analytics> {
 
   const profs = profiles ?? [];
   const oppsArr = opps ?? [];
+  const artworksArr = artworks ?? [];
 
   const byType: Record<string, number> = {};
   const byCountry: Record<string, number> = {};
@@ -173,13 +181,27 @@ export async function getAnalytics(): Promise<Analytics> {
     if (o.country) byCountry[o.country] = (byCountry[o.country] ?? 0) + 1;
   }
 
+  const transferred = artworksArr.filter(
+    (a) => !a.is_available && a.current_owner_id !== a.creator_id
+  );
+  const transferValue = transferred.reduce((sum, a) => {
+    if (!a.price) return sum;
+    const n = parseFloat(a.price.replace(/[^0-9.]/g, ""));
+    return sum + (isNaN(n) ? 0 : n);
+  }, 0);
+
   return {
     profilesActive: profs.filter((p) => p.is_active).length,
     profilesInactive: profs.filter((p) => !p.is_active).length,
     profilesThisWeek: profs.filter((p) => p.created_at >= weekAgo).length,
+    artistCount: profs.filter((p) => p.role === "artist" || p.role === "owner").length,
+    patronCount: profs.filter((p) => p.role === "patron").length,
+    partnerCount: profs.filter((p) => p.role === "partner").length,
     opportunitiesActive,
     opportunitiesInactive,
     opportunitiesExpiringSoon,
+    transferCount: transferred.length,
+    transferValue,
     byType,
     byCountry,
   };

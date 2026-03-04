@@ -22,10 +22,7 @@ export async function approveOpportunity(id: string) {
 export async function rejectOpportunity(id: string) {
   await guard();
   const admin = createAdminClient();
-  await admin
-    .from("opportunities")
-    .update({ status: "rejected" })
-    .eq("id", id);
+  await admin.from("opportunities").delete().eq("id", id);
   revalidatePath("/admin/opportunities/queue");
 }
 
@@ -43,9 +40,6 @@ export async function approveAll(ids: string[]) {
 export async function rejectAll(ids: string[]) {
   await guard();
   const admin = createAdminClient();
-  await admin
-    .from("opportunities")
-    .update({ status: "rejected" })
-    .in("id", ids);
+  await admin.from("opportunities").delete().in("id", ids);
   revalidatePath("/admin/opportunities/queue");
 }

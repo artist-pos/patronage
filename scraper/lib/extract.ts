@@ -8,16 +8,19 @@ const SYSTEM = `You extract arts funding opportunities from web content. Return 
 Each item in the array must have:
 - "title": string (name of the opportunity)
 - "organiser": string (organisation running it)
-- "caption": string (1-2 sentence plain-English summary of what it is)
+- "caption": string — 250–500 character plain-English summary. Include: what it is, who it's for, what's offered, and any eligibility highlights. Write in third person, no markdown.
 - "type": one of "Grant" | "Residency" | "Commission" | "Open Call" | "Prize" | "Display"
 - "country": the primary country or eligibility — use "NZ", "AUS", "UK", "US", "EU", or "Global"
 - "deadline": "YYYY-MM-DD" or null
 - "url": direct link to the opportunity page, or null
 - "funding_range": e.g. "up to $10,000" or "$5,000–$25,000" or null
+- "sub_categories": string array of relevant discipline and focus tags. Include applicable mediums (e.g. "Painting", "Sculpture", "Photography", "Ceramics", "Digital", "Printmaking", "Drawing", "Textile", "Film & Video", "Performance", "Installation", "Sound") and focus tags (e.g. "Early Career", "Emerging", "Mid-Career", "Established", "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research"). Only include tags clearly supported by the content. Return [] if none apply.
 
 Rules:
 - Only include genuine arts opportunities (grants, prizes, residencies, open calls, commissions, display opportunities)
-- Skip job listings, internships, and non-arts content
+- Only include opportunities open to individual artists or small artist collectives. Skip opportunities exclusively for established organisations, institutions, libraries, museums, universities, local councils, or corporate bodies
+- Skip job listings, internships, volunteer roles, and non-arts content
+- Skip opportunities where eligibility is restricted to a specific institution's own members, students, or staff
 - If a page lists multiple opportunities, return all of them
 - If no opportunities are found, return []
 - Return only the JSON array, no other text`;
