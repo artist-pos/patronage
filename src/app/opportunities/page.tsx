@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getOpportunities, getMarketplaceStats } from "@/lib/opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
+import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import type { CountryEnum, OppTypeEnum } from "@/types/database";
@@ -80,13 +81,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
           ))}
         </div>
       ) : (
-        <div className="columns-2 lg:columns-3 gap-4">
-          {opportunities.map((opp) => (
-            <div key={opp.id} className="break-inside-avoid mb-4">
-              <OpportunityCard opp={opp} view="gallery" />
-            </div>
-          ))}
-        </div>
+        <MasonryGrid opportunities={opportunities} />
       )}
     </div>
   );
