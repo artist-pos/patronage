@@ -14,7 +14,7 @@ Each item in the array must have:
 - "deadline": "YYYY-MM-DD" or null
 - "url": direct link to the opportunity page, or null
 - "funding_range": e.g. "up to $10,000" or "$5,000–$25,000" or null
-- "sub_categories": string array of relevant discipline and focus tags. Include applicable mediums (e.g. "Painting", "Sculpture", "Photography", "Ceramics", "Digital", "Printmaking", "Drawing", "Textile", "Film & Video", "Performance", "Installation", "Sound") and focus tags (e.g. "Early Career", "Emerging", "Mid-Career", "Established", "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research"). Only include tags clearly supported by the content. Return [] if none apply.
+- "sub_categories": string array of relevant discipline and focus tags. Include applicable mediums (e.g. "Painting", "Sculpture", "Photography", "Ceramics", "Digital", "Printmaking", "Drawing", "Textile", "Film & Video", "Performance", "Installation", "Sound", "Poetry", "Writing", "Mixed Media") and focus tags (e.g. "Early Career", "Emerging", "Mid-Career", "Established", "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research"). Only include tags clearly supported by the content. Return [] if none apply.
 
 Rules:
 - Only include genuine arts opportunities (grants, prizes, residencies, open calls, commissions, display opportunities)

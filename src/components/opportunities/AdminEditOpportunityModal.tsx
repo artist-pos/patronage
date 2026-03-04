@@ -12,7 +12,7 @@ const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
 const DISCIPLINES = [
   "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
   "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
-  "Installation", "Sound", "Mixed Media",
+  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
 ];
 
 const FOCUS_TAGS = [
