@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { updateOpportunityAdmin } from "@/app/opportunities/[id]/actions";
 import type { Opportunity } from "@/types/database";
 
+const TYPES = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display"] as const;
+const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
+
 const DISCIPLINES = [
   "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
   "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
@@ -28,6 +31,8 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [open, setOpen] = useState(false);
   const [caption, setCaption] = useState(opp.caption ?? "");
   const [url, setUrl] = useState(opp.url ?? "");
+  const [type, setType] = useState(opp.type);
+  const [country, setCountry] = useState(opp.country);
   const [deadline, setDeadline] = useState(opp.deadline ?? "");
   const [fundingRange, setFundingRange] = useState(opp.funding_range ?? "");
   const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
@@ -67,6 +72,8 @@ export function AdminEditOpportunityModal({ opp }: Props) {
       await updateOpportunityAdmin(opp.id, {
         caption: caption.trim() || null,
         url: url.trim() || null,
+        type,
+        country,
         featured_image_url: imgUrl.trim() || null,
         sub_categories: tags.length > 0 ? tags : null,
         deadline: deadline || null,
@@ -124,6 +131,22 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                   className={`${FIELD} resize-none`}
                 />
                 <p className="text-xs text-muted-foreground tabular-nums text-right">{caption.length}/500</p>
+              </div>
+
+              {/* Type + Region */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Type</label>
+                  <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={FIELD}>
+                    {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Region</label>
+                  <select value={country} onChange={(e) => setCountry(e.target.value)} className={FIELD}>
+                    {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
 
               {/* Application URL */}

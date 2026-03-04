@@ -9,6 +9,8 @@ export async function updateOpportunityAdmin(
   data: {
     caption?: string | null;
     url?: string | null;
+    type?: string;
+    country?: string;
     featured_image_url?: string | null;
     sub_categories?: string[] | null;
     deadline?: string | null;
