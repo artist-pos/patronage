@@ -12,6 +12,12 @@ import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
 const TYPES: OppTypeEnum[] = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display"];
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 const GRANT_TYPES = ["Project Grant", "Travel Stipend", "Residency Award", "Commissioning Fee", "Emergency Fund", "Other"];
+const DISCIPLINES = [
+  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
+  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
+  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
+];
+
 const FOCUS_TAGS = ["Research", "Development", "Living Costs", "Travel", "Community", "International", "Emerging Artists", "Māori & Pasifika"];
 
 const MAX_IMG_PX = 1600;
@@ -51,6 +57,7 @@ export function OpportunitySubmissionForm() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imgUrl, setImgUrl] = useState("");
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [selectedFocus, setSelectedFocus] = useState<string[]>([]);
   const [locationType, setLocationType] = useState<"local" | "global">("local");
 
@@ -91,10 +98,18 @@ export function OpportunitySubmissionForm() {
     setPreview((p) => ({ ...p, [key]: value }));
   }
 
+  function toggleDiscipline(tag: string) {
+    setSelectedDisciplines((prev) => {
+      const next = prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag];
+      upd("sub_categories", [...next, ...selectedFocus]);
+      return next;
+    });
+  }
+
   function toggleFocus(tag: string) {
     setSelectedFocus((prev) => {
       const next = prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag];
-      upd("sub_categories", next);
+      upd("sub_categories", [...selectedDisciplines, ...next]);
       return next;
     });
   }
@@ -157,7 +172,7 @@ export function OpportunitySubmissionForm() {
 
         {/* Hidden fields */}
         <input type="hidden" name="featured_image_url" value={imgUrl} />
-        <input type="hidden" name="sub_categories" value={selectedFocus.join(",")} />
+        <input type="hidden" name="sub_categories" value={[...selectedDisciplines, ...selectedFocus].join(",")} />
 
         <Field label="Grant Title *">
           <Input
@@ -254,8 +269,31 @@ export function OpportunitySubmissionForm() {
           </Field>
         </div>
 
+        {/* Disciplines multi-select */}
+        <Field label="Disciplines">
+          <div className="flex flex-wrap gap-2 pt-1">
+            {DISCIPLINES.map((tag) => {
+              const active = selectedDisciplines.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleDiscipline(tag)}
+                  className={`text-xs px-2.5 py-1 border leading-none transition-colors ${
+                    active
+                      ? "border-black bg-black text-white"
+                      : "border-black bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
         {/* Grant Focus multi-select */}
-        <Field label="Grant Focus">
+        <Field label="Focus">
           <div className="flex flex-wrap gap-2 pt-1">
             {FOCUS_TAGS.map((tag) => {
               const active = selectedFocus.includes(tag);
