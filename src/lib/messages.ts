@@ -48,12 +48,18 @@ export async function getConversations(): Promise<ConversationWithOther[]> {
         other_avatar_url: profileRes.data?.avatar_url ?? null,
         last_message: latestRes.data?.content ?? null,
         last_message_at: latestRes.data?.created_at ?? null,
+        conv_created_at: conv.created_at,
         unread_count: unreadRes.count ?? 0,
       };
     })
   );
 
-  return results;
+  // Sort by most recent message activity, falling back to conversation creation date
+  return results.sort((a, b) => {
+    const aTime = a.last_message_at ?? a.conv_created_at;
+    const bTime = b.last_message_at ?? b.conv_created_at;
+    return bTime > aTime ? 1 : bTime < aTime ? -1 : 0;
+  });
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {

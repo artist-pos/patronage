@@ -218,5 +218,6 @@ export interface ConversationWithOther {
   other_avatar_url: string | null;
   last_message: string | null;
   last_message_at: string | null;
+  conv_created_at: string;
   unread_count: number;
 }
