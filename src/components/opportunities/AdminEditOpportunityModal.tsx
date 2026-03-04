@@ -28,6 +28,8 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [open, setOpen] = useState(false);
   const [caption, setCaption] = useState(opp.caption ?? "");
   const [url, setUrl] = useState(opp.url ?? "");
+  const [deadline, setDeadline] = useState(opp.deadline ?? "");
+  const [fundingRange, setFundingRange] = useState(opp.funding_range ?? "");
   const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
   const [tags, setTags] = useState<string[]>(opp.sub_categories ?? []);
   const [uploading, setUploading] = useState(false);
@@ -67,6 +69,8 @@ export function AdminEditOpportunityModal({ opp }: Props) {
         url: url.trim() || null,
         featured_image_url: imgUrl.trim() || null,
         sub_categories: tags.length > 0 ? tags : null,
+        deadline: deadline || null,
+        funding_range: fundingRange.trim() || null,
       });
       setToast("Saved");
       setTimeout(() => {
@@ -132,6 +136,29 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                   placeholder="https://..."
                   className={FIELD}
                 />
+              </div>
+
+              {/* Deadline + Funding */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Deadline</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className={FIELD}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Funding</label>
+                  <input
+                    type="text"
+                    value={fundingRange}
+                    onChange={(e) => setFundingRange(e.target.value)}
+                    placeholder="e.g. up to $10,000"
+                    className={FIELD}
+                  />
+                </div>
               </div>
 
               {/* Featured image */}

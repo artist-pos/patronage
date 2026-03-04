@@ -11,6 +11,8 @@ export async function updateOpportunityAdmin(
     url?: string | null;
     featured_image_url?: string | null;
     sub_categories?: string[] | null;
+    deadline?: string | null;
+    funding_range?: string | null;
   }
 ) {
   if (!(await isAdmin())) throw new Error("Not authorised");

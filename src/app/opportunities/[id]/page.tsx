@@ -76,10 +76,10 @@ export default async function OpportunityPage({ params }: Props) {
 
       {/* Featured image with backdrop-blur background */}
       {opp.featured_image_url ? (
-        <div className="relative w-full border border-black overflow-hidden bg-black">
+        <div className="relative w-full border border-black overflow-hidden bg-white">
           {/* Blurred background fill */}
           <div
-            className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-40"
+            className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-20"
             style={{ backgroundImage: `url(${opp.featured_image_url})` }}
           />
           {/* Actual image */}
