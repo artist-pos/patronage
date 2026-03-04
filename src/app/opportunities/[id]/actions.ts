@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function updateOpportunityAdmin(
   id: string,
@@ -23,4 +24,15 @@ export async function updateOpportunityAdmin(
   if (error) throw new Error(error.message);
   revalidatePath(`/opportunities/${id}`);
   revalidatePath("/opportunities");
+}
+
+export async function rejectOpportunityAdmin(id: string) {
+  if (!(await isAdmin())) throw new Error("Not authorised");
+  const admin = createAdminClient();
+  await admin
+    .from("opportunities")
+    .update({ status: "rejected", is_active: false })
+    .eq("id", id);
+  revalidatePath("/opportunities");
+  redirect("/opportunities");
 }

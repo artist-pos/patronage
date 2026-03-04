@@ -6,6 +6,7 @@ import { getOpportunityById } from "@/lib/opportunities";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { isAdmin } from "@/lib/admin";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
+import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -63,6 +64,7 @@ export default async function OpportunityPage({ params }: Props) {
           ← Opportunities
         </Link>
         <div className="flex items-center gap-3">
+          {adminUser && <AdminRejectButton id={opp.id} />}
           {adminUser && <AdminEditOpportunityModal opp={opp} />}
           <Link
             href="/opportunities"
