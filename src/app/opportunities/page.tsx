@@ -6,9 +6,14 @@ import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import type { CountryEnum, OppTypeEnum } from "@/types/database";
 
 export const metadata = {
-  title: "Opportunities — Patronage",
+  title: "Art Grants & Opportunities for NZ & Australian Artists",
   description:
-    "Browse grants, residencies, commissions, and open calls for NZ and AUS artists.",
+    "Browse art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Updated regularly with the latest arts funding opportunities.",
+  openGraph: {
+    title: "Art Grants & Opportunities for NZ & Australian Artists | Patronage",
+    description:
+      "Browse art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Updated regularly with the latest arts funding opportunities.",
+  },
 };
 
 interface PageProps {
@@ -36,7 +41,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
       {/* Page heading */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Opportunities</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Art Grants & Opportunities</h1>
         <p className="text-sm text-muted-foreground">
           {opportunities.length} listing{opportunities.length !== 1 ? "s" : ""}
           {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}

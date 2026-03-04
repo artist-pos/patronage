@@ -18,11 +18,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Patronage — Opportunities for NZ & AUS Artists",
+  title: {
+    default: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+    template: "%s | Patronage",
+  },
   description:
-    "Patronage curates grants, residencies, commissions, and open calls for New Zealand and Australian artists.",
+    "Find art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Patronage curates the best arts funding opportunities in NZ and Australia.",
+  keywords: [
+    "art grants NZ",
+    "art grants New Zealand",
+    "art grants Australia",
+    "arts funding New Zealand",
+    "arts funding Australia",
+    "artist grants",
+    "residencies New Zealand",
+    "open calls artists",
+    "arts council grants",
+    "Creative NZ grants",
+    "Australia Council grants",
+  ],
   icons: { icon: "/Favicon.png" },
   verification: { google: "b1uNttMPg-mggBe-7YRYuCrdH_qyy0fWGTdCQX3fY30" },
+  metadataBase: new URL("https://patronage.nz"),
+  openGraph: {
+    siteName: "Patronage",
+    type: "website",
+    locale: "en_NZ",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

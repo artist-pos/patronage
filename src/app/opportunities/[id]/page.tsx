@@ -18,13 +18,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!opp) return { title: "Opportunity not found — Patronage" };
 
   const description =
-    opp.caption ?? opp.description ?? `${opp.type} opportunity by ${opp.organiser}.`;
+    opp.caption ??
+    opp.description ??
+    `${opp.type} open to ${opp.country} artists, offered by ${opp.organiser}.`;
 
   return {
-    title: `${opp.title} | Art Funding | Patronage`,
+    title: `${opp.title} — ${opp.type} | Patronage`,
     description,
     openGraph: {
-      title: `${opp.title} | Art Funding | Patronage`,
+      title: `${opp.title} — ${opp.type} | Patronage`,
       description,
       ...(opp.featured_image_url && {
         images: [{ url: opp.featured_image_url, width: 1200, height: 630, alt: opp.title }],
