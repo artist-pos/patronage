@@ -54,15 +54,34 @@ export async function upsertOpportunity(
   }
 
   // New opportunity — insert as pending
-  const { error } = await supabase
+  const record = buildRecord(opp, sourceUrl, ogImage);
+  const { data: inserted, error } = await supabase
     .from("opportunities")
-    .insert({ ...buildRecord(opp, sourceUrl, ogImage), status: "pending", is_active: true });
+    .insert({ ...record, status: "pending", is_active: true })
+    .select("id")
+    .single();
+
+  // Generate and store slug now that we have the ID
+  if (!error && inserted?.id) {
+    const slug = toSlug(record.title, inserted.id);
+    await supabase.from("opportunities").update({ slug }).eq("id", inserted.id);
+  }
 
   if (error) {
     console.error(`  Insert error: ${error.message}`);
     return "skipped";
   }
   return "inserted";
+}
+
+function toSlug(title: string, id: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/, "") +
+    "-" + id.slice(0, 8);
 }
 
 function buildRecord(opp: ScrapedOpportunity, sourceUrl: string, ogImage: string | null) {

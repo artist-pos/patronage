@@ -63,14 +63,18 @@ export async function getMarketplaceStats(): Promise<{
   return { count, totalFunding };
 }
 
-export async function getOpportunityById(id: string): Promise<Opportunity | null> {
+export async function getOpportunityById(idOrSlug: string): Promise<Opportunity | null> {
   const supabase = await createClient();
+
+  // Try slug first (new SEO URLs), fall back to UUID for existing links
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
   const { data } = await supabase
     .from("opportunities")
     .select("*")
-    .eq("id", id)
-    .eq("is_active", true)
+    .eq(isUuid ? "id" : "slug", idOrSlug)
     .single();
+
   return data as Opportunity | null;
 }
 

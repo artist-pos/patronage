@@ -25,6 +25,7 @@ export interface Opportunity {
   featured_image_url: string | null;
   grant_type: string | null;
   recipients_count: number | null;
+  slug: string | null;             // SEO-friendly URL segment e.g. "photoplace-gallery-open-call-195878cc"
   is_active: boolean;
   status: string;                  // "pending" | "published" | "rejected"
   source_url: string | null;       // page the scraper found this on

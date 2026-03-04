@@ -92,7 +92,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
     if (isPreview) return row;
     return (
-      <Link href={`/opportunities/${opp.id}`}>
+      <Link href={`/opportunities/${opp.slug ?? opp.id}`}>
         {row}
       </Link>
     );
@@ -209,7 +209,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
   if (isPreview) return <div className="h-full">{inner}</div>;
   return (
-    <Link href={`/opportunities/${opp.id}`} className="block h-full">
+    <Link href={`/opportunities/${opp.slug ?? opp.id}`} className="block h-full">
       {inner}
     </Link>
   );
