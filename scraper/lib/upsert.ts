@@ -6,11 +6,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY! // service role bypasses RLS
 );
 
+const ALLOWED_COUNTRIES = new Set(["NZ", "AUS", "Global"]);
+
 export async function upsertOpportunity(
   opp: ScrapedOpportunity,
   sourceUrl: string,
   ogImage: string | null
 ): Promise<"inserted" | "updated" | "skipped"> {
+  // Region filter — skip anything not open to NZ/AUS artists
+  if (opp.country && !ALLOWED_COUNTRIES.has(opp.country)) return "skipped";
+
   // Dedup: if the opportunity has its own URL, check that first
   if (opp.url) {
     const { data: byUrl } = await supabase

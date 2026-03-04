@@ -21,7 +21,16 @@ Rules:
 - Only include opportunities open to individual artists or small artist collectives. Skip opportunities exclusively for established organisations, institutions, libraries, museums, universities, local councils, or corporate bodies
 - Skip job listings, internships, volunteer roles, and non-arts content
 - Skip opportunities where eligibility is restricted to a specific institution's own members, students, or staff
-- If a page lists multiple opportunities, return all of them
+- ELIGIBILITY FILTER — this platform serves NZ and Australian artists. For the "country" field, use eligibility not location of the organiser:
+  * "Global" — open to international applicants with no residency/citizenship requirement, OR the opportunity uses phrases like "open to all", "international artists welcome", "worldwide", "any nationality", or similar
+  * "NZ" — explicitly for NZ-based artists/residents
+  * "AUS" — explicitly for Australia-based artists/residents
+  * "UK" — requires UK residency, citizenship, or institutional affiliation
+  * "US" — requires US residency, citizenship, or visa status
+  * "EU" — requires EU residency or citizenship
+  * SKIP the opportunity entirely if it requires residency/citizenship in a specific country outside NZ/AUS and makes no mention of international eligibility
+  * When unsure, prefer "Global" over a country code — many US/EU/UK prizes and residencies accept international applicants even if their organiser is local
+- If a page lists multiple opportunities, return all of them (applying the eligibility filter to each)
 - If no opportunities are found, return []
 - Return only the JSON array, no other text`;
 
