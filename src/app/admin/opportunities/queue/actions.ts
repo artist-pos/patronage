@@ -22,7 +22,11 @@ export async function approveOpportunity(id: string) {
 export async function rejectOpportunity(id: string) {
   await guard();
   const admin = createAdminClient();
-  await admin.from("opportunities").delete().eq("id", id);
+  // Soft-delete: keep as block-list so scraper won't re-insert on next run
+  await admin
+    .from("opportunities")
+    .update({ status: "rejected", is_active: false })
+    .eq("id", id);
   revalidatePath("/admin/opportunities/queue");
 }
 
@@ -40,6 +44,10 @@ export async function approveAll(ids: string[]) {
 export async function rejectAll(ids: string[]) {
   await guard();
   const admin = createAdminClient();
-  await admin.from("opportunities").delete().in("id", ids);
+  // Soft-delete: keep as block-list so scraper won't re-insert on next run
+  await admin
+    .from("opportunities")
+    .update({ status: "rejected", is_active: false })
+    .in("id", ids);
   revalidatePath("/admin/opportunities/queue");
 }

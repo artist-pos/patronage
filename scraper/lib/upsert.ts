@@ -20,8 +20,8 @@ export async function upsertOpportunity(
       .maybeSingle();
 
     if (byUrl) {
-      // Already published — don't overwrite
-      if (byUrl.status === "published") return "skipped";
+      // Already reviewed — don't re-surface
+      if (byUrl.status === "published" || byUrl.status === "rejected") return "skipped";
       // Still pending — refresh data
       await supabase
         .from("opportunities")
@@ -39,7 +39,7 @@ export async function upsertOpportunity(
       .maybeSingle();
 
     if (byTitle) {
-      if (byTitle.status === "published") return "skipped";
+      if (byTitle.status === "published" || byTitle.status === "rejected") return "skipped";
       await supabase
         .from("opportunities")
         .update(buildRecord(opp, sourceUrl, ogImage))
