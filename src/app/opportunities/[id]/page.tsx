@@ -147,21 +147,15 @@ export default async function OpportunityPage({ params }: Props) {
         )}
       </div>
 
-      {/* Description — caption is the primary short description */}
+      {/* Description */}
       {(opp.caption || opp.full_description || opp.description) && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             About
           </h2>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {opp.caption ?? opp.full_description ?? opp.description}
+            {opp.full_description ?? opp.description ?? opp.caption}
           </p>
-          {/* Extended detail below caption if available */}
-          {opp.caption && (opp.full_description || opp.description) && (
-            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-              {opp.full_description ?? opp.description}
-            </p>
-          )}
         </div>
       )}
 
