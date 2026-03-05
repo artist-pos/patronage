@@ -13,12 +13,13 @@ interface Props {
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
   return (
     <div className="flex flex-col gap-1.5 cursor-pointer group" onClick={onClick}>
-      <div className="border border-border overflow-hidden">
+      {/* Fixed aspect ratio container — border here so grid stays uniform */}
+      <div className="border border-border overflow-hidden aspect-[4/5]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
           alt={img.caption ?? "Portfolio work"}
-          className="w-full h-auto sm:h-[300px] sm:w-auto block group-hover:opacity-90 transition-opacity"
+          className="w-full h-full object-cover object-center group-hover:opacity-90 transition-opacity"
         />
       </div>
       {img.caption && (
@@ -35,7 +36,7 @@ export function PortfolioGrid({ images, artistName, viewerRole }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {images.map((img) => (
           <PortfolioItem
             key={img.id}
