@@ -19,7 +19,11 @@ const DISCIPLINES = [
   "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
 ];
 
-const FOCUS_TAGS = ["Research", "Development", "Living Costs", "Travel", "Community", "International", "Emerging Artists", "Māori & Pasifika"];
+const FOCUS_TAGS = [
+  "Early Career", "Emerging", "Mid-Career", "Established",
+  "Māori", "Pasifika", "Indigenous", "Youth",
+  "International", "Travel", "Research", "Community",
+];
 
 const MAX_IMG_PX = 1600;
 
