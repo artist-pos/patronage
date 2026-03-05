@@ -5,6 +5,8 @@ export interface FollowerProfile {
   username: string;
   full_name: string | null;
   avatar_url: string | null;
+  role: string | null;
+  followed_at: string;
 }
 
 export async function getFollowers(artistId: string): Promise<FollowerProfile[]> {
@@ -13,10 +15,12 @@ export async function getFollowers(artistId: string): Promise<FollowerProfile[]>
     .from("follows")
     .select(`
       follower_id,
+      created_at,
       profiles!follows_follower_id_fkey (
         username,
         full_name,
-        avatar_url
+        avatar_url,
+        role
       )
     `)
     .eq("following_id", artistId)
@@ -27,6 +31,8 @@ export async function getFollowers(artistId: string): Promise<FollowerProfile[]>
     username: row.profiles?.username ?? "",
     full_name: row.profiles?.full_name ?? null,
     avatar_url: row.profiles?.avatar_url ?? null,
+    role: row.profiles?.role ?? null,
+    followed_at: row.created_at,
   }));
 }
 

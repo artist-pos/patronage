@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getProfileStats } from "@/lib/profileAnalytics";
 import { getFollowerCount, getFollowers } from "@/lib/follows";
-import { FollowerAccordion } from "@/components/profile/FollowerAccordion";
+import { FollowersTab } from "@/components/analytics/FollowersTab";
 
 export const metadata = { title: "My Analytics — Patronage" };
 
@@ -55,13 +55,15 @@ export default async function ProfileAnalyticsPage() {
 
       {/* ── Followers ── */}
       <div className="space-y-4 border-b border-border pb-8">
-        <div className="space-y-0.5">
-          <p className="text-6xl font-bold tabular-nums">{followerCount.toLocaleString()}</p>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Total Followers
-          </p>
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-6xl font-bold tabular-nums">{followerCount.toLocaleString()}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Total Followers
+            </p>
+          </div>
         </div>
-        <FollowerAccordion followers={followers} />
+        <FollowersTab followers={followers} />
       </div>
 
       {/* Stats grid */}

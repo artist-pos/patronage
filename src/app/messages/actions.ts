@@ -11,6 +11,24 @@ export async function getOrCreateConversation(
   if (!user) return { error: "not_authenticated" };
   if (user.id === otherUserId) return { error: "cannot_message_self" };
 
+  // Artists may only message users who follow them
+  const { data: senderProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (senderProfile?.role === "artist" || senderProfile?.role === "owner") {
+    const { data: followRow } = await supabase
+      .from("follows")
+      .select("id")
+      .eq("follower_id", otherUserId)
+      .eq("following_id", user.id)
+      .maybeSingle();
+
+    if (!followRow) return { error: "not_following" };
+  }
+
   // Always order UUIDs so participant_a < participant_b (unique pair constraint)
   const [a, b] = [user.id, otherUserId].sort();
 
