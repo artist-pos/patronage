@@ -131,10 +131,14 @@ export default async function Home() {
 
   return (
     <div>
-      <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-16">
+      <div className={`max-w-[1600px] mx-auto px-6 ${isAuthenticated ? "py-0 space-y-0" : "py-16 space-y-16"}`}>
 
-        {/* ── Hero — hidden for authenticated users ── */}
-        {!isAuthenticated && (
+        {/* ── Hero / Brand header ── */}
+        {isAuthenticated ? (
+          <h1 className="text-4xl font-semibold tracking-tight text-center mt-8 mb-4">
+            Patronage
+          </h1>
+        ) : (
           <div className="space-y-6 flex flex-col items-center text-center">
             <div className="space-y-1.5">
               <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
@@ -158,7 +162,7 @@ export default async function Home() {
         )}
 
         {/* ── Active Directory ── */}
-        <div className="space-y-8 border-t border-border pt-16">
+        <div className={`space-y-8 ${isAuthenticated ? "pt-0" : "border-t border-border pt-16"}`}>
           <div className="space-y-1 text-center">
             <h2 className="text-xl font-semibold tracking-tight">Active Directory</h2>
             <p className="text-sm text-muted-foreground">
