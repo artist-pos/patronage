@@ -21,8 +21,15 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   return (
     <Link
       href={`/opportunities/${opp.id}`}
-      className="group border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
+      className="group relative border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
     >
+      {/* Closing soon badge — absolute top-left on mobile, hidden (shown inline below) on sm+ */}
+      {days !== null && days <= 7 && (
+        <Badge className="absolute top-2 left-2 z-10 text-xs font-normal bg-foreground text-background sm:hidden">
+          Closing soon
+        </Badge>
+      )}
+
       {/* Partner logo — wider container, object-contain so logos breathe */}
       {opp.featured_image_url && (
         <div className="w-36 shrink-0 bg-white border-r border-black overflow-hidden flex items-center justify-center self-stretch">
@@ -45,7 +52,7 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
             {opp.title}
           </p>
           {days !== null && days <= 7 && (
-            <Badge className="text-xs font-normal bg-foreground text-background shrink-0">
+            <Badge className="hidden sm:inline-flex text-xs font-normal bg-foreground text-background shrink-0">
               Closing soon
             </Badge>
           )}
@@ -159,6 +166,11 @@ export default async function Home() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* ── Divider for authenticated view ── */}
+        {isAuthenticated && (
+          <hr className="my-6" style={{ borderColor: "#eeeeee" }} />
         )}
 
         {/* ── Active Directory ── */}

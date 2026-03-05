@@ -138,11 +138,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
             {/* Status badge — top-left overlay */}
             {preOpen ? (
-              <div className="absolute top-0 left-0 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
+              <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
                 Not yet open
               </div>
             ) : closing && (
-              <div className="absolute top-0 left-0 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
+              <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
                 Closing soon
               </div>
             )}
@@ -156,11 +156,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
               </div>
             )}
             {preOpen ? (
-              <div className="absolute top-0 left-0 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
+              <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
                 Not yet open
               </div>
             ) : closing && (
-              <div className="absolute top-0 left-0 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
+              <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
                 Closing soon
               </div>
             )}
