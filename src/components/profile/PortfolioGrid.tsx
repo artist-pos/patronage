@@ -28,15 +28,14 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
     >
       {/* aspect-ratio placeholder prevents CLS on mobile; removed once loaded */}
       <div
-        className="border border-border overflow-hidden md:h-[300px]"
-        style={!loaded ? { aspectRatio: "1 / 1" } : undefined}
+        className={`border border-border overflow-hidden md:h-[300px] md:w-fit${!loaded ? " max-md:aspect-square" : ""}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
           alt={img.caption ?? "Portfolio work"}
           loading="lazy"
-          className="w-full h-auto object-cover md:h-full md:w-auto md:object-none group-hover:opacity-90 transition-opacity block"
+          className="w-full h-auto max-md:object-cover md:h-full md:w-auto group-hover:opacity-90 transition-opacity block"
           onLoad={handleLoad}
         />
       </div>

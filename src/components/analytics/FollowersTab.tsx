@@ -37,11 +37,13 @@ export function FollowersTab({ followers }: Props) {
     <div className="divide-y divide-border">
       {followers.map((f) => {
         const displayName = f.full_name ?? f.username;
-        const followedDate = new Date(f.followed_at).toLocaleDateString("en-NZ", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
+        const followedDate = f.followed_at
+          ? new Date(f.followed_at).toLocaleDateString("en-NZ", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : null;
 
         return (
           <div key={f.id} className="flex items-center gap-3 py-3">
@@ -76,9 +78,11 @@ export function FollowersTab({ followers }: Props) {
             </div>
 
             {/* Date followed — hidden on smallest screens */}
-            <span className="hidden sm:block text-xs text-muted-foreground whitespace-nowrap shrink-0">
-              {followedDate}
-            </span>
+            {followedDate && (
+              <span className="hidden sm:block text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                {followedDate}
+              </span>
+            )}
 
             {/* Message icon */}
             <FollowerMessageButton followerId={f.id} />
