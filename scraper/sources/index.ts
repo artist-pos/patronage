@@ -4,18 +4,17 @@ export const sources: Source[] = [
 
   // ── Tier 1: Aggregators (highest yield per scrape) ───────────────────────
 
-  { name: "NAVA Opportunities", url: "https://visualarts.net.au/opportunities/", country: "AUS", isListPage: true },
-  { name: "Artshub AU Opportunities", url: "https://www.artshub.com.au/jobs-and-opportunities/", country: "AUS", isListPage: true },
-  { name: "ResArtis Open Calls", url: "https://resartis.org/open-calls/", country: "Global", isListPage: true },
-  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true },
-  { name: "A-N Opportunities", url: "https://www.a-n.co.uk/opportunities/", country: "Global", isListPage: true },
-  { name: "Artquest Opportunities", url: "https://www.artquest.org.uk/opportunities/", country: "Global", isListPage: true },
-  { name: "Trans Artists", url: "https://www.transartists.org/en/air", country: "Global", isListPage: true },
-  { name: "Open Calls", url: "https://opencalls.net/", country: "Global", isListPage: true },
-  { name: "Art Deadline", url: "https://www.artdeadline.com/", country: "Global", isListPage: true },
-  { name: "Aesthetica Open Calls", url: "https://aestheticamagazine.com/open-calls/", country: "Global", isListPage: true },
-  { name: "Alliance of Artists Communities", url: "https://www.artistcommunities.org/opportunities", country: "Global", isListPage: true },
-  { name: "Submittable Open Calls", url: "https://www.submittable.com/t/open-calls", country: "Global", isListPage: true },
+  { name: "NAVA Opportunities", url: "https://visualarts.net.au/opportunities/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Artshub AU Opportunities", url: "https://www.artshub.com.au/jobs-and-opportunities/", country: "AUS", isListPage: true, followLinks: true, maxLinks: 15 },
+  { name: "ResArtis Open Calls", url: "https://resartis.org/open-calls/", country: "Global", isListPage: true, followLinks: true },
+  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
+  { name: "A-N Opportunities", url: "https://www.a-n.co.uk/opportunities/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10 },
+  { name: "Artquest Opportunities", url: "https://www.artquest.org.uk/opportunities/", country: "Global", isListPage: true, followLinks: true },
+  { name: "Trans Artists", url: "https://www.transartists.org/en/air", country: "Global", isListPage: true, followLinks: true },
+  { name: "Open Calls", url: "https://opencalls.net/", country: "Global", isListPage: true, followLinks: true },
+  { name: "Aesthetica Open Calls", url: "https://aestheticamagazine.com/open-calls/", country: "Global", isListPage: true, followLinks: true },
+  { name: "Alliance of Artists Communities", url: "https://www.artistcommunities.org/opportunities", country: "Global", isListPage: true, followLinks: true },
+  { name: "Submittable Open Calls", url: "https://www.submittable.com/t/open-calls", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15 },
 
   // ── Tier 1: RSS Feeds ────────────────────────────────────────────────────
 
@@ -32,10 +31,10 @@ export const sources: Source[] = [
 
   // ── Tier 2: NZ Government & Funded Bodies ───────────────────────────────
 
-  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true },
-  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/music/funding/", country: "NZ", isListPage: true },
-  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding", country: "NZ", isListPage: true },
-  { name: "Foundation North", url: "https://foundationnorth.org.nz/grants/", country: "NZ", isListPage: true },
+  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25 },
+  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/music/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Foundation North", url: "https://foundationnorth.org.nz/grants/", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true },
   { name: "Pub Charity", url: "https://pubcharitynz.org.nz/apply/", country: "NZ" },
   { name: "Lion Foundation", url: "https://www.lionfoundation.org.nz/apply-for-a-grant/", country: "NZ" },
   { name: "Trust Waikato", url: "https://www.trustwaikato.co.nz/apply/", country: "NZ" },
@@ -57,22 +56,22 @@ export const sources: Source[] = [
 
   // ── Tier 2: Australian Federal & State ───────────────────────────────────
 
-  { name: "Australia Council Grants", url: "https://www.australiacouncil.gov.au/funding/", country: "AUS", isListPage: true },
-  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", isListPage: true },
-  { name: "AIATSIS Grants", url: "https://aiatsis.gov.au/grants-and-fellowships", country: "AUS", isListPage: true },
-  { name: "National Gallery of Australia", url: "https://nga.gov.au/prizes-and-commissions/", country: "AUS", isListPage: true },
-  { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true },
-  { name: "Creative Victoria", url: "https://creative.vic.gov.au/grants-and-support", country: "AUS", isListPage: true },
-  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/funding", country: "AUS", isListPage: true },
-  { name: "DLGSC Western Australia", url: "https://www.dlgsc.wa.gov.au/arts/funding-and-support", country: "AUS", isListPage: true },
-  { name: "Arts South Australia", url: "https://www.arts.sa.gov.au/funding/", country: "AUS", isListPage: true },
-  { name: "ArtsACT", url: "https://www.arts.act.gov.au/funding", country: "AUS", isListPage: true },
-  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true },
-  { name: "Northern Territory Arts", url: "https://arts.nt.gov.au/grants", country: "AUS", isListPage: true },
-  { name: "City of Sydney Arts", url: "https://www.cityofsydney.nsw.gov.au/grants/arts", country: "AUS", isListPage: true },
-  { name: "City of Melbourne Arts", url: "https://www.melbourne.vic.gov.au/arts-and-culture/arts-grants", country: "AUS", isListPage: true },
-  { name: "Brisbane City Arts", url: "https://www.brisbane.qld.gov.au/community-and-safety/grants-awards", country: "AUS", isListPage: true },
-  { name: "ANAT Opportunities", url: "https://anat.org.au/opportunities/", country: "AUS", isListPage: true },
+  { name: "Australia Council Grants", url: "https://www.australiacouncil.gov.au/funding/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", isListPage: true, followLinks: true },
+  { name: "AIATSIS Grants", url: "https://aiatsis.gov.au/grants-and-fellowships", country: "AUS", isListPage: true, followLinks: true },
+  { name: "National Gallery of Australia", url: "https://nga.gov.au/prizes-and-commissions/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Creative Victoria", url: "https://creative.vic.gov.au/grants-and-support", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/funding", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "DLGSC Western Australia", url: "https://www.dlgsc.wa.gov.au/arts/funding-and-support", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Arts South Australia", url: "https://www.arts.sa.gov.au/funding/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "ArtsACT", url: "https://www.arts.act.gov.au/funding", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Northern Territory Arts", url: "https://arts.nt.gov.au/grants", country: "AUS", isListPage: true, followLinks: true },
+  { name: "City of Sydney Arts", url: "https://www.cityofsydney.nsw.gov.au/grants/arts", country: "AUS", isListPage: true, followLinks: true },
+  { name: "City of Melbourne Arts", url: "https://www.melbourne.vic.gov.au/arts-and-culture/arts-grants", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Brisbane City Arts", url: "https://www.brisbane.qld.gov.au/community-and-safety/grants-awards", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "ANAT Opportunities", url: "https://anat.org.au/opportunities/", country: "AUS", isListPage: true, followLinks: true },
   { name: "Artlink Australia", url: "https://www.artlink.com.au/", country: "AUS" },
 
   // ── Tier 3: Australian Prizes ─────────────────────────────────────────────
@@ -144,12 +143,12 @@ export const sources: Source[] = [
 
   // ── Tier 4: Fellowship & Exchange Programs ───────────────────────────────
 
-  { name: "Fulbright New Zealand", url: "https://www.fulbright.org.nz/", country: "NZ", isListPage: true },
-  { name: "Fulbright Australia", url: "https://www.fulbright.org.au/", country: "AUS", isListPage: true },
-  { name: "Asian Cultural Council", url: "https://www.asianculturalcouncil.org/apply", country: "Global", isListPage: true },
-  { name: "Japan Foundation Australia", url: "https://jpf.org.au/arts/", country: "Global", isListPage: true },
-  { name: "Goethe-Institut Australia", url: "https://www.goethe.de/ins/au/en/kul/bku.html", country: "Global", isListPage: true },
-  { name: "British Council Australia", url: "https://www.britishcouncil.org.au/programmes", country: "Global", isListPage: true },
+  { name: "Fulbright New Zealand", url: "https://www.fulbright.org.nz/awards/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Fulbright Australia", url: "https://www.fulbright.org.au/awards/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Asian Cultural Council", url: "https://www.asianculturalcouncil.org/apply", country: "Global", isListPage: true, followLinks: true },
+  { name: "Japan Foundation Australia", url: "https://jpf.org.au/arts/", country: "Global", isListPage: true, followLinks: true },
+  { name: "Goethe-Institut Australia", url: "https://www.goethe.de/ins/au/en/kul/bku.html", country: "Global", isListPage: true, followLinks: true },
+  { name: "British Council Australia", url: "https://www.britishcouncil.org.au/programmes", country: "Global", isListPage: true, followLinks: true },
   { name: "Korea Foundation", url: "https://www.kf.or.kr/eng/", country: "Global" },
   { name: "Alliance Française Australia", url: "https://www.afaustralia.org.au/", country: "Global" },
 
@@ -170,10 +169,34 @@ export const sources: Source[] = [
   { name: "4A Centre for Contemporary Asian Art", url: "https://www.4a.com.au/", country: "AUS" },
   { name: "Firstdraft Sydney", url: "https://firstdraft.org.au/", country: "AUS" },
   { name: "Bus Projects Melbourne", url: "https://www.busprojects.org.au/", country: "AUS" },
-  { name: "Jerwood Arts UK", url: "https://jerwoodarts.org/opportunities/", country: "UK", isListPage: true },
-  { name: "Gasworks London", url: "https://www.gasworks.org.uk/opportunities/", country: "UK", isListPage: true },
-  { name: "Tate Opportunities", url: "https://www.tate.org.uk/about-us/opportunities", country: "UK", isListPage: true },
-  { name: "Arts Council England", url: "https://www.artscouncil.org.uk/our-open-funds", country: "UK", isListPage: true },
-  { name: "Creative Scotland", url: "https://www.creativescotland.com/funding/", country: "UK", isListPage: true },
+  { name: "Jerwood Arts UK", url: "https://jerwoodarts.org/opportunities/", country: "UK", isListPage: true, followLinks: true },
+  { name: "Gasworks London", url: "https://www.gasworks.org.uk/opportunities/", country: "UK", isListPage: true, followLinks: true },
+  { name: "Arts Council England", url: "https://www.artscouncil.org.uk/our-open-funds", country: "UK", isListPage: true, followLinks: true },
+  { name: "Creative Scotland", url: "https://www.creativescotland.com/funding/", country: "UK", isListPage: true, followLinks: true },
+
+  // ── Additional NZ Sources ─────────────────────────────────────────────────
+
+  { name: "Creative NZ News & Opportunities RSS", url: "https://www.creativenz.govt.nz/rss.xml", country: "NZ", isRss: true },
+  { name: "Arts Access Aotearoa", url: "https://www.artsaccess.org.nz/news/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Toi Whakaari NZ Drama School", url: "https://www.toiwhakaari.ac.nz/opportunities/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Dowse Art Museum", url: "https://www.dowse.org.nz/", country: "NZ" },
+  { name: "Chartwell Trust", url: "https://www.chartwell.org.nz/", country: "NZ" },
+  { name: "James Wallace Arts Trust", url: "https://www.wallaceartstrust.org.nz/residencies/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Sargeson Fellowship", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding/sargeson-residency", country: "NZ" },
+  { name: "NZ Young Arts Trust", url: "https://www.youngartstrust.org.nz/", country: "NZ" },
+  { name: "Tautai Pacific Arts Trust", url: "https://tautai.org/opportunities/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Pacific Arts Alliance", url: "https://pacificartsalliance.org.nz/", country: "NZ" },
+  { name: "Māori Arts Board (Toi Māori)", url: "https://www.toimaori.nz/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Arts Foundation Te Tūāpapa Toi", url: "https://www.artsfoundation.org.nz/awards/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "$50K Waikato Arts Grant", url: "https://waikatocommunity.org.nz/grants/", country: "NZ", isListPage: true, followLinks: true },
+
+  // ── Additional AUS Sources ────────────────────────────────────────────────
+
+  { name: "Artlands Australia", url: "https://www.artlands.com.au/", country: "AUS" },
+  { name: "Craft ACT", url: "https://www.craftact.org.au/opportunities", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Craft Victoria", url: "https://www.craftvictoria.com.au/opportunities/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "The Big Anxiety Festival", url: "https://thebigpicture.com.au/", country: "AUS" },
+  { name: "Australian Art Network", url: "https://www.artnetwork.com.au/opportunities", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Museum Victoria Grants", url: "https://museumsvictoria.com.au/about-us/grants/", country: "AUS", isListPage: true, followLinks: true },
 
 ];

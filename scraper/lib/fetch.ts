@@ -15,11 +15,43 @@ const http = axios.create({
   },
 });
 
+// ── Link extraction from raw HTML ────────────────────────────────────────────
+
+const SKIP_PATH = /\/(login|logout|admin|search|tag|tags|category|categories|page\/\d|wp-|feed|rss|sitemap|contact|about|privacy|terms|cookie|newsletter|subscribe|donate|shop|cart|event|news|blog|press|media)\b/i;
+const SKIP_EXT = /\.(pdf|jpg|jpeg|png|gif|svg|zip|mp4|mp3|docx?)$/i;
+
+export function extractLinksFromHtml(html: string, baseUrl: string): string[] {
+  const $ = cheerio.load(html);
+  const base = new URL(baseUrl);
+  const seen = new Set<string>();
+  const links: string[] = [];
+
+  $("a[href]").each((_, el) => {
+    const href = $(el).attr("href");
+    if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) return;
+    try {
+      const url = new URL(href, baseUrl);
+      if (url.hostname !== base.hostname) return;
+      const path = url.pathname;
+      if (path === "/" || path === base.pathname) return;
+      if (SKIP_PATH.test(path) || SKIP_EXT.test(path)) return;
+      const clean = url.origin + path;
+      if (seen.has(clean)) return;
+      seen.add(clean);
+      links.push(clean);
+    } catch { /* invalid URL */ }
+  });
+
+  return links;
+}
+
 // ── Static HTML fetch (axios + cheerio) ─────────────────────────────────────
 
-export async function fetchPageContent(url: string): Promise<{ text: string; ogImage: string | null }> {
+export async function fetchPageContent(url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
   const response = await http.get(url, { responseType: "text" });
-  const $ = cheerio.load(response.data as string);
+  const rawHtml = response.data as string;
+  const $ = cheerio.load(rawHtml);
+  const links = extractLinksFromHtml(rawHtml, url);
 
   const ogImage =
     $('meta[property="og:image"]').attr("content") ??
@@ -34,7 +66,7 @@ export async function fetchPageContent(url: string): Promise<{ text: string; ogI
     .replace(/\s+/g, " ")
     .trim();
 
-  return { text: text.slice(0, 10000), ogImage };
+  return { text: text.slice(0, 10000), ogImage, links };
 }
 
 // ── Browser fetch (Playwright — for JS-rendered pages) ───────────────────────
@@ -55,7 +87,7 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
-export async function fetchWithBrowser(url: string): Promise<{ text: string; ogImage: string | null }> {
+export async function fetchWithBrowser(url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
@@ -66,6 +98,9 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
         el.getAttribute("content")
       )
       .catch(() => null);
+
+    const rawHtml = await page.content();
+    const links = extractLinksFromHtml(rawHtml, url);
 
     await page.evaluate(() => {
       document
@@ -80,7 +115,7 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
       return el ? (el.textContent ?? "").replace(/\s+/g, " ").trim() : "";
     });
 
-    return { text: text.slice(0, 10000), ogImage };
+    return { text: text.slice(0, 10000), ogImage, links };
   } finally {
     await page.close();
   }

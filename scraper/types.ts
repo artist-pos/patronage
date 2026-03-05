@@ -5,6 +5,8 @@ export interface Source {
   isRss?: boolean; // parse as RSS/Atom feed
   isListPage?: boolean; // page lists multiple opportunities — extract all
   needsBrowser?: boolean; // page requires JS execution (use Playwright)
+  followLinks?: boolean; // follow individual opportunity links from the list page for full detail
+  maxLinks?: number; // cap on how many detail links to follow (default 20)
 }
 
 export interface ScrapedOpportunity {

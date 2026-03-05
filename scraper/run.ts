@@ -41,21 +41,47 @@ async function main() {
         }
       } else {
         // ── HTML page (static or browser) ───────────────────────────────────
-        const { text, ogImage } = source.needsBrowser
+        const { text, ogImage, links } = source.needsBrowser
           ? await fetchWithBrowser(source.url)
           : await fetchPageContent(source.url);
-        const opps = await extractFromPage(text, source.url, source.country);
-        console.log(`  ↳ ${opps.length} opportunities extracted`);
 
-        for (const opp of opps) {
-          const image =
-            opp.featured_image_url ??
-            ogImage ??
-            (await resolveOrgImage(opp.url, source.url));
-          const result = await upsertOpportunity(opp, source.url, image);
-          if (result === "inserted") inserted++;
-          else if (result === "updated") updated++;
-          else skipped++;
+        if (source.followLinks && links.length > 0) {
+          // ── Deep scrape: follow each individual opportunity link ───────────
+          const detailLinks = links.slice(0, source.maxLinks ?? 20);
+          console.log(`  ↳ following ${detailLinks.length} links`);
+
+          for (const link of detailLinks) {
+            try {
+              const { text: dText, ogImage: dOgImage } = await fetchPageContent(link);
+              const opps = await extractFromPage(dText, link, source.country);
+              for (const opp of opps) {
+                if (!opp.url) opp.url = link;
+                const image = opp.featured_image_url ?? dOgImage ?? ogImage ?? (await resolveOrgImage(opp.url, source.url));
+                const result = await upsertOpportunity(opp, source.url, image);
+                if (result === "inserted") inserted++;
+                else if (result === "updated") updated++;
+                else skipped++;
+              }
+            } catch (err) {
+              console.error(`    ✗ ${link}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+            await sleep(RATE_LIMIT_MS);
+          }
+        } else {
+          // ── Standard: extract from the page directly ───────────────────────
+          const opps = await extractFromPage(text, source.url, source.country);
+          console.log(`  ↳ ${opps.length} opportunities extracted`);
+
+          for (const opp of opps) {
+            const image =
+              opp.featured_image_url ??
+              ogImage ??
+              (await resolveOrgImage(opp.url, source.url));
+            const result = await upsertOpportunity(opp, source.url, image);
+            if (result === "inserted") inserted++;
+            else if (result === "updated") updated++;
+            else skipped++;
+          }
         }
       }
     } catch (err) {
