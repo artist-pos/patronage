@@ -28,6 +28,7 @@ const NAV_LINKS = [
 export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
   const isPartner = role === "partner" || role === "admin";
+  const showOpportunities = isArtist || role === "patron";
   const [open, setOpen] = useState(false);
 
   return (
@@ -57,7 +58,7 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
               <DropdownMenuItem asChild>
                 <Link href="/profile/analytics">Analytics</Link>
               </DropdownMenuItem>
-              {isArtist && (
+              {showOpportunities && (
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard">My Opportunities</Link>
                 </DropdownMenuItem>
@@ -142,7 +143,7 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                 >
                   Analytics
                 </Link>
-                {isArtist && (
+                {showOpportunities && (
                   <Link
                     href="/dashboard"
                     onClick={() => setOpen(false)}

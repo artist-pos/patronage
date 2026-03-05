@@ -37,6 +37,8 @@ export default async function ProfileAnalyticsPage() {
   const profile = await getProfileById(user.id);
   if (!profile) redirect("/onboarding");
 
+  const isArtist = profile.role === "artist" || profile.role === "owner";
+
   const [stats, followerCount, followers] = await Promise.all([
     getProfileStats(user.id),
     getFollowerCount(user.id),
@@ -101,12 +103,18 @@ export default async function ProfileAnalyticsPage() {
         stats.websiteClicks === 0 &&
         stats.bibClicks === 0 && (
           <p className="text-xs text-muted-foreground border border-dashed border-border p-4">
-            No activity recorded yet. Data starts tracking once visitors view your public profile.
-            Make sure your profile is active and discoverable in the{" "}
-            <Link href="/artists" className="underline underline-offset-2">
-              artist directory
-            </Link>
-            .
+            {isArtist ? (
+              <>
+                No activity recorded yet. Data starts tracking once visitors view your public profile.
+                Make sure your profile is active and discoverable in the{" "}
+                <Link href="/artists" className="underline underline-offset-2">
+                  artist directory
+                </Link>
+                .
+              </>
+            ) : (
+              "No activity recorded yet. Data will appear here as your profile receives visits."
+            )}
           </p>
         )}
 
