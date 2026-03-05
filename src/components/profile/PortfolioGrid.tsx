@@ -11,14 +11,26 @@ interface Props {
 }
 
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const el = e.currentTarget;
+    setIsLandscape(el.naturalWidth / el.naturalHeight > 1.2);
+  }
+
   return (
-    <div className="flex flex-col gap-1.5 cursor-pointer group shrink-0 w-fit" onClick={onClick}>
-      <div className="border border-border overflow-hidden h-[300px]">
+    // col-span-2 only affects the mobile grid; ignored in desktop flex layout
+    <div
+      className={`flex flex-col gap-1.5 cursor-pointer group ${isLandscape ? "col-span-2" : ""} md:shrink-0 md:w-fit`}
+      onClick={onClick}
+    >
+      <div className="border border-border overflow-hidden md:h-[300px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
           alt={img.caption ?? "Portfolio work"}
-          className="h-full w-auto block group-hover:opacity-90 transition-opacity"
+          className="w-full h-auto object-cover md:h-full md:w-auto md:object-none group-hover:opacity-90 transition-opacity block"
+          onLoad={handleLoad}
         />
       </div>
       {img.caption && (
@@ -35,7 +47,8 @@ export function PortfolioGrid({ images, artistName, viewerRole }: Props) {
 
   return (
     <>
-      <div className="flex flex-wrap gap-4">
+      {/* Mobile: 2-col grid with landscape span. Desktop: horizontal flex wrap */}
+      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-4">
         {images.map((img) => (
           <PortfolioItem
             key={img.id}
