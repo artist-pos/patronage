@@ -174,6 +174,21 @@ export const sources: Source[] = [
   { name: "Arts Council England", url: "https://www.artscouncil.org.uk/our-open-funds", country: "UK", isListPage: true, followLinks: true },
   { name: "Creative Scotland", url: "https://www.creativescotland.com/funding/", country: "UK", isListPage: true, followLinks: true },
 
+  // ── NZ Regional Arts Development Organisations ───────────────────────────
+
+  { name: "Creative Waikato", url: "https://creativewaikato.co.nz/opportunities/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Creative Bay of Plenty", url: "https://www.creativebop.org.nz/opportunities/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Arts Otago", url: "https://www.artsotago.org.nz/grants/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Toi Tāmaki Creative Auckland", url: "https://toitamaki.nz/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Creative Northland", url: "https://creativenorthland.com/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Arts Canterbury", url: "https://www.artscanterbury.org.nz/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Creative Hawke's Bay", url: "https://www.creativehawkesbay.org.nz/", country: "NZ" },
+  { name: "Arts on Tour NZ", url: "https://www.artsontour.co.nz/", country: "NZ" },
+  { name: "Venture Southland Arts", url: "https://www.venturesouthland.co.nz/arts/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Creative Taranaki", url: "https://creativetaranaki.nz/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Marlborough Arts", url: "https://www.marlborough.govt.nz/culture-community/arts-culture/arts-grants", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Nelson Bays Arts Council", url: "https://www.nelsonbaysarts.org.nz/grants/", country: "NZ", isListPage: true, followLinks: true },
+
   // ── Additional NZ Sources ─────────────────────────────────────────────────
 
   { name: "Creative NZ News & Opportunities RSS", url: "https://www.creativenz.govt.nz/rss.xml", country: "NZ", isRss: true },
