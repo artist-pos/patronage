@@ -188,10 +188,10 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
-              placeholder="Use a concise, recognizable title."
+              placeholder="Use a concise, recognisable title."
               className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
             />
-            <p className="text-[11px] text-muted-foreground">Use a concise, recognizable title.</p>
+            <p className="text-[11px] text-muted-foreground">Use a concise, recognisable title.</p>
           </div>
 
           {/* ── Price ── */}
