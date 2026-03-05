@@ -12,10 +12,12 @@ interface Props {
 
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
   const [isLandscape, setIsLandscape] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const el = e.currentTarget;
     setIsLandscape(el.naturalWidth / el.naturalHeight > 1.2);
+    setLoaded(true);
   }
 
   return (
@@ -24,11 +26,16 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
       className={`flex flex-col gap-1.5 cursor-pointer group ${isLandscape ? "col-span-2" : ""} md:shrink-0 md:w-fit`}
       onClick={onClick}
     >
-      <div className="border border-border overflow-hidden md:h-[300px]">
+      {/* aspect-ratio placeholder prevents CLS on mobile; removed once loaded */}
+      <div
+        className="border border-border overflow-hidden md:h-[300px]"
+        style={!loaded ? { aspectRatio: "1 / 1" } : undefined}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
           alt={img.caption ?? "Portfolio work"}
+          loading="lazy"
           className="w-full h-auto object-cover md:h-full md:w-auto md:object-none group-hover:opacity-90 transition-opacity block"
           onLoad={handleLoad}
         />

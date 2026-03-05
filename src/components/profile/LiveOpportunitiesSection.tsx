@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { RichOpportunityModal } from "./RichOpportunityModal";
+import dynamic from "next/dynamic";
+const RichOpportunityModal = dynamic(() => import("./RichOpportunityModal").then((m) => m.RichOpportunityModal), { ssr: false });
 import type { Opportunity } from "@/types/database";
 
 const CARD_H = 225;

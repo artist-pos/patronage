@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { getOpportunityById } from "@/lib/opportunities";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { isAdmin } from "@/lib/admin";
-import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
+import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModalDynamic";
 import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
 import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";

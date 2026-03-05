@@ -18,7 +18,7 @@ interface ArtistProfile {
   exhibition_history: Array<{ type: string }>;
 }
 
-interface Props {
+export interface ApplyModalProps {
   opportunity: Opportunity;
   artistProfile: ArtistProfile;
   artistArtworks: Artwork[];
@@ -26,6 +26,8 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+type Props = ApplyModalProps;
 
 export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, onClose, onSuccess }: Props) {
   const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null);

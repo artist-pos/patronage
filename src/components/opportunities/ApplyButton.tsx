@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ApplyModal } from "./ApplyModal";
 import { computeBadges } from "@/lib/badges";
+import type { ApplyModalProps } from "./ApplyModal";
+
+const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 import type { Opportunity, Artwork } from "@/types/database";
 
 interface Props {
@@ -15,9 +18,9 @@ export function ApplyButton({ opportunity }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [artistData, setArtistData] = useState<{
-    profile: Parameters<typeof ApplyModal>[0]["artistProfile"];
+    profile: ApplyModalProps["artistProfile"];
     artworks: Artwork[];
-    badges: Parameters<typeof ApplyModal>[0]["badges"];
+    badges: ApplyModalProps["badges"];
   } | null>(null);
   const router = useRouter();
 
