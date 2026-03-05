@@ -7,6 +7,7 @@ import { ArtistCard } from "@/components/artists/ArtistCard";
 import { getProfiles } from "@/lib/profiles";
 import { getClosingSoonOpportunities } from "@/lib/opportunities";
 import { getLatestUpdates } from "@/lib/feed";
+import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, ProjectUpdateWithArtist } from "@/types/database";
 
 function daysUntil(deadline: string | null): number | null {
@@ -118,6 +119,10 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
 }
 
 export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthenticated = !!user;
+
   const [artists, opportunities, updates] = await Promise.all([
     getProfiles({}, 4),
     getClosingSoonOpportunities(4),
@@ -128,27 +133,29 @@ export default async function Home() {
     <div>
       <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-16">
 
-        {/* ── Hero ── */}
-        <div className="space-y-6 flex flex-col items-center text-center">
-          <div className="space-y-1.5">
-            <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
-            <p className="text-lg text-muted-foreground">
-              Grants, residencies, and open calls for New Zealand and Australian
-              artists — curated and verified.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              A community for artists, patrons, and partners.
-            </p>
+        {/* ── Hero — hidden for authenticated users ── */}
+        {!isAuthenticated && (
+          <div className="space-y-6 flex flex-col items-center text-center">
+            <div className="space-y-1.5">
+              <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
+              <p className="text-lg text-muted-foreground">
+                Grants, residencies, and open calls for New Zealand and Australian
+                artists — curated and verified.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                A community for artists, patrons, and partners.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Button asChild>
+                <Link href="/opportunities">Browse Opportunities</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/auth/signup">Join the Community</Link>
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Button asChild>
-              <Link href="/opportunities">Browse Opportunities</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/auth/signup">Join the Community</Link>
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* ── Active Directory ── */}
         <div className="space-y-8 border-t border-border pt-16">
@@ -230,12 +237,14 @@ export default async function Home() {
 
       </div>
 
-      {/* ── Weekly Digest – above footer ── */}
-      <div className="border-t border-border px-6 py-12 text-center">
-        <div className="max-w-md mx-auto">
-          <EmailCapture />
+      {/* ── Weekly Digest – above footer, hidden for authenticated users ── */}
+      {!isAuthenticated && (
+        <div className="border-t border-border px-6 py-12 text-center">
+          <div className="max-w-md mx-auto">
+            <EmailCapture />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

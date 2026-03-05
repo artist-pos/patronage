@@ -121,6 +121,8 @@ export interface Profile {
   hide_sold_section: boolean;
   collection_public: boolean;
   received_grants: string[];
+  marketing_subscription: boolean;
+  weekly_digest: boolean;
   created_at: string;
 }
 

@@ -14,7 +14,11 @@ import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,9 +31,21 @@ export default async function OnboardingPage() {
   if (!profile?.role) redirect("/onboarding/role");
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
+  const { welcome } = await searchParams;
+  const showWelcomeBanner = isArtist && welcome === "1";
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 py-12 space-y-12">
+
+      {/* ── Welcome / subscription confirmation banner ── */}
+      {showWelcomeBanner && (
+        <div className="border border-black bg-black text-white px-6 py-4 space-y-0.5">
+          <p className="text-sm font-semibold">Welcome to Patronage!</p>
+          <p className="text-sm opacity-80">
+            We&apos;ve subscribed you to our Weekly Digest to ensure you never miss a deadline.
+          </p>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="space-y-1 border-b border-border pb-6">

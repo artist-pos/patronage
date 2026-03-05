@@ -22,12 +22,19 @@ async function setRole(formData: FormData) {
 
   // Patrons and partners don't require admin approval — activate immediately.
   // Artists default to is_active: true too (admin can deactivate if needed).
+  const isArtist = role === "artist";
   await supabase.from("profiles").upsert(
-    { id: user.id, username: fallbackUsername, role, is_active: true },
+    {
+      id: user.id,
+      username: fallbackUsername,
+      role,
+      is_active: true,
+      ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
+    },
     { onConflict: "id", ignoreDuplicates: false }
   );
 
-  redirect("/onboarding");
+  redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
 }
 
 export default async function SelectRolePage() {
