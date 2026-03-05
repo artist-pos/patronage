@@ -39,6 +39,10 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [fundingRange, setFundingRange] = useState(opp.funding_range ?? "");
   const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
   const [tags, setTags] = useState<string[]>(opp.sub_categories ?? []);
+  const [entryFee, setEntryFee] = useState<string>(opp.entry_fee != null ? String(opp.entry_fee) : "");
+  const [artistPaymentType, setArtistPaymentType] = useState(opp.artist_payment_type ?? "");
+  const [travelSupport, setTravelSupport] = useState<boolean | null>(opp.travel_support ?? null);
+  const [travelSupportDetails, setTravelSupportDetails] = useState(opp.travel_support_details ?? "");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,6 +86,10 @@ export function AdminEditOpportunityModal({ opp }: Props) {
         opens_at: opensAt || null,
         deadline: deadline || null,
         funding_range: fundingRange.trim() || null,
+        entry_fee: entryFee !== "" ? parseFloat(entryFee) : null,
+        artist_payment_type: artistPaymentType || null,
+        travel_support: travelSupport,
+        travel_support_details: travelSupportDetails.trim() || null,
       });
       setToast("Saved");
       setTimeout(() => {
@@ -257,6 +265,68 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                   className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
                 />
+              </div>
+
+              {/* Transparency fields */}
+              <div className="space-y-4 border border-black/20 p-4 bg-muted/20">
+                <p className="text-xs font-semibold uppercase tracking-widest">Transparency</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest">Entry Fee</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={entryFee}
+                      onChange={(e) => setEntryFee(e.target.value)}
+                      placeholder="0 = Free, blank = unknown"
+                      className={FIELD}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest">Artist Payment</label>
+                    <select
+                      value={artistPaymentType}
+                      onChange={(e) => setArtistPaymentType(e.target.value)}
+                      className={FIELD}
+                    >
+                      <option value="">— None / N/A —</option>
+                      <option value="Honorarium">Honorarium</option>
+                      <option value="Commission">Commission</option>
+                      <option value="Stipend">Stipend</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-widest">Travel Support</label>
+                  <div className="flex gap-3">
+                    {[{ val: null, label: "Unknown" }, { val: true, label: "Yes" }, { val: false, label: "No" }].map(({ val, label }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setTravelSupport(val)}
+                        className={`text-xs px-3 py-1.5 border leading-none transition-colors ${
+                          travelSupport === val
+                            ? "border-black bg-black text-white"
+                            : "border-black hover:bg-muted"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {travelSupport && (
+                    <input
+                      type="text"
+                      value={travelSupportDetails}
+                      onChange={(e) => setTravelSupportDetails(e.target.value)}
+                      placeholder="e.g. flights + accommodation covered"
+                      className={FIELD}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Disciplines */}

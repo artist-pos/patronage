@@ -7,6 +7,7 @@ import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploade
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
+import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
@@ -118,6 +119,19 @@ export default async function OnboardingPage() {
             profileId={user.id}
             initial={(profile.exhibition_history ?? []) as ExhibitionEntry[]}
           />
+        </section>
+      )}
+
+      {/* ── Artist-only: Grants Received ── */}
+      {isArtist && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Grants Received</h2>
+            <p className="text-xs text-muted-foreground">
+              List grants, awards, or funding you have received. These appear as trust signals on your profile.
+            </p>
+          </div>
+          <GrantsSection initialGrants={(profile as unknown as { received_grants?: string[] }).received_grants ?? []} />
         </section>
       )}
 

@@ -18,23 +18,25 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ type?: string; country?: string; view?: string }>;
+  searchParams: Promise<{ type?: string; country?: string; view?: string; discipline?: string }>;
 }
 
 export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const type = params.type as OppTypeEnum | undefined;
   const country = params.country as CountryEnum | undefined;
+  const discipline = params.discipline;
   const view = params.view === "list" ? "list" : "gallery";
 
   const [opportunities, stats] = await Promise.all([
-    getOpportunities({ type, country }),
+    getOpportunities({ type, country, discipline }),
     getMarketplaceStats(),
   ]);
 
   const activeFilters = [
     type,
     country,
+    discipline,
   ].filter(Boolean);
 
   return (

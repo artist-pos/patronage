@@ -21,6 +21,12 @@ const OPP_TYPES: OppTypeEnum[] = [
 ];
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 
+const DISCIPLINES = [
+  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
+  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
+  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
+];
+
 function GridIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -49,6 +55,7 @@ export function OpportunityFilters() {
 
   const currentType = searchParams.get("type") as OppTypeEnum | null;
   const currentCountry = searchParams.get("country") as CountryEnum | null;
+  const currentDiscipline = searchParams.get("discipline");
   const currentView = searchParams.get("view") ?? "gallery";
 
   const updateParam = useCallback(
@@ -122,7 +129,7 @@ export function OpportunityFilters() {
         </div>
       </div>
 
-      {/* Secondary: country filter */}
+      {/* Secondary: country + discipline filters */}
       <div className="flex flex-wrap gap-3">
         <Select
           value={currentCountry ?? "all"}
@@ -135,6 +142,21 @@ export function OpportunityFilters() {
             <SelectItem value="all">All countries</SelectItem>
             {COUNTRIES.map((c) => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentDiscipline ?? "all"}
+          onValueChange={(v) => updateParam("discipline", v)}
+        >
+          <SelectTrigger className="w-44 text-sm">
+            <SelectValue placeholder="All disciplines" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All disciplines</SelectItem>
+            {DISCIPLINES.map((d) => (
+              <SelectItem key={d} value={d}>{d}</SelectItem>
             ))}
           </SelectContent>
         </Select>

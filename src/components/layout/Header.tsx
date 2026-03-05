@@ -62,6 +62,7 @@ export async function Header() {
             username={profile?.username ?? null}
             unreadCount={unreadCount}
             signOut={signOut}
+            role={profile?.role ?? null}
           />
         </div>
 

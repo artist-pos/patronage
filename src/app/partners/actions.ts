@@ -27,6 +27,13 @@ export async function submitOpportunityAction(
 
   const captionRaw = (formData.get("caption") as string)?.trim();
 
+  const routingType = (formData.get("routing_type") as string) || "external";
+  const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
+  const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
+
+  let customFields = [];
+  try { customFields = JSON.parse(customFieldsRaw); } catch { customFields = []; }
+
   const { error } = await supabase.from("opportunity_submissions").insert({
     title,
     organiser,
@@ -44,6 +51,9 @@ export async function submitOpportunityAction(
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,
+    routing_type: routingType,
+    custom_fields: customFields,
+    show_badges_in_submission: showBadgesRaw === "true",
   });
 
   if (error) return { error: error.message };

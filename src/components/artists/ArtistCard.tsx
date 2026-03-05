@@ -2,14 +2,40 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import type { ProfileWithImage } from "@/types/database";
+import type { BadgeSet } from "@/lib/badges";
 
 interface Props {
   artist: ProfileWithImage;
   view?: "gallery" | "list";
   compact?: boolean; // fixed 200px height for landing page
+  badges?: BadgeSet;
 }
 
-export function ArtistCard({ artist, view = "gallery", compact = false }: Props) {
+function SecondaryBadges({ badges }: { badges: BadgeSet }) {
+  const pills = [
+    badges.verified && "Verified",
+    badges.exhibited && "Exhibited",
+    badges.grantRecipient && "Grant Recipient",
+    badges.collected && "Collected",
+  ].filter(Boolean) as string[];
+
+  if (pills.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {pills.map((label) => (
+        <span
+          key={label}
+          className="text-[10px] border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none"
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function ArtistCard({ artist, view = "gallery", compact = false, badges }: Props) {
   const displayName = artist.full_name ?? artist.username;
   const bioTaster = artist.bio
     ? artist.bio.slice(0, 120) + (artist.bio.length > 120 ? "…" : "")
@@ -50,6 +76,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
             )}
           </p>
           <p className="text-xs text-muted-foreground truncate">@{artist.username}</p>
+          {badges && <SecondaryBadges badges={badges} />}
         </div>
 
         {/* Medium tags */}
@@ -108,6 +135,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
               {artist.is_patronage_supported && (
                 <Badge className="text-xs font-normal bg-foreground text-background w-fit">With Patronage</Badge>
               )}
+              {badges && <SecondaryBadges badges={badges} />}
               {artist.country && <span className="text-xs text-muted-foreground">{artist.country}</span>}
             </div>
           </div>
@@ -167,6 +195,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false }: Props)
                 With Patronage
               </Badge>
             )}
+            {badges && <SecondaryBadges badges={badges} />}
             {artist.country && (
               <span className="text-xs text-muted-foreground truncate">{artist.country}</span>
             )}

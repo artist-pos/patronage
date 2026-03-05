@@ -21,6 +21,9 @@ export async function getOpportunities(
   if (filters.country) {
     query = query.eq("country", filters.country);
   }
+  if (filters.discipline) {
+    query = query.contains("sub_categories", [filters.discipline]);
+  }
 
   const { data, error } = await query;
 

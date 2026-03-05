@@ -6,8 +6,9 @@ import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { X, Plus } from "lucide-react";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
-import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
+import type { Opportunity, OppTypeEnum, CountryEnum, CustomField } from "@/types/database";
 
 const TYPES: OppTypeEnum[] = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display"];
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
@@ -60,6 +61,9 @@ export function OpportunitySubmissionForm() {
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [selectedFocus, setSelectedFocus] = useState<string[]>([]);
   const [locationType, setLocationType] = useState<"local" | "global">("local");
+  const [routingType, setRoutingType] = useState<"external" | "pipeline">("external");
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [showBadges, setShowBadges] = useState(true);
 
   // Live preview state — mirrors key form fields
   const [preview, setPreview] = useState<Partial<Opportunity>>({
@@ -139,6 +143,14 @@ export function OpportunitySubmissionForm() {
     source_url: null,
     profile_id: null,
     created_at: new Date().toISOString(),
+    entry_fee: null,
+    artist_payment_type: null,
+    travel_support: null,
+    travel_support_details: null,
+    view_count: 0,
+    routing_type: routingType,
+    custom_fields: customFields,
+    show_badges_in_submission: showBadges,
   };
 
   if (state.success) {
@@ -173,6 +185,9 @@ export function OpportunitySubmissionForm() {
         {/* Hidden fields */}
         <input type="hidden" name="featured_image_url" value={imgUrl} />
         <input type="hidden" name="sub_categories" value={[...selectedDisciplines, ...selectedFocus].join(",")} />
+        <input type="hidden" name="routing_type" value={routingType} />
+        <input type="hidden" name="custom_fields" value={JSON.stringify(customFields)} />
+        <input type="hidden" name="show_badges_in_submission" value={showBadges ? "true" : "false"} />
 
         <Field label="Grant Title *">
           <Input
@@ -352,6 +367,97 @@ export function OpportunitySubmissionForm() {
             placeholder="https://..."
             className={FIELD}
           />
+        </Field>
+
+        {/* Application routing */}
+        <Field label="How should artists apply?">
+          <div className="space-y-4">
+            <div className="flex gap-6">
+              {[
+                { val: "external" as const, label: "External Link", desc: "Redirect to your website or form" },
+                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application" },
+              ].map(({ val, label, desc }) => (
+                <label key={val} className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="routing_radio"
+                    checked={routingType === val}
+                    onChange={() => setRoutingType(val)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {routingType === "pipeline" && (
+              <div className="space-y-4 border border-black p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest">Custom Questions</p>
+                {customFields.map((field, idx) => (
+                  <div key={field.id} className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={field.question}
+                        onChange={(e) => {
+                          const next = [...customFields];
+                          next[idx] = { ...next[idx], question: e.target.value };
+                          setCustomFields(next);
+                        }}
+                        placeholder={`Question ${idx + 1}`}
+                        className={FIELD}
+                      />
+                      <select
+                        value={field.inputType}
+                        onChange={(e) => {
+                          const next = [...customFields];
+                          next[idx] = { ...next[idx], inputType: e.target.value as CustomField["inputType"] };
+                          setCustomFields(next);
+                        }}
+                        className={`${FIELD} text-xs`}
+                      >
+                        <option value="short">Short answer</option>
+                        <option value="long">Long answer</option>
+                        <option value="file">File upload</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCustomFields((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-muted-foreground hover:text-foreground mt-2"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCustomFields((prev) => [
+                      ...prev,
+                      { id: crypto.randomUUID(), question: "", inputType: "short" },
+                    ])
+                  }
+                  className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Question
+                </button>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBadges}
+                    onChange={(e) => setShowBadges(e.target.checked)}
+                  />
+                  <span className="text-xs">Include artist reputation badges in submission view</span>
+                </label>
+              </div>
+            )}
+          </div>
         </Field>
 
         <Field label="Caption (shown on card — max 160 characters)">

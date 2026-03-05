@@ -16,6 +16,7 @@ interface NavBarProps {
   username: string | null;
   unreadCount: number;
   signOut: () => Promise<void>;
+  role?: string | null;
 }
 
 const NAV_LINKS = [
@@ -24,7 +25,9 @@ const NAV_LINKS = [
   { href: "/opportunities", label: "Opportunities" },
 ];
 
-export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarProps) {
+export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: NavBarProps) {
+  const isArtist = role === "artist" || role === "owner";
+  const isPartner = role === "partner" || role === "admin";
   const [open, setOpen] = useState(false);
 
   return (
@@ -54,6 +57,16 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
               <DropdownMenuItem asChild>
                 <Link href="/profile/analytics">Analytics</Link>
               </DropdownMenuItem>
+              {isArtist && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">My Opportunities</Link>
+                </DropdownMenuItem>
+              )}
+              {isPartner && (
+                <DropdownMenuItem asChild>
+                  <Link href="/partner/dashboard">Partner Dashboard</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link href="/profile/notes">Manage Notes</Link>
               </DropdownMenuItem>
@@ -129,6 +142,24 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut }: NavBarPro
                 >
                   Analytics
                 </Link>
+                {isArtist && (
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    My Opportunities
+                  </Link>
+                )}
+                {isPartner && (
+                  <Link
+                    href="/partner/dashboard"
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Partner Dashboard
+                  </Link>
+                )}
                 <Link
                   href="/profile/notes"
                   onClick={() => setOpen(false)}

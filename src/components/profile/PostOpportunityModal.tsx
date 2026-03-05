@@ -74,6 +74,14 @@ export function PostOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       source_url: null,
       profile_id: null,
       created_at: new Date().toISOString(),
+      entry_fee: null,
+      artist_payment_type: null,
+      travel_support: null,
+      travel_support_details: null,
+      view_count: 0,
+      routing_type: "external",
+      custom_fields: [],
+      show_badges_in_submission: true,
     };
 
     onSuccess?.(optimistic);

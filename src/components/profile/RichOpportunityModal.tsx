@@ -104,6 +104,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       type: type as Opportunity["type"],
       country: (country || "Global") as Opportunity["country"],
       city: city || null,
+      opens_at: null,
       deadline: deadline || null,
       url: null,
       funding_amount: null,
@@ -112,11 +113,20 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       featured_image_url: imgUrl || null,
       grant_type: grantType || null,
       recipients_count: recipients ? parseInt(recipients) : null,
+      slug: null,
       is_active: true,
       status: "published",
       source_url: null,
       profile_id: null,
       created_at: new Date().toISOString(),
+      entry_fee: null,
+      artist_payment_type: null,
+      travel_support: null,
+      travel_support_details: null,
+      view_count: 0,
+      routing_type: "external",
+      custom_fields: [],
+      show_badges_in_submission: true,
     };
 
     onSuccess?.(optimistic);

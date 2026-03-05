@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { getProfiles } from "@/lib/profiles";
+import { createClient } from "@/lib/supabase/server";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { ArtistFilters } from "@/components/artists/ArtistFilters";
+import { computeBadges } from "@/lib/badges";
 import type { CountryEnum, CareerStageEnum } from "@/types/database";
 
 export const metadata = {
@@ -20,7 +22,33 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const medium = params.medium;
   const view = params.view === "list" ? "list" : "gallery";
 
-  const artists = await getProfiles({ country, career_stage, medium });
+  const supabase = await createClient();
+
+  const [artists, collectedResult, worksCountResult] = await Promise.all([
+    getProfiles({ country, career_stage, medium }),
+    // IDs of artists who have had at least one work transferred
+    supabase
+      .from("artworks")
+      .select("creator_id")
+      .neq("current_owner_id", "creator_id"),
+    // Works count per artist profile
+    supabase
+      .from("artworks")
+      .select("profile_id"),
+  ]);
+
+  // Build sets for O(1) lookups
+  const collectedSet = new Set(
+    (collectedResult.data ?? [])
+      .filter((r: { creator_id: string }) => r.creator_id)
+      .map((r: { creator_id: string }) => r.creator_id)
+  );
+
+  const worksCountMap = new Map<string, number>();
+  for (const row of worksCountResult.data ?? []) {
+    const r = row as { profile_id: string };
+    worksCountMap.set(r.profile_id, (worksCountMap.get(r.profile_id) ?? 0) + 1);
+  }
 
   const activeFilters = [
     country,
@@ -49,13 +77,31 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
       ) : view === "list" ? (
         <div className="border-t border-black">
           {artists.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} view="list" />
+            <ArtistCard
+              key={artist.id}
+              artist={artist}
+              view="list"
+              badges={computeBadges(
+                { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+                worksCountMap.get(artist.id) ?? 0,
+                collectedSet.has(artist.id)
+              )}
+            />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {artists.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} view="gallery" />
+            <ArtistCard
+              key={artist.id}
+              artist={artist}
+              view="gallery"
+              badges={computeBadges(
+                { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+                worksCountMap.get(artist.id) ?? 0,
+                collectedSet.has(artist.id)
+              )}
+            />
           ))}
         </div>
       )}

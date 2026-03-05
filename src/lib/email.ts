@@ -97,6 +97,41 @@ export async function notifyMessageRecipient(
 }
 
 /**
+ * Send application confirmation to artist.
+ */
+export async function sendApplicationConfirmation(
+  artistEmail: string,
+  artistName: string,
+  opportunityTitle: string,
+  partnerName: string,
+  dashboardUrl: string
+): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Application Received: ${opportunityTitle}`,
+    html: buildApplicationConfirmationHtml({ artistName, opportunityTitle, partnerName, dashboardUrl }),
+  });
+}
+
+/**
+ * Notify artist that their high-res upload is needed (approved_pending_assets).
+ */
+export async function sendHighResRequest(
+  artistEmail: string,
+  artistName: string,
+  opportunityTitle: string,
+  dashboardUrl: string
+): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Action Required: Upload your high-res file for ${opportunityTitle}`,
+    html: buildHighResRequestHtml({ artistName, opportunityTitle, dashboardUrl }),
+  });
+}
+
+/**
  * Notify a buyer that an artist has offered them an artwork via transfer request.
  */
 export async function notifyTransferRequest(
@@ -226,6 +261,82 @@ function buildTransferAcceptedHtml({
       <p style="color:#888;font-size:12px;margin:32px 0 0;">
         You're receiving this because you have an account at
         <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildApplicationConfirmationHtml({
+  artistName,
+  opportunityTitle,
+  partnerName,
+  dashboardUrl,
+}: {
+  artistName: string;
+  opportunityTitle: string;
+  partnerName: string;
+  dashboardUrl: string;
+}): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application received</p>
+
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application has been received by <strong>${esc(partnerName)}</strong> for:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">
+        ${esc(opportunityTitle)}
+      </blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">We&apos;ll let you know when the status of your application changes.</p>
+
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        View in dashboard →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildHighResRequestHtml({
+  artistName,
+  opportunityTitle,
+  dashboardUrl,
+}: {
+  artistName: string;
+  opportunityTitle: string;
+  dashboardUrl: string;
+}): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Action required</p>
+
+      <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${esc(artistName)}</strong>!</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> has been approved. Please upload your high-resolution file to complete the process.</p>
+
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Upload high-res file →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
       </p>
     </td></tr>
   </table>

@@ -19,6 +19,7 @@ import { CollectionSection } from "@/components/profile/CollectionSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork } from "@/types/database";
+import { computeBadges } from "@/lib/badges";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -162,6 +163,17 @@ export default async function ArtistProfilePage({ params }: Props) {
   // Narrow types for downstream use
   const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
 
+  // Compute artist badges
+  const isCollected = isArtistProfile && soldWorks.length > 0;
+  const worksCount = isArtistProfile ? availableWorks.length + images.length : 0;
+  const profileBadges = isArtistProfile
+    ? computeBadges(
+        { ...profile, received_grants: (profile as unknown as { received_grants?: string[] }).received_grants ?? [] },
+        worksCount,
+        isCollected
+      )
+    : null;
+
   const displayName = profile.full_name ?? profile.username;
 
   const exhibitions = (profile.exhibition_history ?? []) as ExhibitionEntry[];
@@ -222,6 +234,22 @@ export default async function ArtistProfilePage({ params }: Props) {
                     {profile.role === "owner" ? "Artist" : profile.role === "admin" ? "Admin" : profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                   </Badge>
                 </div>
+                {profileBadges && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profileBadges.verified && (
+                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Verified</span>
+                    )}
+                    {profileBadges.exhibited && (
+                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Exhibited</span>
+                    )}
+                    {profileBadges.grantRecipient && (
+                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Grant Recipient</span>
+                    )}
+                    {profileBadges.collected && (
+                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Collected</span>
+                    )}
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground">@{profile.username}</p>
               </div>
 

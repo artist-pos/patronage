@@ -7,6 +7,12 @@ export type OppTypeEnum =
   | "Prize"
   | "Display";
 
+export interface CustomField {
+  id: string;
+  question: string;
+  inputType: 'short' | 'long' | 'file';
+}
+
 export interface Opportunity {
   id: string;
   title: string;
@@ -32,6 +38,35 @@ export interface Opportunity {
   source_url: string | null;       // page the scraper found this on
   profile_id: string | null;
   created_at: string;
+  // Transparency fields (migration 035)
+  entry_fee: number | null;
+  artist_payment_type: string | null;
+  travel_support: boolean | null;
+  travel_support_details: string | null;
+  view_count: number;
+  // Application routing (migration 035)
+  routing_type: 'external' | 'pipeline';
+  custom_fields: CustomField[];
+  show_badges_in_submission: boolean;
+}
+
+export interface SavedOpportunity {
+  id: string;
+  user_id: string;
+  opportunity_id: string;
+  status: 'saved' | 'applied';
+  created_at: string;
+}
+
+export interface OpportunityApplication {
+  id: string;
+  opportunity_id: string;
+  artist_id: string;
+  status: 'pending' | 'shortlisted' | 'selected' | 'approved_pending_assets' | 'production_ready' | 'rejected';
+  custom_answers: Record<string, string>;
+  artwork_id: string | null;
+  highres_asset_url: string | null;
+  created_at: string;
 }
 
 // Looser insert type — new optional fields need not be specified for CSV imports
@@ -56,6 +91,7 @@ export type OpportunityInsert = Omit<
 export interface OpportunityFilters {
   type?: OppTypeEnum;
   country?: CountryEnum;
+  discipline?: string;
 }
 
 export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";
@@ -82,6 +118,7 @@ export interface Profile {
   acquired_works: string[];
   hide_sold_section: boolean;
   collection_public: boolean;
+  received_grants: string[];
   created_at: string;
 }
 
