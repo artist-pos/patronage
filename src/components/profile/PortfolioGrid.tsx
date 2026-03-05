@@ -12,9 +12,8 @@ interface Props {
 
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
   return (
-    <div className="flex flex-col gap-1.5 cursor-pointer group shrink-0" onClick={onClick}>
-      {/* Fixed 500px height, width follows the image's natural aspect ratio */}
-      <div className="border border-border overflow-hidden h-[300px] w-fit">
+    <div className="flex flex-col gap-1.5 cursor-pointer group shrink-0 w-fit" onClick={onClick}>
+      <div className="border border-border overflow-hidden h-[300px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
@@ -23,7 +22,7 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
         />
       </div>
       {img.caption && (
-        <p className="text-xs text-muted-foreground leading-snug font-mono">
+        <p className="text-xs text-muted-foreground leading-snug font-mono max-w-0 min-w-full break-words">
           {img.caption}
         </p>
       )}
