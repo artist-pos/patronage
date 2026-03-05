@@ -16,8 +16,10 @@ import type { CountryEnum, CareerStageEnum } from "@/types/database";
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 const STAGES: CareerStageEnum[] = ["Emerging", "Mid-Career", "Established", "Open"];
 const MEDIUMS = [
-  "Painting", "Sculpture", "Photography", "Film", "Music",
-  "Public Art", "Digital", "Ceramics", "Printmaking", "Poetry",
+  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
+  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
+  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
+  "Film", "Music", "Public Art",
 ];
 
 function GridIcon() {
