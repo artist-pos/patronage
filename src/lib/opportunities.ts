@@ -24,6 +24,9 @@ export async function getOpportunities(
   if (filters.discipline) {
     query = query.contains("sub_categories", [filters.discipline]);
   }
+  if (filters.freeEntry) {
+    query = query.eq("entry_fee", 0);
+  }
 
   const { data, error } = await query;
 

@@ -18,7 +18,7 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ type?: string; country?: string; view?: string; discipline?: string }>;
+  searchParams: Promise<{ type?: string; country?: string; view?: string; discipline?: string; freeEntry?: string }>;
 }
 
 export default async function OpportunitiesPage({ searchParams }: PageProps) {
@@ -26,10 +26,11 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const type = params.type as OppTypeEnum | undefined;
   const country = params.country as CountryEnum | undefined;
   const discipline = params.discipline;
+  const freeEntry = params.freeEntry === "1";
   const view = params.view === "list" ? "list" : "gallery";
 
   const [opportunities, stats] = await Promise.all([
-    getOpportunities({ type, country, discipline }),
+    getOpportunities({ type, country, discipline, freeEntry }),
     getMarketplaceStats(),
   ]);
 
@@ -37,6 +38,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     type,
     country,
     discipline,
+    freeEntry ? "Free Entry" : undefined,
   ].filter(Boolean);
 
   return (

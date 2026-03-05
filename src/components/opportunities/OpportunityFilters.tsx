@@ -56,6 +56,7 @@ export function OpportunityFilters() {
   const currentType = searchParams.get("type") as OppTypeEnum | null;
   const currentCountry = searchParams.get("country") as CountryEnum | null;
   const currentDiscipline = searchParams.get("discipline");
+  const currentFreeEntry = searchParams.get("freeEntry") === "1";
   const currentView = searchParams.get("view") ?? "gallery";
 
   const updateParam = useCallback(
@@ -129,8 +130,8 @@ export function OpportunityFilters() {
         </div>
       </div>
 
-      {/* Secondary: country + discipline filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* Secondary: country + discipline + free entry filters */}
+      <div className="flex flex-wrap gap-3 items-center">
         <Select
           value={currentCountry ?? "all"}
           onValueChange={(v) => updateParam("country", v)}
@@ -160,6 +161,17 @@ export function OpportunityFilters() {
             ))}
           </SelectContent>
         </Select>
+
+        <button
+          onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
+          className={`text-sm px-3 py-1.5 border transition-colors ${
+            currentFreeEntry
+              ? "bg-black text-white border-black"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-black"
+          }`}
+        >
+          Free Entry
+        </button>
       </div>
     </div>
   );
