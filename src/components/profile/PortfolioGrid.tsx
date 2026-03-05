@@ -14,12 +14,12 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   return (
     <div className="flex flex-col gap-1.5 cursor-pointer group shrink-0" onClick={onClick}>
       {/* Fixed 500px height, width follows the image's natural aspect ratio */}
-      <div className="border border-border overflow-hidden h-[500px]">
+      <div className="border border-border overflow-hidden h-[300px] w-fit">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={img.url}
           alt={img.caption ?? "Portfolio work"}
-          className="h-full w-auto object-cover object-center group-hover:opacity-90 transition-opacity"
+          className="h-full w-auto block group-hover:opacity-90 transition-opacity"
         />
       </div>
       {img.caption && (
