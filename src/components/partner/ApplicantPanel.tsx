@@ -33,6 +33,7 @@ interface Application {
   created_at: string;
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
+  submitted_image_url: string | null;
   artist: Artist | null;
   artwork: Artwork | null;
 }
@@ -187,18 +188,18 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
             )}
           </div>
 
-          {/* Submitted artwork */}
-          {application.artwork && (
+          {/* Submitted artwork or uploaded image */}
+          {(application.artwork || application.submitted_image_url) && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest">Submitted Work</p>
               <div className="border border-black overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={application.artwork.url}
-                  alt={application.artwork.caption ?? ""}
+                  src={application.artwork?.url ?? application.submitted_image_url!}
+                  alt={application.artwork?.caption ?? "Submitted image"}
                   className="w-full max-h-64 object-contain bg-muted"
                 />
-                {application.artwork.caption && (
+                {application.artwork?.caption && (
                   <p className="text-xs text-muted-foreground p-2">{application.artwork.caption}</p>
                 )}
               </div>

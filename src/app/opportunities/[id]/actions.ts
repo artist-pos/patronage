@@ -37,7 +37,8 @@ export async function updateOpportunityAdmin(
 export async function submitApplication(
   opportunityId: string,
   artworkId: string | null,
-  answers: Record<string, string>
+  answers: Record<string, string>,
+  submittedImageUrl?: string | null
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,6 +50,7 @@ export async function submitApplication(
       opportunity_id: opportunityId,
       artist_id: user.id,
       artwork_id: artworkId || null,
+      submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
     });
 

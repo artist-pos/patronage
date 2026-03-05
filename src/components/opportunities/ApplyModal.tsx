@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication } from "@/app/opportunities/[id]/actions";
 import type { Opportunity, Artwork } from "@/types/database";
@@ -29,16 +29,38 @@ interface Props {
 
 export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, onClose, onSuccess }: Props) {
   const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null);
+  const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(null);
+  const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(null);
+  const [uploadingNewImage, setUploadingNewImage] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fileUploads, setFileUploads] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const newImageRef = useRef<HTMLInputElement | null>(null);
 
   const displayName = artistProfile.full_name ?? artistProfile.username;
   const exhibitionCount = (artistProfile.exhibition_history ?? []).length;
   const customFields = opportunity.custom_fields ?? [];
+
+  async function handleNewImageUpload(file: File) {
+    setUploadingNewImage(true);
+    setError(null);
+    const path = `submissions/${opportunity.id}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+    const { error: uploadError } = await supabase.storage
+      .from("opportunity-images")
+      .upload(path, file, { contentType: file.type });
+    setUploadingNewImage(false);
+    if (uploadError) {
+      setError("Image upload failed: " + uploadError.message);
+      return;
+    }
+    const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+    setSubmittedImageUrl(publicUrl);
+    setSubmittedImagePreview(URL.createObjectURL(file));
+    setSelectedArtworkId(null); // deselect any existing artwork
+  }
 
   async function handleFileUpload(fieldId: string, file: File) {
     const path = `answers/${opportunity.id}/${fieldId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
@@ -61,7 +83,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     // Merge file uploads into answers
     const finalAnswers = { ...answers, ...fileUploads };
 
-    const result = await submitApplication(opportunity.id, selectedArtworkId, finalAnswers);
+    const result = await submitApplication(opportunity.id, selectedArtworkId, finalAnswers, submittedImageUrl);
     setSubmitting(false);
 
     if (result.error) {
@@ -139,49 +161,83 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
           </div>
 
           {/* Artwork selector */}
-          {artistArtworks.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest">Select a Work (optional)</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {/* None tile */}
+              <button
+                type="button"
+                onClick={() => { setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
+                  selectedArtworkId === null && !submittedImageUrl
+                    ? "border-black bg-muted"
+                    : "border-black/30 hover:border-black"
+                }`}
+              >
+                None
+              </button>
+
+              {/* Upload new tile */}
+              <button
+                type="button"
+                onClick={() => newImageRef.current?.click()}
+                disabled={uploadingNewImage}
+                className={`aspect-square border relative overflow-hidden flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+                  submittedImageUrl
+                    ? "border-black ring-2 ring-black"
+                    : "border-dashed border-black/40 hover:border-black"
+                }`}
+              >
+                {submittedImagePreview ? (
+                  <Image src={submittedImagePreview} alt="New upload" fill className="object-cover" sizes="80px" />
+                ) : uploadingNewImage ? (
+                  <span className="text-muted-foreground text-[10px]">Uploading…</span>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground leading-tight text-center px-1">Upload new</span>
+                  </>
+                )}
+              </button>
+              <input
+                ref={newImageRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleNewImageUpload(f); }}
+              />
+
+              {/* Existing artworks */}
+              {artistArtworks.slice(0, 10).map((artwork) => (
                 <button
+                  key={artwork.id}
                   type="button"
-                  onClick={() => setSelectedArtworkId(null)}
-                  className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
-                    selectedArtworkId === null
-                      ? "border-black bg-muted"
+                  onClick={() => { setSelectedArtworkId(artwork.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                  className={`aspect-square border relative overflow-hidden transition-colors ${
+                    selectedArtworkId === artwork.id
+                      ? "border-black ring-2 ring-black"
                       : "border-black/30 hover:border-black"
                   }`}
                 >
-                  None
+                  <Image
+                    src={artwork.url}
+                    alt={artwork.caption ?? ""}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
                 </button>
-                {artistArtworks.slice(0, 11).map((artwork) => (
-                  <button
-                    key={artwork.id}
-                    type="button"
-                    onClick={() => setSelectedArtworkId(artwork.id)}
-                    className={`aspect-square border relative overflow-hidden transition-colors ${
-                      selectedArtworkId === artwork.id
-                        ? "border-black ring-2 ring-black"
-                        : "border-black/30 hover:border-black"
-                    }`}
-                  >
-                    <Image
-                      src={artwork.url}
-                      alt={artwork.caption ?? ""}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
-                  </button>
-                ))}
-              </div>
-              {selectedArtworkId && (
-                <p className="text-xs text-muted-foreground">
-                  {artistArtworks.find((a) => a.id === selectedArtworkId)?.caption ?? ""}
-                </p>
-              )}
+              ))}
             </div>
-          )}
+            {selectedArtworkId && (
+              <p className="text-xs text-muted-foreground">
+                {artistArtworks.find((a) => a.id === selectedArtworkId)?.caption ?? ""}
+              </p>
+            )}
+            {submittedImageUrl && (
+              <p className="text-xs text-muted-foreground">New image uploaded.</p>
+            )}
+          </div>
 
           {/* Custom questions */}
           {customFields.length > 0 && (

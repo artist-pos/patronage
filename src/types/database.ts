@@ -65,6 +65,7 @@ export interface OpportunityApplication {
   status: 'pending' | 'shortlisted' | 'selected' | 'approved_pending_assets' | 'production_ready' | 'rejected';
   custom_answers: Record<string, string>;
   artwork_id: string | null;
+  submitted_image_url: string | null;
   highres_asset_url: string | null;
   created_at: string;
 }
