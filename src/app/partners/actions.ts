@@ -27,6 +27,7 @@ export async function submitOpportunityAction(
 
   const captionRaw = (formData.get("caption") as string)?.trim();
 
+  const entryFeeRaw = formData.get("entry_fee") as string;
   const routingType = (formData.get("routing_type") as string) || "external";
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
@@ -46,6 +47,7 @@ export async function submitOpportunityAction(
     deadline: deadline || null,
     url: (formData.get("url") as string)?.trim() || null,
     funding_range: (formData.get("funding_range") as string)?.trim() || null,
+    entry_fee: entryFeeRaw !== "" && entryFeeRaw != null ? parseFloat(entryFeeRaw) : null,
     sub_categories: subCategories,
     featured_image_url: (formData.get("featured_image_url") as string)?.trim() || null,
     grant_type: (formData.get("grant_type") as string)?.trim() || null,

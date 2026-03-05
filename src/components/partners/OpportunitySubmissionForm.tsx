@@ -288,6 +288,21 @@ export function OpportunitySubmissionForm() {
           </Field>
         </div>
 
+        <Field label="Entry Fee">
+          <div className="space-y-1">
+            <Input
+              name="entry_fee"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="0 for free, leave blank if unknown"
+              className={FIELD}
+              onChange={(e) => upd("entry_fee", e.target.value !== "" ? parseFloat(e.target.value) : null)}
+            />
+            <p className="text-xs text-muted-foreground font-mono">Enter 0 if there is no entry fee.</p>
+          </div>
+        </Field>
+
         {/* Disciplines multi-select */}
         <Field label="Disciplines">
           <div className="flex flex-wrap gap-2 pt-1">
