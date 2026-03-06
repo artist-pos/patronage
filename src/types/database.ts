@@ -1,11 +1,14 @@
-export type CountryEnum = "NZ" | "AUS" | "Global";
+export type CountryEnum = "NZ" | "AUS" | "Global" | "UK" | "US" | "EU";
 export type OppTypeEnum =
   | "Grant"
   | "Residency"
   | "Commission"
   | "Open Call"
   | "Prize"
-  | "Display";
+  | "Display"
+  | "Job / Employment"
+  | "Studio / Space"
+  | "Public Art";
 
 export interface CustomField {
   id: string;
@@ -193,6 +196,9 @@ export interface Conversation {
   id: string;
   participant_a: string;
   participant_b: string;
+  initiated_via_enquiry: boolean;
+  source_action: string | null;
+  source_work_id: string | null;
   created_at: string;
 }
 
@@ -204,6 +210,8 @@ export interface Message {
   is_read: boolean;
   message_type: 'text' | 'transfer_request' | 'transfer_accepted';
   work_id: string | null;
+  is_system_message: boolean;
+  source_action: string | null;
   created_at: string;
 }
 

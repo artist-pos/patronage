@@ -3,6 +3,7 @@ import { getOpportunities, getMarketplaceStats } from "@/lib/opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
+import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import type { CountryEnum, OppTypeEnum } from "@/types/database";
 
@@ -45,12 +46,15 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">
 
       {/* Page heading */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Art Grants & Opportunities</h1>
-        <p className="text-sm text-muted-foreground">
-          {opportunities.length} listing{opportunities.length !== 1 ? "s" : ""}
-          {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
-        </p>
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Art Grants & Opportunities</h1>
+          <p className="text-sm text-muted-foreground">
+            {opportunities.length} listing{opportunities.length !== 1 ? "s" : ""}
+            {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
+          </p>
+        </div>
+        <FoundOpportunityButton />
       </div>
 
       {/* Marketplace Stats bar */}

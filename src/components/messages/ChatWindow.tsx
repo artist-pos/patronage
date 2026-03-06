@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
@@ -14,6 +15,7 @@ interface Props {
   initialMessages: Message[];
   otherName: string;
   workMap?: Record<string, Artwork>;
+  sourceWork?: { url: string; caption: string | null } | null;
 }
 
 function formatTime(iso: string): string {
@@ -23,7 +25,7 @@ function formatTime(iso: string): string {
   });
 }
 
-export function ChatWindow({ conversationId, currentUserId, initialMessages, otherName, workMap = {} }: Props) {
+export function ChatWindow({ conversationId, currentUserId, initialMessages, otherName, workMap = {}, sourceWork }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
@@ -86,6 +88,8 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       is_read: false,
       message_type: "text",
       work_id: null,
+      is_system_message: false,
+      source_action: null,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -123,6 +127,10 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       handleSend();
     }
   }
+
+  // Split system notices from regular chat messages
+  const systemMessages = messages.filter((m) => m.is_system_message);
+  const regularMessages = messages.filter((m) => !m.is_system_message);
 
   // Build a set of work IDs that have been accepted (transfer_accepted messages)
   const acceptedWorkIds = new Set(
@@ -225,14 +233,53 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
         </div>
       )}
 
+      {/* ── Pinned system notice(s) — always at top, outside the scroll area ── */}
+      {systemMessages.length > 0 && (
+        <div className="shrink-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
+          {/* Source artwork context */}
+          {sourceWork && (
+            <div className="flex items-center gap-3 px-4 pt-3 pb-2 border-b border-amber-200/60 dark:border-amber-800/60">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sourceWork.url}
+                alt={sourceWork.caption ?? "Work"}
+                className="w-10 h-10 object-cover border border-amber-300 dark:border-amber-700 shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                  Enquiry re:
+                </p>
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-200 truncate">
+                  {sourceWork.caption ?? "Untitled"}
+                </p>
+              </div>
+            </div>
+          )}
+          {/* Disclaimer */}
+          {systemMessages.map((msg) => (
+            <div key={msg.id} className="flex items-start gap-2.5 px-4 py-3">
+              <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-0.5">
+                  Notice
+                </p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  {msg.content}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-3 min-h-0">
-        {messages.length === 0 && (
+        {regularMessages.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-8">
             Start a conversation with {otherName}.
           </p>
         )}
-        {messages.map(renderMessage)}
+        {regularMessages.map(renderMessage)}
         <div ref={bottomRef} />
       </div>
 

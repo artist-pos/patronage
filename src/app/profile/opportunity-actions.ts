@@ -44,6 +44,7 @@ export async function postProfileOpportunity(formData: {
   sub_categories?: string[];
   caption?: string;
   description?: string;
+  full_description?: string;
   featured_image_url?: string;
   routing_type?: string;
   url?: string | null;
@@ -63,7 +64,8 @@ export async function postProfileOpportunity(formData: {
     country: (formData.country || "Global") as "NZ" | "AUS" | "Global",
     city: formData.city?.trim() || null,
     opens_at: formData.opens_at || null,
-    description: formData.description?.trim().slice(0, 500) || null,
+    description: formData.description?.trim() || null,
+    full_description: formData.full_description?.trim() || null,
     caption: formData.caption?.trim().slice(0, 160) || null,
     deadline: formData.deadline || null,
     funding_range: formData.funding_range?.trim() || null,

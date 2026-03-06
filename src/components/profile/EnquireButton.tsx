@@ -2,35 +2,32 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getOrCreateConversation, sendMessage } from "@/app/messages/actions";
+import { initializeInquiryThread } from "@/app/messages/actions";
 
 interface Props {
   artistId: string;
   artistName: string;
+  workId?: string | null;
   workTitle: string | null;
   workDescription?: string | null;
 }
 
-export function EnquireButton({ artistId, artistName, workTitle, workDescription }: Props) {
+export function EnquireButton({ artistId, workId }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
     setLoading(true);
     try {
-      const result = await getOrCreateConversation(artistId);
-      if ("error" in result) return;
-
-      // Pre-fill message with work title + description context
-      const intro = workTitle
-        ? `Hi ${artistName}, I'm interested in "${workTitle}".`
-        : `Hi ${artistName}, I'm interested in your work.`;
-
-      const body = workDescription
-        ? `${intro}\n\n${workDescription}`
-        : intro;
-
-      await sendMessage(result.id, body);
+      const result = await initializeInquiryThread(
+        artistId,
+        "artwork_enquiry",
+        workId ?? null
+      );
+      if ("error" in result) {
+        if (result.error === "not_authenticated") router.push("/auth/login");
+        return;
+      }
       router.push(`/messages/${result.id}`);
     } finally {
       setLoading(false);

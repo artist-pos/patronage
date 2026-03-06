@@ -51,6 +51,67 @@ export async function getOrCreateConversation(
   return { id: created.id };
 }
 
+const INQUIRY_DISCLAIMER =
+  "Payments, shipping, and all off-platform arrangements are solely between the buyer and seller. " +
+  "Patronage does not facilitate, guarantee, or take responsibility for any transaction made outside of this platform. " +
+  "Please exercise caution and verify all details before proceeding.";
+
+/**
+ * Starts or opens an enquiry thread.
+ * - Bypasses the follower restriction (the act of enquiring is itself the handshake).
+ * - On first contact only: inserts a pinned system disclaimer about off-platform arrangements.
+ * - Records source_action so the artist knows what triggered the message.
+ */
+export async function initializeInquiryThread(
+  otherUserId: string,
+  sourceAction: "profile_enquiry" | "artwork_enquiry",
+  workId?: string | null
+): Promise<{ id: string } | { error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "not_authenticated" };
+  if (user.id === otherUserId) return { error: "cannot_message_self" };
+
+  // Always order UUIDs so participant_a < participant_b
+  const [a, b] = [user.id, otherUserId].sort();
+
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("participant_a", a)
+    .eq("participant_b", b)
+    .maybeSingle();
+
+  if (existing) return { id: existing.id };
+
+  // New thread — create with enquiry metadata
+  const { data: created, error } = await supabase
+    .from("conversations")
+    .insert({
+      participant_a: a,
+      participant_b: b,
+      initiated_via_enquiry: true,
+      source_action: sourceAction,
+      source_work_id: workId ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) return { error: error?.message ?? "Failed to create conversation" };
+
+  // Insert pinned system disclaimer
+  await supabase.from("messages").insert({
+    conversation_id: created.id,
+    sender_id: user.id,
+    content: INQUIRY_DISCLAIMER,
+    is_system_message: true,
+    source_action: sourceAction,
+    message_type: "text",
+  });
+
+  return { id: created.id };
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string
@@ -63,7 +124,7 @@ export async function sendMessage(
     conversation_id: conversationId,
     sender_id: user.id,
     content: content.trim(),
-  }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, created_at").single();
+  }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, is_system_message, source_action, created_at").single();
 
   if (error || !msg) return { error: error?.message ?? "Failed to send" };
 

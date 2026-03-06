@@ -5,21 +5,7 @@ import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateOpportunityAdmin } from "@/app/opportunities/[id]/actions";
 import type { Opportunity } from "@/types/database";
-
-const TYPES = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display"] as const;
-const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
-
-const DISCIPLINES = [
-  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
-  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
-  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
-];
-
-const FOCUS_TAGS = [
-  "Early Career", "Emerging", "Mid-Career", "Established",
-  "Māori", "Pasifika", "Indigenous", "Youth",
-  "International", "Travel", "Research", "Community",
-];
+import { OPP_TYPES, DISCIPLINES, FOCUS_TAGS, COUNTRIES, getFundingFieldMeta } from "@/lib/opportunity-constants";
 
 const FIELD = "w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black";
 
@@ -164,7 +150,7 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-widest">Type</label>
                   <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={FIELD}>
-                    {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {OPP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -211,12 +197,12 @@ export function AdminEditOpportunityModal({ opp }: Props) {
 
               {/* Funding */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">Funding</label>
+                <label className="text-xs font-semibold uppercase tracking-widest">{getFundingFieldMeta(type).label}</label>
                 <input
                   type="text"
                   value={fundingRange}
                   onChange={(e) => setFundingRange(e.target.value)}
-                  placeholder="e.g. up to $10,000"
+                  placeholder={getFundingFieldMeta(type).placeholder}
                   className={FIELD}
                 />
               </div>

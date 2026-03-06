@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { postProfileOpportunity } from "@/app/profile/opportunity-actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Opportunity, CustomField } from "@/types/database";
+import {
+  OPP_TYPES,
+  GRANT_SUBTYPES,
+  DISCIPLINES,
+  FOCUS_TAGS,
+  COUNTRIES,
+  getFundingFieldMeta,
+} from "@/lib/opportunity-constants";
 
-const TYPES = ["Grant", "Commission", "Residency", "Open Call", "Prize", "Display"] as const;
-const GRANT_TYPES = ["Project Grant", "Travel Stipend", "Residency Award", "Commissioning Fee", "Emergency Fund", "Other"];
-const FOCUS_TAGS = ["Early Career", "Emerging", "Mid-Career", "Established", "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research", "Community"];
-const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"];
 const CAPTION_MAX = 160;
-const DESC_MAX = 500;
 
 const FIELD = "w-full border border-black bg-transparent px-3 py-2 text-sm focus:outline-none placeholder:text-muted-foreground";
 
@@ -28,12 +31,14 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
   const [type, setType] = useState("Grant");
   const [grantType, setGrantType] = useState("");
   const [country, setCountry] = useState("Global");
+  const [locationType, setLocationType] = useState<"local" | "global">("local");
   const [city, setCity] = useState("");
   const [opensAt, setOpensAt] = useState("");
   const [deadline, setDeadline] = useState("");
   const [fundingRange, setFundingRange] = useState("");
   const [recipients, setRecipients] = useState("");
   const [entryFee, setEntryFee] = useState("");
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [selectedFocus, setSelectedFocus] = useState<string[]>([]);
   const [caption, setCaption] = useState("");
   const [description, setDescription] = useState("");
@@ -48,10 +53,13 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
+  const fundingMeta = getFundingFieldMeta(type);
+
   function reset() {
     setTitle(""); setOrganiser(""); setType("Grant"); setGrantType("");
-    setCountry("Global"); setCity(""); setOpensAt(""); setDeadline("");
-    setFundingRange(""); setRecipients(""); setEntryFee(""); setSelectedFocus([]);
+    setCountry("Global"); setLocationType("local"); setCity("");
+    setOpensAt(""); setDeadline(""); setFundingRange(""); setRecipients("");
+    setEntryFee(""); setSelectedDisciplines([]); setSelectedFocus([]);
     setCaption(""); setDescription(""); setImgUrl(""); setRoutingType("external");
     setUrl(""); setCustomFields([]); setShowBadges(true); setError(null);
   }
@@ -75,6 +83,12 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
     } finally {
       setUploadingImg(false);
     }
+  }
+
+  function toggleDiscipline(tag: string) {
+    setSelectedDisciplines((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   }
 
   function toggleFocus(tag: string) {
@@ -101,16 +115,21 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
     setSubmitting(true);
     setError(null);
 
+    const subCategories = [...selectedDisciplines, ...selectedFocus];
+
     const result = await postProfileOpportunity({
       title, organiser, type,
-      grant_type: grantType, country, city,
+      grant_type: grantType,
+      country,
+      city: locationType === "local" ? city : "Remote / Online",
       opens_at: opensAt,
       deadline,
       funding_range: fundingRange,
       recipients_count: recipients ? parseInt(recipients) : null,
       entry_fee: entryFee !== "" ? parseFloat(entryFee) : null,
-      sub_categories: selectedFocus,
-      caption, description,
+      sub_categories: subCategories,
+      caption,
+      full_description: description,
       featured_image_url: imgUrl,
       routing_type: routingType,
       url: routingType === "external" ? url : null,
@@ -125,18 +144,18 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       id: `opt-${Date.now()}`,
       title: title.trim(),
       organiser: organiser.trim(),
-      description: description.trim() || null,
+      description: null,
       caption: caption.trim() || null,
-      full_description: null,
+      full_description: description.trim() || null,
       type: type as Opportunity["type"],
       country: (country || "Global") as Opportunity["country"],
-      city: city || null,
+      city: locationType === "local" ? (city || null) : "Remote / Online",
       opens_at: opensAt || null,
       deadline: deadline || null,
       url: url || null,
       funding_amount: null,
       funding_range: fundingRange || null,
-      sub_categories: selectedFocus.length > 0 ? selectedFocus : null,
+      sub_categories: subCategories.length > 0 ? subCategories : null,
       featured_image_url: imgUrl || null,
       grant_type: grantType || null,
       recipients_count: recipients ? parseInt(recipients) : null,
@@ -199,13 +218,13 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
               <div className="grid grid-cols-2 divide-x divide-black">
                 <ModalField label="Type">
                   <select value={type} onChange={(e) => setType(e.target.value)} className={`${FIELD} bg-background`}>
-                    {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {OPP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </ModalField>
                 <ModalField label="Sub-type">
                   <select value={grantType} onChange={(e) => setGrantType(e.target.value)} className={`${FIELD} bg-background`}>
                     <option value="">— Select —</option>
-                    {GRANT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </ModalField>
               </div>
@@ -216,9 +235,27 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                     {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </ModalField>
-                <ModalField label="City / Location">
-                  <input value={city} onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Auckland" className={FIELD} />
+                <ModalField label="Location">
+                  <div className="flex border border-black w-fit mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("local")}
+                      className={`px-3 py-1.5 text-xs transition-colors ${locationType === "local" ? "bg-black text-white" : "bg-background hover:bg-muted"}`}
+                    >
+                      Local / In-Person
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("global")}
+                      className={`px-3 py-1.5 text-xs border-l border-black transition-colors ${locationType === "global" ? "bg-black text-white" : "bg-background hover:bg-muted"}`}
+                    >
+                      Global / Remote
+                    </button>
+                  </div>
+                  {locationType === "local" && (
+                    <input value={city} onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Auckland" className={FIELD} />
+                  )}
                 </ModalField>
               </div>
 
@@ -232,9 +269,9 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
               </div>
 
               <div className="grid grid-cols-2 divide-x divide-black">
-                <ModalField label="Funding Range">
+                <ModalField label={fundingMeta.label}>
                   <input value={fundingRange} onChange={(e) => setFundingRange(e.target.value)}
-                    placeholder="e.g. $5,000 – $25,000" className={FIELD} />
+                    placeholder={fundingMeta.placeholder} className={FIELD} />
                 </ModalField>
                 <ModalField label="No. of Recipients">
                   <input type="number" min={1} value={recipients} onChange={(e) => setRecipients(e.target.value)}
@@ -249,6 +286,21 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                   placeholder="Enter 0 for free, leave blank if unknown"
                   className={FIELD}
                 />
+              </ModalField>
+
+              <ModalField label="Disciplines">
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {DISCIPLINES.map((tag) => (
+                    <button key={tag} type="button" onClick={() => toggleDiscipline(tag)}
+                      className={`text-xs px-2.5 py-1 border leading-none transition-colors ${
+                        selectedDisciplines.includes(tag)
+                          ? "border-black bg-black text-white"
+                          : "border-black bg-background hover:bg-muted"
+                      }`}>
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </ModalField>
 
               <ModalField label="Focus Areas">
@@ -271,9 +323,9 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                   placeholder="One-sentence summary visible on the card…" className={FIELD} />
               </ModalField>
 
-              <ModalField label={`Description (${description.length}/${DESC_MAX})`}>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
-                  rows={4} placeholder="Eligibility, focus areas, how to apply…"
+              <ModalField label={`Description (${description.length} chars)`}>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                  rows={6} placeholder="Eligibility, focus areas, how to apply…"
                   className={`${FIELD} resize-none`} />
               </ModalField>
 

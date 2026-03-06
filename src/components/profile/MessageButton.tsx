@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { getOrCreateConversation } from "@/app/messages/actions";
+import { initializeInquiryThread } from "@/app/messages/actions";
 
 interface Props {
   otherUserId: string;
@@ -14,11 +14,9 @@ export function MessageButton({ otherUserId }: Props) {
 
   function handleClick() {
     startTransition(async () => {
-      const result = await getOrCreateConversation(otherUserId);
+      const result = await initializeInquiryThread(otherUserId, "profile_enquiry");
       if ("error" in result) {
-        if (result.error === "not_authenticated") {
-          router.push("/auth/login");
-        }
+        if (result.error === "not_authenticated") router.push("/auth/login");
         return;
       }
       router.push(`/messages/${result.id}`);

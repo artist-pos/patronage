@@ -116,6 +116,7 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
             <EnquireButton
               artistId={artistId}
               artistName={artistName}
+              workId={img.id}
               workTitle={img.caption}
               workDescription={img.description}
             />

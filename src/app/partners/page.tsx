@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 
 export const metadata = {
@@ -6,7 +7,11 @@ export const metadata = {
     "List an opportunity or discover verified artists through the Patronage platform.",
 };
 
-export default function PartnersPage() {
+export default async function PartnersPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = !!user;
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-16">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20">
@@ -69,7 +74,7 @@ export default function PartnersPage() {
           </section>
         </div>
 
-        {/* ── Right: Submission form ── */}
+        {/* ── Right: Submission form or Partner Wall ── */}
         <div className="space-y-6">
           <div className="space-y-1 border-b border-black pb-6">
             <h2 className="text-xl font-semibold tracking-tight">Submit an Opportunity</h2>
@@ -78,7 +83,8 @@ export default function PartnersPage() {
               business days before publishing.
             </p>
           </div>
-          <OpportunitySubmissionForm />
+
+          <OpportunitySubmissionForm isLoggedIn={isLoggedIn} />
         </div>
 
       </div>

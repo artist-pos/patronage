@@ -9,23 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CountryEnum, OppTypeEnum } from "@/types/database";
-
-const OPP_TYPES: OppTypeEnum[] = [
-  "Grant",
-  "Residency",
-  "Commission",
-  "Open Call",
-  "Prize",
-  "Display",
-];
-const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
-
-const DISCIPLINES = [
-  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
-  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
-  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
-];
+import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES } from "@/lib/opportunity-constants";
 
 function GridIcon() {
   return (
@@ -53,8 +37,8 @@ export function OpportunityFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const currentType = searchParams.get("type") as OppTypeEnum | null;
-  const currentCountry = searchParams.get("country") as CountryEnum | null;
+  const currentType = searchParams.get("type");
+  const currentCountry = searchParams.get("country");
   const currentDiscipline = searchParams.get("discipline");
   const currentFreeEntry = searchParams.get("freeEntry") === "1";
   const currentView = searchParams.get("view") ?? "gallery";
@@ -78,16 +62,12 @@ export function OpportunityFilters() {
 
   return (
     <div className="space-y-4 pb-6 border-b border-border">
-      {/* Type pills + view switcher */}
       <div className="flex items-center justify-between gap-4">
-        {/* Type filter pills — horizontal scroll */}
         <div className="flex overflow-x-auto gap-x-5 scrollbar-none shrink min-w-0 pb-0.5">
           <button
             onClick={() => updateParam("type", null)}
             className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-              !currentType
-                ? "font-semibold border-b border-black"
-                : "text-muted-foreground hover:text-foreground"
+              !currentType ? "font-semibold border-b border-black" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             All
@@ -97,68 +77,50 @@ export function OpportunityFilters() {
               key={t}
               onClick={() => toggleType(t)}
               className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-                currentType === t
-                  ? "font-semibold border-b border-black"
-                  : "text-muted-foreground hover:text-foreground"
+                currentType === t ? "font-semibold border-b border-black" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t}
+              {TYPE_LABELS[t] ?? t}
             </button>
           ))}
         </div>
 
-        {/* View switcher */}
         <div className="flex items-center border border-black shrink-0">
           <button
             onClick={() => updateParam("view", "gallery")}
             aria-label="Gallery view"
-            className={`p-2 transition-colors ${
-              currentView === "gallery" ? "bg-black text-white" : "hover:bg-muted"
-            }`}
+            className={`p-2 transition-colors ${currentView === "gallery" ? "bg-black text-white" : "hover:bg-muted"}`}
           >
             <GridIcon />
           </button>
           <button
             onClick={() => updateParam("view", "list")}
             aria-label="List view"
-            className={`p-2 border-l border-black transition-colors ${
-              currentView === "list" ? "bg-black text-white" : "hover:bg-muted"
-            }`}
+            className={`p-2 border-l border-black transition-colors ${currentView === "list" ? "bg-black text-white" : "hover:bg-muted"}`}
           >
             <ListIcon />
           </button>
         </div>
       </div>
 
-      {/* Secondary: country + discipline + free entry filters */}
       <div className="flex flex-wrap gap-3 items-center">
-        <Select
-          value={currentCountry ?? "all"}
-          onValueChange={(v) => updateParam("country", v)}
-        >
+        <Select value={currentCountry ?? "all"} onValueChange={(v) => updateParam("country", v)}>
           <SelectTrigger className="w-40 text-sm">
             <SelectValue placeholder="All countries" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All countries</SelectItem>
-            {COUNTRIES.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
+            {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
 
-        <Select
-          value={currentDiscipline ?? "all"}
-          onValueChange={(v) => updateParam("discipline", v)}
-        >
+        <Select value={currentDiscipline ?? "all"} onValueChange={(v) => updateParam("discipline", v)}>
           <SelectTrigger className="w-44 text-sm">
             <SelectValue placeholder="All disciplines" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All disciplines</SelectItem>
-            {DISCIPLINES.map((d) => (
-              <SelectItem key={d} value={d}>{d}</SelectItem>
-            ))}
+            {DISCIPLINES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
           </SelectContent>
         </Select>
 

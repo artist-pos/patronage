@@ -20,7 +20,7 @@ export default async function ChatPage({ params }: Props) {
   // Verify the user is a participant (RLS will return null if not)
   const { data: conv } = await supabase
     .from("conversations")
-    .select("id, participant_a, participant_b")
+    .select("id, participant_a, participant_b, source_work_id")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -63,6 +63,17 @@ export default async function ChatPage({ params }: Props) {
       .eq("is_available", true)
       .order("position", { ascending: true });
     artistAvailableWorks = (data ?? []) as Artwork[];
+  }
+
+  // Fetch source artwork if this thread was started via an enquiry
+  let sourceWork: { url: string; caption: string | null } | null = null;
+  if (conv.source_work_id) {
+    const { data: sw } = await supabase
+      .from("artworks")
+      .select("url, caption")
+      .eq("id", conv.source_work_id)
+      .maybeSingle();
+    sourceWork = sw ?? null;
   }
 
   // Build workMap for any transfer_request or transfer_accepted messages
@@ -115,6 +126,7 @@ export default async function ChatPage({ params }: Props) {
         initialMessages={messages}
         otherName={otherName}
         workMap={workMap}
+        sourceWork={sourceWork}
       />
     </div>
   );
