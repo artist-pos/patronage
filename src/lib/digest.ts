@@ -1,5 +1,29 @@
+import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity } from "@/types/database";
+
+const FROM = process.env.RESEND_FROM ?? "Patronage <noreply@patronage.nz>";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
+/**
+ * Send the current digest to a single email address (e.g. on artist sign-up).
+ * Fire-and-forget — call with .catch(console.error).
+ */
+export async function sendWelcomeDigest(email: string): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+
+  const data = await getDigestData();
+  if (data.newOpps.length === 0 && data.closingSoon.length === 0) return;
+
+  const resend = new Resend(key);
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: "Welcome to Patronage — your first opportunities digest",
+    html: buildDigestHtml(data, SITE_URL, email),
+  });
+}
 
 export interface DigestData {
   newOpps: Opportunity[];

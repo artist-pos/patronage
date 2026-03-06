@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
+import { sendWelcomeDigest } from "@/lib/digest";
 
 export const metadata = { title: "Get Started — Patronage" };
 
@@ -34,11 +35,13 @@ async function setRole(formData: FormData) {
     { onConflict: "id", ignoreDuplicates: false }
   );
 
-  // Auto-subscribe artists to the weekly digest
+  // Auto-subscribe artists to the weekly digest and send a welcome digest
   if (isArtist && user.email) {
+    const email = user.email.toLowerCase().trim();
     await supabase
       .from("subscribers")
-      .upsert({ email: user.email.toLowerCase().trim() }, { onConflict: "email", ignoreDuplicates: true });
+      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+    sendWelcomeDigest(email).catch(console.error);
   }
 
   redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
