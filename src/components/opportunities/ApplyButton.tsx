@@ -12,12 +12,14 @@ import type { Opportunity, Artwork } from "@/types/database";
 
 interface Props {
   opportunity: Opportunity;
+  isJobOpportunity?: boolean;
+  professionalCvUrl?: string | null;
 }
 
-export function ApplyButton({ opportunity }: Props) {
+export function ApplyButton({ opportunity, isJobOpportunity = false, professionalCvUrl = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [artistData, setArtistData] = useState<{
+  const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
     artworks: Artwork[];
     badges: ApplyModalProps["badges"];
@@ -35,11 +37,13 @@ export function ApplyButton({ opportunity }: Props) {
 
     const [profileResult, artworksResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
+      isJobOpportunity
+        ? Promise.resolve({ data: [] })
+        : supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
     ]);
 
     const profile = profileResult.data;
-    const artworks = artworksResult.data ?? [];
+    const artworks = (artworksResult.data ?? []) as Artwork[];
 
     if (profile) {
       const collectedSet = artworks.some((a: Artwork) => a.current_owner_id !== a.creator_id);
@@ -48,7 +52,7 @@ export function ApplyButton({ opportunity }: Props) {
         artworks.length,
         collectedSet
       );
-      setArtistData({
+      setApplicantData({
         profile: {
           id: profile.id,
           full_name: profile.full_name,
@@ -58,7 +62,7 @@ export function ApplyButton({ opportunity }: Props) {
           medium: profile.medium,
           exhibition_history: profile.exhibition_history ?? [],
         },
-        artworks: artworks as Artwork[],
+        artworks,
         badges,
       });
     }
@@ -76,12 +80,14 @@ export function ApplyButton({ opportunity }: Props) {
         {loading ? "Loading…" : "Apply with Patronage →"}
       </button>
 
-      {open && artistData && (
+      {open && applicantData && (
         <ApplyModal
           opportunity={opportunity}
-          artistProfile={artistData.profile}
-          artistArtworks={artistData.artworks}
-          badges={artistData.badges}
+          artistProfile={applicantData.profile}
+          artistArtworks={applicantData.artworks}
+          badges={applicantData.badges}
+          isJobOpportunity={isJobOpportunity}
+          professionalCvUrl={professionalCvUrl}
           onClose={() => setOpen(false)}
           onSuccess={() => {
             setOpen(false);

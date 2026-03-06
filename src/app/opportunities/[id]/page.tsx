@@ -102,17 +102,21 @@ export default async function OpportunityPage({ params }: Props) {
   const isTrending = saveCount >= 5;
   const isPipeline = opp.routing_type === "pipeline";
 
-  // Get user profile to determine if artist
+  // Get user profile to determine role and professional CV
   let userRole: string | null = null;
+  let professionalCvUrl: string | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, professional_cv_url")
       .eq("id", user.id)
       .single();
     userRole = profile?.role ?? null;
+    professionalCvUrl = (profile as { professional_cv_url?: string | null } | null)?.professional_cv_url ?? null;
   }
   const isArtist = userRole === "artist" || userRole === "owner";
+  const isJobOpportunity = opp.type === "Job / Employment";
+  const canApply = isPipeline && (isArtist || (userRole === "patron" && isJobOpportunity));
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
@@ -283,8 +287,8 @@ export default async function OpportunityPage({ params }: Props) {
             </Link>
           </p>
         </div>
-      ) : isPipeline && isArtist ? (
-        <ApplyButton opportunity={opp} />
+      ) : canApply ? (
+        <ApplyButton opportunity={opp} isJobOpportunity={isJobOpportunity} professionalCvUrl={professionalCvUrl} />
       ) : opp.url ? (
         <a
           href={opp.url}

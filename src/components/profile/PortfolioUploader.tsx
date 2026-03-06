@@ -201,11 +201,12 @@ function SortableThumb({
 // ── Main component ───────────────────────────────────────────────────────────
 interface Props {
   profileId: string;
-  mode?: "portfolio" | "cv";
+  mode?: "portfolio" | "cv" | "professional-cv";
 }
 
 export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   const isPortfolio = mode === "portfolio";
+  const isProfessionalCv = mode === "professional-cv";
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<PortfolioImage[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -228,6 +229,15 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   );
 
   useEffect(() => {
+    if (isProfessionalCv) {
+      supabase
+        .from("profiles")
+        .select("professional_cv_url")
+        .eq("id", profileId)
+        .single()
+        .then(({ data }) => setCvUrl((data as { professional_cv_url?: string | null } | null)?.professional_cv_url ?? null));
+      return;
+    }
     if (!isPortfolio) {
       supabase
         .from("profiles")
@@ -281,6 +291,22 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
         }
       }
       setImages((prev) => [...prev, ...uploaded]);
+      setUploading(false);
+    } else if (isProfessionalCv) {
+      const file = files[0];
+      if (!file) return;
+      setUploading(true);
+      const path = `${profileId}/professional-cv-${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("cvs")
+        .upload(path, file, { contentType: "application/pdf", upsert: true });
+      if (upErr) { setError(upErr.message); setUploading(false); return; }
+
+      const { data: urlData } = supabase.storage.from("cvs").getPublicUrl(path);
+      const url = urlData.publicUrl;
+
+      await supabase.from("profiles").update({ professional_cv_url: url }).eq("id", profileId);
+      setCvUrl(url);
       setUploading(false);
     } else {
       const file = files[0];
@@ -346,13 +372,14 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
   const activeImage = activeId ? images.find((i) => i.id === activeId) : null;
 
-  // ── CV mode ─────────────────────────────────────────────────────────────────
+  // ── CV / Professional CV mode ────────────────────────────────────────────────
   if (!isPortfolio) {
+    const cvLabel = isProfessionalCv ? "Professional CV" : "Current CV";
     return (
       <div className="space-y-4">
         {cvUrl && (
           <p className="text-sm">
-            Current CV:{" "}
+            {cvLabel}:{" "}
             <a href={cvUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
               Download
             </a>

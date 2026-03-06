@@ -26,6 +26,7 @@ interface AppRow {
   status: string;
   created_at: string;
   artwork_id: string | null;
+  submitted_image_url: string | null;
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
   artist_id: string;
@@ -57,7 +58,7 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
 
   const { data: oppData } = await supabase
     .from("opportunities")
-    .select("id, title, organiser, profile_id, routing_type, custom_fields, show_badges_in_submission")
+    .select("id, title, organiser, type, profile_id, routing_type, custom_fields, show_badges_in_submission")
     .eq("id", opportunityId)
     .single();
 
@@ -67,6 +68,7 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
     id: oppData.id as string,
     title: oppData.title as string,
     organiser: oppData.organiser as string,
+    type: oppData.type as string,
     profile_id: oppData.profile_id as string,
     routing_type: (oppData.routing_type ?? "external") as string,
     custom_fields: (oppData.custom_fields ?? []) as CustomField[],
@@ -76,7 +78,7 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
   // Get applications with artwork (but not artist profile — FK points to auth.users)
   const { data: appsData } = await supabase
     .from("opportunity_applications")
-    .select("id, status, created_at, artwork_id, custom_answers, highres_asset_url, artist_id, artwork:artwork_id(id, url, caption)")
+    .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, artwork:artwork_id(id, url, caption)")
     .eq("opportunity_id", opportunityId)
     .order("created_at", { ascending: false });
 

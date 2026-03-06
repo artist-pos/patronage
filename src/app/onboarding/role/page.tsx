@@ -55,7 +55,7 @@ export default async function SelectRolePage() {
     {
       value: "patron",
       label: "Patron",
-      description: "Follow artists & enquire about works.",
+      description: "Follow artists, enquire about works, and apply for operational roles and industry jobs.",
     },
     {
       value: "partner",

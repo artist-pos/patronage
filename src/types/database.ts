@@ -111,6 +111,7 @@ export interface Profile {
   career_stage: CareerStageEnum | null;
   medium: string[] | null;
   cv_url: string | null;
+  professional_cv_url: string | null;
   avatar_url: string | null;
   featured_image_url: string | null;
   website_url: string | null;

@@ -23,13 +23,15 @@ export interface ApplyModalProps {
   artistProfile: ArtistProfile;
   artistArtworks: Artwork[];
   badges: BadgeSet | null;
+  isJobOpportunity?: boolean;
+  professionalCvUrl?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 type Props = ApplyModalProps;
 
-export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, onClose, onSuccess }: Props) {
+export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, isJobOpportunity = false, professionalCvUrl = null, onClose, onSuccess }: Props) {
   const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null);
   const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(null);
   const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(null);
@@ -85,7 +87,10 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     // Merge file uploads into answers
     const finalAnswers = { ...answers, ...fileUploads };
 
-    const result = await submitApplication(opportunity.id, selectedArtworkId, finalAnswers, submittedImageUrl);
+    // For job applications, pass the professional CV URL as the submitted image URL
+    const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
+
+    const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl);
     setSubmitting(false);
 
     if (result.error) {
@@ -162,84 +167,108 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
             )}
           </div>
 
-          {/* Artwork selector */}
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {/* None tile */}
-              <button
-                type="button"
-                onClick={() => { setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
-                className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
-                  selectedArtworkId === null && !submittedImageUrl
-                    ? "border-black bg-muted"
-                    : "border-black/30 hover:border-black"
-                }`}
-              >
-                None
-              </button>
-
-              {/* Upload new tile */}
-              <button
-                type="button"
-                onClick={() => newImageRef.current?.click()}
-                disabled={uploadingNewImage}
-                className={`aspect-square border relative overflow-hidden flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
-                  submittedImageUrl
-                    ? "border-black ring-2 ring-black"
-                    : "border-dashed border-black/40 hover:border-black"
-                }`}
-              >
-                {submittedImagePreview ? (
-                  <Image src={submittedImagePreview} alt="New upload" fill className="object-cover" sizes="80px" />
-                ) : uploadingNewImage ? (
-                  <span className="text-muted-foreground text-[10px]">Uploading…</span>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground leading-tight text-center px-1">Upload new</span>
-                  </>
-                )}
-              </button>
-              <input
-                ref={newImageRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleNewImageUpload(f); }}
-              />
-
-              {/* Existing artworks */}
-              {artistArtworks.slice(0, 10).map((artwork) => (
+          {/* Job: Professional CV attachment — or Artist: Artwork selector */}
+          {isJobOpportunity ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest">Professional CV</p>
+              {professionalCvUrl ? (
+                <div className="flex items-center gap-3 border border-black px-4 py-3">
+                  <svg className="w-4 h-4 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">CV attached</p>
+                    <a href={professionalCvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground underline underline-offset-2">
+                      Preview →
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-dashed border-black/40 px-4 py-3 space-y-1">
+                  <p className="text-sm text-muted-foreground">No professional CV uploaded.</p>
+                  <a href="/onboarding" target="_blank" className="text-xs underline underline-offset-2">
+                    Upload one in your profile settings →
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {/* None tile */}
                 <button
-                  key={artwork.id}
                   type="button"
-                  onClick={() => { setSelectedArtworkId(artwork.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
-                  className={`aspect-square border relative overflow-hidden transition-colors ${
-                    selectedArtworkId === artwork.id
-                      ? "border-black ring-2 ring-black"
+                  onClick={() => { setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                  className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
+                    selectedArtworkId === null && !submittedImageUrl
+                      ? "border-black bg-muted"
                       : "border-black/30 hover:border-black"
                   }`}
                 >
-                  <Image
-                    src={artwork.url}
-                    alt={artwork.caption ?? ""}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
+                  None
                 </button>
-              ))}
+
+                {/* Upload new tile */}
+                <button
+                  type="button"
+                  onClick={() => newImageRef.current?.click()}
+                  disabled={uploadingNewImage}
+                  className={`aspect-square border relative overflow-hidden flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+                    submittedImageUrl
+                      ? "border-black ring-2 ring-black"
+                      : "border-dashed border-black/40 hover:border-black"
+                  }`}
+                >
+                  {submittedImagePreview ? (
+                    <Image src={submittedImagePreview} alt="New upload" fill className="object-cover" sizes="80px" />
+                  ) : uploadingNewImage ? (
+                    <span className="text-muted-foreground text-[10px]">Uploading…</span>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground leading-tight text-center px-1">Upload new</span>
+                    </>
+                  )}
+                </button>
+                <input
+                  ref={newImageRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleNewImageUpload(f); }}
+                />
+
+                {/* Existing artworks */}
+                {artistArtworks.slice(0, 10).map((artwork) => (
+                  <button
+                    key={artwork.id}
+                    type="button"
+                    onClick={() => { setSelectedArtworkId(artwork.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                    className={`aspect-square border relative overflow-hidden transition-colors ${
+                      selectedArtworkId === artwork.id
+                        ? "border-black ring-2 ring-black"
+                        : "border-black/30 hover:border-black"
+                    }`}
+                  >
+                    <Image
+                      src={artwork.url}
+                      alt={artwork.caption ?? ""}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  </button>
+                ))}
+              </div>
+              {selectedArtworkId && (
+                <p className="text-xs text-muted-foreground">
+                  {artistArtworks.find((a) => a.id === selectedArtworkId)?.caption ?? ""}
+                </p>
+              )}
+              {submittedImageUrl && (
+                <p className="text-xs text-muted-foreground">New image uploaded.</p>
+              )}
             </div>
-            {selectedArtworkId && (
-              <p className="text-xs text-muted-foreground">
-                {artistArtworks.find((a) => a.id === selectedArtworkId)?.caption ?? ""}
-              </p>
-            )}
-            {submittedImageUrl && (
-              <p className="text-xs text-muted-foreground">New image uploaded.</p>
-            )}
-          </div>
+          )}
 
           {/* Custom questions */}
           {customFields.length > 0 && (

@@ -41,6 +41,7 @@ interface Application {
 interface Opportunity {
   id: string;
   title: string;
+  type?: string;
   custom_fields: CustomField[];
   show_badges_in_submission: boolean;
 }
@@ -188,22 +189,39 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
             )}
           </div>
 
-          {/* Submitted artwork or uploaded image */}
-          {(application.artwork || application.submitted_image_url) && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest">Submitted Work</p>
-              <div className="border border-black overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={application.artwork?.url ?? application.submitted_image_url!}
-                  alt={application.artwork?.caption ?? "Submitted image"}
-                  className="w-full max-h-64 object-contain bg-muted"
-                />
-                {application.artwork?.caption && (
-                  <p className="text-xs text-muted-foreground p-2">{application.artwork.caption}</p>
-                )}
+          {/* Submitted artwork / CV */}
+          {opportunity.type === "Job / Employment" ? (
+            application.submitted_image_url && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest">Professional CV</p>
+                <a
+                  href={application.submitted_image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  Download CV →
+                </a>
               </div>
-            </div>
+            )
+          ) : (
+            (application.artwork || application.submitted_image_url) && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest">Submitted Work</p>
+                <div className="border border-black overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={application.artwork?.url ?? application.submitted_image_url!}
+                    alt={application.artwork?.caption ?? "Submitted image"}
+                    className="w-full max-h-64 object-contain bg-muted"
+                  />
+                  {application.artwork?.caption && (
+                    <p className="text-xs text-muted-foreground p-2">{application.artwork.caption}</p>
+                  )}
+                </div>
+              </div>
+            )
           )}
 
           {/* Custom answers */}
