@@ -17,13 +17,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TITLE = "Patronage — Professional Infrastructure for Artists";
+const DESCRIPTION =
+  "A free e-portfolio and opportunity directory for NZ and Australian artists. Manage your CV, portfolio, and discover grants, jobs, and residencies in one place.";
+
 export const metadata: Metadata = {
   title: {
-    default: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+    default: TITLE,
     template: "%s | Patronage",
   },
-  description:
-    "Find art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Patronage curates the best arts funding opportunities in NZ and Australia.",
+  description: DESCRIPTION,
   keywords: [
     "art grants NZ",
     "art grants New Zealand",
@@ -36,17 +39,24 @@ export const metadata: Metadata = {
     "arts council grants",
     "Creative NZ grants",
     "Australia Council grants",
+    "artist portfolio",
+    "artist CV",
+    "artist directory New Zealand",
   ],
   icons: { icon: "/Favicon.png" },
   verification: { google: "b1uNttMPg-mggBe-7YRYuCrdH_qyy0fWGTdCQX3fY30" },
   metadataBase: new URL("https://patronage.nz"),
   openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
     siteName: "Patronage",
     type: "website",
     locale: "en_NZ",
   },
   twitter: {
     card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 

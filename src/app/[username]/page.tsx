@@ -35,22 +35,23 @@ export async function generateMetadata({ params }: Props) {
     ? profile.bio.slice(0, 160)
     : `View ${displayName}'s artist portfolio on Patronage.`;
 
+  const ogImage = profile.featured_image_url
+    ? { url: profile.featured_image_url, width: 1200, height: 630, alt: `${displayName} — Patronage` }
+    : null;
+
   return {
     title: `${displayName} | Artist Portfolio | Patronage`,
     description,
     openGraph: {
       title: `${displayName} | Artist Portfolio | Patronage`,
       description,
-      ...(profile.featured_image_url && {
-        images: [
-          {
-            url: profile.featured_image_url,
-            width: 3840,
-            height: 823,
-            alt: `${displayName} featured artwork`,
-          },
-        ],
-      }),
+      ...(ogImage && { images: [ogImage] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${displayName} | Artist Portfolio | Patronage`,
+      description,
+      ...(ogImage && { images: [ogImage.url] }),
     },
   };
 }
