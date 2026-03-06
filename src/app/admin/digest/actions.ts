@@ -39,16 +39,23 @@ export async function sendDigestAction(): Promise<{
     return { ok: false, sent: 0, message: "Nothing to send — digest is empty." };
   }
 
-  const html = buildDigestHtml(digestData, siteUrl);
+  const subject = `Patronage — opportunities digest ${new Date().toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}`;
   const resend = new Resend(apiKey);
 
-  const { error: sendError } = await resend.emails.send({
+  const emails = subs.map((s) => ({
     from,
-    to: subs.map((s) => s.email),
-    subject: `Patronage — opportunities digest ${new Date().toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}`,
-    html,
-  });
+    to: s.email,
+    subject,
+    html: buildDigestHtml(digestData, siteUrl, s.email),
+  }));
 
-  if (sendError) return { ok: false, sent: 0, message: sendError.message };
-  return { ok: true, sent: subs.length, message: `Sent to ${subs.length} subscriber${subs.length !== 1 ? "s" : ""}.` };
+  let sent = 0;
+  for (let i = 0; i < emails.length; i += 100) {
+    const batch = emails.slice(i, i + 100);
+    const { data, error: batchError } = await resend.batch.send(batch);
+    if (!batchError && data) sent += batch.length;
+  }
+
+  if (sent === 0) return { ok: false, sent: 0, message: "Failed to send." };
+  return { ok: true, sent, message: `Sent to ${sent} subscriber${sent !== 1 ? "s" : ""}.` };
 }
