@@ -109,7 +109,7 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
                     {creatorName && creatorUsername && (
                       <Link
                         href={`/${creatorUsername}`}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                       >
                         By {creatorName}
                       </Link>

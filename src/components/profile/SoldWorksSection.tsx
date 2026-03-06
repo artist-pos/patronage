@@ -112,7 +112,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                     {ownerName && ownerUsername && (
                       <Link
                         href={`/${ownerUsername}`}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                       >
                         Collection of {ownerName}
                       </Link>
