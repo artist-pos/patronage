@@ -34,6 +34,13 @@ async function setRole(formData: FormData) {
     { onConflict: "id", ignoreDuplicates: false }
   );
 
+  // Auto-subscribe artists to the weekly digest
+  if (isArtist && user.email) {
+    await supabase
+      .from("subscribers")
+      .upsert({ email: user.email.toLowerCase().trim() }, { onConflict: "email", ignoreDuplicates: true });
+  }
+
   redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
 }
 
