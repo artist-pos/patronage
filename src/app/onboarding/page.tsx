@@ -109,7 +109,7 @@ export default async function OnboardingPage({
         </section>
       )}
 
-      {/* ── Artist-only: CV ── */}
+      {/* ── Artist-only: CV (public) ── */}
       {isArtist && (
         <section className="space-y-6 border-t border-border pt-12">
           <div className="space-y-1">
@@ -119,6 +119,19 @@ export default async function OnboardingPage({
             </p>
           </div>
           <PortfolioUploader profileId={user.id} mode="cv" />
+        </section>
+      )}
+
+      {/* ── Artist-only: Professional CV (private) ── */}
+      {isArtist && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Professional CV</h2>
+            <p className="text-xs text-muted-foreground">
+              Upload a PDF of your professional CV. This is <strong>not</strong> shown publicly — it is shared privately with partners only when you apply for roles through Patronage.
+            </p>
+          </div>
+          <PortfolioUploader profileId={user.id} mode="professional-cv" />
         </section>
       )}
 
