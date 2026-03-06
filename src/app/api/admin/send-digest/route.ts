@@ -29,7 +29,6 @@ async function sendDigest(): Promise<{ sent: number; errors: number }> {
     return { sent: 0, errors: 0 };
   }
 
-  const html = buildDigestHtml(data, SITE_URL);
   let sent = 0;
   let errors = 0;
 
@@ -38,7 +37,7 @@ async function sendDigest(): Promise<{ sent: number; errors: number }> {
     from: FROM,
     to: s.email,
     subject: "Patronage — weekly opportunities digest",
-    html,
+    html: buildDigestHtml(data, SITE_URL, s.email),
   }));
 
   const resend = getResend();

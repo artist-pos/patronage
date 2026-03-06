@@ -41,7 +41,10 @@ export async function getDigestData(): Promise<DigestData> {
   };
 }
 
-export function buildDigestHtml(data: DigestData, siteUrl: string): string {
+export function buildDigestHtml(data: DigestData, siteUrl: string, subscriberEmail?: string): string {
+  const unsubscribeUrl = subscriberEmail
+    ? `${siteUrl}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`
+    : `${siteUrl}/unsubscribe`;
   const fmt = (d: string | null) =>
     d ? new Date(d + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" }) : "Open deadline";
 
@@ -77,6 +80,7 @@ export function buildDigestHtml(data: DigestData, siteUrl: string): string {
 
       <p style="color:#888;font-size:12px;margin:32px 0 0;">
         You're receiving this because you subscribed at <a href="${siteUrl}" style="color:#888;">${siteUrl}</a>.
+        <br><a href="${unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
       </p>
     </td></tr>
   </table>
