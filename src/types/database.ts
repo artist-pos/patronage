@@ -51,6 +51,8 @@ export interface Opportunity {
   routing_type: 'external' | 'pipeline';
   custom_fields: CustomField[];
   show_badges_in_submission: boolean;
+  // Paid placement (migration 042)
+  is_featured: boolean;
 }
 
 export interface SavedOpportunity {

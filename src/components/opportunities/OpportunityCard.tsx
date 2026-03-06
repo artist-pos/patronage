@@ -56,7 +56,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
   /* ── List row ── */
   if (view === "list") {
     const row = (
-      <div className="flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/30 transition-colors group">
+      <div className={`flex items-center gap-4 border-b py-3 px-2 hover:bg-muted/30 transition-colors group ${opp.is_featured ? "border-b-[3px] border-black" : "border-black"}`}>
         {/* Thumbnail */}
         <div className="relative w-14 h-14 shrink-0 overflow-hidden bg-white border border-black flex items-center justify-center">
           {opp.featured_image_url ? (
@@ -113,7 +113,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
   /* ── Gallery card ── */
   const inner = (
-    <article className="border border-black overflow-hidden flex flex-col h-full">
+    <article className={`overflow-hidden flex flex-col h-full ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
 
       {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
       <div className="relative w-full overflow-hidden bg-white border-b border-black">

@@ -13,6 +13,7 @@ export async function getOpportunities(
     .select("*")
     .eq("is_active", true)
     .or(`deadline.gte.${today},deadline.is.null`) // include open-ended (no deadline)
+    .order("is_featured", { ascending: false })   // featured always first
     .order("deadline", { ascending: true, nullsFirst: false });
 
   if (filters.type) {
