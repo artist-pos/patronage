@@ -38,21 +38,22 @@ export async function updateApplicationStatus(
 
   if (error) return { error: error.message };
 
-  // If approving (status = approved_pending_assets), email the artist
+  // If approving (status = approved_pending_assets), email the applicant
   if (status === "approved_pending_assets") {
     const admin = createAdminClient();
-    const { data: { user: artistUser } } = await admin.auth.admin.getUserById(app.artist_id);
-    if (artistUser?.email) {
+    const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
+    const applicantUser = authData?.user ?? null;
+    if (applicantUser?.email) {
       const { data: artistProfile } = await admin
         .from("profiles")
         .select("full_name, username")
         .eq("id", app.artist_id)
         .single();
-      const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
+      const applicantName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
       sendHighResRequest(
-        artistUser.email,
-        artistName,
+        applicantUser.email,
+        applicantName,
         opp.title,
         `${siteUrl}/dashboard?tab=applications`
       ).catch(console.error);

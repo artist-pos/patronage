@@ -58,12 +58,13 @@ export async function submitApplication(
 
   // Send confirmation email fire-and-forget
   const admin = createAdminClient();
-  const [{ data: { user: authUser } }, { data: opp }, { data: profile }] = await Promise.all([
+  const [authResult, { data: opp }, { data: profile }] = await Promise.all([
     admin.auth.admin.getUserById(user.id),
     admin.from("opportunities").select("title, organiser, profile_id").eq("id", opportunityId).single(),
     admin.from("profiles").select("full_name, username").eq("id", user.id).single(),
   ]);
 
+  const authUser = authResult.data?.user ?? null;
   if (authUser?.email && opp) {
     const artistName = profile?.full_name ?? profile?.username ?? "Artist";
     const partnerName = opp.organiser;
