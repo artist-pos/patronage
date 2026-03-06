@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
-  const { data } = await admin
+  const { id } = await params;
+
+  const { data } = await supabase
     .from("opportunities")
     .select("view_count")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (data) {
-    await admin
+    await supabase
       .from("opportunities")
       .update({ view_count: (data.view_count ?? 0) + 1 })
       .eq("id", id);

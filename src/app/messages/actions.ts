@@ -120,10 +120,13 @@ export async function sendMessage(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
 
+  const trimmed = content.trim();
+  if (trimmed.length === 0 || trimmed.length > 10000) return { error: "Message must be between 1 and 10,000 characters." };
+
   const { data: msg, error } = await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_id: user.id,
-    content: content.trim(),
+    content: trimmed,
   }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, is_system_message, source_action, created_at").single();
 
   if (error || !msg) return { error: error?.message ?? "Failed to send" };

@@ -16,6 +16,8 @@ export async function submitOpportunityAction(
   const title = (formData.get("title") as string)?.trim();
   const organiser = (formData.get("organiser") as string)?.trim();
   if (!title || !organiser) return { error: "Title and organiser are required." };
+  if (title.length > 200) return { error: "Title must be 200 characters or fewer." };
+  if (organiser.length > 100) return { error: "Organiser name must be 100 characters or fewer." };
 
   const opens_at = (formData.get("opens_at") as string) || null;
   const deadline = (formData.get("deadline") as string) || null;

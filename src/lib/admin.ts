@@ -12,7 +12,7 @@ export async function isAdmin(): Promise<boolean> {
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
   return data?.role === "admin" || data?.role === "owner";
 }
 
