@@ -12,6 +12,16 @@ export default async function PartnersPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const isLoggedIn = !!user;
 
+  let partnerName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .single();
+    partnerName = profile?.full_name ?? profile?.username ?? null;
+  }
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-16">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20">
@@ -84,7 +94,7 @@ export default async function PartnersPage() {
             </p>
           </div>
 
-          <OpportunitySubmissionForm isLoggedIn={isLoggedIn} />
+          <OpportunitySubmissionForm isLoggedIn={isLoggedIn} partnerName={partnerName} />
         </div>
 
       </div>

@@ -98,7 +98,7 @@ function TagButton({ label, active, onClick }: { label: string; active: boolean;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function OpportunitySubmissionForm({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = null }: { isLoggedIn?: boolean; partnerName?: string | null }) {
   const [state, action, isPending] = useActionState<SubmissionState, FormData>(
     submitOpportunityAction, {}
   );
@@ -121,7 +121,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false }: { isLoggedIn?:
   const [customFields,  setCustomFields] = useState<CustomField[]>([]);
   const [showBadges,    setShowBadges]   = useState(true);
 
-  const [preview, setPreview] = useState<Partial<Opportunity>>({ type: "Grant", country: "NZ" });
+  const [preview, setPreview] = useState<Partial<Opportunity>>({ type: "Grant", country: "NZ", organiser: partnerName ?? undefined });
   const supabase = createClient();
 
   const fundingMeta = getFundingMeta(selectedType);
@@ -277,8 +277,27 @@ export function OpportunitySubmissionForm({ isLoggedIn = false }: { isLoggedIn?:
           </Field>
 
           <Field label="Organisation / Funder *">
-            <Input name="organiser" required placeholder="e.g. Creative New Zealand"
-              className={FIELD} onChange={(e) => upd("organiser", e.target.value)} />
+            <Input
+              name="organiser"
+              required
+              placeholder="e.g. Creative New Zealand"
+              defaultValue={partnerName ?? ""}
+              className={FIELD}
+              onChange={(e) => upd("organiser", e.target.value)}
+            />
+            {isLoggedIn && partnerName && (
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                Autofilled from your account — edit if needed.
+              </p>
+            )}
+            {!isLoggedIn && (
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                <Link href="/auth/login?next=/partners" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                  Sign in
+                </Link>
+                {" "}to automatically link this listing to your partner account.
+              </p>
+            )}
           </Field>
 
           <Field label="Caption (shown on card — max 160 characters)">
