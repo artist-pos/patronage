@@ -95,6 +95,14 @@ export const CAREER_STAGE_TAGS = [
   "Established",
 ];
 
+export const FOCUS_ONLY_TAGS = [
+  "Public art",
+  "Community projects",
+  "Research",
+  "Environmental work",
+  "Experimental practice",
+];
+
 export const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
 
 /** Returns dynamic label + placeholder for the funding / compensation field based on opportunity type */

@@ -30,6 +30,7 @@ export async function submitOpportunityAction(
   const captionRaw = (formData.get("caption") as string)?.trim();
 
   const entryFeeRaw = formData.get("entry_fee") as string;
+  const travelSupportRaw = formData.get("travel_support") as string;
   const routingType = (formData.get("routing_type") as string) || "external";
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
@@ -55,6 +56,8 @@ export async function submitOpportunityAction(
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,
+    travel_support: travelSupportRaw === "true" ? true : null,
+    travel_support_details: (formData.get("travel_support_details") as string)?.trim() || null,
     routing_type: routingType,
     custom_fields: customFields,
     show_badges_in_submission: showBadgesRaw === "true",
