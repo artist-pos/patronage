@@ -147,16 +147,14 @@ function Tile({
   }
 
   return (
-    <div className="flex-none flex flex-col gap-1">
+    <div className="flex-none flex flex-col gap-1" style={fixed ? { width: "max-content" } : undefined}>
       {/*
         Carousel (fixed=true): natural width at CAROUSEL_H — variable-width tiles suit horizontal scroll.
         Expanded grid (fixed=false): fill container with object-cover for a clean aligned grid.
       */}
       <div
         className="group relative border border-border overflow-hidden bg-muted"
-        style={fixed
-          ? { height: CAROUSEL_H, alignSelf: "flex-start" }
-          : { height: CAROUSEL_H }}
+        style={{ height: CAROUSEL_H }}
       >
         <Link href={href} className={fixed ? "inline-flex h-full" : "absolute inset-0"}>
           {fixed ? (
