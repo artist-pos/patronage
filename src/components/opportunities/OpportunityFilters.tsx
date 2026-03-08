@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES } from "@/lib/opportunity-constants";
+import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES, ELIGIBILITY_TAGS, CAREER_STAGE_TAGS } from "@/lib/opportunity-constants";
 
 function GridIcon() {
   return (
@@ -40,6 +40,8 @@ export function OpportunityFilters() {
   const currentType = searchParams.get("type");
   const currentCountry = searchParams.get("country");
   const currentDiscipline = searchParams.get("discipline");
+  const currentEligibility = searchParams.get("eligibility");
+  const currentCareerStage = searchParams.get("careerStage");
   const currentFreeEntry = searchParams.get("freeEntry") === "1";
   const currentView = searchParams.get("view") ?? "gallery";
 
@@ -121,6 +123,26 @@ export function OpportunityFilters() {
           <SelectContent>
             <SelectItem value="all">All disciplines</SelectItem>
             {DISCIPLINES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={currentEligibility ?? "all"} onValueChange={(v) => updateParam("eligibility", v)}>
+          <SelectTrigger className="w-44 text-sm">
+            <SelectValue placeholder="All eligibility" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All eligibility</SelectItem>
+            {ELIGIBILITY_TAGS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={currentCareerStage ?? "all"} onValueChange={(v) => updateParam("careerStage", v)}>
+          <SelectTrigger className="w-44 text-sm">
+            <SelectValue placeholder="All career stages" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All career stages</SelectItem>
+            {CAREER_STAGE_TAGS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
 

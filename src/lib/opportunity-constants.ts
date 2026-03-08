@@ -69,11 +69,30 @@ export const FOCUS_TAGS = [
   "Māori",
   "Pasifika",
   "Indigenous",
+  "Women",
+  "LGBTQ+",
+  "Disabled artists",
   "Youth",
   "International",
   "Travel",
   "Research",
   "Community",
+];
+
+export const ELIGIBILITY_TAGS = [
+  "Women",
+  "LGBTQ+",
+  "Māori",
+  "Pasifika",
+  "Indigenous",
+  "Disabled artists",
+];
+
+export const CAREER_STAGE_TAGS = [
+  "Early Career",
+  "Emerging",
+  "Mid-Career",
+  "Established",
 ];
 
 export const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;

@@ -28,6 +28,12 @@ export async function getOpportunities(
   if (filters.freeEntry) {
     query = query.eq("entry_fee", 0);
   }
+  if (filters.eligibility) {
+    query = query.contains("sub_categories", [filters.eligibility]);
+  }
+  if (filters.careerStage) {
+    query = query.contains("sub_categories", [filters.careerStage]);
+  }
 
   const { data, error } = await query;
 

@@ -99,6 +99,8 @@ export interface OpportunityFilters {
   country?: CountryEnum;
   discipline?: string;
   freeEntry?: boolean;
+  eligibility?: string;
+  careerStage?: string;
 }
 
 export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";

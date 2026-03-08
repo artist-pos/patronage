@@ -133,14 +133,13 @@ export default async function OpportunityPage({ params }: Props) {
         <div className="flex items-center gap-3">
           {adminUser && <AdminRejectButton id={opp.id} />}
           {adminUser && <AdminEditOpportunityModal opp={opp} />}
-          {user && (
-            <SaveButton
-              opportunityId={opp.id}
-              initialSaved={isSaved}
-              saveCount={saveCount}
-              showCount
-            />
-          )}
+          <SaveButton
+            opportunityId={opp.id}
+            initialSaved={isSaved}
+            saveCount={saveCount}
+            showCount
+            isAuthenticated={!!user}
+          />
           <Link
             href="/opportunities"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors leading-none"
