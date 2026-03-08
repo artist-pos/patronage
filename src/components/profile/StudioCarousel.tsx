@@ -160,12 +160,12 @@ function Tile({
       >
         <Link href={href} className={fixed ? "flex h-full" : "absolute inset-0"}>
           {fixed ? (
-            <Image
+            // Plain <img> so the browser uses the actual image's intrinsic aspect ratio
+            // (Next.js Image with width/height props bakes in a fixed ratio, breaking width: auto)
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={u.image_url}
               alt={u.caption ?? "Studio update"}
-              width={400}
-              height={CAROUSEL_H}
-              unoptimized
               style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
             />
           ) : (
