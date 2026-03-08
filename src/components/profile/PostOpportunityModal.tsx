@@ -82,6 +82,7 @@ export function PostOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       routing_type: "external",
       custom_fields: [],
       show_badges_in_submission: true,
+      is_featured: false,
     };
 
     onSuccess?.(optimistic);

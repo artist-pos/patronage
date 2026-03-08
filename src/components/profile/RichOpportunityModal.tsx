@@ -173,6 +173,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       routing_type: routingType,
       custom_fields: routingType === "pipeline" ? customFields : [],
       show_badges_in_submission: showBadges,
+      is_featured: false,
     };
 
     onSuccess?.(optimistic);

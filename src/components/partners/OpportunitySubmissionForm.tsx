@@ -121,6 +121,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false }: { isLoggedIn?:
     created_at: new Date().toISOString(), entry_fee: null, artist_payment_type: null,
     travel_support: null, travel_support_details: null, view_count: 0,
     routing_type: routingType, custom_fields: customFields, show_badges_in_submission: showBadges,
+    is_featured: false,
   };
 
   if (state.success) {

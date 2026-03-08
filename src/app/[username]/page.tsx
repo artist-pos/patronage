@@ -11,18 +11,25 @@ import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
-import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { FollowButton } from "@/components/profile/FollowButton";
-import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
-import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { CollectionSection } from "@/components/profile/CollectionSection";
-import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
+import { ProfileTabs } from "@/components/profile/ProfileTabs";
+import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
+import { WorkTab } from "@/components/profile/tabs/WorkTab";
+import { StudioTab } from "@/components/profile/tabs/StudioTab";
+import { CvTab } from "@/components/profile/tabs/CvTab";
+import { PressTab } from "@/components/profile/tabs/PressTab";
+import { SupportTab } from "@/components/profile/tabs/SupportTab";
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 
+const VALID_TABS = ["overview", "work", "studio", "cv", "press", "support"] as const;
+type TabType = typeof VALID_TABS[number];
+
 interface Props {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -56,8 +63,13 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function ArtistProfilePage({ params }: Props) {
+export default async function ArtistProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
+  const { tab: rawTab } = await searchParams;
+  const tab: TabType = (VALID_TABS as readonly string[]).includes(rawTab ?? "")
+    ? (rawTab as TabType)
+    : "overview";
+
   const profile = await getProfile(username);
   if (!profile) notFound();
 
@@ -169,7 +181,7 @@ export default async function ArtistProfilePage({ params }: Props) {
   const worksCount = isArtistProfile ? availableWorks.length + images.length : 0;
   const profileBadges = isArtistProfile
     ? computeBadges(
-        { ...profile, received_grants: (profile as unknown as { received_grants?: string[] }).received_grants ?? [] },
+        { ...profile, received_grants: profile.received_grants ?? [] },
         worksCount,
         isCollected
       )
@@ -178,8 +190,6 @@ export default async function ArtistProfilePage({ params }: Props) {
   const displayName = profile.full_name ?? profile.username;
 
   const exhibitions = (profile.exhibition_history ?? []) as ExhibitionEntry[];
-  const soloShows = exhibitions.filter((e) => e.type === "Solo").sort((a, b) => b.year - a.year);
-  const groupShows = exhibitions.filter((e) => e.type === "Group").sort((a, b) => b.year - a.year);
   const bibliography = (profile.press_bibliography ?? []) as BibliographyEntry[];
 
   return (
@@ -203,7 +213,7 @@ export default async function ArtistProfilePage({ params }: Props) {
         </div>
       )}
 
-      <div className="px-4 sm:px-6 space-y-8 sm:space-y-12">
+      <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
 
         {/* ── Identity block ── */}
         <div className={profile.featured_image_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
@@ -351,83 +361,82 @@ export default async function ArtistProfilePage({ params }: Props) {
           </div>
         </div>
 
-        {/* ── Selected Bibliography — immediately below bio ── */}
-        {bibliography.length > 0 && (
-          <section className="space-y-6 border-t border-border pt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Selected Bibliography
-            </h2>
-            <div className="space-y-2">
-              {bibliography.map((item, i) => (
-                <p key={i} className="text-sm leading-relaxed">
-                  {item.author && <span>{item.author}. </span>}
-                  {item.title && <span>&ldquo;{item.title}.&rdquo; </span>}
-                  {item.publication && <span className="italic">{item.publication}</span>}
-                  {item.date && <span>, {item.date}</span>}
-                  {item.link && (
-                    <>
-                      {". "}
-                      <TrackedLink
-                        href={item.link}
-                        profileId={profile.id}
-                        username={profile.username}
-                        eventType="bib_click"
-                        className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                      >
-                        Read →
-                      </TrackedLink>
-                    </>
-                  )}
-                </p>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Artist-only sections ── */}
+        {/* ── Artist profile: tabbed layout ── */}
         {isArtistProfile && (
           <>
-            {/* Portfolio */}
-            {images.length > 0 && (
-              <section className="space-y-6 border-t border-border pt-10">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Portfolio
-                </h2>
-                <PortfolioGrid images={images} artistName={displayName} viewerRole={viewerRole} />
-              </section>
-            )}
+            <ProfileTabs username={profile.username} tab={tab} />
 
-            {/* Available Works — always shown to owner, shown to others only if works exist */}
-            {(isOwner || availableWorks.length > 0) && (
-              <AvailableWorksSection
-                initialWorks={availableWorks}
-                profileId={profile.id}
-                artistName={profile.full_name ?? profile.username}
-                viewerRole={viewerRole}
-                isOwner={isOwner}
-              />
-            )}
+            <div>
+              {tab === "overview" && (
+                <OverviewTab
+                  exhibitions={exhibitions}
+                  bibliography={bibliography}
+                  receivedGrants={profile.received_grants ?? []}
+                  portfolioImages={images}
+                  studioUpdates={studioUpdates}
+                  artistName={displayName}
+                  viewerRole={viewerRole}
+                  username={profile.username}
+                />
+              )}
 
-            {/* Studio Updates Carousel */}
-            <StudioCarousel
-              updates={studioUpdates}
-              artistUsername={profile.username}
-              isOwner={isOwner}
-              profileId={profile.id}
-              projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
-            />
+              {tab === "work" && (
+                <WorkTab
+                  portfolioImages={images}
+                  availableWorks={availableWorks}
+                  soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
+                  projects={artistProjects}
+                  studioUpdates={studioUpdates}
+                  profileId={profile.id}
+                  artistName={displayName}
+                  viewerRole={viewerRole}
+                  isOwner={isOwner}
+                  hideSoldSection={profile.hide_sold_section}
+                  displayName={displayName}
+                />
+              )}
 
-            {/* Sold Works — works transferred to others (bottom of profile) */}
-            <SoldWorksSection
-              initialWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
+              {tab === "studio" && (
+                <StudioTab
+                  updates={studioUpdates}
+                  artistUsername={profile.username}
+                  isOwner={isOwner}
+                  projects={artistProjects}
+                  profileId={profile.id}
+                />
+              )}
 
-              isOwner={isOwner}
-              hideSoldSection={profile.hide_sold_section ?? false}
-            />
+              {tab === "cv" && (
+                <CvTab
+                  exhibitions={exhibitions}
+                  receivedGrants={profile.received_grants ?? []}
+                  cvUrl={profile.cv_url}
+                  profileId={profile.id}
+                  username={profile.username}
+                  displayName={displayName}
+                />
+              )}
+
+              {tab === "press" && (
+                <PressTab
+                  bibliography={bibliography}
+                  profileId={profile.id}
+                  username={profile.username}
+                />
+              )}
+
+              {tab === "support" && (
+                <SupportTab
+                  supportEnabled={profile.support_enabled}
+                  isOwner={isOwner}
+                  artistName={displayName}
+                />
+              )}
+            </div>
           </>
         )}
 
-        {/* ── Patron / Partner sections ── */}
+        {/* ── Patron / Partner sections (flat layout) ── */}
         {!isArtistProfile && (
           <>
             {/* 1. Live Opportunities — top */}
@@ -478,58 +487,10 @@ export default async function ArtistProfilePage({ params }: Props) {
             {/* 3. Collection */}
             <CollectionSection
               initialWorks={collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null } | null })[]}
-
               isOwner={isOwner}
               collectionPublic={profile.collection_public ?? true}
             />
           </>
-        )}
-
-        {/* ── Exhibition History ── */}
-        {exhibitions.length > 0 && (
-          <section className="space-y-8 border-t border-border pt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Exhibition History
-            </h2>
-
-            {soloShows.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Solo Exhibitions
-                </h3>
-                <div className="space-y-1.5">
-                  {soloShows.map((ex, i) => (
-                    <p key={i} className="text-sm">
-                      <span className="font-mono text-muted-foreground">{ex.year}</span>
-                      {" — "}
-                      <span className="font-semibold">{ex.title}</span>
-                      {ex.venue && `, ${ex.venue}`}
-                      {ex.location && `, ${ex.location}`}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {groupShows.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Group Exhibitions
-                </h3>
-                <div className="space-y-1.5">
-                  {groupShows.map((ex, i) => (
-                    <p key={i} className="text-sm">
-                      <span className="font-mono text-muted-foreground">{ex.year}</span>
-                      {" — "}
-                      <span className="font-semibold">{ex.title}</span>
-                      {ex.venue && `, ${ex.venue}`}
-                      {ex.location && `, ${ex.location}`}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
         )}
 
         {/* ── Back link ── */}

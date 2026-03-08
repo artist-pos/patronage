@@ -8,6 +8,7 @@ interface Props {
   images: PortfolioImage[];
   artistName?: string;
   viewerRole?: string | null;
+  limit?: number;
 }
 
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
@@ -21,12 +22,10 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   }
 
   return (
-    // col-span-2 only affects the mobile grid; ignored in desktop flex layout
     <div
       className={`flex flex-col gap-1.5 cursor-pointer group ${isLandscape ? "col-span-2" : ""} md:shrink-0 md:w-fit`}
       onClick={onClick}
     >
-      {/* aspect-ratio placeholder prevents CLS on mobile; removed once loaded */}
       <div
         className={`border border-border overflow-hidden md:h-[300px] md:w-fit${!loaded ? " max-md:aspect-square" : ""}`}
       >
@@ -48,18 +47,20 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   );
 }
 
-export function PortfolioGrid({ images, artistName, viewerRole }: Props) {
-  const [selectedImg, setSelectedImg] = useState<PortfolioImage | null>(null);
+export function PortfolioGrid({ images, artistName, viewerRole, limit }: Props) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const displayed = limit ? images.slice(0, limit) : images;
+  const selectedImg = selectedIndex !== null ? displayed[selectedIndex] : null;
 
   return (
     <>
-      {/* Mobile: 2-col grid with landscape span. Desktop: horizontal flex wrap */}
       <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-4">
-        {images.map((img) => (
+        {displayed.map((img, i) => (
           <PortfolioItem
             key={img.id}
             img={img}
-            onClick={() => setSelectedImg(img)}
+            onClick={() => setSelectedIndex(i)}
           />
         ))}
       </div>
@@ -67,7 +68,11 @@ export function PortfolioGrid({ images, artistName, viewerRole }: Props) {
       {selectedImg && (
         <PortfolioDetailModal
           img={selectedImg}
-          onClose={() => setSelectedImg(null)}
+          onClose={() => setSelectedIndex(null)}
+          onPrev={() => setSelectedIndex(i => Math.max(0, i! - 1))}
+          onNext={() => setSelectedIndex(i => Math.min(displayed.length - 1, i! + 1))}
+          hasPrev={selectedIndex! > 0}
+          hasNext={selectedIndex! < displayed.length - 1}
           artistName={artistName}
           viewerRole={viewerRole}
         />

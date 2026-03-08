@@ -129,6 +129,7 @@ export interface Profile {
   received_grants: string[];
   marketing_subscription: boolean;
   weekly_digest: boolean;
+  support_enabled: boolean;
   created_at: string;
 }
 
@@ -164,7 +165,17 @@ export interface Artwork {
   hide_from_archive: boolean;
   hide_price: boolean;
   collection_visible: boolean;
+  collection_label: string | null;
   position: number;
+  created_at: string;
+}
+
+export interface ProvenanceLink {
+  id: string;
+  artwork_id: string;
+  artist_id: string;
+  patron_id: string;
+  status: 'pending' | 'verified';
   created_at: string;
 }
 
