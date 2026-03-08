@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ApplicantPanel } from "@/components/partner/ApplicantPanel";
 import type { Metadata } from "next";
 import type { CustomField } from "@/types/database";
+import { isAdmin } from "@/lib/admin";
 
 interface Props {
   params: Promise<{ opportunityId: string }>;
@@ -56,13 +57,17 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: oppData } = await supabase
-    .from("opportunities")
-    .select("id, title, organiser, type, profile_id, routing_type, custom_fields, show_badges_in_submission")
-    .eq("id", opportunityId)
-    .single();
+  const [{ data: oppData }, adminUser] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("id, title, organiser, type, profile_id, routing_type, custom_fields, show_badges_in_submission")
+      .eq("id", opportunityId)
+      .single(),
+    isAdmin(),
+  ]);
 
-  if (!oppData || oppData.profile_id !== user.id) notFound();
+  // Allow: owner of the opportunity OR admins
+  if (!oppData || (oppData.profile_id !== user.id && !adminUser)) notFound();
 
   const opp = {
     id: oppData.id as string,

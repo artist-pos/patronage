@@ -13,6 +13,8 @@ export async function submitOpportunityAction(
 ): Promise<SubmissionState> {
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   const title = (formData.get("title") as string)?.trim();
   const organiser = (formData.get("organiser") as string)?.trim();
   if (!title || !organiser) return { error: "Title and organiser are required." };
@@ -56,6 +58,7 @@ export async function submitOpportunityAction(
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,
+    profile_id: user?.id ?? null,
     travel_support: travelSupportRaw === "true" ? true : null,
     travel_support_details: (formData.get("travel_support_details") as string)?.trim() || null,
     routing_type: routingType,
