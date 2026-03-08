@@ -158,7 +158,7 @@ function Tile({
           ? { height: CAROUSEL_H, width: "fit-content" }
           : { height: CAROUSEL_H }}
       >
-        <Link href={href} className={fixed ? "block h-full" : "absolute inset-0"}>
+        <Link href={href} className={fixed ? "flex h-full" : "absolute inset-0"}>
           {fixed ? (
             <Image
               src={u.image_url}
@@ -203,7 +203,7 @@ function Tile({
 
       {/* Caption + timestamp */}
       {(u.caption || isOwner) && (
-        <div className="space-y-0.5" style={fixed ? { maxWidth: CAROUSEL_H } : undefined}>
+        <div className="space-y-0.5">
           {u.caption && (
             <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
               {u.caption}
