@@ -158,7 +158,7 @@ function Tile({
           ? { height: CAROUSEL_H, alignSelf: "flex-start" }
           : { height: CAROUSEL_H }}
       >
-        <Link href={href} className={fixed ? "flex h-full" : "absolute inset-0"}>
+        <Link href={href} className={fixed ? "inline-flex h-full" : "absolute inset-0"}>
           {fixed ? (
             // Plain <img> so the browser uses the actual image's intrinsic aspect ratio
             // (Next.js Image with width/height props bakes in a fixed ratio, breaking width: auto)
