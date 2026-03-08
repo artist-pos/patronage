@@ -43,7 +43,6 @@ export const metadata: Metadata = {
     "artist CV",
     "artist directory New Zealand",
   ],
-  icons: { icon: "/Favicon_Bleed_512.png" },
   verification: { google: "b1uNttMPg-mggBe-7YRYuCrdH_qyy0fWGTdCQX3fY30" },
   metadataBase: new URL("https://patronage.nz"),
   openGraph: {

@@ -36,6 +36,7 @@ yarn-error.log*
 # vercel
 .vercel
 /public/vercel.svg
+/src/app/favicon.ico
 
 # IDE / editor
 .vs/
