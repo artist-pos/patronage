@@ -10,6 +10,8 @@ import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton"
 import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
+import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
+import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
 
 interface Props {
@@ -271,8 +273,16 @@ export default async function OpportunityPage({ params }: Props) {
             About
           </h2>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {opp.full_description ?? opp.description ?? opp.caption}
+            {opp.caption ?? opp.description ?? opp.full_description}
           </p>
+          {opp.full_description && opp.full_description !== (opp.caption ?? opp.description) && (
+            <DescriptionAccordion
+              fullDescription={opp.full_description}
+              opportunityId={opp.id}
+              title={opp.title}
+              organiser={opp.organiser}
+            />
+          )}
         </div>
       )}
 
@@ -289,14 +299,14 @@ export default async function OpportunityPage({ params }: Props) {
       ) : canApply ? (
         <ApplyButton opportunity={opp} isJobOpportunity={isJobOpportunity} professionalCvUrl={professionalCvUrl} />
       ) : opp.url ? (
-        <a
+        <OpportunityCTALink
           href={opp.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          opportunityId={opp.id}
+          title={opp.title}
+          organiser={opp.organiser}
+          label="Apply on Official Site →"
           className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
-        >
-          Apply on Official Site →
-        </a>
+        />
       ) : null}
 
       {/* Back link */}

@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
+import { approveDeletionRequest } from "@/app/profile/artwork-delete-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Message, Artwork } from "@/types/database";
@@ -31,6 +32,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [approvingDeletionId, setApprovingDeletionId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -132,6 +134,22 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const systemMessages = messages.filter((m) => m.is_system_message);
   const regularMessages = messages.filter((m) => !m.is_system_message);
 
+  async function handleApproveDeletion(messageId: string) {
+    setApprovingDeletionId(messageId);
+    try {
+      const result = await approveDeletionRequest(messageId);
+      if (result.error) {
+        showToast(`Error: ${result.error}`);
+      } else {
+        showToast("Artwork deleted");
+      }
+    } catch (err) {
+      showToast(`Error: ${err instanceof Error ? err.message : "Something went wrong"}`);
+    } finally {
+      setApprovingDeletionId(null);
+    }
+  }
+
   // Build a set of work IDs that have been accepted (transfer_accepted messages)
   const acceptedWorkIds = new Set(
     messages
@@ -200,6 +218,69 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
         <div key={msg.id} className="flex justify-center">
           <p className="text-xs text-muted-foreground font-mono py-1">
             {who} accepted the transfer{work?.caption ? ` of "${work.caption}"` : ""}
+          </p>
+        </div>
+      );
+    }
+
+    if (msg.message_type === "deletion_request") {
+      const work = msg.work_id ? workMap[msg.work_id] : null;
+      const isDeletionApproved = messages.some(
+        (m) => m.message_type === "deletion_accepted"
+      );
+
+      return (
+        <div key={msg.id} className="flex justify-center">
+          <div className="border border-black bg-background w-full max-w-sm">
+            <div className="flex">
+              {work && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={work.url}
+                  alt={work.caption ?? "Work"}
+                  className="w-20 h-20 object-cover flex-none border-r border-black"
+                />
+              )}
+              <div className="p-3 flex-1 min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                  Deletion Request
+                </p>
+                <p className="text-sm font-medium truncate">{work?.caption ?? "Untitled"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isMe ? "You requested deletion of this work." : `${otherName} is requesting this work be deleted.`}
+                </p>
+              </div>
+            </div>
+            <div className="border-t border-black px-3 py-2 text-xs flex items-center justify-between">
+              <span className="text-muted-foreground font-mono">{formatTime(msg.created_at)}</span>
+              {isDeletionApproved ? (
+                <span className="text-xs font-semibold">Deleted ✓</span>
+              ) : isMe ? (
+                <span className="text-xs text-muted-foreground italic">Pending approval…</span>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="text-xs h-7"
+                    disabled={approvingDeletionId === msg.id}
+                    onClick={() => handleApproveDeletion(msg.id)}
+                  >
+                    {approvingDeletionId === msg.id ? "Deleting…" : "Approve Deletion"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (msg.message_type === "deletion_accepted") {
+      return (
+        <div key={msg.id} className="flex justify-center">
+          <p className="text-xs text-muted-foreground font-mono py-1">
+            Artwork deleted by mutual agreement.
           </p>
         </div>
       );

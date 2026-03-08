@@ -174,6 +174,96 @@ export async function notifyTransferAccepted(
   });
 }
 
+/**
+ * Invite a non-account patron to join Patronage and claim an artwork.
+ */
+export async function sendProvenanceInvite(
+  toEmail: string,
+  artistName: string,
+  workTitle: string,
+  claimUrl: string
+): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  await getResend().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${artistName} has added your artwork to Patronage`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">You've been added to the provenance record</p>
+
+      <p style="margin:0 0 8px;font-size:15px;"><strong>${esc(artistName)}</strong> has recorded your artwork in their provenance history:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">
+        ${esc(workTitle)}
+      </blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">Create a free Patronage account to confirm this work is in your collection and have it displayed on your profile.</p>
+
+      <a href="${claimUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Claim this artwork →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        If you don't recognise this, you can safely ignore this email.
+        Patronage is a platform for NZ and Australian artists — <a href="${SITE_URL}" style="color:#888;">patronage.nz</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Notify an existing patron that an artist has linked an artwork to their collection.
+ */
+export async function sendProvenanceNotification(
+  patronId: string,
+  artistName: string,
+  workTitle: string
+): Promise<void> {
+  const admin = createAdminClient();
+  const { data: { user } } = await admin.auth.admin.getUserById(patronId);
+  if (!user?.email) return;
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  await getResend().emails.send({
+    from: FROM,
+    to: user.email,
+    subject: `${artistName} linked an artwork to your collection`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Collection verification request</p>
+
+      <p style="margin:0 0 8px;font-size:15px;"><strong>${esc(artistName)}</strong> has linked the following artwork to your collection:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">
+        ${esc(workTitle)}
+      </blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">Visit your dashboard to verify or decline this provenance link.</p>
+
+      <a href="${SITE_URL}/dashboard" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        View in dashboard →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 function buildTransferRequestHtml({
   artistName,
   workTitle,

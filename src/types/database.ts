@@ -168,6 +168,7 @@ export interface Artwork {
   hide_price: boolean;
   collection_visible: boolean;
   collection_label: string | null;
+  hidden_from_artist: boolean;
   position: number;
   created_at: string;
 }
@@ -176,8 +177,10 @@ export interface ProvenanceLink {
   id: string;
   artwork_id: string;
   artist_id: string;
-  patron_id: string;
-  status: 'pending' | 'verified';
+  patron_id: string | null;
+  patron_email: string | null;
+  claim_token: string;
+  status: 'invited' | 'pending' | 'verified';
   created_at: string;
 }
 
@@ -224,7 +227,7 @@ export interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
-  message_type: 'text' | 'transfer_request' | 'transfer_accepted';
+  message_type: 'text' | 'transfer_request' | 'transfer_accepted' | 'deletion_request' | 'deletion_accepted';
   work_id: string | null;
   is_system_message: boolean;
   source_action: string | null;

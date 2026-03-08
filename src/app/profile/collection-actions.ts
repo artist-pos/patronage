@@ -1,12 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { sendProvenanceInvite, sendProvenanceNotification } from "@/lib/email";
 
 export async function markInCollection(
   artworkId: string,
   label: string,
-  patronUsername?: string
+  patronIdentifier?: string // username or email address
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -15,7 +17,7 @@ export async function markInCollection(
   // Verify caller is the creator
   const { data: artwork } = await supabase
     .from("artworks")
-    .select("creator_id, profile_id")
+    .select("id, caption, creator_id")
     .eq("id", artworkId)
     .single();
 
@@ -31,21 +33,79 @@ export async function markInCollection(
 
   if (updateError) return { error: updateError.message };
 
-  // Optionally link a patron
-  if (patronUsername?.trim()) {
-    const { data: patronProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", patronUsername.trim())
-      .single();
+  // Optionally link a patron (by username or email)
+  const identifier = patronIdentifier?.trim();
+  if (identifier) {
+    const isEmail = identifier.includes("@");
+    const admin = createAdminClient();
+    const workTitle = artwork.caption ?? "Untitled";
 
-    if (patronProfile) {
-      await supabase.from("provenance_links").insert({
-        artwork_id: artworkId,
-        artist_id: user.id,
-        patron_id: patronProfile.id,
-        status: "pending",
-      });
+    // Get artist display name for emails
+    const { data: artistProfile } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .single();
+    const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
+
+    if (isEmail) {
+      // Look up user by email via admin client
+      const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 });
+      const matchedUser = users.find((u) => u.email?.toLowerCase() === identifier.toLowerCase());
+
+      if (matchedUser) {
+        // Existing account — create pending provenance link
+        const { data: patronProfile } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("id", matchedUser.id)
+          .single();
+
+        if (patronProfile) {
+          await admin.from("provenance_links").insert({
+            artwork_id: artworkId,
+            artist_id: user.id,
+            patron_id: matchedUser.id,
+            status: "pending",
+          });
+          sendProvenanceNotification(matchedUser.id, artistName, workTitle).catch(console.error);
+        }
+      } else {
+        // No account — create invited provenance link with email
+        const { data: link } = await admin
+          .from("provenance_links")
+          .insert({
+            artwork_id: artworkId,
+            artist_id: user.id,
+            patron_id: null,
+            patron_email: identifier,
+            status: "invited",
+          })
+          .select("claim_token")
+          .single();
+
+        if (link) {
+          const claimUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/claim/${link.claim_token}`;
+          sendProvenanceInvite(identifier, artistName, workTitle, claimUrl).catch(console.error);
+        }
+      }
+    } else {
+      // Username lookup
+      const { data: patronProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", identifier)
+        .single();
+
+      if (patronProfile) {
+        await supabase.from("provenance_links").insert({
+          artwork_id: artworkId,
+          artist_id: user.id,
+          patron_id: patronProfile.id,
+          status: "pending",
+        });
+        sendProvenanceNotification(patronProfile.id, artistName, workTitle).catch(console.error);
+      }
     }
   }
 

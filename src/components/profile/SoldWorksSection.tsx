@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
+import { removeFromArtistProfile, requestArtworkDeletion } from "@/app/profile/artwork-delete-actions";
 import type { Artwork } from "@/types/database";
 
 const CARD_H = 225;
@@ -19,9 +21,12 @@ interface Props {
 }
 
 export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Props) {
+  const router = useRouter();
   const [works, setWorks] = useState<SoldWork[]>(initialWorks);
   const [sectionHidden, setSectionHidden] = useState(hideSoldSection);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // workId awaiting delete confirm
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // Non-owner: hide if section is set to hidden, or no works
   if (!isOwner && sectionHidden) return null;
@@ -45,6 +50,29 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
       prev.map((w) => (w.id === workId ? { ...w, hide_price: !current } : w))
     );
     setToggling(null);
+  }
+
+  async function handleRemoveFromProfile(workId: string) {
+    setDeleting(workId);
+    const result = await removeFromArtistProfile(workId);
+    if (!result.error) {
+      setWorks((prev) => prev.filter((w) => w.id !== workId));
+    }
+    setDeleting(null);
+  }
+
+  async function handleRequestDeletion(workId: string) {
+    setDeleting(workId);
+    const result = await requestArtworkDeletion(workId);
+    setDeleting(null);
+    setConfirmDelete(null);
+    if (result.error) return;
+    if (result.conversationId) {
+      router.push(`/messages/${result.conversationId}`);
+    } else {
+      // No patron — deleted directly
+      setWorks((prev) => prev.filter((w) => w.id !== workId));
+    }
   }
 
   async function toggleSectionVisibility() {
@@ -139,6 +167,40 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                       >
                         {work.hide_price ? "Show price" : "Hide price"}
                       </button>
+                      <button
+                        onClick={() => handleRemoveFromProfile(work.id)}
+                        disabled={deleting === work.id}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                      >
+                        Remove from my profile
+                      </button>
+                      {confirmDelete === work.id ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] text-muted-foreground leading-tight">Request patron approval via DM?</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleRequestDeletion(work.id)}
+                              disabled={deleting === work.id}
+                              className="text-xs text-destructive hover:opacity-70 transition-opacity text-left"
+                            >
+                              {deleting === work.id ? "Sending…" : "Yes, send request"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDelete(work.id)}
+                          className="text-xs text-destructive/70 hover:text-destructive transition-colors text-left"
+                        >
+                          Request deletion
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

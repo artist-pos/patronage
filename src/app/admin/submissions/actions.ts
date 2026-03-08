@@ -21,7 +21,7 @@ export async function approveSubmission(submissionId: string) {
 
   if (fetchErr || !sub) throw new Error("Submission not found");
 
-  // Insert into live opportunities table
+  // Insert into live opportunities table — copy all relevant fields
   const { error: insertErr } = await supabase.from("opportunities").insert({
     title: sub.title,
     organiser: sub.organiser,
@@ -30,6 +30,7 @@ export async function approveSubmission(submissionId: string) {
     type: sub.type,
     country: sub.country,
     city: sub.city ?? null,
+    opens_at: sub.opens_at ?? null,
     deadline: sub.deadline ?? null,
     url: sub.url ?? null,
     featured_image_url: sub.featured_image_url ?? null,
@@ -38,7 +39,16 @@ export async function approveSubmission(submissionId: string) {
     sub_categories: sub.sub_categories ?? null,
     grant_type: sub.grant_type ?? null,
     recipients_count: sub.recipients_count ?? null,
+    entry_fee: sub.entry_fee ?? null,
+    artist_payment_type: sub.artist_payment_type ?? null,
+    travel_support: sub.travel_support ?? null,
+    travel_support_details: sub.travel_support_details ?? null,
+    routing_type: sub.routing_type ?? "external",
+    custom_fields: sub.custom_fields ?? [],
+    show_badges_in_submission: sub.show_badges_in_submission ?? true,
+    profile_id: sub.profile_id ?? null,
     is_active: true,
+    status: "published",
   });
 
   if (insertErr) throw new Error(insertErr.message);

@@ -8,9 +8,11 @@ interface Props {
   opportunityId: string;
   title: string;
   organiser: string;
+  label?: string;
+  className?: string;
 }
 
-export function OpportunityCTALink({ href, opportunityId, title, organiser }: Props) {
+export function OpportunityCTALink({ href, opportunityId, title, organiser, label, className }: Props) {
   function handleClick() {
     track("view_opportunity", { title, organiser });
     trackEvent("opportunity_click", { opportunity_id: opportunityId, title, organiser });
@@ -22,9 +24,9 @@ export function OpportunityCTALink({ href, opportunityId, title, organiser }: Pr
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="text-xs underline underline-offset-2 mt-auto hover:text-muted-foreground transition-colors"
+      className={className ?? "text-xs underline underline-offset-2 mt-auto hover:text-muted-foreground transition-colors"}
     >
-      View opportunity →
+      {label ?? "View opportunity →"}
     </a>
   );
 }

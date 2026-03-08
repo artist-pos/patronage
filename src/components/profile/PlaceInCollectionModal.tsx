@@ -89,21 +89,21 @@ export function PlaceInCollectionModal({ artworkId, artworkTitle, onClose, onSuc
             </div>
           </div>
 
-          {/* Optional patron username */}
+          {/* Optional patron username or email */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" htmlFor="col-patron">
-              Patron username <span className="text-muted-foreground font-normal">(optional)</span>
+              Patron username or email <span className="text-muted-foreground font-normal">(optional)</span>
             </label>
             <input
               id="col-patron"
               type="text"
               value={patronUsername}
               onChange={(e) => setPatronUsername(e.target.value.replace(/^@/, ""))}
-              placeholder="username (without @)"
+              placeholder="username or email@example.com"
               className="w-full border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:border-foreground"
             />
             <p className="text-[11px] text-muted-foreground leading-snug">
-              If this is a Patronage user, they&apos;ll receive a verification request to confirm the work is in their collection.
+              Patronage users get an in-app verification request. Non-members get an email invite to claim the work.
             </p>
           </div>
 
