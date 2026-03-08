@@ -155,7 +155,7 @@ function Tile({
       <div
         className="group relative border border-border overflow-hidden bg-muted"
         style={fixed
-          ? { height: CAROUSEL_H, width: "fit-content" }
+          ? { height: CAROUSEL_H, alignSelf: "flex-start" }
           : { height: CAROUSEL_H }}
       >
         <Link href={href} className={fixed ? "flex h-full" : "absolute inset-0"}>
