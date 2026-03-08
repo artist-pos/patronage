@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
+import { trackEvent } from "@/actions/trackEvent";
 
 interface Props {
   img: PortfolioImage;
@@ -13,9 +14,16 @@ interface Props {
   hasNext?: boolean;
   artistName?: string;
   viewerRole?: string | null;
+  profileId?: string;
 }
 
-export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, hasNext, artistName, viewerRole }: Props) {
+export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, hasNext, artistName, viewerRole, profileId }: Props) {
+  useEffect(() => {
+    if (profileId) {
+      trackEvent("artwork_view", { profile_id: profileId, artwork_id: img.id }).catch(() => {});
+    }
+  }, [img.id, profileId]);
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();

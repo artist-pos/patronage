@@ -12,6 +12,7 @@ export async function getOpportunities(
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
+    .eq("status", "published")
     .or(`deadline.gte.${today},deadline.is.null`) // include open-ended (no deadline)
     .order("is_featured", { ascending: false })   // featured always first
     .order("deadline", { ascending: true, nullsFirst: false });
@@ -50,6 +51,7 @@ export async function getClosingSoonOpportunities(
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
+    .eq("status", "published")
     .or(`deadline.gte.${today},deadline.is.null`)
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(limit);
@@ -67,6 +69,7 @@ export async function getMarketplaceStats(): Promise<{
     .from("opportunities")
     .select("funding_amount")
     .eq("is_active", true)
+    .eq("status", "published")
     .gte("deadline", today);
   const count = data?.length ?? 0;
   const totalFunding = (data ?? []).reduce(
@@ -86,6 +89,7 @@ export async function getOpportunityById(idOrSlug: string): Promise<Opportunity 
     .from("opportunities")
     .select("*")
     .eq(isUuid ? "id" : "slug", idOrSlug)
+    .eq("status", "published")
     .single();
 
   return data as Opportunity | null;

@@ -8,6 +8,7 @@ interface Props {
   images: PortfolioImage[];
   artistName?: string;
   viewerRole?: string | null;
+  profileId?: string;
   limit?: number;
 }
 
@@ -47,7 +48,7 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   );
 }
 
-export function PortfolioGrid({ images, artistName, viewerRole, limit }: Props) {
+export function PortfolioGrid({ images, artistName, viewerRole, profileId, limit }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const displayed = limit ? images.slice(0, limit) : images;
@@ -75,6 +76,7 @@ export function PortfolioGrid({ images, artistName, viewerRole, limit }: Props) 
           hasNext={selectedIndex! < displayed.length - 1}
           artistName={artistName}
           viewerRole={viewerRole}
+          profileId={profileId}
         />
       )}
     </>

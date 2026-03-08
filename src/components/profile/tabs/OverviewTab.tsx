@@ -12,6 +12,7 @@ interface Props {
   artistName: string;
   viewerRole: string | null;
   username: string;
+  profileId?: string;
 }
 
 export function OverviewTab({
@@ -23,6 +24,7 @@ export function OverviewTab({
   artistName,
   viewerRole,
   username,
+  profileId,
 }: Props) {
   const selectedExhibitions = [...exhibitions]
     .sort((a, b) => b.year - a.year)
@@ -141,6 +143,7 @@ export function OverviewTab({
             images={portfolioImages}
             artistName={artistName}
             viewerRole={viewerRole}
+            profileId={profileId}
             limit={9}
           />
         </div>

@@ -51,3 +51,38 @@ export async function rejectAll(ids: string[]) {
     .in("id", ids);
   revalidatePath("/admin/opportunities/queue");
 }
+
+export async function updateQueueOpportunity(
+  id: string,
+  fields: {
+    title: string;
+    organiser: string;
+    caption: string | null;
+    type: string;
+    country: string;
+    opens_at: string | null;
+    deadline: string | null;
+    url: string | null;
+    funding_range: string | null;
+    full_description: string | null;
+  }
+) {
+  await guard();
+  const admin = createAdminClient();
+  await admin
+    .from("opportunities")
+    .update({
+      title: fields.title.trim(),
+      organiser: fields.organiser.trim(),
+      caption: fields.caption?.trim() || null,
+      type: fields.type,
+      country: fields.country,
+      opens_at: fields.opens_at || null,
+      deadline: fields.deadline || null,
+      url: fields.url?.trim() || null,
+      funding_range: fields.funding_range?.trim() || null,
+      full_description: fields.full_description?.trim() || null,
+    })
+    .eq("id", id);
+  revalidatePath("/admin/opportunities/queue");
+}

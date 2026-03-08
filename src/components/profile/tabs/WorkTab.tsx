@@ -55,6 +55,7 @@ export function WorkTab({
               images={portfolioImages}
               artistName={displayName}
               viewerRole={viewerRole}
+              profileId={isOwner ? undefined : profileId}
             />
           ) : (
             <p className="text-sm text-muted-foreground">No portfolio works yet.</p>
