@@ -2,12 +2,12 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
+import { X, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Plus } from "lucide-react";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
 import { COUNTRIES } from "@/lib/opportunity-constants";
 import type { Opportunity, OppTypeEnum, CountryEnum, CustomField } from "@/types/database";
@@ -30,7 +30,6 @@ const FORM_DISCIPLINES = [
 const FORM_CAREER_STAGES = ["Student", "Emerging", "Mid-career", "Established", "All stages"];
 const FORM_ELIGIBILITY   = ["Women", "LGBTQ+", "Māori", "Pasifika", "Indigenous", "Disabled artists"];
 const FORM_FOCUS         = ["Public art", "Community projects", "Research", "Environmental work", "Experimental practice"];
-
 const GRANT_SUBTYPES     = ["Project Grant", "Travel Stipend", "Residency Award", "Commissioning Fee", "Emergency Fund", "Other"];
 const CONTRACT_TYPES     = ["Permanent", "Fixed Term", "Contract / Freelance", "Part-time", "Casual"];
 
@@ -59,6 +58,14 @@ function getFundingMeta(type: string): { label: string; placeholder: string } {
   return                                   { label: "Funding Range",          placeholder: "e.g. $5,000 – $25,000" };
 }
 
+// ── Date formatting ───────────────────────────────────────────────────────────
+function fmtDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-NZ", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+}
+
 // ── Image resize ──────────────────────────────────────────────────────────────
 const MAX_IMG_PX = 1600;
 async function resizeToJpeg(file: File): Promise<Blob> {
@@ -82,10 +89,8 @@ async function resizeToJpeg(file: File): Promise<Blob> {
   });
 }
 
-// ── Shared input style ────────────────────────────────────────────────────────
 const FIELD = "w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black";
 
-// ── Tag toggle button ─────────────────────────────────────────────────────────
 function TagButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
@@ -104,24 +109,35 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver,    setDragOver]    = useState(false);
+  const [dragOver,     setDragOver]     = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
-  const [imgUrl,       setImgUrl]      = useState("");
+  const [imgUrl,       setImgUrl]       = useState("");
 
   const [selectedType, setSelectedType] = useState("Grant");
 
-  const [selectedDisciplines,  setSelectedDisciplines]  = useState<string[]>([]);
-  const [selectedCareerStages, setSelectedCareerStages] = useState<string[]>([]);
-  const [selectedEligibility,  setSelectedEligibility]  = useState<string[]>([]);
-  const [customEligibility,    setCustomEligibility]    = useState<string[]>([]);
+  const [selectedDisciplines,    setSelectedDisciplines]    = useState<string[]>([]);
+  const [selectedCareerStages,   setSelectedCareerStages]   = useState<string[]>([]);
+  const [selectedEligibility,    setSelectedEligibility]    = useState<string[]>([]);
+  const [customEligibility,      setCustomEligibility]      = useState<string[]>([]);
   const [customEligibilityInput, setCustomEligibilityInput] = useState("");
-  const [selectedFocus,        setSelectedFocus]        = useState<string[]>([]);
+  const [selectedFocus,          setSelectedFocus]          = useState<string[]>([]);
 
-  const [routingType,   setRoutingType]  = useState<"external" | "pipeline">("external");
-  const [customFields,  setCustomFields] = useState<CustomField[]>([]);
-  const [showBadges,    setShowBadges]   = useState(true);
+  const [routingType,  setRoutingType]  = useState<"external" | "pipeline">("external");
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [showBadges,   setShowBadges]   = useState(true);
 
-  const [preview, setPreview] = useState<Partial<Opportunity>>({ type: "Grant", country: "NZ", organiser: partnerName ?? undefined });
+  // Extra preview-only state for fields that aren't string/number in Opportunity
+  const [entryFeePreview,      setEntryFeePreview]      = useState<number | null>(null);
+  const [travelSupportPreview, setTravelSupportPreview] = useState(false);
+  const [travelDetailsPreview, setTravelDetailsPreview] = useState("");
+
+  // Listing preview gate
+  const [showFullPreview, setShowFullPreview] = useState(false);
+  const [hasPreviewed,    setHasPreviewed]    = useState(false);
+
+  const [preview, setPreview] = useState<Partial<Opportunity>>({
+    type: "Grant", country: "NZ", organiser: partnerName ?? undefined,
+  });
   const supabase = createClient();
 
   const fundingMeta = getFundingMeta(selectedType);
@@ -170,28 +186,43 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     if (file?.type.startsWith("image/")) handleImageFile(file);
   }
 
+  // Build the full preview opportunity object (used by both card preview and modal)
   const previewOpp: Opportunity = {
-    id: "", title: (preview.title as string) || "Opportunity Title",
+    id: "",
+    title: (preview.title as string) || "Opportunity Title",
     organiser: (preview.organiser as string) || "Organisation",
-    description: null, caption: (preview.caption as string) ?? null,
+    description: null,
+    caption: (preview.caption as string) ?? null,
     full_description: (preview.full_description as string) ?? null,
     type: selectedType as OppTypeEnum,
     country: (preview.country as CountryEnum) ?? "NZ",
     city: (preview.city as string) ?? null,
     opens_at: (preview.opens_at as string) ?? null,
     deadline: (preview.deadline as string) ?? null,
-    url: null, funding_amount: null,
+    url: (preview.url as string) ?? null,
+    funding_amount: null,
     funding_range: (preview.funding_range as string) ?? null,
     sub_categories: allTags.length > 0 ? allTags : null,
     featured_image_url: imgUrl || null,
     grant_type: (preview.grant_type as string) ?? null,
     recipients_count: (preview.recipients_count as number) ?? null,
     slug: null, is_active: true, status: "published", source_url: null, profile_id: null,
-    created_at: new Date().toISOString(), entry_fee: null, artist_payment_type: null,
-    travel_support: null, travel_support_details: null, view_count: 0,
-    routing_type: routingType, custom_fields: customFields,
-    show_badges_in_submission: showBadges, is_featured: false,
+    created_at: new Date().toISOString(),
+    entry_fee: entryFeePreview,
+    artist_payment_type: null,
+    travel_support: travelSupportPreview || null,
+    travel_support_details: travelDetailsPreview || null,
+    view_count: 0,
+    routing_type: routingType,
+    custom_fields: customFields,
+    show_badges_in_submission: showBadges,
+    is_featured: false,
   };
+
+  function openPreview() {
+    setShowFullPreview(true);
+    setHasPreviewed(true);
+  }
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (state.success) {
@@ -225,23 +256,32 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   // ── Form ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-10">
-      {/* Live preview */}
+      {/* Card preview */}
       <div className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Live Preview</p>
+        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Card Preview</p>
         <div className="max-w-sm">
           <OpportunityCard opp={previewOpp} isPreview />
         </div>
       </div>
 
+      {/* Full listing preview modal */}
+      {showFullPreview && (
+        <ListingPreviewModal
+          opp={previewOpp}
+          fundingLabel={fundingMeta.label}
+          onClose={() => setShowFullPreview(false)}
+        />
+      )}
+
       <form action={action} className="space-y-0">
         {state.error && <p className="text-xs text-destructive mb-4">{state.error}</p>}
 
         {/* Hidden fields */}
-        <input type="hidden" name="type"                   value={selectedType} />
-        <input type="hidden" name="featured_image_url"     value={imgUrl} />
-        <input type="hidden" name="sub_categories"         value={allTags.join(",")} />
-        <input type="hidden" name="routing_type"           value={routingType} />
-        <input type="hidden" name="custom_fields"          value={JSON.stringify(customFields)} />
+        <input type="hidden" name="type"                      value={selectedType} />
+        <input type="hidden" name="featured_image_url"        value={imgUrl} />
+        <input type="hidden" name="sub_categories"            value={allTags.join(",")} />
+        <input type="hidden" name="routing_type"              value={routingType} />
+        <input type="hidden" name="custom_fields"             value={JSON.stringify(customFields)} />
         <input type="hidden" name="show_badges_in_submission" value={showBadges ? "true" : "false"} />
 
         {/* ── Section 1: Opportunity Type ──────────────────────────────────── */}
@@ -261,9 +301,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
                 <p className="text-sm font-semibold">{label}</p>
                 <p className={`text-xs mt-0.5 leading-snug ${
                   selectedType === value ? "text-white/70" : "text-muted-foreground"
-                }`}>
-                  {desc}
-                </p>
+                }`}>{desc}</p>
               </button>
             ))}
           </div>
@@ -346,7 +384,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
           {showField(selectedType, "entryFee") && (
             <Field label="Entry Fee">
               <Input name="entry_fee" type="number" min={0} step="0.01"
-                placeholder="0 for free, leave blank if unknown" className={FIELD} />
+                placeholder="0 for free, leave blank if unknown" className={FIELD}
+                onChange={(e) => setEntryFeePreview(e.target.value !== "" ? parseFloat(e.target.value) : null)} />
               <p className="text-xs text-muted-foreground font-mono mt-1">Enter 0 if there is no entry fee.</p>
             </Field>
           )}
@@ -381,12 +420,14 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
           {showField(selectedType, "accommodation") && (
             <Field label="Accommodation">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="travel_support" value="true" />
+                <input type="checkbox" name="travel_support" value="true"
+                  onChange={(e) => setTravelSupportPreview(e.target.checked)} />
                 <span className="text-sm">Accommodation included</span>
               </label>
               <Input name="travel_support_details" type="text"
                 placeholder="e.g. Private studio apartment provided"
-                className={`${FIELD} mt-2`} />
+                className={`${FIELD} mt-2`}
+                onChange={(e) => setTravelDetailsPreview(e.target.value)} />
             </Field>
           )}
         </Section>
@@ -473,8 +514,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
           <div className="space-y-4">
             <div className="flex gap-6">
               {[
-                { val: "external" as const, label: "External Website",    desc: "Artists apply via your website or form" },
-                { val: "pipeline" as const, label: "Patronage Pipeline",   desc: "Native on-platform application flow" },
+                { val: "external" as const, label: "External Website",  desc: "Artists apply via your website or form" },
+                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
               ].map(({ val, label, desc }) => (
                 <label key={val} className="flex items-start gap-2 cursor-pointer">
                   <input type="radio" name="routing_radio" checked={routingType === val}
@@ -489,7 +530,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
 
             {routingType === "external" && (
               <Field label="Application URL">
-                <Input name="url" type="url" placeholder="https://…" className={FIELD} />
+                <Input name="url" type="url" placeholder="https://…" className={FIELD}
+                  onChange={(e) => upd("url", e.target.value || null)} />
               </Field>
             )}
 
@@ -554,7 +596,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
             <textarea name="full_description" rows={6}
               placeholder="Full details, eligibility criteria, how to apply…"
               className={`${FIELD} resize-none`}
-              onChange={(e) => upd("description", e.target.value)} />
+              onChange={(e) => upd("full_description", e.target.value || null)} />
             <p className="text-xs text-muted-foreground font-mono mt-1">
               Revealed when visitors click &ldquo;Read more&rdquo;.
             </p>
@@ -585,13 +627,205 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
           </Field>
         </Section>
 
-        {/* ── Submit ───────────────────────────────────────────────────────── */}
-        <div className="pt-6 border-t-2 border-black">
-          <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-            {isPending ? "Submitting…" : "Submit Opportunity"}
-          </Button>
+        {/* ── Preview + Submit ─────────────────────────────────────────────── */}
+        <div className="pt-6 border-t-2 border-black space-y-3">
+          <button
+            type="button"
+            onClick={openPreview}
+            className="w-full sm:w-auto border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
+          >
+            Preview full listing →
+          </button>
+
+          {hasPreviewed ? (
+            <div className="flex items-center gap-4 flex-wrap">
+              <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+                {isPending ? "Submitting…" : "Submit Opportunity"}
+              </Button>
+              <button type="button" onClick={openPreview}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+                Preview again
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Preview your full listing before submitting.
+            </p>
+          )}
         </div>
       </form>
+    </div>
+  );
+}
+
+// ── Full listing preview modal ────────────────────────────────────────────────
+function ListingPreviewModal({
+  opp,
+  fundingLabel,
+  onClose,
+}: {
+  opp: Opportunity;
+  fundingLabel: string;
+  onClose: () => void;
+}) {
+  const location = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="min-h-screen py-10 px-4 flex items-start justify-center">
+        <div className="bg-background w-full max-w-2xl relative">
+          {/* Preview banner */}
+          <div className="bg-muted border-b border-black px-6 py-3 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground font-mono">
+              Preview — how your listing will appear when published
+            </p>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="px-6 py-10 space-y-8">
+            {/* Featured image */}
+            {opp.featured_image_url ? (
+              <div className="relative w-full border border-black overflow-hidden bg-white">
+                <div
+                  className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-20"
+                  style={{ backgroundImage: `url(${opp.featured_image_url})` }}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={opp.featured_image_url}
+                  alt={opp.title}
+                  className="relative z-10 w-full h-auto max-h-[360px] object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-40 bg-[#E5E7EB] border border-black" />
+            )}
+
+            {/* Tags */}
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.type}</span>
+              <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.country}</span>
+              {opp.grant_type && (
+                <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.grant_type}</span>
+              )}
+              {opp.recipients_count != null && (
+                <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+                  {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
+                </span>
+              )}
+              {(opp.sub_categories ?? []).map((cat) => (
+                <span key={cat} className="text-xs border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none">
+                  {cat}
+                </span>
+              ))}
+            </div>
+
+            {/* Title + organiser */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight">{opp.title || "Opportunity Title"}</h1>
+              <p className="text-sm text-muted-foreground font-mono">{opp.organiser || "Organisation"}</p>
+            </div>
+
+            {/* Vital stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border border-black p-5">
+              {opp.funding_range && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{fundingLabel}</p>
+                  <p className="font-mono font-bold text-sm">{opp.funding_range}</p>
+                </div>
+              )}
+              {opp.opens_at && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Opens</p>
+                  <p className="font-mono text-sm">{fmtDate(opp.opens_at)}</p>
+                </div>
+              )}
+              {opp.deadline && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Deadline</p>
+                  <p className="font-mono text-sm">{fmtDate(opp.deadline)}</p>
+                </div>
+              )}
+              {location && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Location</p>
+                  <p className="font-mono text-sm">{location}</p>
+                </div>
+              )}
+              {opp.entry_fee != null && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Entry Fee</p>
+                  <p className="font-mono text-sm">{opp.entry_fee === 0 ? "Free" : `$${opp.entry_fee}`}</p>
+                </div>
+              )}
+              {opp.travel_support && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Accommodation</p>
+                  <p className="font-mono text-sm">
+                    Included{opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            {(opp.caption || opp.full_description) && (
+              <div className="space-y-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">About</h2>
+                {opp.caption && (
+                  <p className="text-sm leading-relaxed">{opp.caption}</p>
+                )}
+                {opp.full_description && (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    {opp.full_description}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* CTA mock */}
+            <div className="space-y-2">
+              {opp.routing_type === "pipeline" ? (
+                <div className="space-y-2">
+                  <button
+                    disabled
+                    className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold opacity-60 cursor-not-allowed"
+                  >
+                    Apply with Patronage →
+                  </button>
+                  {opp.custom_fields && opp.custom_fields.length > 0 && (
+                    <div className="text-xs text-muted-foreground space-y-0.5 pt-1">
+                      <p className="font-semibold uppercase tracking-widest mb-1">Application will ask for:</p>
+                      {opp.custom_fields.map((f) => (
+                        <p key={f.id}>· {f.question} <span className="opacity-60">({f.inputType})</span></p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : opp.url ? (
+                <span className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold opacity-60 cursor-not-allowed">
+                  Apply on Official Site →
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-black px-6 py-4 flex justify-end">
+            <button
+              onClick={onClose}
+              className="text-sm border border-black px-5 py-2 hover:bg-muted transition-colors"
+            >
+              Close preview
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
