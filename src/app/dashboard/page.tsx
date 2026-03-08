@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
+import { ProvenanceBanner } from "@/components/dashboard/ProvenanceBanner";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,17 +23,44 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const activeTab = params.tab ?? "closing";
 
-  const [saved, applicationsData] = await Promise.all([
+  // Fetch user role to show provenance links for patrons
+  const { data: userProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isPatron = userProfile?.role === "patron" || userProfile?.role === "partner";
+
+  const [saved, applicationsData, provenanceData] = await Promise.all([
     getSavedOpportunities(),
     supabase
       .from("opportunity_applications")
       .select("*, opportunity:opportunities(id, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
       .eq("artist_id", user.id)
       .order("created_at", { ascending: false }),
+    // Pending provenance links for patrons/partners
+    isPatron
+      ? supabase
+          .from("provenance_links")
+          .select("id, artwork_id, artist_id, artworks(url, caption), artist_profile:artist_id(username, full_name)")
+          .eq("patron_id", user.id)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const { closingSoon, saved: savedList, applied, expired } = categorizeSaved(saved);
   const applications = applicationsData.data ?? [];
+
+  // Shape provenance links for the banner
+  const provenanceLinks = (provenanceData.data ?? []).map((row: any) => ({
+    id: row.id,
+    artwork_id: row.artwork_id,
+    artwork_url: row.artworks?.url ?? "",
+    artwork_caption: row.artworks?.caption ?? null,
+    artist_username: row.artist_profile?.username ?? "",
+    artist_name: row.artist_profile?.full_name ?? null,
+  }));
 
   const tabs = [
     { id: "closing", label: "Closing Soon", count: closingSoon.length },
@@ -57,6 +85,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <h1 className="text-2xl font-semibold tracking-tight">My Opportunities</h1>
         <p className="text-sm text-muted-foreground">Track and manage the opportunities you&apos;ve saved.</p>
       </div>
+
+      {/* Provenance verification banner — patrons only */}
+      {provenanceLinks.length > 0 && (
+        <ProvenanceBanner links={provenanceLinks} />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-black overflow-x-auto">

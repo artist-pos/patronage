@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { EnquireButton } from "./EnquireButton";
+import { PlaceInCollectionModal } from "./PlaceInCollectionModal";
 import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
 import type { Artwork } from "@/types/database";
 
@@ -23,6 +24,7 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
   const [hidden, setHidden] = useState(img.hide_available);
   const [unlisting, setUnlisting] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [collectModal, setCollectModal] = useState(false);
 
   async function handleUnlist() {
     setUnlisting(true);
@@ -39,6 +41,15 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
   }
 
   return (
+    <>
+    {collectModal && (
+      <PlaceInCollectionModal
+        artworkId={img.id}
+        artworkTitle={img.caption}
+        onClose={() => setCollectModal(false)}
+        onSuccess={() => onRemove?.(img.id)}
+      />
+    )}
     <div
       className="flex-none flex flex-row border border-border bg-background snap-start overflow-hidden"
       style={{ height: CARD_H, boxSizing: "border-box" }}
@@ -100,15 +111,23 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
 
         {/* Bottom actions */}
         <div className="mt-auto flex flex-col gap-2">
-          {/* Hide / Show toggle (owner only) */}
+          {/* Owner controls */}
           {isOwner && (
-            <button
-              onClick={handleHideToggle}
-              disabled={toggling}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start disabled:opacity-40"
-            >
-              {hidden ? "Show" : "Hide"}
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={handleHideToggle}
+                disabled={toggling}
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start disabled:opacity-40"
+              >
+                {hidden ? "Show" : "Hide"}
+              </button>
+              <button
+                onClick={() => setCollectModal(true)}
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start"
+              >
+                Mark as collected
+              </button>
+            </div>
           )}
 
           {/* Enquire button (non-owner authenticated) */}
@@ -124,5 +143,6 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
         </div>
       </div>
     </div>
+    </>
   );
 }

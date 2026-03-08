@@ -80,3 +80,60 @@ export async function submitHighResAsset(
   revalidatePath("/dashboard");
   return {};
 }
+
+export async function verifyProvenanceLink(linkId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: link } = await supabase
+    .from("provenance_links")
+    .select("id, artwork_id, patron_id")
+    .eq("id", linkId)
+    .eq("patron_id", user.id)
+    .single();
+
+  if (!link) return { error: "Link not found." };
+
+  const [{ error: linkErr }, { error: artworkErr }] = await Promise.all([
+    supabase.from("provenance_links").update({ status: "verified" }).eq("id", linkId),
+    supabase.from("artworks").update({ current_owner_id: user.id }).eq("id", link.artwork_id),
+  ]);
+
+  if (linkErr) return { error: linkErr.message };
+  if (artworkErr) return { error: artworkErr.message };
+
+  // Add to patron's acquired_works array
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("acquired_works")
+    .eq("id", user.id)
+    .single();
+
+  const current = (profile?.acquired_works ?? []) as string[];
+  if (!current.includes(link.artwork_id)) {
+    await supabase
+      .from("profiles")
+      .update({ acquired_works: [...current, link.artwork_id] })
+      .eq("id", user.id);
+  }
+
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function declineProvenanceLink(linkId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("provenance_links")
+    .delete()
+    .eq("id", linkId)
+    .eq("patron_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard");
+  return {};
+}
