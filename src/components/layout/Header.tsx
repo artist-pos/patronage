@@ -35,7 +35,7 @@ export async function Header() {
 
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-2 shrink-0 text-base font-semibold tracking-tight">
-          <Image src="/Favicon.png" alt="Patronage" width={24} height={24} />
+          <Image src="/Favicon_Bleed_512.png" alt="Patronage" width={24} height={24} />
           <span className="hidden sm:inline">Patronage</span>
         </Link>
 
