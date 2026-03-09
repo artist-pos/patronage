@@ -94,15 +94,21 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
       scroll={false}
       className="group shrink-0 flex flex-col border border-border overflow-hidden bg-background"
     >
-      <div className="overflow-hidden bg-muted">
-        <Image
-          src={u.image_url}
-          alt={u.caption ?? `Update by ${name}`}
-          width={320}
-          height={180}
-          unoptimized
-          className="h-[170px] w-auto block transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className="overflow-hidden bg-muted flex items-center justify-center" style={{ height: 170 }}>
+        {u.image_url ? (
+          <Image
+            src={u.image_url}
+            alt={u.caption ?? `Update by ${name}`}
+            width={320}
+            height={180}
+            unoptimized
+            className="h-[170px] w-auto block transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <span className="text-xs text-muted-foreground uppercase tracking-widest">
+            {u.content_type}
+          </span>
+        )}
       </div>
       <div className="px-2 py-1.5 border-t border-border bg-background shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">

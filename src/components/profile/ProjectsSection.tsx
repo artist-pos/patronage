@@ -65,13 +65,19 @@ export function ProjectsSection({ projects, updates, isOwner }: Props) {
                       className="flex-1 relative overflow-hidden"
                       style={{ minWidth: 0 }}
                     >
-                      <Image
-                        src={u.image_url}
-                        alt={u.caption ?? "Project update"}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
+                      {u.image_url ? (
+                        <Image
+                          src={u.image_url}
+                          alt={u.caption ?? "Project update"}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-[9px] uppercase text-muted-foreground">{u.content_type}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (

@@ -3,8 +3,16 @@ import { sources } from "./sources/index.js";
 import { fetchPageContent, fetchWithBrowser, fetchRssFeed, resolveOrgImage, closeBrowser, sleep } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
 import { upsertOpportunity } from "./lib/upsert.js";
+import type { Source } from "./types.js";
+import type { ScrapedOpportunity } from "./types.js";
 
 const RATE_LIMIT_MS = 2000; // 2s between requests — respectful to servers
+
+/** Merge source-level discipline hints into a scraped opportunity. */
+function applySourceMeta(opp: ScrapedOpportunity, source: Source): ScrapedOpportunity {
+  const merged = [...new Set([...(opp.disciplines ?? []), ...(source.disciplines ?? [])])];
+  return { ...opp, disciplines: merged };
+}
 
 async function main() {
   console.log(`\n🎨 Patronage Scraper`);
@@ -30,10 +38,15 @@ async function main() {
           const opps = await extractFromRssItem(item, source.url, source.country);
           for (const opp of opps) {
             if (!opp.url && item.link) opp.url = item.link;
+            const enriched = applySourceMeta(opp, source);
             const image =
-              opp.featured_image_url ??
-              (await resolveOrgImage(opp.url, source.url));
-            const result = await upsertOpportunity(opp, source.url, image);
+              enriched.featured_image_url ??
+              (await resolveOrgImage(enriched.url, source.url));
+            const result = await upsertOpportunity(enriched, source.url, image, {
+              disciplines: source.disciplines,
+              is_recurring: source.is_recurring,
+              recurrence_pattern: source.recurrence_pattern,
+            });
             if (result === "inserted") inserted++;
             else if (result === "updated") updated++;
             else skipped++;
@@ -56,8 +69,13 @@ async function main() {
               const opps = await extractFromPage(dText, link, source.country);
               for (const opp of opps) {
                 if (!opp.url) opp.url = link;
-                const image = opp.featured_image_url ?? dOgImage ?? ogImage ?? (await resolveOrgImage(opp.url, source.url));
-                const result = await upsertOpportunity(opp, source.url, image);
+                const enriched = applySourceMeta(opp, source);
+                const image = enriched.featured_image_url ?? dOgImage ?? ogImage ?? (await resolveOrgImage(enriched.url, source.url));
+                const result = await upsertOpportunity(enriched, source.url, image, {
+                  disciplines: source.disciplines,
+                  is_recurring: source.is_recurring,
+                  recurrence_pattern: source.recurrence_pattern,
+                });
                 if (result === "inserted") inserted++;
                 else if (result === "updated") updated++;
                 else skipped++;
@@ -73,11 +91,16 @@ async function main() {
           console.log(`  ↳ ${opps.length} opportunities extracted`);
 
           for (const opp of opps) {
+            const enriched = applySourceMeta(opp, source);
             const image =
-              opp.featured_image_url ??
+              enriched.featured_image_url ??
               ogImage ??
-              (await resolveOrgImage(opp.url, source.url));
-            const result = await upsertOpportunity(opp, source.url, image);
+              (await resolveOrgImage(enriched.url, source.url));
+            const result = await upsertOpportunity(enriched, source.url, image, {
+              disciplines: source.disciplines,
+              is_recurring: source.is_recurring,
+              recurrence_pattern: source.recurrence_pattern,
+            });
             if (result === "inserted") inserted++;
             else if (result === "updated") updated++;
             else skipped++;

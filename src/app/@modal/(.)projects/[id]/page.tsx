@@ -36,18 +36,33 @@ export default async function ProjectModal({ params }: Props) {
   return (
     <ModalShell>
       <div className="space-y-8">
-        {/* Image */}
-        <div className="border border-black overflow-hidden bg-muted">
-          <Image
-            src={update.image_url}
-            alt={update.caption ?? `Studio update by ${name}`}
-            width={1200}
-            height={900}
-            priority
-            unoptimized
-            className="w-full h-auto max-h-[70vh] object-contain"
-          />
-        </div>
+        {/* Media */}
+        {update.image_url && (
+          <div className="border border-black overflow-hidden bg-muted">
+            <Image
+              src={update.image_url}
+              alt={update.caption ?? `Studio update by ${name}`}
+              width={1200}
+              height={900}
+              priority
+              unoptimized
+              className="w-full h-auto max-h-[70vh] object-contain"
+            />
+          </div>
+        )}
+        {update.content_type === "audio" && update.audio_url && (
+          <div className="border border-black bg-zinc-900 p-6">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio controls className="w-full" src={update.audio_url} />
+          </div>
+        )}
+        {update.content_type === "text" && update.text_content && (
+          <div className="border border-black p-6 bg-background">
+            {update.text_content.split("\n\n").map((para, i) => (
+              <p key={i} className="mb-4 text-base leading-relaxed last:mb-0">{para}</p>
+            ))}
+          </div>
+        )}
 
         {/* Meta */}
         <div className="space-y-4">

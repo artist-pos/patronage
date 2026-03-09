@@ -37,6 +37,7 @@ export default async function AdminDigestPage() {
       <DigestControls
         subscriberCount={subscriberCount}
         hasResend={hasResend}
+        isEmpty={isEmpty}
       />
 
       {isEmpty ? (

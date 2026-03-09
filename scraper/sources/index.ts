@@ -32,8 +32,8 @@ export const sources: Source[] = [
   // ── Tier 2: NZ Government & Funded Bodies ───────────────────────────────
 
   { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25 },
-  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/music/funding/", country: "NZ", isListPage: true, followLinks: true },
-  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding", country: "NZ", isListPage: true, followLinks: true },
+  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/music/funding/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true, is_recurring: true, recurrence_pattern: "monthly" },
+  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true },
   { name: "Foundation North", url: "https://foundationnorth.org.nz/grants/", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true },
   { name: "Pub Charity", url: "https://pubcharitynz.org.nz/apply/", country: "NZ" },
   { name: "Lion Foundation", url: "https://www.lionfoundation.org.nz/apply-for-a-grant/", country: "NZ" },
@@ -57,7 +57,7 @@ export const sources: Source[] = [
   // ── Tier 2: Australian Federal & State ───────────────────────────────────
 
   { name: "Australia Council Grants", url: "https://www.australiacouncil.gov.au/funding/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
   { name: "AIATSIS Grants", url: "https://aiatsis.gov.au/grants-and-fellowships", country: "AUS", isListPage: true, followLinks: true },
   { name: "National Gallery of Australia", url: "https://nga.gov.au/prizes-and-commissions/", country: "AUS", isListPage: true, followLinks: true },
   { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
@@ -208,10 +208,97 @@ export const sources: Source[] = [
   // ── Additional AUS Sources ────────────────────────────────────────────────
 
   { name: "Artlands Australia", url: "https://www.artlands.com.au/", country: "AUS" },
-  { name: "Craft ACT", url: "https://www.craftact.org.au/opportunities", country: "AUS", isListPage: true, followLinks: true },
-  { name: "Craft Victoria", url: "https://www.craftvictoria.com.au/opportunities/", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Craft ACT", url: "https://www.craftact.org.au/opportunities", country: "AUS", disciplines: ["craft"], isListPage: true, followLinks: true },
+  { name: "Craft Victoria", url: "https://www.craftvictoria.com.au/opportunities/", country: "AUS", disciplines: ["craft"], isListPage: true, followLinks: true },
   { name: "The Big Anxiety Festival", url: "https://thebigpicture.com.au/", country: "AUS" },
   { name: "Australian Art Network", url: "https://www.artnetwork.com.au/opportunities", country: "AUS", isListPage: true, followLinks: true },
   { name: "Museum Victoria Grants", url: "https://museumsvictoria.com.au/about-us/grants/", country: "AUS", isListPage: true, followLinks: true },
+
+  // ── Music — NZ ────────────────────────────────────────────────────────────
+
+  { name: "APRA AMCOS Grants", url: "https://www.apraamcos.com.au/about/supporting-music/apraamcos-grants", country: "Global", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "Recorded Music NZ", url: "https://www.recordedmusic.co.nz/grants/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "SOUNZ Opportunities", url: "https://www.sounz.org.nz/opportunities", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "NZ Music Foundation", url: "https://www.nzmusicfoundation.org/grants/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "Creative NZ Music Grants", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding?category=music", country: "NZ", disciplines: ["music"], isListPage: true, needsBrowser: true, followLinks: true },
+
+  // ── Music — AUS ───────────────────────────────────────────────────────────
+
+  { name: "PPCA Community & Cultural Fund", url: "https://www.ppca.com.au/grants/", country: "AUS", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "AIR (Aus Independent Record Labels)", url: "https://www.air.org.au/grants", country: "AUS", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "Support Act Wellbeing Fund", url: "https://supportact.org.au/getting-help/wellbeing-fund/", country: "AUS", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "Australia Council — Music", url: "https://www.australiacouncil.gov.au/funding/programs/music/", country: "AUS", disciplines: ["music"], isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Australian Music Centre", url: "https://www.australianmusiccentre.com.au/opportunities", country: "AUS", disciplines: ["music"], isListPage: true, followLinks: true },
+
+  // ── Writing & Poetry — NZ ─────────────────────────────────────────────────
+
+  { name: "Creative NZ Literature Grants", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding?category=literature", country: "NZ", disciplines: ["writing", "poetry"], isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "NZ Book Council", url: "https://www.bookcouncil.org.nz/writers/opportunities/", country: "NZ", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Landfall Journal Submissions", url: "https://www.otago.ac.nz/press/journals/landfall/submissions/", country: "NZ", disciplines: ["writing", "poetry"] },
+  { name: "Sport Literary Journal", url: "https://www.sportjournal.org.nz/", country: "NZ", disciplines: ["writing", "poetry"] },
+  { name: "Starling Magazine", url: "https://starlingmag.com/submissions/", country: "NZ", disciplines: ["poetry", "writing"] },
+  { name: "Verb Wellington Writers Festival", url: "https://verbwellington.nz/", country: "NZ", disciplines: ["writing"] },
+  { name: "NZSA Grants & Awards", url: "https://www.authors.org.nz/grants-and-awards/", country: "NZ", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "NZ Poetry Society", url: "https://poetrysociety.org.nz/competitions-and-awards/", country: "NZ", disciplines: ["poetry"], isListPage: true, followLinks: true },
+
+  // ── Writing & Poetry — AUS ────────────────────────────────────────────────
+
+  { name: "Copyright Agency Cultural Fund", url: "https://www.copyright.com.au/grants-and-schemes/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Writing NSW Opportunities", url: "https://www.writingnsw.com.au/opportunities/", country: "AUS", disciplines: ["writing", "poetry"], isListPage: true, followLinks: true },
+  { name: "Writers Victoria", url: "https://www.writersvictoria.org.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Queensland Writers Centre", url: "https://qwc.com.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Varuna Writers House", url: "https://varuna.com.au/residencies/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Express Media", url: "https://www.expressmedia.org.au/opportunities/", country: "AUS", disciplines: ["writing", "poetry"], isListPage: true, followLinks: true },
+  { name: "Overland Literary Journal", url: "https://overland.org.au/category/open-calls/", country: "AUS", disciplines: ["writing"] },
+  { name: "Meanjin Journal", url: "https://meanjin.com.au/submissions/", country: "AUS", disciplines: ["writing"] },
+  { name: "Australia Council — Literature", url: "https://www.australiacouncil.gov.au/funding/programs/literature/", country: "AUS", disciplines: ["writing"], isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Emerging Writers Festival", url: "https://emergingwritersfestival.org.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
+  { name: "Melbourne Writers Festival Opportunities", url: "https://mwf.com.au/opportunities/", country: "AUS", disciplines: ["writing"] },
+
+  // ── Dance & Performance — NZ ──────────────────────────────────────────────
+
+  { name: "Dance Aotearoa NZ (DANZ)", url: "https://www.danz.org.nz/opportunities/", country: "NZ", disciplines: ["dance"], isListPage: true, followLinks: true },
+  { name: "Tempo Dance Festival", url: "https://www.tempodancefestival.co.nz/", country: "NZ", disciplines: ["dance", "performance"] },
+  { name: "Footnote NZ Dance", url: "https://www.footnotenzdance.co.nz/opportunities/", country: "NZ", disciplines: ["dance"] },
+  { name: "PANNZ Performing Arts Network", url: "https://pannz.org.nz/opportunities/", country: "NZ", disciplines: ["dance", "performance"], isListPage: true, followLinks: true },
+  { name: "Atamira Dance Company", url: "https://www.atamira.co.nz/", country: "NZ", disciplines: ["dance"] },
+  { name: "NZ Fringe Festival", url: "https://www.fringe.co.nz/get-involved/", country: "NZ", disciplines: ["performance"] },
+
+  // ── Dance & Performance — AUS ─────────────────────────────────────────────
+
+  { name: "Ausdance National", url: "https://ausdance.org.au/opportunities/", country: "AUS", disciplines: ["dance"], isListPage: true, followLinks: true },
+  { name: "Australian Dance Theatre", url: "https://www.adt.org.au/opportunities/", country: "AUS", disciplines: ["dance"] },
+  { name: "Chunky Move Open Calls", url: "https://www.chunkymove.com/opportunities/", country: "AUS", disciplines: ["dance", "performance"] },
+  { name: "Australia Council — Dance", url: "https://www.australiacouncil.gov.au/funding/programs/dance/", country: "AUS", disciplines: ["dance"], isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Australia Council — Theatre", url: "https://www.australiacouncil.gov.au/funding/programs/theatre/", country: "AUS", disciplines: ["performance"], isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Melbourne Fringe", url: "https://melbournefringe.com.au/opportunities/", country: "AUS", disciplines: ["performance"], isListPage: true, followLinks: true },
+  { name: "Adelaide Fringe", url: "https://adelaidefringe.com.au/opportunities/", country: "AUS", disciplines: ["performance"] },
+
+  // ── Film — NZ ─────────────────────────────────────────────────────────────
+
+  { name: "NZ Film Commission — Short Films", url: "https://www.nzfilm.co.nz/funding/filmmakers/short-film-funds", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "NZ Film Commission — Feature Development", url: "https://www.nzfilm.co.nz/funding/filmmakers/development", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "NZ Film Commission — Production Finance", url: "https://www.nzfilm.co.nz/funding/filmmakers/production", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "NZ International Film Festival Open Call", url: "https://www.nziff.co.nz/", country: "NZ", disciplines: ["film"] },
+  { name: "Rialto Channel Documentary Fund", url: "https://www.rialtochannel.co.nz/about/for-filmmakers/", country: "NZ", disciplines: ["film"] },
+
+  // ── Film — AUS ────────────────────────────────────────────────────────────
+
+  { name: "Film Victoria", url: "https://www.film.vic.gov.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Screenwest", url: "https://www.screenwest.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Screen Queensland", url: "https://www.screenqueensland.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "South Australian Film Corporation", url: "https://www.safilm.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Screen Tasmania", url: "https://www.screentas.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+
+  // ── Cross-discipline & International ─────────────────────────────────────
+
+  { name: "Asia NZ Foundation", url: "https://www.asianz.org.nz/funding/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Goethe-Institut NZ", url: "https://www.goethe.de/ins/nz/en/kul/bku.html", country: "Global", isListPage: true, followLinks: true },
+  { name: "ST PAUL St Gallery Auckland", url: "https://stpaulst.auckland.ac.nz/", country: "NZ", disciplines: ["visual_art"] },
+  { name: "Creative Live Arts NZ (CLANZ)", url: "https://clanz.org.nz/opportunities/", country: "NZ", disciplines: ["performance"], isListPage: true, followLinks: true },
+  { name: "Auckland Arts Festival", url: "https://www.aucklandartsday.co.nz/opportunities/", country: "NZ", isListPage: true, followLinks: true },
+  { name: "Chamber Music NZ", url: "https://www.chambermusic.co.nz/opportunities/", country: "NZ", disciplines: ["music"] },
+  { name: "NZ Opera Emerging Artists", url: "https://www.nzopera.com/education/opportunities/", country: "NZ", disciplines: ["music", "performance"] },
+  { name: "Objectspace Open Calls", url: "https://objectspace.org.nz/opportunities/", country: "NZ", disciplines: ["craft", "visual_art"], isListPage: true, followLinks: true },
 
 ];

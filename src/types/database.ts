@@ -1,4 +1,47 @@
 export type CountryEnum = "NZ" | "AUS" | "Global" | "UK" | "US" | "EU";
+
+export type DisciplineEnum =
+  | "visual_art"
+  | "music"
+  | "poetry"
+  | "writing"
+  | "dance"
+  | "film"
+  | "photography"
+  | "craft"
+  | "performance"
+  | "other";
+
+export type ContentTypeEnum = "image" | "audio" | "video" | "text" | "document" | "embed";
+
+export interface CreativeWork {
+  id: string;
+  profile_id: string;
+  creator_id: string;
+  current_owner_id: string;
+  discipline: DisciplineEnum;
+  content_type: ContentTypeEnum;
+  title: string | null;
+  caption: string | null;
+  description: string | null;
+  year_created: number | null;
+  medium_detail: string | null;
+  duration_seconds: number | null;
+  image_url: string | null;
+  audio_url: string | null;
+  video_url: string | null;
+  text_content: string | null;
+  embed_url: string | null;
+  embed_provider: string | null;
+  price: string | null;
+  is_available: boolean;
+  hide_available: boolean;
+  hide_from_archive: boolean;
+  hide_price: boolean;
+  collection_visible: boolean;
+  position: number;
+  created_at: string;
+}
 export type OppTypeEnum =
   | "Grant"
   | "Residency"
@@ -132,6 +175,7 @@ export interface Profile {
   marketing_subscription: boolean;
   weekly_digest: boolean;
   support_enabled: boolean;
+  disciplines: DisciplineEnum[] | null;
   created_at: string;
 }
 
@@ -209,6 +253,7 @@ export interface ProfileFilters {
   country?: CountryEnum;
   career_stage?: CareerStageEnum;
   medium?: string;
+  discipline?: DisciplineEnum;
 }
 
 export interface Conversation {
@@ -238,8 +283,15 @@ export interface ProjectUpdate {
   id: string;
   artist_id: string;
   project_id: string | null;
-  image_url: string;
+  image_url: string | null;
   caption: string | null;
+  content_type: ContentTypeEnum;
+  discipline: DisciplineEnum | null;
+  audio_url: string | null;
+  video_url: string | null;
+  text_content: string | null;
+  embed_url: string | null;
+  embed_provider: string | null;
   created_at: string;
 }
 

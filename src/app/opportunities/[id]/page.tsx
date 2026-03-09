@@ -14,6 +14,9 @@ import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALin
 import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
 
+const FUNDING_TYPES = new Set(["Grant", "Prize", "Commission"]);
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -23,20 +26,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const opp = await getOpportunityById(id);
   if (!opp) return { title: "Opportunity not found — Patronage" };
 
-  const description =
-    opp.caption ??
-    opp.description ??
-    `${opp.type} open to ${opp.country} artists, offered by ${opp.organiser}.`;
+  const rawDescription = opp.caption ?? opp.description ?? opp.full_description ?? null;
+  const description = rawDescription
+    ? rawDescription.length > 155
+      ? rawDescription.slice(0, 152) + "…"
+      : rawDescription
+    : `${opp.type} offered by ${opp.organiser} on Patronage.`;
+
+  const title = `${opp.title} — ${opp.organiser} | Patronage`;
+  const canonicalPath = `/opportunities/${opp.slug ?? opp.id}`;
 
   return {
-    title: `${opp.title} — ${opp.type} | Patronage`,
+    title,
     description,
+    alternates: { canonical: canonicalPath },
     openGraph: {
-      title: `${opp.title} — ${opp.type} | Patronage`,
+      title,
       description,
+      url: canonicalPath,
+      type: "website",
       ...(opp.featured_image_url && {
         images: [{ url: opp.featured_image_url, width: 1200, height: 630, alt: opp.title }],
       }),
+    },
+    twitter: {
+      card: opp.featured_image_url ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(opp.featured_image_url && { images: [opp.featured_image_url] }),
     },
   };
 }
@@ -120,8 +137,26 @@ export default async function OpportunityPage({ params }: Props) {
   const isJobOpportunity = opp.type === "Job / Employment";
   const canApply = isPipeline && (isArtist || (userRole === "patron" && isJobOpportunity));
 
+  const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
+  const schemaType = FUNDING_TYPES.has(opp.type) ? "Grant" : "Event";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": schemaType,
+    name: opp.title,
+    organizer: { "@type": "Organization", name: opp.organiser },
+    ...(opp.opens_at && { startDate: opp.opens_at }),
+    ...(opp.deadline && { endDate: opp.deadline }),
+    url: canonicalUrl,
+    ...(opp.full_description && { description: opp.full_description }),
+    location: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ViewTracker opportunityId={opp.id} />
 
       {/* Header: breadcrumb + admin edit + X close */}

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Music, Play, ExternalLink, FileText } from "lucide-react";
 import { deleteUpdate } from "@/actions/updates";
 import { AssignProjectButton } from "./AssignProjectButton";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
@@ -111,6 +111,68 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
   );
 }
 
+// Sub-tile components for non-image content types
+
+function AudioTileContent({ u }: { u: ProjectUpdateWithArtist }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 bg-zinc-900 text-white">
+      <Music className="w-8 h-8 opacity-50" />
+      {u.caption && (
+        <p className="text-xs text-center line-clamp-3 opacity-80 leading-snug">{u.caption}</p>
+      )}
+      {u.discipline && (
+        <span className="text-[9px] uppercase tracking-widest opacity-40">
+          {u.discipline.replace(/_/g, " ")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function VideoTileContent({ u }: { u: ProjectUpdateWithArtist }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 bg-zinc-900 text-white">
+      <Play className="w-8 h-8 opacity-50" />
+      {u.caption && (
+        <p className="text-xs text-center line-clamp-3 opacity-80 leading-snug">{u.caption}</p>
+      )}
+    </div>
+  );
+}
+
+function TextTileContent({ u }: { u: ProjectUpdateWithArtist }) {
+  return (
+    <div className="w-full h-full flex flex-col gap-2 p-3 bg-background overflow-hidden">
+      {u.discipline && (
+        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+          {u.discipline.replace(/_/g, " ")}
+        </span>
+      )}
+      {u.text_content ? (
+        <p className="text-xs leading-relaxed line-clamp-[9] text-foreground">{u.text_content}</p>
+      ) : u.caption ? (
+        <p className="text-xs leading-relaxed line-clamp-[9] text-foreground">{u.caption}</p>
+      ) : (
+        <FileText className="w-6 h-6 opacity-30 m-auto" />
+      )}
+    </div>
+  );
+}
+
+function EmbedTileContent({ u }: { u: ProjectUpdateWithArtist }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 bg-muted">
+      <ExternalLink className="w-6 h-6 opacity-40" />
+      {u.embed_provider && (
+        <p className="text-xs text-muted-foreground">{u.embed_provider}</p>
+      )}
+      {u.caption && (
+        <p className="text-xs text-center line-clamp-2 text-muted-foreground">{u.caption}</p>
+      )}
+    </div>
+  );
+}
+
 function Tile({
   u,
   isOwner,
@@ -129,7 +191,6 @@ function Tile({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  // Project updates → thread; standalone updates → single update page
   const href = u.project_id
     ? `/threads/${u.project_id}`
     : from
@@ -140,44 +201,66 @@ function Tile({
     e.preventDefault();
     e.stopPropagation();
     startTransition(async () => {
-      await deleteUpdate(u.id, u.image_url);
+      await deleteUpdate(u.id, {
+        image_url: u.image_url,
+        audio_url: u.audio_url,
+        video_url: u.video_url,
+      });
       onDeleted(u.id);
       router.refresh();
     });
   }
 
+  const isImage = u.content_type === "image";
+  // Non-image carousel tiles get a square tile so they have a defined width
+  const fixedStyle = fixed
+    ? isImage
+      ? { width: "max-content" as const }
+      : { width: CAROUSEL_H }
+    : undefined;
+
   return (
-    <div className="flex-none flex flex-col gap-1" style={fixed ? { width: "max-content" } : undefined}>
-      {/*
-        Carousel (fixed=true): natural width at CAROUSEL_H — variable-width tiles suit horizontal scroll.
-        Expanded grid (fixed=false): fill container with object-cover for a clean aligned grid.
-      */}
+    <div className="flex-none flex flex-col gap-1" style={fixedStyle}>
       <div
         className="group relative border border-border overflow-hidden bg-muted"
         style={{ height: CAROUSEL_H }}
       >
-        <Link href={href} className={fixed ? "inline-flex h-full" : "absolute inset-0"}>
-          {fixed ? (
-            // Plain <img> so the browser uses the actual image's intrinsic aspect ratio
-            // (Next.js Image with width/height props bakes in a fixed ratio, breaking width: auto)
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={u.image_url}
-              alt={u.caption ?? "Studio update"}
-              style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
-            />
+        <Link
+          href={href}
+          className={fixed && isImage ? "inline-flex h-full" : "absolute inset-0"}
+        >
+          {isImage && u.image_url ? (
+            fixed ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={u.image_url}
+                alt={u.caption ?? "Studio update"}
+                style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
+              />
+            ) : (
+              <Image
+                src={u.image_url}
+                alt={u.caption ?? "Studio update"}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            )
+          ) : u.content_type === "audio" ? (
+            <AudioTileContent u={u} />
+          ) : u.content_type === "video" ? (
+            <VideoTileContent u={u} />
+          ) : u.content_type === "text" ? (
+            <TextTileContent u={u} />
+          ) : u.content_type === "embed" ? (
+            <EmbedTileContent u={u} />
           ) : (
-            <Image
-              src={u.image_url}
-              alt={u.caption ?? "Studio update"}
-              fill
-              unoptimized
-              className="object-cover"
-            />
+            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+              Update
+            </div>
           )}
         </Link>
 
-        {/* Owner controls: assign to project (top-left) + delete (top-right) */}
         {isOwner && (
           <>
             <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -199,7 +282,6 @@ function Tile({
         )}
       </div>
 
-      {/* Caption + timestamp */}
       {(u.caption || isOwner) && (
         <div className="space-y-0.5">
           {u.caption && (

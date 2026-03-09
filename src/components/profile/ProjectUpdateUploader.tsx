@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import type { ProjectUpdate } from "@/types/database";
 
 const MAX_PX = 1600;
-const MAX_CAPTION = 120;
 
 async function resizeImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -92,9 +91,11 @@ export function ProjectUpdateUploader({ profileId }: Props) {
     setUploading(false);
   }
 
-  async function handleDelete(id: string, imageUrl: string) {
-    const path = imageUrl.split("/portfolio/")[1];
-    await supabase.storage.from("portfolio").remove([path]);
+  async function handleDelete(id: string, imageUrl: string | null) {
+    if (imageUrl) {
+      const path = imageUrl.split("/portfolio/")[1];
+      if (path) await supabase.storage.from("portfolio").remove([path]);
+    }
     await supabase.from("project_updates").delete().eq("id", id);
     setUpdates((prev) => prev.filter((u) => u.id !== id));
   }
@@ -131,18 +132,13 @@ export function ProjectUpdateUploader({ profileId }: Props) {
 
         {preview && (
           <div className="space-y-2 max-w-sm">
-            <div className="relative">
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION))}
-                placeholder="Add a caption… (optional, max 120 chars)"
-                rows={2}
-                className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
-              />
-              <span className="absolute bottom-2 right-2 text-xs text-muted-foreground font-mono">
-                {caption.length}/{MAX_CAPTION}
-              </span>
-            </div>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Add a caption… (optional)"
+              rows={2}
+              className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+            />
             <button
               onClick={handlePost}
               disabled={uploading}
@@ -161,13 +157,19 @@ export function ProjectUpdateUploader({ profileId }: Props) {
         <div className="grid grid-cols-3 gap-2">
           {updates.map((u) => (
             <div key={u.id} className="group relative aspect-square border border-border overflow-hidden bg-muted">
-              <Image
-                src={u.image_url}
-                alt={u.caption ?? "Studio update"}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 33vw, 200px"
-              />
+              {u.image_url ? (
+                <Image
+                  src={u.image_url}
+                  alt={u.caption ?? "Studio update"}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 33vw, 200px"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-[9px] uppercase text-muted-foreground">{u.content_type ?? "update"}</span>
+                </div>
+              )}
               {u.caption && (
                 <div className="absolute bottom-0 inset-x-0 bg-background/80 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <p className="text-xs leading-snug line-clamp-2">{u.caption}</p>

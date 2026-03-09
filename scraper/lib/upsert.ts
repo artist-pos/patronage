@@ -8,10 +8,17 @@ const supabase = createClient(
 
 const ALLOWED_COUNTRIES = new Set(["NZ", "AUS", "Global"]);
 
+export interface SourceMeta {
+  disciplines?: string[];
+  is_recurring?: boolean;
+  recurrence_pattern?: string;
+}
+
 export async function upsertOpportunity(
   opp: ScrapedOpportunity,
   sourceUrl: string,
-  ogImage: string | null
+  ogImage: string | null,
+  sourceMeta?: SourceMeta
 ): Promise<"inserted" | "updated" | "skipped"> {
   // Region filter — skip anything not open to NZ/AUS artists
   if (opp.country && !ALLOWED_COUNTRIES.has(opp.country)) return "skipped";
@@ -30,7 +37,7 @@ export async function upsertOpportunity(
       // Still pending — refresh data
       await supabase
         .from("opportunities")
-        .update(buildRecord(opp, sourceUrl, ogImage))
+        .update(buildRecord(opp, sourceUrl, ogImage, sourceMeta))
         .eq("id", byUrl.id);
       return "updated";
     }
@@ -47,14 +54,14 @@ export async function upsertOpportunity(
       if (byTitle.status === "published" || byTitle.status === "rejected") return "skipped";
       await supabase
         .from("opportunities")
-        .update(buildRecord(opp, sourceUrl, ogImage))
+        .update(buildRecord(opp, sourceUrl, ogImage, sourceMeta))
         .eq("id", byTitle.id);
       return "updated";
     }
   }
 
   // New opportunity — insert as pending
-  const record = buildRecord(opp, sourceUrl, ogImage);
+  const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
   const { data: inserted, error } = await supabase
     .from("opportunities")
     .insert({ ...record, status: "pending", is_active: true })
@@ -84,7 +91,15 @@ function toSlug(title: string, id: string): string {
     "-" + id.slice(0, 8);
 }
 
-function buildRecord(opp: ScrapedOpportunity, sourceUrl: string, ogImage: string | null) {
+function buildRecord(
+  opp: ScrapedOpportunity,
+  sourceUrl: string,
+  ogImage: string | null,
+  sourceMeta?: SourceMeta
+) {
+  // Merge AI-extracted disciplines with source-level hints, deduplicated
+  const disciplines = [...new Set([...(opp.disciplines ?? []), ...(sourceMeta?.disciplines ?? [])])];
+
   return {
     title: opp.title.slice(0, 255),
     organiser: opp.organiser.slice(0, 255),
@@ -97,6 +112,9 @@ function buildRecord(opp: ScrapedOpportunity, sourceUrl: string, ogImage: string
     funding_range: opp.funding_range ?? null,
     featured_image_url: opp.featured_image_url ?? ogImage ?? null,
     source_url: sourceUrl,
+    disciplines: disciplines.length > 0 ? disciplines : null,
+    is_recurring: sourceMeta?.is_recurring ?? false,
+    recurrence_pattern: sourceMeta?.recurrence_pattern ?? null,
   };
 }
 

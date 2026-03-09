@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MediumInput } from "./MediumInput";
-import type { Profile } from "@/types/database";
+import { DisciplineInput } from "./DisciplineInput";
+import type { Profile, DisciplineEnum } from "@/types/database";
 
 const COUNTRIES = ["NZ", "AUS", "Global"] as const;
 const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
@@ -108,8 +109,22 @@ export function ProfileForm({ profile, role }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label>{isArtist ? "Medium" : "Taste"}</Label>
-        <MediumInput defaultValue={profile?.medium ?? []} />
+        {isArtist ? (
+          <>
+            <Label>Disciplines</Label>
+            <p className="text-xs text-muted-foreground">
+              Select all that apply to your practice.
+            </p>
+            <DisciplineInput
+              defaultValue={(profile?.disciplines ?? []) as DisciplineEnum[]}
+            />
+          </>
+        ) : (
+          <>
+            <Label>Taste</Label>
+            <MediumInput defaultValue={profile?.medium ?? []} />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

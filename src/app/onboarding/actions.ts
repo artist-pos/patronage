@@ -29,6 +29,11 @@ export async function upsertProfileAction(
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  const disciplinesRaw = (formData.get("disciplines") as string) ?? "";
+  const disciplines = disciplinesRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const website_url = (formData.get("website_url") as string)?.trim() || null;
   const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
 
@@ -60,6 +65,7 @@ export async function upsertProfileAction(
     country: country || null,
     career_stage: career_stage || null,
     medium: medium.length > 0 ? medium : null,
+    disciplines: disciplines.length > 0 ? disciplines : null,
     website_url,
     instagram_handle,
   });

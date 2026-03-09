@@ -21,11 +21,17 @@ import { StudioTab } from "@/components/profile/tabs/StudioTab";
 import { CvTab } from "@/components/profile/tabs/CvTab";
 import { PressTab } from "@/components/profile/tabs/PressTab";
 import { SupportTab } from "@/components/profile/tabs/SupportTab";
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 
 const VALID_TABS = ["overview", "work", "studio", "cv", "press", "support"] as const;
 type TabType = typeof VALID_TABS[number];
+
+const DISCIPLINE_LABELS: Record<string, string> = {
+  visual_art: "Visual Art", music: "Music", poetry: "Poetry",
+  writing: "Writing", dance: "Dance", film: "Film",
+  photography: "Photography", craft: "Craft", performance: "Performance", other: "Other",
+};
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -38,25 +44,51 @@ export async function generateMetadata({ params }: Props) {
   if (!profile) return { title: "Artist not found — Patronage" };
 
   const displayName = profile.full_name ?? profile.username;
-  const description = profile.bio
-    ? profile.bio.slice(0, 160)
-    : `View ${displayName}'s artist portfolio on Patronage.`;
 
-  const ogImage = profile.featured_image_url
-    ? { url: profile.featured_image_url, width: 1200, height: 630, alt: `${displayName} — Patronage` }
+  // Discipline labels for title
+  const disciplineLabels = profile.disciplines?.length
+    ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
+    : (profile.medium ?? []);
+  const disciplineStr = disciplineLabels.join(", ");
+
+  const title = disciplineStr
+    ? `${displayName} — ${disciplineStr} | Patronage`
+    : `${displayName} | Patronage`;
+
+  // Bio truncated to 155 chars
+  const description = profile.bio
+    ? profile.bio.length > 155
+      ? profile.bio.slice(0, 152) + "…"
+      : profile.bio
+    : `View ${displayName}'s profile on Patronage.`;
+
+  // OG image: featured banner first, avatar fallback
+  const ogImageUrl = profile.featured_image_url ?? profile.avatar_url ?? null;
+  const ogImage = ogImageUrl
+    ? { url: ogImageUrl, width: 1200, height: 630, alt: `${displayName} — Patronage` }
     : null;
 
+  const profileUrl = `/${username}`;
+
   return {
-    title: `${displayName} | Artist Portfolio | Patronage`,
+    title,
     description,
+    alternates: { canonical: profileUrl },
     openGraph: {
-      title: `${displayName} | Artist Portfolio | Patronage`,
+      title,
       description,
+      url: profileUrl,
+      type: "profile",
       ...(ogImage && { images: [ogImage] }),
+      ...(profile.full_name && {
+        firstName: profile.full_name.split(" ")[0],
+        lastName: profile.full_name.split(" ").slice(1).join(" ") || undefined,
+      }),
+      username,
     },
     twitter: {
       card: "summary_large_image",
-      title: `${displayName} | Artist Portfolio | Patronage`,
+      title,
       description,
       ...(ogImage && { images: [ogImage.url] }),
     },
@@ -91,7 +123,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks, profileOpportunities] =
+  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks, profileOpportunities, creativeWorks] =
     await Promise.all([
       // Bucket A: archival portfolio — not for sale, still owned by the creator
       // Non-owners only see works with hide_from_archive = false
@@ -169,6 +201,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             .order("created_at", { ascending: false })
             .then(({ data }) => (data ?? []) as Opportunity[])
         : Promise.resolve([] as Opportunity[]),
+      // Creative works (multi-discipline: images, audio, video, writing)
+      isArtistProfile
+        ? supabase
+            .from("creative_works")
+            .select("*")
+            .eq("profile_id", profile.id)
+            .order("position", { ascending: true })
+            .then(({ data }) => (data ?? []) as CreativeWork[])
+        : Promise.resolve([] as CreativeWork[]),
     ]);
 
   const images = portfolioImages;
@@ -192,8 +233,35 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const exhibitions = (profile.exhibition_history ?? []) as ExhibitionEntry[];
   const bibliography = (profile.press_bibliography ?? []) as BibliographyEntry[];
 
+  // Build discipline labels for JSON-LD jobTitle
+  const jsonLdDisciplines = profile.disciplines?.length
+    ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
+    : (profile.medium ?? []);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: displayName,
+    url: `https://patronage.nz/${profile.username}`,
+    ...(profile.avatar_url && { image: profile.avatar_url }),
+    ...(profile.bio && { description: profile.bio }),
+    ...(jsonLdDisciplines.length > 0 && {
+      jobTitle: jsonLdDisciplines.join(", "),
+    }),
+    ...(profile.country && {
+      address: {
+        "@type": "PostalAddress",
+        addressCountry: profile.country,
+      },
+    }),
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
       {/* ── Banner ── */}
@@ -275,11 +343,16 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                     {profile.career_stage}
                   </span>
                 )}
-                {isArtistProfile && (profile.medium ?? []).map((m) => (
-                  <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                    {m}
-                  </span>
-                ))}
+                {isArtistProfile && (() => {
+                  const chips = profile.disciplines?.length
+                    ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
+                    : (profile.medium ?? []);
+                  return chips.map((label) => (
+                    <span key={label} className="text-xs border border-black px-1.5 py-0.5 leading-none">
+                      {label}
+                    </span>
+                  ));
+                })()}
               </div>
 
               {/* Taste chips — patron/partner only */}
@@ -404,6 +477,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   projects={artistProjects}
                   profileId={profile.id}
+                  creativeWorks={creativeWorks}
                 />
               )}
 

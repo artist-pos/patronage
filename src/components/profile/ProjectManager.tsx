@@ -151,13 +151,17 @@ function ProjectRow({
                     assigned ? "border-black ring-2 ring-black ring-offset-1" : "border-border opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <Image
-                    src={u.image_url}
-                    alt={u.caption ?? "Update"}
-                    fill
-                    className="object-cover"
-                    sizes="56px"
-                  />
+                  {u.image_url ? (
+                    <Image
+                      src={u.image_url}
+                      alt={u.caption ?? "Update"}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  ) : (
+                    <span className="text-[8px] uppercase text-muted-foreground">{u.content_type}</span>
+                  )}
                 </button>
               );
             })}

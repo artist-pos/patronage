@@ -136,16 +136,31 @@ function ModalThreadPost({
           {formatTimestamp(post.created_at)}
         </p>
 
-        <div className="border border-black overflow-hidden bg-muted">
-          <Image
-            src={post.image_url}
-            alt={post.caption ?? "Studio update"}
-            width={800}
-            height={600}
-            unoptimized
-            className="w-full h-auto"
-          />
-        </div>
+        {post.image_url && (
+          <div className="border border-black overflow-hidden bg-muted">
+            <Image
+              src={post.image_url}
+              alt={post.caption ?? "Studio update"}
+              width={800}
+              height={600}
+              unoptimized
+              className="w-full h-auto"
+            />
+          </div>
+        )}
+        {post.content_type === "audio" && post.audio_url && (
+          <div className="border border-black bg-zinc-900 p-4">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio controls className="w-full" src={post.audio_url} />
+          </div>
+        )}
+        {post.content_type === "text" && post.text_content && (
+          <div className="border border-black p-4 bg-background">
+            {post.text_content.split("\n\n").map((para, i) => (
+              <p key={i} className="mb-3 text-sm leading-relaxed last:mb-0">{para}</p>
+            ))}
+          </div>
+        )}
 
         {post.caption && (
           <p className="text-base leading-relaxed">{post.caption}</p>

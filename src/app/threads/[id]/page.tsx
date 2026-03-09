@@ -165,19 +165,34 @@ function ThreadPostItem({
           {formatTimestamp(post.created_at)}
         </p>
 
-        {/* Image */}
-        <div className="border border-black overflow-hidden bg-muted">
-          <Link href={`/projects/${post.id}?from=thread&t=${post.project_id}`}>
-            <Image
-              src={post.image_url}
-              alt={post.caption ?? "Studio update"}
-              width={800}
-              height={600}
-              unoptimized
-              className="w-full h-auto"
-            />
-          </Link>
-        </div>
+        {/* Media */}
+        {post.image_url && (
+          <div className="border border-black overflow-hidden bg-muted">
+            <Link href={`/projects/${post.id}?from=thread&t=${post.project_id}`}>
+              <Image
+                src={post.image_url}
+                alt={post.caption ?? "Studio update"}
+                width={800}
+                height={600}
+                unoptimized
+                className="w-full h-auto"
+              />
+            </Link>
+          </div>
+        )}
+        {post.content_type === "audio" && post.audio_url && (
+          <div className="border border-black bg-zinc-900 p-4">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio controls className="w-full" src={post.audio_url} />
+          </div>
+        )}
+        {post.content_type === "text" && post.text_content && (
+          <div className="border border-black p-4 bg-background">
+            {post.text_content.split("\n\n").map((para, i) => (
+              <p key={i} className="mb-3 text-sm leading-relaxed last:mb-0">{para}</p>
+            ))}
+          </div>
+        )}
 
         {/* Caption */}
         {post.caption && (

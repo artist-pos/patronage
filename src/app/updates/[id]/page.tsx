@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getUpdateById } from "@/lib/feed";
+import type { ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -13,13 +14,91 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const update = await getUpdateById(id);
   if (!update) return { title: "Update not found — Patronage" };
   const name = update.artist_full_name ?? update.artist_username;
+  const ogImages = update.image_url
+    ? [{ url: update.image_url, alt: update.caption ?? name }]
+    : [];
   return {
     title: `${name} — Studio Update | Patronage`,
     description: update.caption ?? `Studio update from ${name} on Patronage.`,
-    openGraph: {
-      images: [{ url: update.image_url, alt: update.caption ?? name }],
-    },
+    openGraph: { images: ogImages },
   };
+}
+
+function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: string }) {
+  const { content_type, image_url, audio_url, video_url, text_content, embed_url } = update;
+
+  if (content_type === "image" && image_url) {
+    return (
+      <div className="border border-black overflow-hidden bg-muted">
+        <Image
+          src={image_url}
+          alt={update.caption ?? `Studio update by ${name}`}
+          width={1200}
+          height={900}
+          priority
+          unoptimized
+          className="w-full h-auto max-h-[70vh] object-contain"
+        />
+      </div>
+    );
+  }
+
+  if (content_type === "audio") {
+    return (
+      <div className="border border-black bg-zinc-900 text-white p-8 space-y-4">
+        {audio_url && (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <audio controls className="w-full" src={audio_url} />
+        )}
+        {embed_url && !audio_url && (
+          <iframe src={embed_url} width="100%" height="166" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen" className="w-full" />
+        )}
+      </div>
+    );
+  }
+
+  if (content_type === "video") {
+    if (embed_url) {
+      return (
+        <div className="border border-black bg-black overflow-hidden aspect-video">
+          <iframe src={embed_url} title={update.caption ?? `Video by ${name}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
+        </div>
+      );
+    }
+    if (video_url) {
+      return (
+        <div className="border border-black bg-black overflow-hidden">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video controls className="w-full max-h-[70vh]" src={video_url} />
+        </div>
+      );
+    }
+  }
+
+  if (content_type === "embed" && embed_url) {
+    return (
+      <div className="border border-black overflow-hidden">
+        <iframe src={embed_url} title={update.caption ?? `Embed by ${name}`} allowFullScreen className="w-full" style={{ height: 400 }} />
+      </div>
+    );
+  }
+
+  if (content_type === "text" && text_content) {
+    return (
+      <div className="border border-black p-6 sm:p-8 bg-background">
+        {update.discipline && (
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
+            {update.discipline.replace(/_/g, " ")}
+          </p>
+        )}
+        {text_content.split("\n\n").map((para, i) => (
+          <p key={i} className="mb-4 leading-relaxed text-base last:mb-0">{para}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default async function UpdatePage({ params }: Props) {
@@ -37,27 +116,14 @@ export default async function UpdatePage({ params }: Props) {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 space-y-8">
 
-      {/* Back */}
-      <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+      <Link href="/feed" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
         ← Back to feed
       </Link>
 
-      {/* Image */}
-      <div className="border border-black overflow-hidden bg-muted">
-        <Image
-          src={update.image_url}
-          alt={update.caption ?? `Studio update by ${name}`}
-          width={1200}
-          height={900}
-          priority
-          unoptimized
-          className="w-full h-auto max-h-[70vh] object-contain"
-        />
-      </div>
+      <UpdateMedia update={update} name={name} />
 
-      {/* Meta */}
       <div className="space-y-4">
-        {update.caption && (
+        {update.caption && update.content_type !== "text" && (
           <p className="text-base leading-relaxed">{update.caption}</p>
         )}
 

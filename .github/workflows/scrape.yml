@@ -2,8 +2,8 @@ name: Scrape Opportunities
 
 on:
   schedule:
-    # Every Monday at 9am NZST (UTC+13 in summer) = Sunday 8pm UTC
-    - cron: "0 20 * * 0"
+    # Every Tuesday at 10pm NZST (UTC+13 in summer) = Wednesday 10:00 UTC
+    - cron: "0 10 * * 3"
   workflow_dispatch:
     # Also triggerable manually from GitHub Actions tab
 

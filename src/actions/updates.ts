@@ -3,18 +3,29 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function deleteUpdate(updateId: string, imageUrl: string) {
+interface UpdateUrls {
+  image_url?: string | null;
+  audio_url?: string | null;
+  video_url?: string | null;
+}
+
+async function removeFromBucket(supabase: Awaited<ReturnType<typeof createClient>>, bucket: string, url: string) {
+  const marker = `/${bucket}/`;
+  const idx = url.indexOf(marker);
+  if (idx !== -1) {
+    const path = decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
+    await supabase.storage.from(bucket).remove([path]);
+  }
+}
+
+export async function deleteUpdate(updateId: string, urls: UpdateUrls = {}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Attempt to remove from storage (path is everything after /portfolio/)
-  const marker = "/portfolio/";
-  const idx = imageUrl.indexOf(marker);
-  if (idx !== -1) {
-    const path = decodeURIComponent(imageUrl.slice(idx + marker.length).split("?")[0]);
-    await supabase.storage.from("portfolio").remove([path]);
-  }
+  if (urls.image_url) await removeFromBucket(supabase, "portfolio", urls.image_url);
+  if (urls.audio_url) await removeFromBucket(supabase, "audio", urls.audio_url);
+  if (urls.video_url) await removeFromBucket(supabase, "video", urls.video_url);
 
   await supabase
     .from("project_updates")

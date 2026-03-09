@@ -176,12 +176,18 @@ export function OverviewTab({
                   className="overflow-hidden border border-border bg-muted"
                   style={{ height: 180 }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={u.image_url}
-                    alt={u.caption ?? "Studio update"}
-                    style={{ height: 180, width: "auto", display: "block" }}
-                  />
+                  {u.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={u.image_url}
+                      alt={u.caption ?? "Studio update"}
+                      style={{ height: 180, width: "auto", display: "block" }}
+                    />
+                  ) : (
+                    <div className="h-full w-[180px] flex items-center justify-center">
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{u.content_type}</span>
+                    </div>
+                  )}
                 </div>
                 {u.caption && (
                   <p className="text-[10px] text-muted-foreground mt-1 leading-snug line-clamp-1">
