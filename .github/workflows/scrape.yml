@@ -9,9 +9,13 @@ on:
 
 jobs:
   scrape:
-    name: Run opportunity scraper
+    name: Scrape — Tier ${{ matrix.tier }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [1, 2, 3, 4]
 
     steps:
       - name: Checkout
@@ -32,10 +36,21 @@ jobs:
         working-directory: scraper
         run: npx playwright install chromium --with-deps
 
-      - name: Run scraper
+      - name: Run scraper (Tier ${{ matrix.tier }})
         working-directory: scraper
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCRAPER_TIER: ${{ matrix.tier }}
+          SCRAPER_STATS_PATH: /tmp/stats-tier-${{ matrix.tier }}.json
         run: npm run scrape
+
+      - name: Upload tier stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stats-tier-${{ matrix.tier }}
+          path: /tmp/stats-tier-${{ matrix.tier }}.json
+          if-no-files-found: warn
+
