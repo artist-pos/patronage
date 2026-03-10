@@ -33,7 +33,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
   const [portfolioResult, availableResult, soldResult] = await Promise.all([
     supabase
       .from("portfolio_images")
-      .select("id, url, caption, description, is_featured, hide_from_archive, position, created_at, content_type")
+      .select("id, url, caption, description, hide_from_archive, position, created_at, content_type")
       .eq("profile_id", user.id)
       .eq("is_available", false)
       .order("position", { ascending: true }),
@@ -51,11 +51,24 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false }),
   ]);
 
-  const portfolioWorks = portfolioResult.data ?? [];
+  // is_featured requires migration 041 — fetch separately so the page works without it
+  const { data: featuredRows } = await supabase
+    .from("portfolio_images")
+    .select("id, is_featured")
+    .eq("profile_id", user.id)
+    .eq("is_available", false)
+    .eq("is_featured", true);
+
+  const featuredIds = new Set((featuredRows ?? []).map((r: { id: string }) => r.id));
+
+  const portfolioWorks = (portfolioResult.data ?? []).map(w => ({
+    ...w,
+    is_featured: featuredIds.has(w.id),
+  }));
   const availableWorks = availableResult.data ?? [];
   const soldWorks = soldResult.data ?? [];
 
-  const featuredCount = portfolioWorks.filter(w => w.is_featured).length;
+  const featuredCount = featuredIds.size;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-8">
