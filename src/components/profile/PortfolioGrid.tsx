@@ -10,6 +10,7 @@ interface Props {
   viewerRole?: string | null;
   profileId?: string;
   limit?: number;
+  isOwner?: boolean;
 }
 
 function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
@@ -48,11 +49,17 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   );
 }
 
-export function PortfolioGrid({ images, artistName, viewerRole, profileId, limit }: Props) {
+export function PortfolioGrid({ images, artistName, viewerRole, profileId, limit, isOwner }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [localImages, setLocalImages] = useState<PortfolioImage[]>(images);
 
-  const displayed = limit ? images.slice(0, limit) : images;
+  const displayed = limit ? localImages.slice(0, limit) : localImages;
   const selectedImg = selectedIndex !== null ? displayed[selectedIndex] : null;
+  const featuredCount = localImages.filter(i => i.is_featured).length;
+
+  function handleFeaturedToggle(id: string, featured: boolean) {
+    setLocalImages(prev => prev.map(img => img.id === id ? { ...img, is_featured: featured } : img));
+  }
 
   return (
     <>
@@ -77,6 +84,9 @@ export function PortfolioGrid({ images, artistName, viewerRole, profileId, limit
           artistName={artistName}
           viewerRole={viewerRole}
           profileId={profileId}
+          isOwner={isOwner}
+          featuredCount={featuredCount}
+          onFeaturedToggle={handleFeaturedToggle}
         />
       )}
     </>

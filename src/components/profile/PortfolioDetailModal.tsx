@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
 import { trackEvent } from "@/actions/trackEvent";
+import { toggleFeaturedWork } from "@/app/profile/available-work-actions";
 
 interface Props {
   img: PortfolioImage;
@@ -15,9 +16,29 @@ interface Props {
   artistName?: string;
   viewerRole?: string | null;
   profileId?: string;
+  isOwner?: boolean;
+  featuredCount?: number;
+  onFeaturedToggle?: (id: string, featured: boolean) => void;
 }
 
-export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, hasNext, artistName, viewerRole, profileId }: Props) {
+export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, hasNext, artistName, viewerRole, profileId, isOwner, featuredCount = 0, onFeaturedToggle }: Props) {
+  const [featured, setFeatured] = useState(img.is_featured);
+  const [toggling, setToggling] = useState(false);
+  const [featErr, setFeatErr] = useState<string | null>(null);
+
+  async function handleFeaturedToggle() {
+    setToggling(true);
+    setFeatErr(null);
+    const next = !featured;
+    const result = await toggleFeaturedWork(img.id, next, featuredCount);
+    if (result.error) {
+      setFeatErr(result.error);
+    } else {
+      setFeatured(next);
+      onFeaturedToggle?.(img.id, next);
+    }
+    setToggling(false);
+  }
   useEffect(() => {
     if (profileId) {
       trackEvent("artwork_view", { profile_id: profileId, artwork_id: img.id }).catch(() => {});
@@ -105,6 +126,26 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
               <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {img.description}
               </p>
+            )}
+
+            {isOwner && (
+              <div className="pt-2 border-t border-border space-y-1">
+                <button
+                  onClick={handleFeaturedToggle}
+                  disabled={toggling}
+                  className={`text-xs px-2.5 py-1 border transition-colors disabled:opacity-40 ${
+                    featured
+                      ? "bg-black text-white border-black"
+                      : "border-black hover:bg-muted/40"
+                  }`}
+                >
+                  {featured ? "★ Featured" : "☆ Mark as Featured"}
+                </button>
+                {featErr && <p className="text-[11px] text-destructive">{featErr}</p>}
+                <p className="text-[11px] text-muted-foreground">
+                  Featured works appear on your profile overview — up to 8.
+                </p>
+              </div>
             )}
           </div>
 

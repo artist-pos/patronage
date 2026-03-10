@@ -67,6 +67,7 @@ export function WorkTab({
               artistName={displayName}
               viewerRole={viewerRole}
               profileId={isOwner ? undefined : profileId}
+              isOwner={isOwner}
             />
           ) : (
             <p className="text-sm text-muted-foreground">No portfolio works yet.</p>

@@ -58,6 +58,11 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
               <DropdownMenuItem asChild>
                 <Link href="/profile/analytics">Analytics</Link>
               </DropdownMenuItem>
+              {isArtist && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/works">My Works</Link>
+                </DropdownMenuItem>
+              )}
               {showOpportunities && (
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard">My Opportunities</Link>
@@ -143,6 +148,15 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                 >
                   Analytics
                 </Link>
+                {isArtist && (
+                  <Link
+                    href="/dashboard/works"
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    My Works
+                  </Link>
+                )}
                 {showOpportunities && (
                   <Link
                     href="/dashboard"

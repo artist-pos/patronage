@@ -46,3 +46,26 @@ export async function toggleHideAvailable(workId: string, hide: boolean): Promis
   if (error) return { error: error.message };
   return {};
 }
+
+export async function toggleFeaturedWork(
+  workId: string,
+  featured: boolean,
+  currentFeaturedCount: number
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  if (featured && currentFeaturedCount >= 8) {
+    return { error: "You can feature up to 8 works. Unfeature one first." };
+  }
+
+  const { error } = await supabase
+    .from("portfolio_images")
+    .update({ is_featured: featured })
+    .eq("id", workId)
+    .eq("creator_id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}

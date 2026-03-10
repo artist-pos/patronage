@@ -123,31 +123,38 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* Portfolio preview — up to 9 images */}
-      {portfolioImages.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-              Portfolio
-            </h3>
-            {portfolioImages.length > 9 && (
+      {/* Portfolio preview — featured works first, fallback to first 9 */}
+      {portfolioImages.length > 0 && (() => {
+        const featured = portfolioImages.filter(i => i.is_featured);
+        const displayImages = featured.length > 0 ? featured : portfolioImages;
+        const isFiltered = featured.length > 0;
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+                Portfolio
+              </h3>
               <Link
                 href={`/${username}?tab=work`}
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
-                View all {portfolioImages.length} works →
+                {isFiltered
+                  ? `All ${portfolioImages.length} works →`
+                  : portfolioImages.length > 9
+                    ? `View all ${portfolioImages.length} works →`
+                    : null}
               </Link>
-            )}
+            </div>
+            <PortfolioGrid
+              images={displayImages}
+              artistName={artistName}
+              viewerRole={viewerRole}
+              profileId={profileId}
+              limit={isFiltered ? undefined : 9}
+            />
           </div>
-          <PortfolioGrid
-            images={portfolioImages}
-            artistName={artistName}
-            viewerRole={viewerRole}
-            profileId={profileId}
-            limit={9}
-          />
-        </div>
-      )}
+        );
+      })()}
 
       {/* Studio updates preview — up to 3 */}
       {selectedUpdates.length > 0 && (

@@ -196,6 +196,7 @@ export interface PortfolioImage {
   hide_price: boolean;
   collection_visible: boolean;
   hide_available: boolean;
+  is_featured: boolean;
   orientation: ImageOrientation | null;
   natural_width: number | null;
   natural_height: number | null;

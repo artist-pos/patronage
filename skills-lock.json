@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-seo": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "0dfe8e2dedc037971bc817fb169c2c1175776b51fd1403f5cd43a8662806ae50"
+    },
+    "product-marketing-context": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "e0c954d8b63d562b997fe6d60f0b39aef49517bdbb93ad67e61989ecbc647cf8"
+    },
+    "schema-markup": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "7e94629c1bafd6459b4f113237655a98761438eb1b26aa15c440351f79a86d2e"
+    },
+    "signup-flow-cro": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "9ed0af5cecc6d6b9956a7ffd79c15cb18e5a19d3249bb760418a9b763eb21503"
+    },
+    "social-content": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "89c1726323ac944b02fb8f27c1d86e84c6310ebacb6b0f62dae74e0351873c08"
+    }
+  }
+}
