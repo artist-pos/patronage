@@ -5,24 +5,23 @@ import { sendWelcomeDigest } from "@/lib/digest";
 
 export const metadata = { title: "Get Started — Patronage" };
 
-async function setRole(formData: FormData) {
+const VALID_ROLES = ["artist", "patron", "partner"] as const;
+type Role = (typeof VALID_ROLES)[number];
+
+async function applyRole(role: string) {
   "use server";
-  const role = formData.get("role") as string;
-  if (!["artist", "patron", "partner"].includes(role)) return;
+  if (!VALID_ROLES.includes(role as Role)) return;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  // Derive a fallback username from the email (stripped, lowercased)
   const fallbackUsername = user.email
     ?.split("@")[0]
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_")
     .slice(0, 30) ?? user.id.slice(0, 8);
 
-  // Patrons and partners don't require admin approval — activate immediately.
-  // Artists default to is_active: true too (admin can deactivate if needed).
   const isArtist = role === "artist";
   await supabase.from("profiles").upsert(
     {
@@ -35,7 +34,6 @@ async function setRole(formData: FormData) {
     { onConflict: "id", ignoreDuplicates: false }
   );
 
-  // Auto-subscribe artists to the weekly digest and send a welcome digest
   if (isArtist && user.email) {
     const email = user.email.toLowerCase().trim();
     await supabase
@@ -47,14 +45,28 @@ async function setRole(formData: FormData) {
   redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
 }
 
-export default async function SelectRolePage() {
+async function setRole(formData: FormData) {
+  "use server";
+  await applyRole(formData.get("role") as string);
+}
+
+interface Props {
+  searchParams: Promise<{ role?: string }>;
+}
+
+export default async function SelectRolePage({ searchParams }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
   const profile = await getProfileById(user.id);
-  // Already has a role — skip to onboarding
   if (profile?.role) redirect("/onboarding");
+
+  // Pre-selected role from the homepage join buttons — skip the selection UI
+  const { role: roleParam } = await searchParams;
+  if (roleParam && VALID_ROLES.includes(roleParam as Role)) {
+    await applyRole(roleParam);
+  }
 
   const roles = [
     {

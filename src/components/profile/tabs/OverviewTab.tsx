@@ -45,7 +45,7 @@ export function OverviewTab({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {selectedExhibitions.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
                 Selected Exhibitions
               </h3>
               <div className="space-y-1.5">
@@ -71,7 +71,7 @@ export function OverviewTab({
 
           {selectedBib.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
                 Selected Press
               </h3>
               <div className="space-y-1.5">
@@ -102,7 +102,7 @@ export function OverviewTab({
 
           {selectedGrants.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
                 Selected Grants
               </h3>
               <div className="space-y-1.5">
@@ -127,7 +127,7 @@ export function OverviewTab({
       {portfolioImages.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Portfolio
             </h3>
             {portfolioImages.length > 9 && (
@@ -153,7 +153,7 @@ export function OverviewTab({
       {selectedUpdates.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Studio
             </h3>
             {studioUpdates.length > 3 && (

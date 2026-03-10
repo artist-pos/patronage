@@ -31,7 +31,7 @@ export function ProfileTabs({ username, tab }: Props) {
             onClick={() => router.replace(`/${username}?tab=${t}`, { scroll: false })}
             className={`px-4 py-3 text-sm whitespace-nowrap transition-colors ${
               tab === t
-                ? "font-semibold underline underline-offset-4"
+                ? "font-semibold border-b-2 border-black"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >

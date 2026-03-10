@@ -25,13 +25,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { toggleHidePortfolioWork } from "@/app/profile/available-work-actions";
 import { Button } from "@/components/ui/button";
+import { detectOrientation } from "@/lib/image";
 import type { PortfolioImage } from "@/types/database";
 
 const MAX_IMAGES = 10;
 const MAX_PX = 1600;
 const THUMB_H = 112; // h-28 in px
 
-async function resizeToJpeg(file: File): Promise<Blob> {
+async function resizeToJpeg(file: File): Promise<{ blob: Blob; orientation: "landscape" | "portrait" | "square"; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const src = URL.createObjectURL(file);
@@ -43,8 +44,9 @@ async function resizeToJpeg(file: File): Promise<Blob> {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(src);
+      const orientation = detectOrientation(canvas.width, canvas.height);
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
+        (blob) => (blob ? resolve({ blob, orientation, width: canvas.width, height: canvas.height }) : reject(new Error("Canvas toBlob failed"))),
         "image/jpeg",
         0.85
       );
@@ -270,7 +272,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       const uploaded: PortfolioImage[] = [];
       for (const file of toUpload) {
         try {
-          const blob = await resizeToJpeg(file);
+          const { blob, orientation, width, height } = await resizeToJpeg(file);
           const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
           const { error: upErr } = await supabase.storage
             .from("portfolio")
@@ -282,7 +284,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
 
           const { data: row } = await supabase
             .from("portfolio_images")
-            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, position: images.length + uploaded.length })
+            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, orientation, natural_width: width, natural_height: height, position: images.length + uploaded.length })
             .select()
             .single();
           if (row) uploaded.push(row as PortfolioImage);

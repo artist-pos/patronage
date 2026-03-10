@@ -82,7 +82,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         {/* Medium tags */}
         <div className="hidden sm:flex flex-wrap gap-1 justify-end shrink-0 max-w-[40%]">
           {(artist.medium ?? []).slice(0, 3).map((m) => (
-            <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none whitespace-nowrap">
+            <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none whitespace-nowrap">
               {m}
             </span>
           ))}
@@ -142,7 +142,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
           {(artist.medium ?? []).length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {(artist.medium ?? []).slice(0, 2).map((m) => (
-                <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">{m}</span>
+                <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">{m}</span>
               ))}
             </div>
           )}
@@ -205,7 +205,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         {(artist.medium ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {(artist.medium ?? []).slice(0, 3).map((m) => (
-              <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
+              <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
                 {m}
               </span>
             ))}

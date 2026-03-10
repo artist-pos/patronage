@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
-export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArtist[]> {
+export async function getLatestUpdates(limit = 12, offset = 0): Promise<ProjectUpdateWithArtist[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_updates")
@@ -18,6 +18,7 @@ export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArt
       text_content,
       embed_url,
       embed_provider,
+      orientation,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -26,7 +27,7 @@ export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArt
       )
     `)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (error) throw new Error(error.message);
 
@@ -43,6 +44,7 @@ export async function getLatestUpdates(limit = 20): Promise<ProjectUpdateWithArt
     text_content: row.text_content ?? null,
     embed_url: row.embed_url ?? null,
     embed_provider: row.embed_provider ?? null,
+    orientation: row.orientation ?? null,
     created_at: row.created_at,
     artist_username: row.profiles?.username ?? "",
     artist_full_name: row.profiles?.full_name ?? null,
@@ -67,6 +69,7 @@ export async function getArtistUpdates(artistId: string, limit = 30): Promise<Pr
       text_content,
       embed_url,
       embed_provider,
+      orientation,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -91,6 +94,7 @@ export async function getArtistUpdates(artistId: string, limit = 30): Promise<Pr
     text_content: row.text_content ?? null,
     embed_url: row.embed_url ?? null,
     embed_provider: row.embed_provider ?? null,
+    orientation: row.orientation ?? null,
     created_at: row.created_at,
     artist_username: row.profiles?.username ?? "",
     artist_full_name: row.profiles?.full_name ?? null,
@@ -115,6 +119,7 @@ export async function getUpdateById(id: string): Promise<ProjectUpdateWithArtist
       text_content,
       embed_url,
       embed_provider,
+      orientation,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -140,6 +145,7 @@ export async function getUpdateById(id: string): Promise<ProjectUpdateWithArtist
     text_content: row.text_content ?? null,
     embed_url: row.embed_url ?? null,
     embed_provider: row.embed_provider ?? null,
+    orientation: row.orientation ?? null,
     created_at: row.created_at,
     artist_username: row.profiles?.username ?? "",
     artist_full_name: row.profiles?.full_name ?? null,

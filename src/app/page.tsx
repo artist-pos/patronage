@@ -88,33 +88,26 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
 
 function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   const name = u.artist_full_name ?? u.artist_username;
+  const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
   return (
-    <Link
-      href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`}
-      scroll={false}
-      className="group shrink-0 flex flex-col border border-border overflow-hidden bg-background"
-    >
-      <div className="overflow-hidden bg-muted flex items-center justify-center" style={{ height: 170 }}>
-        {u.image_url ? (
-          <Image
+    <Link href={href} scroll={false} className="group inline-block border border-border bg-background">
+      {u.image_url && (
+        <div className="overflow-hidden bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={u.image_url}
             alt={u.caption ?? `Update by ${name}`}
-            width={320}
-            height={180}
-            unoptimized
-            className="h-[170px] w-auto block transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            style={{ height: 200, width: "auto", display: "block" }}
+            className="transition-transform duration-500 group-hover:scale-105"
           />
-        ) : (
-          <span className="text-xs text-muted-foreground uppercase tracking-widest">
-            {u.content_type}
-          </span>
-        )}
-      </div>
-      <div className="px-2 py-1.5 border-t border-border bg-background shrink-0">
+        </div>
+      )}
+      <div className="px-2.5 py-2 border-t border-border">
         <div className="flex items-center gap-1.5 min-w-0">
           {u.artist_avatar_url ? (
             <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
-              <Image src={u.artist_avatar_url} alt={name} fill className="object-cover" sizes="20px" />
+              <Image src={u.artist_avatar_url} alt={name} fill loading="lazy" className="object-cover" sizes="20px" />
             </div>
           ) : (
             <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
@@ -156,20 +149,47 @@ export default async function Home() {
             <div className="space-y-1.5">
               <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
               <p className="text-lg text-muted-foreground">
-                Grants, residencies, and open calls for New Zealand and Australian
-                artists — curated and verified.
+                Grants, residencies, and open calls for New Zealand and Australian creatives — visual artists, musicians, writers, poets, dancers, and filmmakers.
               </p>
               <p className="text-sm text-muted-foreground">
-                A community for artists, patrons, and partners.
+                A free professional profile and weekly-updated opportunities directory — all in one place. A community for artists, patrons, and partners.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
               <Button asChild>
                 <Link href="/opportunities">Browse Opportunities</Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/auth/signup">Join the Community</Link>
-              </Button>
+            </div>
+
+            {/* ── Role-specific join buttons ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+              <Link
+                href="/auth/signup?role=artist"
+                className="flex flex-col items-center text-center gap-1 bg-black text-white px-5 py-4 hover:bg-black/85 transition-colors"
+              >
+                <span className="text-sm font-semibold">Join as a Creative</span>
+                <span className="text-xs opacity-70 leading-snug">
+                  Artists, musicians, writers, poets, dancers, filmmakers
+                </span>
+              </Link>
+              <Link
+                href="/auth/signup?role=patron"
+                className="flex flex-col items-center text-center gap-1 border border-black px-5 py-4 hover:bg-muted/50 transition-colors"
+              >
+                <span className="text-sm font-semibold">Join as a Patron</span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  Supporters, collectors, and job seekers.
+                </span>
+              </Link>
+              <Link
+                href="/auth/signup?role=partner"
+                className="flex flex-col items-center text-center gap-1 border border-black px-5 py-4 hover:bg-muted/50 transition-colors"
+              >
+                <span className="text-sm font-semibold">Join as a Partner</span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  Galleries, councils, organisations
+                </span>
+              </Link>
             </div>
           </div>
         )}
@@ -248,8 +268,7 @@ export default async function Home() {
               </Link>
             </div>
 
-            {/* Single-row horizontal carousel */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex flex-wrap gap-2">
               {updates.map((u) => (
                 <StudioFeedCard key={u.id} u={u} />
               ))}

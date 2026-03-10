@@ -65,6 +65,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
       text_content,
       embed_url,
       embed_provider,
+      orientation,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -134,6 +135,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
     text_content: u.text_content ?? null,
     embed_url: u.embed_url ?? null,
     embed_provider: u.embed_provider ?? null,
+    orientation: u.orientation ?? null,
     created_at: u.created_at,
     artist_username: u.profiles?.username ?? "",
     artist_full_name: u.profiles?.full_name ?? null,

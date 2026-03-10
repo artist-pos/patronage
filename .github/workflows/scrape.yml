@@ -2,20 +2,18 @@ name: Scrape Opportunities
 
 on:
   schedule:
-    # Every Tuesday at 10pm NZST (UTC+13 in summer) = Wednesday 10:00 UTC
     - cron: "0 10 * * 3"
   workflow_dispatch:
-    # Also triggerable manually from GitHub Actions tab
 
 jobs:
   scrape:
-    name: Scrape — Tier ${{ matrix.tier }}
+    name: Scrape tier ${{ matrix.tier }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 55
     strategy:
-      fail-fast: false
       matrix:
         tier: [1, 2, 3, 4]
+      fail-fast: false
 
     steps:
       - name: Checkout
@@ -36,21 +34,11 @@ jobs:
         working-directory: scraper
         run: npx playwright install chromium --with-deps
 
-      - name: Run scraper (Tier ${{ matrix.tier }})
+      - name: Run scraper
         working-directory: scraper
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SCRAPER_TIER: ${{ matrix.tier }}
-          SCRAPER_STATS_PATH: /tmp/stats-tier-${{ matrix.tier }}.json
         run: npm run scrape
-
-      - name: Upload tier stats
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: stats-tier-${{ matrix.tier }}
-          path: /tmp/stats-tier-${{ matrix.tier }}.json
-          if-no-files-found: warn
-

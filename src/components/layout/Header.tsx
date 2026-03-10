@@ -30,7 +30,7 @@ export async function Header() {
   const unreadCount = user ? await getUnreadCount() : 0;
 
   return (
-    <header className="border-b border-border sticky top-0 z-40 bg-background">
+    <header className="border-b border-stone-100 sticky top-0 z-40 bg-white/90 backdrop-blur-sm">
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-6">
 
         {/* ── Logo ── */}
@@ -48,7 +48,7 @@ export async function Header() {
             <Link
               key={l.href}
               href={l.href}
-              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+              className="text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors whitespace-nowrap"
             >
               {l.label}
             </Link>

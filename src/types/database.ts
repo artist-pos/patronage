@@ -179,6 +179,8 @@ export interface Profile {
   created_at: string;
 }
 
+export type ImageOrientation = 'landscape' | 'portrait' | 'square';
+
 export interface PortfolioImage {
   id: string;
   profile_id: string;
@@ -194,6 +196,13 @@ export interface PortfolioImage {
   hide_price: boolean;
   collection_visible: boolean;
   hide_available: boolean;
+  orientation: ImageOrientation | null;
+  natural_width: number | null;
+  natural_height: number | null;
+  content_type: ContentTypeEnum;
+  audio_url: string | null;
+  video_url: string | null;
+  text_content: string | null;
   created_at: string;
 }
 
@@ -292,6 +301,7 @@ export interface ProjectUpdate {
   text_content: string | null;
   embed_url: string | null;
   embed_provider: string | null;
+  orientation: ImageOrientation | null;
   created_at: string;
 }
 

@@ -23,6 +23,7 @@ import { PressTab } from "@/components/profile/tabs/PressTab";
 import { SupportTab } from "@/components/profile/tabs/SupportTab";
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
+import { supabaseTransform } from "@/lib/image";
 
 const VALID_TABS = ["overview", "work", "studio", "cv", "press", "support"] as const;
 type TabType = typeof VALID_TABS[number];
@@ -268,15 +269,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       {profile.featured_image_url && (
         <div className="relative w-full aspect-[42/9] overflow-hidden bg-neutral-100">
           <Image
-            src={profile.featured_image_url}
+            src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 85 }) ?? profile.featured_image_url}
             alt={`${displayName} featured work`}
             fill
             priority
-            quality={100}
             unoptimized
             className="object-cover"
             style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
-            sizes="(max-width: 3840px) 100vw, 3840px"
+            sizes="100vw"
           />
         </div>
       )}

@@ -43,9 +43,11 @@ interface Props {
   opp: Opportunity;
   isPreview?: boolean;
   view?: "gallery" | "list";
+  /** Pass true for the first few above-fold cards to prioritise LCP. */
+  priority?: boolean;
 }
 
-export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Props) {
+export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false }: Props) {
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
   const days = daysLeft(opp.opens_at ?? null, opp.deadline);
@@ -66,6 +68,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
               width={56}
               height={56}
               unoptimized
+              loading={priority ? undefined : "lazy"}
+              priority={priority}
               className="w-full h-full object-contain"
               sizes="56px"
             />
@@ -113,59 +117,39 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
   /* ── Gallery card ── */
   const inner = (
-    <article className={`overflow-hidden flex flex-col h-full ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
+    <article className={`overflow-hidden flex flex-col h-full rounded-xl shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
 
       {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
       <div className="relative w-full overflow-hidden bg-white border-b border-black">
-        {opp.featured_image_url ? (
-          <div className="relative">
-            <Image
+        <div className="relative" style={{ height: 200, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
+          {opp.featured_image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={opp.featured_image_url}
               alt={opp.title}
-              width={800}
-              height={450}
-              unoptimized
-              className="w-full h-auto max-h-[300px] object-contain"
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              loading={priority ? "eager" : "lazy"}
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block" }}
             />
+          )}
 
-            {/* $ Range — top-right overlay */}
-            {fundingLabel && (
-              <div className="absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
-                {fundingLabel}
-              </div>
-            )}
+          {/* $ Range — top-right overlay */}
+          {fundingLabel && (
+            <div className="absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
+              {fundingLabel}
+            </div>
+          )}
 
-            {/* Status badge — top-left overlay */}
-            {preOpen ? (
-              <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
-                Not yet open
-              </div>
-            ) : closing && (
-              <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
-                Closing soon
-              </div>
-            )}
-          </div>
-        ) : (
-          /* No image: solid grey placeholder with overlaid badges */
-          <div className="relative w-full h-40 bg-[#E5E7EB]">
-            {fundingLabel && (
-              <div className="absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
-                {fundingLabel}
-              </div>
-            )}
-            {preOpen ? (
-              <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-2 py-1 leading-none">
-                Not yet open
-              </div>
-            ) : closing && (
-              <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-2 py-1 leading-none">
-                Closing soon
-              </div>
-            )}
-          </div>
-        )}
+          {/* Status badge — top-left overlay */}
+          {preOpen ? (
+            <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 rounded-full leading-none">
+              Not yet open
+            </div>
+          ) : closing && (
+            <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 rounded-full leading-none">
+              Closing soon
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Content ── */}
@@ -175,19 +159,19 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
 
         {/* Type / country / grant_type / recipients tags */}
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
             {opp.type}
           </span>
-          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
             {opp.country}
           </span>
           {opp.grant_type && (
-            <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
               {opp.grant_type}
             </span>
           )}
           {opp.recipients_count != null && (
-            <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
               {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
             </span>
           )}
@@ -210,7 +194,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery" }: Pr
             {(opp.sub_categories ?? []).map((cat) => (
               <span
                 key={cat}
-                className="text-xs border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none"
+                className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none"
               >
                 {cat}
               </span>

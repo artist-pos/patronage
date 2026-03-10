@@ -88,8 +88,8 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         </p>
       ) : view === "list" ? (
         <div className="border-t border-black">
-          {opportunities.map((opp) => (
-            <OpportunityCard key={opp.id} opp={opp} view="list" />
+          {opportunities.map((opp, i) => (
+            <OpportunityCard key={opp.id} opp={opp} view="list" priority={i < 6} />
           ))}
         </div>
       ) : (

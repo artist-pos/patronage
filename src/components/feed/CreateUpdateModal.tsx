@@ -6,12 +6,13 @@ import Image from "next/image";
 import { X, ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createProject } from "@/actions/projects";
-import type { ContentTypeEnum } from "@/types/database";
+import { detectOrientation } from "@/lib/image";
+import type { ContentTypeEnum, ImageOrientation } from "@/types/database";
 
 const MAX_PX = 1600;
 const MAX_PROJ_TITLE = 140;
 
-async function resizeImage(file: File): Promise<Blob> {
+async function resizeImage(file: File): Promise<{ blob: Blob; orientation: ImageOrientation }> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const src = URL.createObjectURL(file);
@@ -23,8 +24,9 @@ async function resizeImage(file: File): Promise<Blob> {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(src);
+      const orientation = detectOrientation(canvas.width, canvas.height);
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
+        (blob) => (blob ? resolve({ blob, orientation }) : reject(new Error("toBlob failed"))),
         "image/jpeg",
         0.9
       );
@@ -104,6 +106,7 @@ export function CreateUpdateModal({
   // Image
   const [preview, setPreview] = useState<string | null>(null);
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [imageOrientation, setImageOrientation] = useState<ImageOrientation | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Audio
@@ -135,6 +138,7 @@ export function CreateUpdateModal({
     setContentType("image");
     setPreview(null);
     setImageBlob(null);
+    setImageOrientation(null);
     setAudioFile(null);
     setVideoFile(null);
     setCaption("");
@@ -162,9 +166,10 @@ export function CreateUpdateModal({
 
   async function handleImageFile(file: File | null) {
     if (!file) return;
-    const resized = await resizeImage(file);
-    setImageBlob(resized);
-    setPreview(URL.createObjectURL(resized));
+    const { blob, orientation } = await resizeImage(file);
+    setImageBlob(blob);
+    setImageOrientation(orientation);
+    setPreview(URL.createObjectURL(blob));
   }
 
   function canPost(): boolean {
@@ -266,6 +271,7 @@ export function CreateUpdateModal({
           text_content,
           caption: caption.trim() || null,
           project_id: projectId,
+          orientation: imageOrientation,
         });
       if (dbErr) { setError(dbErr.message); setUploading(false); return; }
 
