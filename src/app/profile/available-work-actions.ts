@@ -47,6 +47,46 @@ export async function toggleHideAvailable(workId: string, hide: boolean): Promis
   return {};
 }
 
+export async function toggleHidePrice(workId: string, hide: boolean): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("artworks")
+    .update({ hide_price: hide })
+    .eq("id", workId)
+    .eq("creator_id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deletePortfolioWork(workId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Delete from storage then table
+  const { data: img } = await supabase
+    .from("portfolio_images")
+    .select("url, creator_id")
+    .eq("id", workId)
+    .single();
+
+  if (!img || img.creator_id !== user.id) return { error: "Not authorised" };
+
+  // Extract storage path from URL
+  const match = img.url.match(/\/storage\/v1\/object\/public\/portfolio\/(.+)/);
+  if (match?.[1]) {
+    await supabase.storage.from("portfolio").remove([decodeURIComponent(match[1])]);
+  }
+
+  const { error } = await supabase.from("portfolio_images").delete().eq("id", workId);
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function toggleFeaturedWork(
   workId: string,
   featured: boolean,

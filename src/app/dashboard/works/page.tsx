@@ -41,13 +41,13 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
       .order("position", { ascending: true }),
     supabase
       .from("artworks")
-      .select("id, url, caption, description, price, price_currency, is_available, hide_available, position, created_at")
+      .select("id, url, caption, description, price, price_currency, is_available, hide_available, hide_price, position, created_at")
       .eq("profile_id", user.id)
       .eq("is_available", true)
       .order("position", { ascending: true }),
     supabase
       .from("artworks")
-      .select("id, url, caption, price, price_currency, created_at, current_owner_id")
+      .select("id, url, caption, price, price_currency, created_at, current_owner_id, hidden_from_artist")
       .eq("creator_id", user.id)
       .neq("current_owner_id", user.id)
       .order("created_at", { ascending: false }),
