@@ -38,9 +38,9 @@ export function EnquireButton({ artistId, workId }: Props) {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="w-full bg-black text-white text-xs py-1.5 px-3 hover:opacity-80 transition-opacity disabled:opacity-40"
+      className="w-full border border-black text-xs py-1.5 px-3 hover:bg-muted/40 transition-colors disabled:opacity-40"
     >
-      {loading ? "Opening…" : "Enquire to Buy"}
+      {loading ? "Opening…" : "Enquire"}
     </button>
   );
 }

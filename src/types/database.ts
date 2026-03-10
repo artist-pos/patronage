@@ -214,6 +214,7 @@ export interface Artwork {
   url: string;
   caption: string | null;
   price: string | null;
+  price_currency: 'NZD' | 'AUD';
   description: string | null;
   is_available: boolean;
   hide_available: boolean;
@@ -281,8 +282,10 @@ export interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
-  message_type: 'text' | 'transfer_request' | 'transfer_accepted' | 'deletion_request' | 'deletion_accepted';
+  message_type: 'text' | 'transfer_request' | 'transfer_accepted' | 'deletion_request' | 'deletion_accepted' | 'work_offer';
   work_id: string | null;
+  offer_amount: number | null;
+  offer_currency: string | null;
   is_system_message: boolean;
   source_action: string | null;
   created_at: string;

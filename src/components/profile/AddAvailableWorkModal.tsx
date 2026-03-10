@@ -55,6 +55,8 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState<"NZD" | "AUD">("NZD");
+  const [poa, setPoa] = useState(false);
   const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,8 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
     setFile(null);
     setName("");
     setPrice("");
+    setPriceCurrency("NZD");
+    setPoa(false);
     setDescription("");
     setError(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -78,7 +82,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
     e.preventDefault();
     if (!file) { setError("Please choose an image."); return; }
     if (!name.trim()) { setError("Work name is required."); return; }
-    if (!price.trim()) { setError("Price is required."); return; }
+    if (!poa && !price.trim()) { setError("Enter a price or select 'Price on application'."); return; }
 
     setUploading(true);
     setError(null);
@@ -97,6 +101,9 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
 
       const { data: { publicUrl } } = supabase.storage.from("portfolio").getPublicUrl(path);
 
+      // Store price as numeric string (or "POA" for price on application)
+      const priceValue = poa ? "POA" : price.trim();
+
       // Insert artworks row
       const { data: row, error: dbErr } = await supabase
         .from("artworks")
@@ -106,7 +113,8 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
           current_owner_id: profileId,
           url: publicUrl,
           caption: name.trim(),
-          price: price.trim(),
+          price: priceValue,
+          price_currency: priceCurrency,
           description: description.trim() || null,
           is_available: true,
           position: 9999,
@@ -126,7 +134,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
     }
   }
 
-  const canSubmit = !!file && name.trim().length > 0 && price.trim().length > 0 && !uploading;
+  const canSubmit = !!file && name.trim().length > 0 && (poa || price.trim().length > 0) && !uploading;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -199,13 +207,38 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
             <label className="text-sm font-medium">
               Price <span className="text-destructive">*</span>
             </label>
-            <input
-              type="text"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="e.g., $1,200 or POA"
-              className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-            />
+            {!poa && (
+              <div className="flex gap-2">
+                <select
+                  value={priceCurrency}
+                  onChange={(e) => setPriceCurrency(e.target.value as "NZD" | "AUD")}
+                  className="border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground w-24"
+                >
+                  <option value="NZD">NZD</option>
+                  <option value="AUD">AUD</option>
+                </select>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="1200"
+                  className="flex-1 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+            )}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={poa}
+                onChange={(e) => {
+                  setPoa(e.target.checked);
+                  if (e.target.checked) setPrice("");
+                }}
+                className="accent-black"
+              />
+              <span className="text-sm text-muted-foreground">Price on application</span>
+            </label>
           </div>
 
           {/* ── Description / Inquiry Context ── */}

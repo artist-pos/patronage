@@ -64,7 +64,7 @@ const INQUIRY_DISCLAIMER =
  */
 export async function initializeInquiryThread(
   otherUserId: string,
-  sourceAction: "profile_enquiry" | "artwork_enquiry",
+  sourceAction: "profile_enquiry" | "artwork_enquiry" | "artwork_offer",
   workId?: string | null
 ): Promise<{ id: string } | { error: string }> {
   const supabase = await createClient();

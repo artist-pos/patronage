@@ -3,9 +3,18 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { EnquireButton } from "./EnquireButton";
+import { MakeOfferModal } from "./MakeOfferModal";
 import { PlaceInCollectionModal } from "./PlaceInCollectionModal";
 import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
 import type { Artwork } from "@/types/database";
+
+function formatPrice(price: string | null, currency: string): string | null {
+  if (!price) return null;
+  if (price === "POA") return "Price on application";
+  const num = parseFloat(price.replace(/,/g, ""));
+  if (isNaN(num)) return price;
+  return `${currency} ${num.toLocaleString("en-NZ")}`;
+}
 
 const CARD_H = 225;
 const META_W = 200;
@@ -25,6 +34,11 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
   const [unlisting, setUnlisting] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [collectModal, setCollectModal] = useState(false);
+  const [offerModal, setOfferModal] = useState(false);
+
+  const displayPrice = !img.hide_price
+    ? formatPrice(img.price, img.price_currency ?? "NZD")
+    : null;
 
   async function handleUnlist() {
     setUnlisting(true);
@@ -48,6 +62,17 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
         artworkTitle={img.caption}
         onClose={() => setCollectModal(false)}
         onSuccess={() => onRemove?.(img.id)}
+      />
+    )}
+    {offerModal && (
+      <MakeOfferModal
+        open={offerModal}
+        onClose={() => setOfferModal(false)}
+        artistId={artistId}
+        workId={img.id}
+        workTitle={img.caption}
+        listingPrice={img.price}
+        listingCurrency={(img.price_currency as "NZD" | "AUD") ?? "NZD"}
       />
     )}
     <div
@@ -97,8 +122,8 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
           )}
 
           {/* Price */}
-          {img.price && (
-            <p className="text-xs text-muted-foreground">{img.price}</p>
+          {displayPrice && (
+            <p className="text-xs text-muted-foreground">{displayPrice}</p>
           )}
 
           {/* Description */}
@@ -130,15 +155,23 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
             </div>
           )}
 
-          {/* Enquire button (non-owner authenticated) */}
+          {/* Enquire / Offer buttons (non-owner authenticated) */}
           {canEnquire && (
-            <EnquireButton
-              artistId={artistId}
-              artistName={artistName}
-              workId={img.id}
-              workTitle={img.caption}
-              workDescription={img.description}
-            />
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => setOfferModal(true)}
+                className="w-full bg-black text-white text-xs py-1.5 px-3 hover:opacity-80 transition-opacity"
+              >
+                Make an Offer
+              </button>
+              <EnquireButton
+                artistId={artistId}
+                artistName={artistName}
+                workId={img.id}
+                workTitle={img.caption}
+                workDescription={img.description}
+              />
+            </div>
           )}
         </div>
       </div>

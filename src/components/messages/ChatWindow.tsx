@@ -90,6 +90,8 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       is_read: false,
       message_type: "text",
       work_id: null,
+      offer_amount: null,
+      offer_currency: null,
       is_system_message: false,
       source_action: null,
       created_at: new Date().toISOString(),
@@ -282,6 +284,45 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           <p className="text-xs text-muted-foreground font-mono py-1">
             Artwork deleted by mutual agreement.
           </p>
+        </div>
+      );
+    }
+
+    if (msg.message_type === "work_offer") {
+      const work = msg.work_id ? workMap[msg.work_id] : null;
+      const offerDisplay = msg.offer_amount && msg.offer_currency
+        ? `${msg.offer_currency} ${msg.offer_amount.toLocaleString("en-NZ")}`
+        : null;
+
+      return (
+        <div key={msg.id} className="flex justify-center">
+          <div className="border border-black bg-background w-full max-w-sm">
+            <div className="flex">
+              {work && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={work.url}
+                  alt={work.caption ?? "Work"}
+                  className="w-20 h-20 object-cover flex-none border-r border-black"
+                />
+              )}
+              <div className="p-3 flex-1 min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                  Offer
+                </p>
+                <p className="text-sm font-medium truncate">{work?.caption ?? "Untitled"}</p>
+                {offerDisplay && (
+                  <p className="text-base font-semibold mt-0.5">{offerDisplay}</p>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-black px-3 py-2 text-xs flex items-center justify-between">
+              <span className="text-muted-foreground font-mono">{formatTime(msg.created_at)}</span>
+              <span className="text-xs text-muted-foreground italic">
+                {isMe ? "Offer sent" : "Offer received"}
+              </span>
+            </div>
+          </div>
         </div>
       );
     }
