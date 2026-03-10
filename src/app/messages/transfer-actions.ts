@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted } from "@/lib/email";
+import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 
 export async function initiateTransfer(
   workId: string,
@@ -89,7 +90,7 @@ export async function acceptTransfer(
   // Verify work is still available (guard against double-accept)
   const { data: work } = await supabase
     .from("artworks")
-    .select("id, caption, is_available, creator_id")
+    .select("id, title, caption, is_available, creator_id, image_url, year_created, medium_detail")
     .eq("id", message.work_id)
     .maybeSingle();
 
@@ -118,8 +119,8 @@ export async function acceptTransfer(
     .update({ acquired_works: [...existing, message.work_id] })
     .eq("id", user.id);
 
-  // Insert transfer_accepted system message
-  const { error: acceptMsgError } = await supabase
+  // Insert transfer_accepted system message — capture ID for certificate
+  const { data: acceptedMsg, error: acceptMsgError } = await supabase
     .from("messages")
     .insert({
       conversation_id: message.conversation_id,
@@ -127,22 +128,39 @@ export async function acceptTransfer(
       content: "",
       message_type: "transfer_accepted",
       work_id: message.work_id,
-    });
+    })
+    .select("id")
+    .single();
 
   if (acceptMsgError) return { error: acceptMsgError.message };
 
-  // Fetch buyer name for notification
-  const { data: buyerData } = await supabase
-    .from("profiles")
-    .select("full_name, username")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Fetch buyer + artist profiles for notifications and certificate
+  const [{ data: buyerData }, { data: artistData }] = await Promise.all([
+    supabase.from("profiles").select("full_name, username").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("full_name, username").eq("id", work.creator_id).maybeSingle(),
+  ]);
 
   const buyerName = buyerData?.full_name ?? buyerData?.username ?? "The buyer";
-  const workTitle = work.caption ?? "Untitled";
+  const artistName = artistData?.full_name ?? artistData?.username ?? "The artist";
+  const artistUsername = artistData?.username ?? null;
+  const workTitle = work.title ?? work.caption ?? "Untitled";
+  const transferId = acceptedMsg.id;
+  const w = work as { image_url?: string | null; year_created?: number | null; medium_detail?: string | null };
 
-  // Fire-and-forget email to artist
+  // Fire-and-forget: transfer accepted notification + provenance certificate
   notifyTransferAccepted(work.creator_id, buyerName, workTitle).catch(console.error);
+  sendTransferCertificate({
+    artistId: work.creator_id,
+    buyerId: user.id,
+    transferId,
+    workTitle,
+    workImageUrl: w.image_url ?? null,
+    artistName,
+    artistUsername,
+    patronName: buyerName,
+    yearCreated: w.year_created ?? null,
+    medium: w.medium_detail ?? null,
+  }).catch(console.error);
 
   return {};
 }
