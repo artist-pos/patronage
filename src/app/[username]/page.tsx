@@ -372,6 +372,17 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               {profile.bio && (
                 <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
               )}
+
+              {isArtistProfile && availableWorks.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <Link
+                    href={`/${profile.username}?tab=work`}
+                    className="underline underline-offset-2 hover:text-foreground transition-colors"
+                  >
+                    {availableWorks.length} work{availableWorks.length !== 1 ? "s" : ""} available
+                  </Link>
+                </p>
+              )}
             </div>
 
             {/* Right sidecar: action buttons + links */}
@@ -484,11 +495,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               {tab === "cv" && (
                 <CvTab
                   exhibitions={exhibitions}
+                  bibliography={bibliography}
                   receivedGrants={profile.received_grants ?? []}
                   cvUrl={profile.cv_url}
                   profileId={profile.id}
                   username={profile.username}
                   displayName={displayName}
+                  isOwner={isOwner}
                 />
               )}
 

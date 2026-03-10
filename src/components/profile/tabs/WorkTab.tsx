@@ -37,6 +37,17 @@ export function WorkTab({
 }: Props) {
   return (
     <div className="space-y-12 py-8">
+      {/* Available works — top */}
+      {(isOwner || availableWorks.length > 0) && (
+        <AvailableWorksSection
+          initialWorks={availableWorks}
+          profileId={profileId}
+          artistName={artistName}
+          viewerRole={viewerRole}
+          isOwner={isOwner}
+        />
+      )}
+
       {/* Projects */}
       <ProjectsSection
         projects={projects}
@@ -61,17 +72,6 @@ export function WorkTab({
             <p className="text-sm text-muted-foreground">No portfolio works yet.</p>
           )}
         </section>
-      )}
-
-      {/* Available works */}
-      {(isOwner || availableWorks.length > 0) && (
-        <AvailableWorksSection
-          initialWorks={availableWorks}
-          profileId={profileId}
-          artistName={artistName}
-          viewerRole={viewerRole}
-          isOwner={isOwner}
-        />
       )}
 
       {/* In Collection / Sold works */}
