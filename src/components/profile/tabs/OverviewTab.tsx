@@ -91,7 +91,7 @@ export function OverviewTab({
               </div>
               {bibliography.length > 3 && (
                 <Link
-                  href={`/${username}?tab=press`}
+                  href={`/${username}?tab=cv`}
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   View all press →

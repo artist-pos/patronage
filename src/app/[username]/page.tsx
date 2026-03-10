@@ -19,13 +19,12 @@ import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
 import { WorkTab } from "@/components/profile/tabs/WorkTab";
 import { StudioTab } from "@/components/profile/tabs/StudioTab";
 import { CvTab } from "@/components/profile/tabs/CvTab";
-import { PressTab } from "@/components/profile/tabs/PressTab";
 import { SupportTab } from "@/components/profile/tabs/SupportTab";
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
-const VALID_TABS = ["overview", "work", "studio", "cv", "press", "support"] as const;
+const VALID_TABS = ["overview", "work", "studio", "cv", "support"] as const;
 type TabType = typeof VALID_TABS[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
@@ -99,8 +98,10 @@ export async function generateMetadata({ params }: Props) {
 export default async function ArtistProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const { tab: rawTab } = await searchParams;
-  const tab: TabType = (VALID_TABS as readonly string[]).includes(rawTab ?? "")
-    ? (rawTab as TabType)
+  // Redirect legacy ?tab=press to cv
+  const normalised = rawTab === "press" ? "cv" : rawTab;
+  const tab: TabType = (VALID_TABS as readonly string[]).includes(normalised ?? "")
+    ? (normalised as TabType)
     : "overview";
 
   const profile = await getProfile(username);
@@ -502,14 +503,6 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   username={profile.username}
                   displayName={displayName}
                   isOwner={isOwner}
-                />
-              )}
-
-              {tab === "press" && (
-                <PressTab
-                  bibliography={bibliography}
-                  profileId={profile.id}
-                  username={profile.username}
                 />
               )}
 
