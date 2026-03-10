@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { WorksTable } from "@/components/dashboard/WorksTable";
+import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
+import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -28,7 +30,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
   }
 
   const params = await searchParams;
-  const section = params.section === "available" ? "available" : "portfolio";
+  const section = (["portfolio", "available", "sold"].includes(params.section ?? "") ? params.section : "portfolio") as "portfolio" | "available" | "sold";
 
   const [portfolioResult, availableResult, soldResult] = await Promise.all([
     supabase
@@ -98,7 +100,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
             key={key}
             href={`/dashboard/works?section=${key}`}
             className={`px-4 py-3 text-sm whitespace-nowrap transition-colors ${
-              section === key || (section === "portfolio" && key === "portfolio")
+              section === key
                 ? "font-semibold border-b-2 border-black -mb-px"
                 : "text-muted-foreground hover:text-foreground"
             }`}
@@ -108,28 +110,70 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
         ))}
       </div>
 
-      {/* Featured notice */}
+      {/* Portfolio section */}
       {section === "portfolio" && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
-          <span>
-            <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
-            {featuredCount > 0 && " — shown on your profile overview"}
-          </span>
-          {featuredCount === 0 && (
-            <span className="text-muted-foreground">
-              Click any work to open it, then mark it as Featured to curate your overview.
-            </span>
-          )}
+        <div className="space-y-6">
+          {featuredCount > 0 || portfolioWorks.length > 0 ? (
+            <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
+              <span>
+                <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
+                {featuredCount > 0 && " — shown on your profile overview"}
+              </span>
+              {featuredCount === 0 && (
+                <span>Open any work and mark it as Featured to curate your overview.</span>
+              )}
+            </div>
+          ) : null}
+
+          <WorksTable
+            section="portfolio"
+            portfolioWorks={portfolioWorks}
+            availableWorks={availableWorks}
+            soldWorks={soldWorks}
+            featuredCount={featuredCount}
+          />
+
+          <div className="pt-4 border-t border-border">
+            <p className="text-sm font-medium mb-4">Add portfolio works</p>
+            <PortfolioUploader profileId={user.id} />
+          </div>
         </div>
       )}
 
-      <WorksTable
-        section={section as "portfolio" | "available" | "sold"}
-        portfolioWorks={portfolioWorks}
-        availableWorks={availableWorks}
-        soldWorks={soldWorks}
-        featuredCount={featuredCount}
-      />
+      {/* Available section */}
+      {section === "available" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Works listed for sale. Patrons can make offers directly from your profile.
+            </p>
+            <AddWorkButton profileId={user.id} />
+          </div>
+          <WorksTable
+            section="available"
+            portfolioWorks={portfolioWorks}
+            availableWorks={availableWorks}
+            soldWorks={soldWorks}
+            featuredCount={featuredCount}
+          />
+        </div>
+      )}
+
+      {/* Sold section */}
+      {section === "sold" && (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Works transferred to collectors. These are permanent provenance records.
+          </p>
+          <WorksTable
+            section="sold"
+            portfolioWorks={portfolioWorks}
+            availableWorks={availableWorks}
+            soldWorks={soldWorks}
+            featuredCount={featuredCount}
+          />
+        </div>
+      )}
     </div>
   );
 }
