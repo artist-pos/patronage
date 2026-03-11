@@ -9,6 +9,7 @@ import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
 
@@ -94,18 +95,23 @@ export default async function OnboardingPage({
         </section>
       </div>
 
-      {/* ── Artist-only: Portfolio ── */}
+      {/* ── Artist-only: Works ── */}
       {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Portfolio</h2>
-            <p className="text-xs text-muted-foreground">
-              Upload up to 10 images. JPEG or PNG, max 10 MB each. Resized to 1600 px before
-              uploading. Add a title and description to each image by clicking below it. Drag to reorder.
-              Use Hide to remove an image from your public profile without deleting it.
-            </p>
+        <section className="border-t border-border pt-12">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Works</h2>
+              <p className="text-xs text-muted-foreground">
+                Upload, reorder, and manage your portfolio, available works, and sales history.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/works"
+              className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors whitespace-nowrap"
+            >
+              Manage your works →
+            </Link>
           </div>
-          <PortfolioUploader profileId={user.id} />
         </section>
       )}
 
