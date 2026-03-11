@@ -129,7 +129,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
       {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
       <div className="relative w-full overflow-hidden bg-white border-b border-black">
-        <div className="relative" style={{ height: 160, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
+        <div className="relative" style={{ height: 200, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
           {opp.featured_image_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -161,7 +161,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
       </div>
 
       {/* ── Content ── */}
-      <div className="p-4 flex flex-col gap-2">
+      <div className="p-5 flex flex-col gap-2 flex-1">
 
         {/* ── Always-visible vital stats ── */}
 
@@ -220,6 +220,13 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
             </div>
           );
         })()}
+
+        {/* Caption */}
+        {(opp.caption || opp.description) && (
+          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+            {opp.caption ?? opp.description}
+          </p>
+        )}
       </div>
     </article>
   );
