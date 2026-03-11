@@ -35,7 +35,6 @@ interface Props {
 
 export function FeaturedImageUploader({ profileId }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [focusY, setFocusY] = useState(50);
@@ -80,13 +79,9 @@ export function FeaturedImageUploader({ profileId }: Props) {
     setUploading(false);
   }
 
-  function handleFocusChange(value: number) {
-    setFocusY(value);
-    // Debounce the DB write — only save 600ms after the user stops dragging
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      supabase.from("profiles").update({ banner_focus_y: value }).eq("id", profileId);
-    }, 600);
+  function saveFocusY(value: number) {
+    // Fire-and-forget — the fetch completes even if the page navigates away before it returns
+    supabase.from("profiles").update({ banner_focus_y: value }).eq("id", profileId);
   }
 
   function handleRemove() {
@@ -143,7 +138,9 @@ export function FeaturedImageUploader({ profileId }: Props) {
               min={0}
               max={100}
               value={focusY}
-              onChange={(e) => handleFocusChange(Number(e.target.value))}
+              onChange={(e) => setFocusY(Number(e.target.value))}
+              onPointerUp={(e) => saveFocusY(Number((e.target as HTMLInputElement).value))}
+              onKeyUp={(e) => saveFocusY(Number((e.target as HTMLInputElement).value))}
               className="w-full accent-black cursor-pointer"
             />
             <p className="text-xs text-muted-foreground">

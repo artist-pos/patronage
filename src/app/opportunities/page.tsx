@@ -6,7 +6,7 @@ import { OpportunityFilters } from "@/components/opportunities/OpportunityFilter
 import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { createClient } from "@/lib/supabase/server";
-import type { CountryEnum, DisciplineEnum, Opportunity, OppTypeEnum } from "@/types/database";
+import type { CareerStageEnum, CountryEnum, DisciplineEnum, Opportunity, OppTypeEnum } from "@/types/database";
 
 export const metadata = {
   title: "Art Grants & Opportunities for NZ & Australian Artists",
@@ -19,47 +19,81 @@ export const metadata = {
   },
 };
 
-// Maps DisciplineEnum values to the display labels used in opportunity sub_categories
-const DISCIPLINE_LABELS: Record<string, string> = {
-  visual_art: "Visual Art",
-  music: "Music",
-  poetry: "Poetry",
-  writing: "Writing",
-  dance: "Dance",
-  film: "Film",
-  photography: "Photography",
-  craft: "Craft",
-  performance: "Performance",
-  other: "Other",
+// Expanded mapping: each discipline covers its specific scraped mediums.
+// Opportunities tagged with any of these sub_category values count as a discipline match.
+const DISCIPLINE_EXPANSION: Record<string, string[]> = {
+  visual_art:  ["Visual Art", "Painting", "Sculpture", "Drawing", "Printmaking", "Installation", "Mixed Media", "Ceramics", "Digital", "Illustration"],
+  craft:       ["Craft", "Ceramics", "Textile", "Jewellery", "Glass", "Woodwork", "Printmaking", "Mixed Media"],
+  photography: ["Photography"],
+  film:        ["Film", "Film & Video", "Moving Image", "Animation"],
+  music:       ["Music", "Sound"],
+  writing:     ["Writing", "Poetry"],   // poetry is a form of writing
+  dance:       ["Dance", "Performance"],
+  performance: ["Performance", "Live Art", "Dance"],
+  poetry:      ["Poetry", "Writing"],
+  other:       ["Other"],
 };
 
-// Discipline labels that appear in sub_categories (to distinguish from non-discipline tags)
-const DISCIPLINE_LABEL_SET = new Set(Object.values(DISCIPLINE_LABELS));
+// All medium/discipline tags (used to distinguish them from career-stage/focus tags)
+const ALL_MEDIUM_TAGS = new Set(
+  Object.values(DISCIPLINE_EXPANSION).flat()
+);
+
+// Career stage tags as they appear in sub_categories, mapped per CareerStageEnum
+const CAREER_STAGE_TAG_MAP: Record<CareerStageEnum, string[]> = {
+  Emerging:     ["Emerging", "Early Career"],
+  "Mid-Career": ["Mid-Career"],
+  Established:  ["Established"],
+  Open:         [], // "Open" matches everything — no tags required
+};
+const ALL_CAREER_STAGE_TAGS = new Set(
+  Object.values(CAREER_STAGE_TAG_MAP).flat()
+);
 
 function splitByRelevance(
   opportunities: Opportunity[],
   artistCountry: string | null,
-  artistDisciplines: DisciplineEnum[]
+  artistDisciplines: DisciplineEnum[],
+  artistCareerStage: CareerStageEnum | null
 ): { matched: Opportunity[]; lessRelevant: Opportunity[] } {
-  const artistLabels = artistDisciplines.map(d => DISCIPLINE_LABELS[d] ?? d);
+  // Build the union of all medium tags relevant to this artist's disciplines
+  const expandedMediums = new Set<string>();
+  for (const d of artistDisciplines) {
+    for (const tag of DISCIPLINE_EXPANSION[d] ?? []) expandedMediums.add(tag);
+  }
+
+  // Career stage tags this artist matches
+  const matchedStageTags = new Set<string>(
+    artistCareerStage ? (CAREER_STAGE_TAG_MAP[artistCareerStage] ?? []) : []
+  );
 
   const matched: Opportunity[] = [];
   const lessRelevant: Opportunity[] = [];
 
   for (const opp of opportunities) {
-    // Country relevance: Global = everyone; null/empty = everyone; otherwise must match
+    const tags = opp.sub_categories ?? [];
+
+    // Country: null/Global = open to all; otherwise must match artist's country
     const countryRelevant =
       !opp.country ||
       opp.country === "Global" ||
       opp.country === artistCountry;
 
-    // Discipline relevance: if sub_categories has no discipline tags, it's open to all
-    const disciplineTags = (opp.sub_categories ?? []).filter(tag => DISCIPLINE_LABEL_SET.has(tag));
+    // Discipline: if no medium tags present → open to all disciplines
+    const mediumTags = tags.filter(t => ALL_MEDIUM_TAGS.has(t));
     const disciplineRelevant =
-      disciplineTags.length === 0 ||
-      artistLabels.some(label => disciplineTags.includes(label));
+      mediumTags.length === 0 ||
+      (expandedMediums.size > 0 && mediumTags.some(t => expandedMediums.has(t)));
 
-    if (countryRelevant && disciplineRelevant) {
+    // Career stage: if no stage tags present → open to all; "Open" profile matches all
+    const stageTags = tags.filter(t => ALL_CAREER_STAGE_TAGS.has(t));
+    const careerRelevant =
+      stageTags.length === 0 ||
+      !artistCareerStage ||
+      artistCareerStage === "Open" ||
+      stageTags.some(t => matchedStageTags.has(t));
+
+    if (countryRelevant && disciplineRelevant && careerRelevant) {
       matched.push(opp);
     } else {
       lessRelevant.push(opp);
@@ -89,18 +123,20 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
   let artistCountry: string | null = null;
   let artistDisciplines: DisciplineEnum[] = [];
+  let artistCareerStage: CareerStageEnum | null = null;
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry);
 
   if (user && !hasManualFilters) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, country, disciplines")
+      .select("role, country, disciplines, career_stage")
       .eq("id", user.id)
       .single();
 
     if (profile && (profile.role === "artist" || profile.role === "owner")) {
       artistCountry = profile.country ?? null;
       artistDisciplines = (profile.disciplines ?? []) as DisciplineEnum[];
+      artistCareerStage = (profile.career_stage ?? null) as CareerStageEnum | null;
     }
   }
 
@@ -113,7 +149,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
   // Split into matched / less relevant only when we have profile data and no manual filters
   const { matched, lessRelevant } = canScore
-    ? splitByRelevance(opportunities, artistCountry, artistDisciplines)
+    ? splitByRelevance(opportunities, artistCountry, artistDisciplines, artistCareerStage)
     : { matched: opportunities, lessRelevant: [] };
 
   const activeFilters = [
