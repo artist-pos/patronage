@@ -2,6 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity } from "@/types/database";
 
+// Tags hidden from cards — still used for filtering/matching, shown on detail page
+const HIDDEN_CARD_TAGS = new Set([
+  // Career stage
+  "Emerging", "Early Career", "Mid-Career", "Established",
+  // Eligibility / audience focus
+  "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research",
+]);
+
 export function formatFunding(amount: number): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(0)}M+`;
   if (amount >= 100_000) return `$${Math.round(amount / 1_000)}k+`;
@@ -121,7 +129,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
       {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
       <div className="relative w-full overflow-hidden bg-white border-b border-black">
-        <div className="relative" style={{ height: 200, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
+        <div className="relative" style={{ height: 160, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
           {opp.featured_image_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -153,7 +161,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
       </div>
 
       {/* ── Content ── */}
-      <div className="p-5 flex flex-col gap-2 flex-1">
+      <div className="p-4 flex flex-col gap-2">
 
         {/* ── Always-visible vital stats ── */}
 
@@ -188,26 +196,30 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           </span>
         </div>
 
-        {/* Sub-category focus tags — always visible, above the fold */}
-        {(opp.sub_categories ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {(opp.sub_categories ?? []).map((cat) => (
-              <span
-                key={cat}
-                className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none"
-              >
-                {cat}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Caption */}
-        {(opp.caption || opp.description) && (
-          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
-            {opp.caption ?? opp.description}
-          </p>
-        )}
+        {/* Medium / discipline tags — max 3 visible, career/eligibility tags hidden */}
+        {(() => {
+          const visible = (opp.sub_categories ?? []).filter(t => !HIDDEN_CARD_TAGS.has(t));
+          const shown = visible.slice(0, 3);
+          const overflow = visible.length - shown.length;
+          if (shown.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-1.5">
+              {shown.map((cat) => (
+                <span
+                  key={cat}
+                  className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none"
+                >
+                  {cat}
+                </span>
+              ))}
+              {overflow > 0 && (
+                <span className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none">
+                  +{overflow} more
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </article>
   );
