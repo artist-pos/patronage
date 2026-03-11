@@ -142,6 +142,16 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         <FoundOpportunityButton />
       </div>
 
+      {/* AI-extractable description — hidden visually but crawlable and screen-reader accessible */}
+      {!hasManualFilters && (
+        <p className="sr-only">
+          Patronage lists arts grants, residencies, open calls, commissions, prizes, and jobs for New Zealand and Australian artists.
+          Opportunities are sourced from Creative NZ, Creative Australia, NZ On Air, state and regional arts councils, galleries, and independent organisations.
+          The directory covers visual art, music, writing, poetry, dance, film, photography, craft, and performance disciplines.
+          All listings are reviewed before publishing and updated weekly.
+        </p>
+      )}
+
       {/* Marketplace Stats bar */}
       <div className="border border-black px-6 py-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
         <span className="font-mono text-sm">

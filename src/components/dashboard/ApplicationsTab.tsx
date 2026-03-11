@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createRealtimeClient } from "@/lib/supabase/client";
 import type { OpportunityApplication } from "@/types/database";
 import { UploadHighResButton } from "./UploadHighResButton";
 
@@ -37,7 +37,7 @@ export function ApplicationsTab({ initialApplications, userId }: Props) {
 
   // Realtime subscription
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createRealtimeClient();
     const channel = supabase
       .channel("applications-realtime")
       .on(

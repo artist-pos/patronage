@@ -59,6 +59,40 @@ export const metadata: Metadata = {
   },
 };
 
+const siteSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://patronage.nz/#organization",
+      name: "Patronage",
+      url: "https://patronage.nz",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://patronage.nz/Favicon_Bleed_512.png",
+      },
+      description:
+        "Free professional infrastructure for NZ and Australian artists — portfolio, CV, and opportunity directory.",
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://patronage.nz/#website",
+      name: "Patronage",
+      url: "https://patronage.nz",
+      publisher: { "@id": "https://patronage.nz/#organization" },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate:
+            "https://patronage.nz/opportunities?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
   modal,
@@ -69,6 +103,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
+        />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
 import { trackEvent } from "@/actions/trackEvent";
@@ -73,11 +74,11 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
       >
         {/* ── Image panel ── */}
         <div className="relative overflow-hidden bg-muted group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={img.url}
             alt={img.caption ?? "Portfolio work"}
-            className="absolute inset-0 w-full h-full object-contain"
+            fill
+            style={{ objectFit: "contain" }}
           />
 
           {/* Prev arrow */}

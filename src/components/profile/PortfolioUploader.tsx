@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import {
@@ -222,7 +222,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
   const [orderDirty, setOrderDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const sensors = useSensors(
     // distance: 8 — requires intentional drag, prevents accidental drags on tap/click
@@ -257,7 +257,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       .eq("current_owner_id", profileId)
       .order("position", { ascending: true })
       .then(({ data }) => setImages((data ?? []) as PortfolioImage[]));
-  }, [profileId, isPortfolio]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profileId, isPortfolio, supabase]);
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;

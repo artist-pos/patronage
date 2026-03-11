@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,7 +43,7 @@ export function FeaturedImageUploader({ profileId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     supabase
@@ -55,7 +55,7 @@ export function FeaturedImageUploader({ profileId }: Props) {
         setImageUrl(data?.featured_image_url ?? null);
         setFocusY(data?.banner_focus_y ?? 50);
       });
-  }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profileId, supabase]);
 
   async function handleFile(file: File | null) {
     if (!file) return;

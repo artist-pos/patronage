@@ -10,16 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
-import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
+import { LazyCreateUpdateModal } from "@/components/feed/LazyCreateUpdateModal";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
+import dynamic from "next/dynamic";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
-import { WorkTab } from "@/components/profile/tabs/WorkTab";
-import { StudioTab } from "@/components/profile/tabs/StudioTab";
-import { CvTab } from "@/components/profile/tabs/CvTab";
-import { SupportTab } from "@/components/profile/tabs/SupportTab";
+
+const WorkTab = dynamic(() =>
+  import("@/components/profile/tabs/WorkTab").then((m) => ({ default: m.WorkTab }))
+);
+const StudioTab = dynamic(() =>
+  import("@/components/profile/tabs/StudioTab").then((m) => ({ default: m.StudioTab }))
+);
+const CvTab = dynamic(() =>
+  import("@/components/profile/tabs/CvTab").then((m) => ({ default: m.CvTab }))
+);
+const SupportTab = dynamic(() =>
+  import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
+);
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
@@ -125,103 +135,143 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
-  const [portfolioImages, availableWorks, studioUpdates, artistProjects, alreadyFollowing, followsData, soldWorks, collectionWorks, profileOpportunities, creativeWorks] =
-    await Promise.all([
-      // Bucket A: archival portfolio — not for sale, still owned by the creator
-      // Non-owners only see works with hide_from_archive = false
-      isArtistProfile
-        ? (async () => {
-            const q = supabase
-              .from("portfolio_images")
-              .select("*")
-              .eq("profile_id", profile.id)
-              .eq("is_available", false)
-              .eq("current_owner_id", profile.id);
-            const { data } = await (!isOwner ? q.eq("hide_from_archive", false) : q)
-              .order("position", { ascending: true });
-            return data ?? [];
-          })()
-        : Promise.resolve([]),
-      // Bucket B: available for sale — hide soft-hidden works from non-owners
-      isArtistProfile
-        ? (async () => {
-            const q = supabase
-              .from("artworks")
-              .select("*")
-              .eq("profile_id", profile.id)
-              .eq("is_available", true);
-            const { data } = await (!isOwner ? q.eq("hide_available", false) : q)
-              .order("position", { ascending: true });
-            return data ?? [];
-          })()
-        : Promise.resolve([]),
-      isArtistProfile ? getArtistUpdates(profile.id) : Promise.resolve([]),
-      isArtistProfile ? getArtistProjects(profile.id) : Promise.resolve([]),
-      user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
-      // For patron/partner profiles: get the artists they follow
-      !isArtistProfile
-        ? supabase
-            .from("follows")
-            .select("following_id")
-            .eq("follower_id", profile.id)
-            .then(async ({ data: follows }) => {
-              const ids = (follows ?? []).map((f: { following_id: string }) => f.following_id);
-              if (ids.length === 0) return [];
-              const { data: artists } = await supabase
-                .from("profiles")
-                .select("id, username, full_name, avatar_url")
-                .in("id", ids);
-              return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
-            })
-        : Promise.resolve([]),
-      // Bucket C: sold works — transferred to a different owner
-      isArtistProfile
-        ? supabase
+  // ── Phase 1: Always-needed (identity block, badges, follow button) ──────────
+  const [
+    availableWorks,
+    portfolioCountResult,
+    hasSoldWorkResult,
+    alreadyFollowing,
+    ownerProjects,
+    followsData,
+    collectionWorks,
+    profileOpportunities,
+  ] = await Promise.all([
+    // Available works: always needed for "X works available" badge
+    isArtistProfile
+      ? (() => {
+          const q = supabase
             .from("artworks")
-            .select("*, owner_profile:current_owner_id(username, full_name)")
-            .eq("creator_id", profile.id)
-            .neq("current_owner_id", profile.id)
-            .order("created_at", { ascending: false })
-            .then(({ data }) => (data ?? []))
-        : Promise.resolve([]),
-      // Patron/partner collection (works they currently own)
-      !isArtistProfile
-        ? supabase
-            .from("artworks")
-            .select("*, creator_profile:creator_id(username, full_name)")
-            .eq("current_owner_id", profile.id)
-            .order("created_at", { ascending: false })
-            .then(({ data }) => (data ?? []))
-        : Promise.resolve([]),
-      // Patron/partner profile opportunities
-      !isArtistProfile
-        ? supabase
-            .from("opportunities")
             .select("*")
             .eq("profile_id", profile.id)
-            .eq("is_active", true)
-            .order("created_at", { ascending: false })
-            .then(({ data }) => (data ?? []) as Opportunity[])
-        : Promise.resolve([] as Opportunity[]),
-      // Creative works (multi-discipline: images, audio, video, writing)
-      isArtistProfile
-        ? supabase
-            .from("creative_works")
-            .select("*")
-            .eq("profile_id", profile.id)
+            .eq("is_available", true);
+          return (!isOwner ? q.eq("hide_available", false) : q)
             .order("position", { ascending: true })
-            .then(({ data }) => (data ?? []) as CreativeWork[])
-        : Promise.resolve([] as CreativeWork[]),
-    ]);
+            .then(({ data }) => data ?? []);
+        })()
+      : Promise.resolve([]),
+    // Cheap count for portfolio badge when full images not loaded
+    isArtistProfile
+      ? supabase
+          .from("portfolio_images")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", profile.id)
+          .eq("is_available", false)
+          .eq("current_owner_id", profile.id)
+      : Promise.resolve({ count: 0 }),
+    // Cheap check for "Collected" badge
+    isArtistProfile
+      ? supabase
+          .from("artworks")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", profile.id)
+          .neq("current_owner_id", profile.id)
+          .limit(1)
+      : Promise.resolve({ count: 0 }),
+    user && !isOwner ? isFollowing(user.id, profile.id) : Promise.resolve(false),
+    // Owner's projects: needed for CreateUpdateModal in identity block
+    isOwner && isArtistProfile ? getArtistProjects(profile.id) : Promise.resolve([]),
+    // Non-artist: followed artists
+    !isArtistProfile
+      ? supabase
+          .from("follows")
+          .select("following_id")
+          .eq("follower_id", profile.id)
+          .then(async ({ data: follows }) => {
+            const ids = (follows ?? []).map((f: { following_id: string }) => f.following_id);
+            if (ids.length === 0) return [];
+            const { data: artists } = await supabase
+              .from("profiles")
+              .select("id, username, full_name, avatar_url")
+              .in("id", ids);
+            return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
+          })
+      : Promise.resolve([]),
+    // Non-artist: collection
+    !isArtistProfile
+      ? supabase
+          .from("artworks")
+          .select("*, creator_profile:creator_id(username, full_name)")
+          .eq("current_owner_id", profile.id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
+    // Non-artist: live opportunities
+    !isArtistProfile
+      ? supabase
+          .from("opportunities")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => (data ?? []) as Opportunity[])
+      : Promise.resolve([] as Opportunity[]),
+  ]);
+
+  // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
+  const needsPortfolio = isArtistProfile && (tab === "overview" || tab === "work");
+  const needsUpdates   = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
+  const needsProjects  = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
+  const needsSold      = isArtistProfile && tab === "work";
+  const needsCreative  = isArtistProfile && (tab === "work" || tab === "studio");
+
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks] = await Promise.all([
+    needsPortfolio
+      ? (() => {
+          const q = supabase
+            .from("portfolio_images")
+            .select("*")
+            .eq("profile_id", profile.id)
+            .eq("is_available", false)
+            .eq("current_owner_id", profile.id);
+          return (!isOwner ? q.eq("hide_from_archive", false) : q)
+            .order("position", { ascending: true })
+            .then(({ data }) => data ?? []);
+        })()
+      : Promise.resolve([]),
+    needsUpdates ? getArtistUpdates(profile.id) : Promise.resolve([]),
+    needsProjects ? getArtistProjects(profile.id) : Promise.resolve([]),
+    needsSold
+      ? supabase
+          .from("artworks")
+          .select("*, owner_profile:current_owner_id(username, full_name)")
+          .eq("creator_id", profile.id)
+          .neq("current_owner_id", profile.id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
+    needsCreative
+      ? supabase
+          .from("creative_works")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []) as CreativeWork[])
+      : Promise.resolve([] as CreativeWork[]),
+  ]);
+
+  // Merge: owner gets projects from phase 1 (for modal), others from phase 2
+  const artistProjects = ownerProjects.length > 0 ? ownerProjects : tabProjects;
 
   const images = portfolioImages;
 
-  // Narrow types for downstream use
   const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
 
-  // Compute artist badges
-  const isCollected = isArtistProfile && soldWorks.length > 0;
-  const worksCount = isArtistProfile ? availableWorks.length + images.length : 0;
+  // Use full data when loaded; fall back to cheap counts for tabs that skip full fetches
+  const portfolioCount = (portfolioCountResult as { count: number | null }).count ?? 0;
+  const hasSoldWork = ((hasSoldWorkResult as { count: number | null }).count ?? 0) > 0;
+  const isCollected = isArtistProfile && (hasSoldWork || soldWorks.length > 0);
+  const imagesCount = images.length > 0 ? images.length : portfolioCount;
+  const worksCount = isArtistProfile ? availableWorks.length + imagesCount : 0;
   const profileBadges = isArtistProfile
     ? computeBadges(
         { ...profile, received_grants: profile.received_grants ?? [] },
@@ -240,22 +290,41 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
     : (profile.medium ?? []);
 
+  const profileUrl = `https://patronage.nz/${profile.username}`;
+  const sameAs = [
+    ...(profile.website_url ? [profile.website_url] : []),
+    ...(profile.instagram_handle ? [`https://instagram.com/${profile.instagram_handle}`] : []),
+  ];
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Person",
-    name: displayName,
-    url: `https://patronage.nz/${profile.username}`,
-    ...(profile.avatar_url && { image: profile.avatar_url }),
-    ...(profile.bio && { description: profile.bio }),
-    ...(jsonLdDisciplines.length > 0 && {
-      jobTitle: jsonLdDisciplines.join(", "),
-    }),
-    ...(profile.country && {
-      address: {
-        "@type": "PostalAddress",
-        addressCountry: profile.country,
+    "@graph": [
+      {
+        "@type": "Person",
+        "@id": profileUrl,
+        name: displayName,
+        url: profileUrl,
+        ...(profile.avatar_url && { image: profile.avatar_url }),
+        ...(profile.bio && { description: profile.bio }),
+        ...(jsonLdDisciplines.length > 0 && {
+          jobTitle: jsonLdDisciplines.join(", "),
+          knowsAbout: jsonLdDisciplines,
+        }),
+        ...(profile.country && {
+          address: {
+            "@type": "PostalAddress",
+            addressCountry: profile.country,
+          },
+        }),
+        ...(sameAs.length > 0 && { sameAs }),
       },
-    }),
+      ...(isArtistProfile ? [{
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Artists", item: "https://patronage.nz/artists" },
+          { "@type": "ListItem", position: 2, name: displayName, item: profileUrl },
+        ],
+      }] : []),
+    ],
   };
 
   return (
@@ -390,7 +459,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             {(isOwner || canMessage || profile.website_url || profile.instagram_handle || profile.cv_url) && (
               <div className="flex flex-col gap-2 lg:text-right lg:items-end shrink-0 pt-1">
                 {isOwner && isArtistProfile && (
-                  <CreateUpdateModal
+                  <LazyCreateUpdateModal
                     profileId={profile.id}
                     label="Post a studio update +"
                     projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}

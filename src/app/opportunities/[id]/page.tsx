@@ -139,16 +139,45 @@ export default async function OpportunityPage({ params }: Props) {
 
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
   const schemaType = FUNDING_TYPES.has(opp.type) ? "Grant" : "Event";
+  const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": schemaType,
-    name: opp.title,
-    organizer: { "@type": "Organization", name: opp.organiser },
-    ...(opp.opens_at && { startDate: opp.opens_at }),
-    ...(opp.deadline && { endDate: opp.deadline }),
-    url: canonicalUrl,
-    ...(opp.full_description && { description: opp.full_description }),
-    location: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
+    "@graph": [
+      {
+        "@type": schemaType,
+        "@id": canonicalUrl,
+        name: opp.title,
+        url: canonicalUrl,
+        organizer: { "@type": "Organization", name: opp.organiser },
+        ...(opp.opens_at && { startDate: opp.opens_at }),
+        ...(opp.deadline && { endDate: opp.deadline }),
+        ...(schemaType === "Grant" && opp.deadline && { applicationDeadline: opp.deadline }),
+        ...(oppDescription && { description: oppDescription }),
+        ...(opp.featured_image_url && { image: opp.featured_image_url }),
+        ...((opp.city || opp.country) && {
+          location: {
+            "@type": "Place",
+            name: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
+            address: {
+              "@type": "PostalAddress",
+              ...(opp.city && { addressLocality: opp.city }),
+              addressCountry: opp.country,
+            },
+          },
+        }),
+        ...(opp.funding_amount != null && {
+          funder: { "@type": "Organization", name: opp.organiser },
+          amount: { "@type": "MonetaryAmount", value: opp.funding_amount },
+        }),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Opportunities", item: `${SITE_URL}/opportunities` },
+          { "@type": "ListItem", position: 2, name: opp.title, item: canonicalUrl },
+        ],
+      },
+    ],
   };
 
   return (

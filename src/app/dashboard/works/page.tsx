@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { WorksTable } from "@/components/dashboard/WorksTable";
-import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
+import { LazyPortfolioUploader } from "@/components/profile/LazyPortfolioUploader";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -135,7 +135,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
 
           <div className="pt-4 border-t border-border">
             <p className="text-sm font-medium mb-4">Add portfolio works</p>
-            <PortfolioUploader profileId={user.id} />
+            <LazyPortfolioUploader profileId={user.id} />
           </div>
         </div>
       )}

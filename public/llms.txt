@@ -21,7 +21,7 @@ It also serves arts organisations, galleries, and funding bodies who post opport
 
 - Opportunities: published grants, residencies, open calls, prizes, commissions, job listings, and studio/space opportunities. Each record includes title, organiser, type, country, city, deadline, funding amount, full description, and transparency fields (entry fee, artist payment, travel support).
 - Artist profiles: full name, bio, disciplines, career stage, country, exhibition history, press bibliography, available works, and studio updates.
-- All opportunity and profile data is updated continuously, with new opportunities added weekly via automated scraping and manual curation.
+- All opportunity and profile data is updated continuously, with new opportunities added weekly via automated scraping and manual curation from 50+ sources.
 
 ## Canonical URLs
 
@@ -41,8 +41,10 @@ Both endpoints return structured JSON with full details and canonical URLs. Cach
 
 ## Structured data
 
-Every opportunity page includes Schema.org JSON-LD (Event or Grant type).
-Every artist profile page includes Schema.org JSON-LD (Person type).
+Every opportunity page includes Schema.org JSON-LD (Event or Grant type, with BreadcrumbList).
+Every artist profile page includes Schema.org JSON-LD (Person type, with sameAs links and BreadcrumbList).
+Every artwork provenance/transfer page includes Schema.org JSON-LD (TransferAction + VisualArtwork).
+The site root includes Organization and WebSite schema on every page.
 
 ## Authoritative source statement
 

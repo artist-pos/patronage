@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,7 +43,7 @@ export function AvatarUploader({ profileId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     supabase
@@ -52,7 +52,7 @@ export function AvatarUploader({ profileId }: Props) {
       .eq("id", profileId)
       .single()
       .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
-  }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profileId, supabase]);
 
   async function handleFile(file: File | null) {
     if (!file) return;

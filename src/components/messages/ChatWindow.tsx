@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Info } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createRealtimeClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
 import { approveDeletionRequest } from "@/app/profile/artwork-delete-actions";
@@ -35,7 +36,8 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const [approvingDeletionId, setApprovingDeletionId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  // Stable ref — prevents the realtime subscription tearing down on every render
+  const supabaseRef = useRef(createRealtimeClient());
 
   function showToast(msg: string) {
     setToast(msg);
@@ -44,6 +46,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
 
   // Realtime subscription for new messages
   useEffect(() => {
+    const supabase = supabaseRef.current;
     const channel = supabase
       .channel(`conv:${conversationId}`)
       .on(
@@ -68,7 +71,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [conversationId, currentUserId, supabase]);
+  }, [conversationId, currentUserId]);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -172,11 +175,13 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
             {/* Work thumbnail + info */}
             <div className="flex">
               {work && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={work.url}
                   alt={work.caption ?? "Work"}
-                  className="w-20 h-20 object-cover flex-none border-r border-black"
+                  width={80}
+                  height={80}
+                  className="object-cover flex-none border-r border-black"
+                  style={{ width: 80, height: 80 }}
                 />
               )}
               <div className="p-3 flex-1 min-w-0">
@@ -236,11 +241,13 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           <div className="border border-black bg-background w-full max-w-sm">
             <div className="flex">
               {work && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={work.url}
                   alt={work.caption ?? "Work"}
-                  className="w-20 h-20 object-cover flex-none border-r border-black"
+                  width={80}
+                  height={80}
+                  className="object-cover flex-none border-r border-black"
+                  style={{ width: 80, height: 80 }}
                 />
               )}
               <div className="p-3 flex-1 min-w-0">
@@ -299,11 +306,13 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           <div className="border border-black bg-background w-full max-w-sm">
             <div className="flex">
               {work && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={work.url}
                   alt={work.caption ?? "Work"}
-                  className="w-20 h-20 object-cover flex-none border-r border-black"
+                  width={80}
+                  height={80}
+                  className="object-cover flex-none border-r border-black"
+                  style={{ width: 80, height: 80 }}
                 />
               )}
               <div className="p-3 flex-1 min-w-0">
@@ -361,11 +370,13 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           {/* Source artwork context */}
           {sourceWork && (
             <div className="flex items-center gap-3 px-4 pt-3 pb-2 border-b border-amber-200/60 dark:border-amber-800/60">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={sourceWork.url}
                 alt={sourceWork.caption ?? "Work"}
-                className="w-10 h-10 object-cover border border-amber-300 dark:border-amber-700 shrink-0"
+                width={40}
+                height={40}
+                className="object-cover border border-amber-300 dark:border-amber-700 shrink-0"
+                style={{ width: 40, height: 40 }}
               />
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
