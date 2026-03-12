@@ -147,7 +147,7 @@ export function OverviewTab({
             </div>
             <PortfolioGrid
               images={displayImages}
-              artistName={artistName}
+              username={username}
               viewerRole={viewerRole}
               profileId={profileId}
               limit={isFiltered ? undefined : 9}

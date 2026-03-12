@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 import { EnquireButton } from "./EnquireButton";
 import { MakeOfferModal } from "./MakeOfferModal";
@@ -23,12 +24,13 @@ interface Props {
   img: Artwork;
   artistId: string;
   artistName: string;
+  artistUsername: string;
   viewerRole: string | null;
   isOwner: boolean;
   onRemove?: (id: string) => void;
 }
 
-export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwner, onRemove }: Props) {
+export function AvailableWorkCard({ img, artistId, artistName, artistUsername, viewerRole, isOwner, onRemove }: Props) {
   const canEnquire = !isOwner && viewerRole !== null;
   const [hidden, setHidden] = useState(img.hide_available);
   const [unlisting, setUnlisting] = useState(false);
@@ -81,12 +83,14 @@ export function AvailableWorkCard({ img, artistId, artistName, viewerRole, isOwn
     >
       {/* Left: image — natural aspect ratio, fixed height */}
       <div className="relative overflow-hidden bg-muted flex-none group" style={{ height: CARD_H }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={img.url}
-          alt={img.caption ?? "Available work"}
-          style={{ height: CARD_H, width: "auto", display: "block" }}
-        />
+        <Link href={`/${artistUsername}/works/${img.id}`} tabIndex={-1}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={img.url}
+            alt={img.caption ?? "Available work"}
+            style={{ height: CARD_H, width: "auto", display: "block" }}
+          />
+        </Link>
 
         {/* X button — unlist (owner only) */}
         {isOwner && (

@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { PortfolioDetailModal } from "./PortfolioDetailModal";
+import Link from "next/link";
 import type { PortfolioImage } from "@/types/database";
 
 interface Props {
   images: PortfolioImage[];
-  artistName?: string;
+  username: string;
   viewerRole?: string | null;
   profileId?: string;
   limit?: number;
   isOwner?: boolean;
 }
 
-function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => void }) {
+function PortfolioItem({ img, username }: { img: PortfolioImage; username: string }) {
   const [isLandscape, setIsLandscape] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -24,9 +24,9 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
   }
 
   return (
-    <div
-      className={`flex flex-col gap-1.5 cursor-pointer group ${isLandscape ? "col-span-2" : ""} md:shrink-0 md:w-fit`}
-      onClick={onClick}
+    <Link
+      href={`/${username}/works/${img.slug ?? img.id}`}
+      className={`flex flex-col gap-1.5 group ${isLandscape ? "col-span-2" : ""} md:shrink-0 md:w-fit`}
     >
       <div
         className={`border border-border overflow-hidden md:h-[300px] md:w-fit${!loaded ? " max-md:aspect-square" : ""}`}
@@ -45,50 +45,22 @@ function PortfolioItem({ img, onClick }: { img: PortfolioImage; onClick: () => v
           {img.caption}
         </p>
       )}
-    </div>
+    </Link>
   );
 }
 
-export function PortfolioGrid({ images, artistName, viewerRole, profileId, limit, isOwner }: Props) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [localImages, setLocalImages] = useState<PortfolioImage[]>(images);
-
-  const displayed = limit ? localImages.slice(0, limit) : localImages;
-  const selectedImg = selectedIndex !== null ? displayed[selectedIndex] : null;
-  const featuredCount = localImages.filter(i => i.is_featured).length;
-
-  function handleFeaturedToggle(id: string, featured: boolean) {
-    setLocalImages(prev => prev.map(img => img.id === id ? { ...img, is_featured: featured } : img));
-  }
+export function PortfolioGrid({ images, username, limit }: Props) {
+  const displayed = limit ? images.slice(0, limit) : images;
 
   return (
-    <>
-      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-4">
-        {displayed.map((img, i) => (
-          <PortfolioItem
-            key={img.id}
-            img={img}
-            onClick={() => setSelectedIndex(i)}
-          />
-        ))}
-      </div>
-
-      {selectedImg && (
-        <PortfolioDetailModal
-          img={selectedImg}
-          onClose={() => setSelectedIndex(null)}
-          onPrev={() => setSelectedIndex(i => Math.max(0, i! - 1))}
-          onNext={() => setSelectedIndex(i => Math.min(displayed.length - 1, i! + 1))}
-          hasPrev={selectedIndex! > 0}
-          hasNext={selectedIndex! < displayed.length - 1}
-          artistName={artistName}
-          viewerRole={viewerRole}
-          profileId={profileId}
-          isOwner={isOwner}
-          featuredCount={featuredCount}
-          onFeaturedToggle={handleFeaturedToggle}
+    <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-4">
+      {displayed.map((img) => (
+        <PortfolioItem
+          key={img.id}
+          img={img}
+          username={username}
         />
-      )}
-    </>
+      ))}
+    </div>
   );
 }

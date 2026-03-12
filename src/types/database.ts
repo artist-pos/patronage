@@ -204,6 +204,12 @@ export interface PortfolioImage {
   audio_url: string | null;
   video_url: string | null;
   text_content: string | null;
+  title: string | null;
+  year: number | null;
+  medium: string | null;
+  dimensions: string | null;
+  linked_artwork_id: string | null;
+  slug: string | null;
   created_at: string;
 }
 
@@ -225,6 +231,22 @@ export interface Artwork {
   collection_label: string | null;
   hidden_from_artist: boolean;
   position: number;
+  title: string | null;
+  year: number | null;
+  medium: string | null;
+  dimensions: string | null;
+  edition: string | null;
+  created_at: string;
+}
+
+export interface WorkImage {
+  id: string;
+  portfolio_image_id: string | null;
+  artwork_id: string | null;
+  url: string;
+  caption: string | null;
+  position: number;
+  is_primary: boolean;
   created_at: string;
 }
 

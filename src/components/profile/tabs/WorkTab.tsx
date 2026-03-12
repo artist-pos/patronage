@@ -15,6 +15,7 @@ interface Props {
   projects: Project[];
   studioUpdates: ProjectUpdateWithArtist[];
   profileId: string;
+  username: string;
   artistName: string;
   viewerRole: string | null;
   isOwner: boolean;
@@ -29,6 +30,7 @@ export function WorkTab({
   projects,
   studioUpdates,
   profileId,
+  username,
   artistName,
   viewerRole,
   isOwner,
@@ -43,6 +45,7 @@ export function WorkTab({
           initialWorks={availableWorks}
           profileId={profileId}
           artistName={artistName}
+          artistUsername={username}
           viewerRole={viewerRole}
           isOwner={isOwner}
         />
@@ -64,7 +67,7 @@ export function WorkTab({
           {portfolioImages.length > 0 ? (
             <PortfolioGrid
               images={portfolioImages}
-              artistName={displayName}
+              username={username}
               viewerRole={viewerRole}
               profileId={isOwner ? undefined : profileId}
               isOwner={isOwner}

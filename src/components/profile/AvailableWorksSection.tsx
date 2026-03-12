@@ -12,6 +12,7 @@ interface Props {
   initialWorks: Artwork[];
   profileId: string;
   artistName: string;
+  artistUsername: string;
   viewerRole: string | null;
   isOwner: boolean;
 }
@@ -20,6 +21,7 @@ export function AvailableWorksSection({
   initialWorks,
   profileId,
   artistName,
+  artistUsername,
   viewerRole,
   isOwner,
 }: Props) {
@@ -64,6 +66,7 @@ export function AvailableWorksSection({
               img={img}
               artistId={profileId}
               artistName={artistName}
+              artistUsername={artistUsername}
               viewerRole={viewerRole}
               isOwner={isOwner}
               onRemove={handleWorkRemoved}

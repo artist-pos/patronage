@@ -28,7 +28,6 @@ const NAV_LINKS = [
 export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
   const isPartner = role === "partner" || role === "admin";
-  const showOpportunities = isArtist || role === "patron";
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,12 +40,20 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
               {username ?? "My Account"}
               <ChevronDown className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 border border-black">
+            <DropdownMenuContent align="end" className="w-48 border border-black">
               {username && (
                 <DropdownMenuItem asChild>
-                  <Link href={`/${username}`}>View Profile</Link>
+                  <Link href={`/${username}`}>Profile</Link>
                 </DropdownMenuItem>
               )}
+              {isArtist && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/works">My Works</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/messages" className="flex items-center gap-2">
                   Messages
@@ -55,30 +62,11 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                   )}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/profile/analytics">Analytics</Link>
-              </DropdownMenuItem>
-              {isArtist && (
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/works">My Works</Link>
-                </DropdownMenuItem>
-              )}
-              {showOpportunities && (
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard">My Opportunities</Link>
-                </DropdownMenuItem>
-              )}
               {isPartner && (
                 <DropdownMenuItem asChild>
                   <Link href="/partner/dashboard">Partner Dashboard</Link>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem asChild>
-                <Link href="/profile/notes">Manage Notes</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/profile/edit">Edit Profile</Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => signOut()}>
                 Sign Out
@@ -123,87 +111,41 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
             {isLoggedIn ? (
               <>
                 {username && (
-                  <Link
-                    href={`/${username}`}
-                    onClick={() => setOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    View Profile
+                  <Link href={`/${username}`} onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Profile
                   </Link>
                 )}
+                {isArtist && (
+                  <Link href="/dashboard/works" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    My Works
+                  </Link>
+                )}
+                <Link href="/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  Dashboard
+                </Link>
                 <Link
                   href="/messages"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Messages
-                  {unreadCount > 0 && (
-                    <span className="w-1.5 h-1.5 bg-black rounded-full" />
-                  )}
+                  {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
                 </Link>
-                <Link
-                  href="/profile/analytics"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Analytics
-                </Link>
-                {isArtist && (
-                  <Link
-                    href="/dashboard/works"
-                    onClick={() => setOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    My Works
-                  </Link>
-                )}
-                {showOpportunities && (
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    My Opportunities
-                  </Link>
-                )}
                 {isPartner && (
-                  <Link
-                    href="/partner/dashboard"
-                    onClick={() => setOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Link href="/partner/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                     Partner Dashboard
                   </Link>
                 )}
-                <Link
-                  href="/profile/notes"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Manage Notes
-                </Link>
-                <Link
-                  href="/profile/edit"
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Edit Profile
-                </Link>
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Sign out
-                  </button>
-                </form>
+                <div className="border-t border-border pt-3">
+                  <form action={signOut}>
+                    <button type="submit" className="text-muted-foreground hover:text-foreground transition-colors">
+                      Sign out
+                    </button>
+                  </form>
+                </div>
               </>
             ) : (
-              <Link
-                href="/auth/login"
-                onClick={() => setOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                 Sign in
               </Link>
             )}

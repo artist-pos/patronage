@@ -458,6 +458,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             {/* Right sidecar: action buttons + links */}
             {(isOwner || canMessage || profile.website_url || profile.instagram_handle || profile.cv_url) && (
               <div className="flex flex-col gap-2 lg:text-right lg:items-end shrink-0 pt-1">
+                {isOwner && (
+                  <Link
+                    href="/profile/edit"
+                    className="text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors self-start lg:self-end"
+                  >
+                    Edit Profile
+                  </Link>
+                )}
                 {isOwner && isArtistProfile && (
                   <LazyCreateUpdateModal
                     profileId={profile.id}
@@ -543,6 +551,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   projects={artistProjects}
                   studioUpdates={studioUpdates}
                   profileId={profile.id}
+                  username={profile.username}
                   artistName={displayName}
                   viewerRole={viewerRole}
                   isOwner={isOwner}

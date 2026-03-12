@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { WorksTable } from "@/components/dashboard/WorksTable";
 import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
-import { LazyPortfolioUploader } from "@/components/profile/LazyPortfolioUploader";
+import { AddPortfolioWorkButton } from "@/components/dashboard/AddPortfolioWorkButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
   const [portfolioResult, availableResult, soldResult] = await Promise.all([
     supabase
       .from("portfolio_images")
-      .select("id, url, caption, description, hide_from_archive, position, created_at, content_type")
+      .select("id, url, caption, description, hide_from_archive, position, created_at, content_type, title, year, medium, dimensions, linked_artwork_id")
       .eq("profile_id", user.id)
       .eq("is_available", false)
       .order("position", { ascending: true }),
@@ -131,12 +131,11 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
             availableWorks={availableWorks}
             soldWorks={soldWorks}
             featuredCount={featuredCount}
+            profileId={user.id}
           />
+          <AddPortfolioWorkButton profileId={user.id} />
 
-          <div className="pt-4 border-t border-border">
-            <p className="text-sm font-medium mb-4">Add portfolio works</p>
-            <LazyPortfolioUploader profileId={user.id} />
-          </div>
+
         </div>
       )}
 
@@ -155,6 +154,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
             availableWorks={availableWorks}
             soldWorks={soldWorks}
             featuredCount={featuredCount}
+            profileId={user.id}
           />
         </div>
       )}
@@ -171,6 +171,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
             availableWorks={availableWorks}
             soldWorks={soldWorks}
             featuredCount={featuredCount}
+            profileId={user.id}
           />
         </div>
       )}
