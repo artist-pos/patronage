@@ -9,6 +9,7 @@ import { UploadHighResButton } from "./UploadHighResButton";
 interface ApplicationWithOpportunity extends OpportunityApplication {
   opportunity: {
     id: string;
+    slug: string | null;
     title: string;
     organiser: string;
     type: string;
