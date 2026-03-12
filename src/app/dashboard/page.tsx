@@ -69,7 +69,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     getSavedOpportunities(),
     supabase
       .from("opportunity_applications")
-      .select("*, opportunity:opportunities(id, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
+      .select("*, opportunity:opportunities(id, slug, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
       .eq("artist_id", user.id)
       .order("created_at", { ascending: false }),
     isPatron
