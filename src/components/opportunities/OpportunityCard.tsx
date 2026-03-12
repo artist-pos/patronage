@@ -125,7 +125,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
   /* ── Gallery card ── */
   const inner = (
-    <article className={`overflow-hidden flex flex-col h-full rounded-xl shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
+    <article className={`overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
 
       {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
       <div className="relative w-full overflow-hidden bg-white border-b border-black">
@@ -149,11 +149,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
           {/* Status badge — top-left overlay */}
           {preOpen ? (
-            <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 rounded-full leading-none">
+            <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 leading-none">
               Not yet open
             </div>
           ) : closing && (
-            <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 rounded-full leading-none">
+            <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 leading-none">
               Closing soon
             </div>
           )}
