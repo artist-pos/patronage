@@ -7,6 +7,7 @@ import { Search, X } from "lucide-react";
 
 interface Opportunity {
   id: string;
+  slug: string | null;
   title: string;
   organiser: string;
   type: string;

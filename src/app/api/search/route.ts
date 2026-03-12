@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const p = `%${q}%`;
 
-  const oppSelect = "id, title, organiser, type, country, city, deadline, featured_image_url";
+  const oppSelect = "id, slug, title, organiser, type, country, city, deadline, featured_image_url";
   const [{ data: byFields }, { data: bySubCats }, { data: artists }] = await Promise.all([
     supabase
       .from("opportunities")
