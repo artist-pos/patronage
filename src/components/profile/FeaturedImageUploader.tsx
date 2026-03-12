@@ -80,8 +80,7 @@ export function FeaturedImageUploader({ profileId }: Props) {
   }
 
   function saveFocusY(value: number) {
-    // Fire-and-forget — the fetch completes even if the page navigates away before it returns
-    supabase.from("profiles").update({ banner_focus_y: value }).eq("id", profileId);
+    void supabase.from("profiles").update({ banner_focus_y: value }).eq("id", profileId).then(() => {});
   }
 
   function handleRemove() {
