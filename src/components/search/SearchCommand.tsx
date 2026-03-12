@@ -158,7 +158,7 @@ export function SearchCommand() {
                   {results.opportunities.map((opp) => (
                     <Link
                       key={opp.id}
-                      href={`/opportunities/${opp.id}`}
+                      href={`/opportunities/${opp.slug ?? opp.id}`}
                       onClick={closeAndNavigate}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-b border-border last:border-0"
                     >

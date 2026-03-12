@@ -20,7 +20,7 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   const days = daysUntil(opp.deadline);
   return (
     <Link
-      href={`/opportunities/${opp.id}`}
+      href={`/opportunities/${opp.slug ?? opp.id}`}
       className="group relative border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
     >
       {/* Closing soon badge — absolute top-left on mobile, hidden (shown inline below) on sm+ */}

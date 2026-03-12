@@ -95,7 +95,7 @@ export function ApplicationsTab({ initialApplications, userId }: Props) {
               <div className="space-y-0.5 min-w-0">
                 {opp ? (
                   <Link
-                    href={`/opportunities/${opp.id}`}
+                    href={`/opportunities/${opp.slug ?? opp.id}`}
                     className="font-semibold text-sm hover:underline truncate block"
                   >
                     {opp.title}

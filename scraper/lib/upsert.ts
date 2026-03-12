@@ -70,7 +70,7 @@ export async function upsertOpportunity(
 
   // Generate and store slug now that we have the ID
   if (!error && inserted?.id) {
-    const slug = toSlug(record.title, inserted.id);
+    const slug = toSlug(record.title, record.deadline ?? null);
     await supabase.from("opportunities").update({ slug }).eq("id", inserted.id);
   }
 
@@ -81,14 +81,15 @@ export async function upsertOpportunity(
   return "inserted";
 }
 
-function toSlug(title: string, id: string): string {
-  return title
+function toSlug(title: string, deadline: string | null): string {
+  const base = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/, "") +
-    "-" + id.slice(0, 8);
+    .slice(0, 70)
+    .replace(/-+$/, "");
+  const year = deadline ? new Date(deadline).getFullYear() : null;
+  return year ? `${base}-${year}` : base;
 }
 
 function buildRecord(
