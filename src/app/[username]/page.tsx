@@ -337,7 +337,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
       {/* ── Banner ── */}
       {profile.featured_image_url && (
-        <div className="relative w-full aspect-[3/1] overflow-hidden bg-neutral-100">
+        <div className="relative w-full aspect-[42/9] overflow-hidden bg-neutral-100">
           <Image
             src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 85 }) ?? profile.featured_image_url}
             alt={`${displayName} featured work`}
