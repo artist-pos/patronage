@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_PX = 3840;
@@ -96,25 +95,18 @@ export function FeaturedImageUploader({ profileId }: Props) {
     <div className="space-y-4">
       {imageUrl && (
         <div className="space-y-3">
-          {/* Letterbox preview — same aspect ratio as the public banner */}
+          {/* Preview — same aspect ratio as the public banner */}
           <div
-            className="group relative w-full overflow-hidden border border-black bg-neutral-100"
-            style={{ aspectRatio: "42 / 9" }}
+            className="group relative w-full border border-black"
+            style={{
+              aspectRatio: "42 / 9",
+              backgroundImage: `url("${imageUrl}")`,
+              backgroundSize: "100% auto",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: `center ${focusY}%`,
+              backgroundColor: "#f5f5f4",
+            }}
           >
-            <Image
-              src={imageUrl}
-              alt="Featured artwork preview"
-              fill
-              unoptimized
-              className="object-cover"
-              style={{ objectPosition: `center ${focusY}%` }}
-              sizes="100vw"
-            />
-            {/* Focal point indicator line */}
-            <div
-              className="absolute left-0 right-0 h-px bg-white/70 pointer-events-none"
-              style={{ top: `${focusY}%` }}
-            />
             {/* Remove floater */}
             <button
               onClick={handleRemove}

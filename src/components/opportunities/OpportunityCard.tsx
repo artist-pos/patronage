@@ -125,85 +125,93 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
   /* ── Gallery card ── */
   const inner = (
-    <article className={`overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
+    <article className={`overflow-hidden flex flex-row md:flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
 
-      {/* ── Image / Logo — flexible height, object-contain so logos aren't cropped ── */}
-      <div className="relative w-full overflow-hidden bg-white border-b border-black">
-        <div className="relative" style={{ height: 200, overflow: "hidden", backgroundColor: "#f5f5f5" }}>
-          {opp.featured_image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={opp.featured_image_url}
-              alt={opp.title}
-              loading={priority ? "eager" : "lazy"}
-              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block" }}
-            />
-          )}
+      {/* ── Image / Logo ── */}
+      {/* Mobile: narrow left column; Desktop: full-width top section */}
+      <div
+        className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
+        style={{ backgroundColor: "#f5f5f5" }}
+      >
+        {opp.featured_image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={opp.featured_image_url}
+            alt={opp.title}
+            loading={priority ? "eager" : "lazy"}
+            className="absolute inset-0 w-full h-full"
+            style={{ objectFit: "contain", objectPosition: "center", display: "block" }}
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center font-mono text-[8px] text-muted-foreground uppercase tracking-widest text-center px-1">
+            {opp.type}
+          </span>
+        )}
 
-          {/* $ Range — top-right overlay */}
-          {fundingLabel && (
-            <div className="absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
-              {fundingLabel}
-            </div>
-          )}
-
-          {/* Status badge — top-left overlay */}
-          {preOpen ? (
-            <div className="absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 leading-none">
-              Not yet open
-            </div>
-          ) : closing && (
-            <div className="absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 leading-none">
-              Closing soon
-            </div>
-          )}
-        </div>
+        {/* Overlays — desktop only */}
+        {fundingLabel && (
+          <div className="hidden md:block absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
+            {fundingLabel}
+          </div>
+        )}
+        {preOpen ? (
+          <div className="hidden md:block absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 leading-none">
+            Not yet open
+          </div>
+        ) : closing && (
+          <div className="hidden md:block absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 leading-none">
+            Closing soon
+          </div>
+        )}
       </div>
 
       {/* ── Content ── */}
-      <div className="p-5 flex flex-col gap-2 flex-1">
+      <div className="p-3 md:p-5 flex flex-col gap-1.5 md:gap-2 flex-1 min-w-0">
 
-        {/* ── Always-visible vital stats ── */}
-
-        {/* Type / country / grant_type / recipients tags */}
-        <div className="flex flex-wrap gap-1.5">
-          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1 md:gap-1.5">
+          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
             {opp.type}
           </span>
-          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
             {opp.country}
           </span>
           {opp.grant_type && (
-            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+            <span className="hidden md:inline-block text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
               {opp.grant_type}
             </span>
           )}
           {opp.recipients_count != null && (
-            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+            <span className="hidden md:inline-block text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
               {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
             </span>
           )}
         </div>
 
+        {/* Funding label — mobile only (desktop uses image overlay) */}
+        {fundingLabel && (
+          <span className="md:hidden font-mono text-xs font-bold">{fundingLabel}</span>
+        )}
+
         {/* Title */}
-        <h2 className="text-sm font-semibold leading-snug">{opp.title}</h2>
+        <h2 className="text-sm font-semibold leading-snug line-clamp-2">{opp.title}</h2>
 
         {/* Organiser + days */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-xs truncate">{opp.organiser}</span>
           <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
             {days}
           </span>
         </div>
 
-        {/* Medium / discipline tags — max 3 visible, career/eligibility tags hidden */}
+        {/* Sub-category tags — desktop only */}
         {(() => {
           const visible = (opp.sub_categories ?? []).filter(t => !HIDDEN_CARD_TAGS.has(t));
           const shown = visible.slice(0, 3);
           const overflow = visible.length - shown.length;
           if (shown.length === 0) return null;
           return (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="hidden md:flex flex-wrap gap-1.5">
               {shown.map((cat) => (
                 <span
                   key={cat}
@@ -221,9 +229,9 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           );
         })()}
 
-        {/* Caption */}
+        {/* Caption — desktop only */}
         {(opp.caption || opp.description) && (
-          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+          <p className="hidden md:block text-xs text-muted-foreground leading-relaxed flex-1">
             {opp.caption ?? opp.description}
           </p>
         )}

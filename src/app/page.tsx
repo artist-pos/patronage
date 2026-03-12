@@ -90,7 +90,7 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   const name = u.artist_full_name ?? u.artist_username;
   const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
   return (
-    <Link href={href} scroll={false} className="group inline-block border border-border bg-background">
+    <Link href={href} scroll={false} className="group block sm:inline-block border border-border bg-background">
       {u.image_url && (
         <div className="overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -98,12 +98,12 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
             src={u.image_url}
             alt={u.caption ?? `Update by ${name}`}
             loading="lazy"
-            style={{ height: 200, width: "auto", display: "block" }}
-            className="transition-transform duration-500 group-hover:scale-105"
+            className="w-full aspect-video object-cover sm:aspect-auto sm:h-[200px] sm:w-auto transition-transform duration-500 group-hover:scale-105"
+            style={{ display: "block" }}
           />
         </div>
       )}
-      <div className="px-2.5 py-2 border-t border-border">
+      <div className="px-2.5 py-1.5 border-t border-border">
         <div className="flex items-center gap-1.5 min-w-0">
           {u.artist_avatar_url ? (
             <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
@@ -268,7 +268,7 @@ export default async function Home() {
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {updates.map((u) => (
                 <StudioFeedCard key={u.id} u={u} />
               ))}

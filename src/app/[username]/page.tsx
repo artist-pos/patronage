@@ -337,18 +337,16 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
       {/* ── Banner ── */}
       {profile.featured_image_url && (
-        <div className="relative w-full aspect-[42/9] overflow-hidden bg-neutral-100">
-          <Image
-            src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 85 }) ?? profile.featured_image_url}
-            alt={`${displayName} featured work`}
-            fill
-            priority
-            unoptimized
-            className="object-cover"
-            style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
-            sizes="100vw"
-          />
-        </div>
+        <div
+          className="w-full aspect-[42/9]"
+          style={{
+            backgroundImage: `url("${profile.featured_image_url}")`,
+            backgroundSize: "100% auto",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: `center ${profile.banner_focus_y ?? 50}%`,
+            backgroundColor: "#f5f5f4",
+          }}
+        />
       )}
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
