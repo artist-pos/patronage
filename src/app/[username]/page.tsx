@@ -336,21 +336,18 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
       {/* ── Banner ── */}
-      {profile.featured_image_url && (() => {
-        const bannerUrl = supabaseTransform(profile.featured_image_url, { width: 1600, quality: 85 }) ?? profile.featured_image_url;
-        return (
-          <div
-            className="w-full aspect-[42/9]"
-            style={{
-              backgroundImage: `url("${bannerUrl}")`,
-              backgroundSize: "100% auto",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: `center ${profile.banner_focus_y ?? 50}%`,
-              backgroundColor: "#f5f5f4",
-            }}
-          />
-        );
-      })()}
+      {profile.featured_image_url && (
+        <div
+          className="w-full aspect-[42/9]"
+          style={{
+            backgroundImage: `url("${profile.featured_image_url}")`,
+            backgroundSize: "100% auto",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: `center ${profile.banner_focus_y ?? 50}%`,
+            backgroundColor: "#f5f5f4",
+          }}
+        />
+      )}
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
 
