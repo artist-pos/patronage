@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { notifyOpportunitySubmission } from "@/lib/email";
 
 export interface SubmissionState {
   success?: boolean;
@@ -74,5 +75,16 @@ export async function submitOpportunityAction(
   });
 
   if (error) return { error: error.message };
+
+  notifyOpportunitySubmission({
+    title,
+    organiser,
+    type: (formData.get("type") as string) || "Grant",
+    submitterEmail: (formData.get("submitter_email") as string)?.trim() || null,
+    isFeatured: isFeaturedRaw === "true",
+    isPipeline: routingType === "pipeline",
+    adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/admin`,
+  }).catch(console.error);
+
   return { success: true };
 }

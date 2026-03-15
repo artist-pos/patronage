@@ -264,6 +264,63 @@ export async function sendProvenanceNotification(
   });
 }
 
+/**
+ * Notify hello@patronage.nz when a partner submits an opportunity.
+ */
+export async function notifyOpportunitySubmission(params: {
+  title: string;
+  organiser: string;
+  type: string;
+  submitterEmail: string | null;
+  isFeatured: boolean;
+  isPipeline: boolean;
+  adminUrl: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { title, organiser, type, submitterEmail, isFeatured, isPipeline, adminUrl } = params;
+
+  const addOns: string[] = [];
+  if (isFeatured) addOns.push("Featured placement ($75 NZD)");
+  if (isPipeline) addOns.push("Patronage Pipeline");
+  const addOnHtml = addOns.length
+    ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Add-ons requested:</strong> ${addOns.map(esc).join(", ")}</p>`
+    : "";
+
+  const subjectFlag = isFeatured ? " ★ Featured requested" : "";
+
+  await getResend().emails.send({
+    from: FROM,
+    to: "hello@patronage.nz",
+    subject: `New opportunity submission: ${title}${subjectFlag}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">New opportunity submission — review within 2 business days</p>
+
+      <p style="margin:0 0 8px;font-size:15px;"><strong>${esc(title)}</strong></p>
+      <p style="margin:0 0 4px;font-size:14px;color:#555;">Organiser: ${esc(organiser)}</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Type: ${esc(type)}</p>
+      ${addOnHtml}
+      ${submitterEmail ? `<p style="margin:0 0 24px;font-size:14px;color:#555;">Submitted by: ${esc(submitterEmail)}</p>` : ""}
+
+      <a href="${adminUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Review in admin →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        <a href="${SITE_URL}" style="color:#888;">patronage.nz</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 function buildTransferRequestHtml({
   artistName,
   workTitle,
