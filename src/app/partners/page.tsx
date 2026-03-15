@@ -147,7 +147,9 @@ function PricingItem({
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold">{heading}</p>
         {price && (
-          <span className="font-mono text-xs font-medium">{price}</span>
+          <span className="bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
+            {price}
+          </span>
         )}
         {strikePrice && (
           <span className="font-mono text-xs text-muted-foreground">
