@@ -687,6 +687,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium">Request featured placement</p>
                     <span className="font-mono text-xs text-muted-foreground"><s>$150 NZD</s></span>
+                    <span className="font-mono text-xs font-medium">$75 NZD</span>
                     <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">Founding partner rate</span>
                   </div>
                   <p className="text-xs text-muted-foreground">Pinned at top of the opportunities page, homepage, and weekly digest.</p>
