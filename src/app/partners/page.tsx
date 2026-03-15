@@ -95,7 +95,8 @@ export default async function PartnersPage() {
             <PricingItem
               heading="Featured listing"
               strikePrice="$150 NZD"
-              body="Pinned at top of the opportunities page, homepage, and weekly email digest for the duration of your listing."
+              currentPrice="$75 NZD"
+              body="Pinned at top of the opportunities page, homepage, and weekly email digest for the duration of your listing. Shared across our social channels."
             />
             <PricingItem
               heading="Patronage Pipeline"
@@ -132,11 +133,13 @@ function PricingItem({
   heading,
   price,
   strikePrice,
+  currentPrice,
   body,
 }: {
   heading: string;
   price?: string;
   strikePrice?: string;
+  currentPrice?: string;
   body: string;
 }) {
   return (
@@ -151,9 +154,12 @@ function PricingItem({
             <s>{strikePrice}</s>
           </span>
         )}
+        {currentPrice && (
+          <span className="font-mono text-xs font-medium">{currentPrice}</span>
+        )}
         {strikePrice && (
           <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
-            Free for now
+            Founding partner rate
           </span>
         )}
       </div>
