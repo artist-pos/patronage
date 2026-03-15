@@ -354,6 +354,8 @@ export interface ProjectUpdate {
   embed_url: string | null;
   embed_provider: string | null;
   orientation: ImageOrientation | null;
+  image_width: number | null;
+  image_height: number | null;
   created_at: string;
 }
 

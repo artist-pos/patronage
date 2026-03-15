@@ -194,6 +194,9 @@ export function CreateUpdateModal({
       let embed_provider: string | null = null;
       let text_content: string | null = null;
 
+      let image_width: number | null = null;
+      let image_height: number | null = null;
+
       if (contentType === "image" && imageBlob) {
         const path = `${profileId}/updates/${Date.now()}.jpg`;
         const { error: upErr } = await supabase.storage
@@ -202,6 +205,16 @@ export function CreateUpdateModal({
         if (upErr) { setError(upErr.message); setUploading(false); return; }
         const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
         image_url = urlData.publicUrl;
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+          img.src = image_url!;
+        });
+        if (dims.w > 0 && dims.h > 0) {
+          image_width = dims.w;
+          image_height = dims.h;
+        }
       }
 
       if (contentType === "audio" && audioFile) {
@@ -272,6 +285,8 @@ export function CreateUpdateModal({
           caption: caption.trim() || null,
           project_id: projectId,
           orientation: imageOrientation,
+          image_width,
+          image_height,
         });
       if (dbErr) { setError(dbErr.message); setUploading(false); return; }
 

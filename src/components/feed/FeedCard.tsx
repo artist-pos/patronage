@@ -26,8 +26,12 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
 
   const mediaSection = (() => {
     if (u.content_type === "image" && u.image_url) {
+      const hasAspect = u.image_width && u.image_height;
       return (
-        <div className="overflow-hidden bg-muted">
+        <div
+          className="overflow-hidden bg-muted"
+          style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={u.image_url}

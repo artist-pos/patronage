@@ -75,7 +75,6 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
               alt={opp.title}
               width={56}
               height={56}
-              unoptimized
               loading={priority ? undefined : "lazy"}
               priority={priority}
               className="w-full h-full object-contain"

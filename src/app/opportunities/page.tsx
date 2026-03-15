@@ -173,6 +173,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
               ? `${matched.length} matched · ${lessRelevant.length} less relevant`
               : `${opportunities.length} listing${opportunities.length !== 1 ? "s" : ""}`}
             {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
+            {opportunities.length === 48 ? " · Showing 48 results — use filters to narrow down." : ""}
           </p>
         </div>
         <FoundOpportunityButton />

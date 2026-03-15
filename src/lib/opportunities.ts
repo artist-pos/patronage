@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, OpportunityFilters, OpportunityInsert } from "@/types/database";
 
 export async function getOpportunities(
-  filters: OpportunityFilters = {}
+  filters: OpportunityFilters = {},
+  limit = 48
 ): Promise<Opportunity[]> {
   const supabase = await createClient();
 
@@ -36,7 +37,7 @@ export async function getOpportunities(
     query = query.contains("sub_categories", [filters.careerStage]);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(limit);
 
   if (error) throw new Error(error.message);
   return (data ?? []) as Opportunity[];
@@ -65,18 +66,26 @@ export async function getMarketplaceStats(): Promise<{
 }> {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
-  const { data } = await supabase
-    .from("opportunities")
-    .select("funding_amount")
-    .eq("is_active", true)
-    .eq("status", "published")
-    .gte("deadline", today);
-  const count = data?.length ?? 0;
-  const totalFunding = (data ?? []).reduce(
-    (sum, o) => sum + (o.funding_amount ?? 0),
-    0
-  );
-  return { count, totalFunding };
+
+  const [{ count }, { data: fundingData }] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("status", "published")
+      .or(`deadline.gte.${today},deadline.is.null`),
+    supabase
+      .from("opportunities")
+      .select("funding_amount")
+      .eq("is_active", true)
+      .eq("status", "published")
+      .or(`deadline.gte.${today},deadline.is.null`),
+  ]);
+
+  return {
+    count: count ?? 0,
+    totalFunding: (fundingData ?? []).reduce((s, o) => s + (o.funding_amount ?? 0), 0),
+  };
 }
 
 export async function getOpportunityById(idOrSlug: string): Promise<Opportunity | null> {
