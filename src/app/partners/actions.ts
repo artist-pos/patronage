@@ -37,6 +37,7 @@ export async function submitOpportunityAction(
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
   const pipelineConfigRaw = (formData.get("pipeline_config") as string) || "null";
+  const isFeaturedRaw = (formData.get("is_featured") as string) ?? "false";
 
   let customFields = [];
   try { customFields = JSON.parse(customFieldsRaw); } catch { customFields = []; }
@@ -69,6 +70,7 @@ export async function submitOpportunityAction(
     custom_fields: customFields,
     show_badges_in_submission: showBadgesRaw === "true",
     pipeline_config: pipelineConfig,
+    is_featured: isFeaturedRaw === "true",
   });
 
   if (error) return { error: error.message };

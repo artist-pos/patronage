@@ -82,6 +82,32 @@ export default async function PartnersPage() {
               Enquire about partnerships →
             </a>
           </section>
+
+          <section className="space-y-0 border-t border-black pt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+              Pricing
+            </h2>
+            <PricingItem
+              heading="Standard listing"
+              price="Free, always"
+              body="No cost to list. Reviewed within 2 business days."
+            />
+            <PricingItem
+              heading="Featured listing"
+              strikePrice="$150 NZD"
+              body="Pinned at top of the opportunities page, homepage, and weekly email digest for the duration of your listing."
+            />
+            <PricingItem
+              heading="Patronage Pipeline"
+              strikePrice="$200 NZD"
+              body="Run your full application process on Patronage. Custom questions, applicant dashboard, status tracking. Replaces Google Forms and spreadsheets."
+            />
+            <PricingItem
+              heading="Featured + Pipeline bundle"
+              strikePrice="$350 NZD"
+              body="Both add-ons together."
+            />
+          </section>
         </div>
 
         {/* ── Right: Submission form or Partner Wall ── */}
@@ -98,6 +124,40 @@ export default async function PartnersPage() {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+function PricingItem({
+  heading,
+  price,
+  strikePrice,
+  body,
+}: {
+  heading: string;
+  price?: string;
+  strikePrice?: string;
+  body: string;
+}) {
+  return (
+    <div className="border-t border-black py-5 space-y-1.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <p className="text-sm font-semibold">{heading}</p>
+        {price && (
+          <span className="font-mono text-xs font-medium">{price}</span>
+        )}
+        {strikePrice && (
+          <span className="font-mono text-xs text-muted-foreground">
+            <s>{strikePrice}</s>
+          </span>
+        )}
+        {strikePrice && (
+          <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
+            Free for now
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
     </div>
   );
 }

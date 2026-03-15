@@ -228,6 +228,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   const [selectedFocus,          setSelectedFocus]          = useState<string[]>([]);
 
   const [routingType, setRoutingType] = useState<"external" | "pipeline">("external");
+  const [isFeatured,  setIsFeatured]  = useState(false);
   const [showBadges,  setShowBadges]  = useState(true);
 
   // Step 2 pipeline config state
@@ -370,7 +371,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     routing_type: routingType,
     custom_fields: [],
     show_badges_in_submission: showBadges,
-    is_featured: false,
+    is_featured: isFeatured,
     pipeline_config: routingType === "pipeline" ? pipelineConfigValue : null,
   };
 
@@ -424,6 +425,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         <input type="hidden" name="custom_fields"             value="[]" />
         <input type="hidden" name="show_badges_in_submission" value={showBadges ? "true" : "false"} />
         <input type="hidden" name="pipeline_config"           value={routingType === "pipeline" ? JSON.stringify(pipelineConfigValue) : "null"} />
+        <input type="hidden" name="is_featured"               value={isFeatured ? "true" : "false"} />
 
         {/* Step indicator (pipeline only) */}
         {routingType === "pipeline" && (
@@ -657,19 +659,39 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
             <div className="space-y-4">
               <div className="flex gap-6">
                 {[
-                  { val: "external" as const, label: "External Website",  desc: "Artists apply via your website or form" },
-                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
-                ].map(({ val, label, desc }) => (
+                  { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form", strikePrice: null },
+                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow", strikePrice: "$200 NZD" },
+                ].map(({ val, label, desc, strikePrice }) => (
                   <label key={val} className="flex items-start gap-2 cursor-pointer">
                     <input type="radio" name="routing_radio" checked={routingType === val}
                       onChange={() => { setRoutingType(val); setStep(1); }} className="mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium">{label}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{label}</p>
+                        {strikePrice && (
+                          <>
+                            <span className="font-mono text-xs text-muted-foreground"><s>{strikePrice}</s></span>
+                            <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">Free for now</span>
+                          </>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{desc}</p>
                     </div>
                   </label>
                 ))}
               </div>
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium">Request featured placement</p>
+                    <span className="font-mono text-xs text-muted-foreground"><s>$150 NZD</s></span>
+                    <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">Free for now</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Pinned at top of the opportunities page, homepage, and weekly digest.</p>
+                </div>
+              </label>
 
               {routingType === "external" && (
                 <Field label="Application URL">
