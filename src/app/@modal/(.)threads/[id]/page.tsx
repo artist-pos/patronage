@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getThread } from "@/lib/projects";
 import { getProfileById } from "@/lib/profiles";
@@ -60,12 +59,13 @@ export default async function ThreadModal({ params }: Props) {
                 />
               </div>
             )}
-            <Link
+            {/* Hard navigation: resets @modal parallel route so modal closes */}
+            <a
               href={`/${project.artist_username}`}
               className="text-sm font-semibold hover:underline underline-offset-2"
             >
               {artistName}
-            </Link>
+            </a>
             <span className="text-xs text-muted-foreground">
               {posts.length} {posts.length === 1 ? "post" : "posts"}
             </span>
