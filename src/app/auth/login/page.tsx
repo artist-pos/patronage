@@ -4,11 +4,11 @@ import { AuthForm } from "@/components/auth/AuthForm";
 export const metadata = { title: "Sign In — Patronage" };
 
 interface Props {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; message?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { next, error } = await searchParams;
+  const { next, error, message } = await searchParams;
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-6">
       <div className="w-full max-w-sm space-y-8">
@@ -21,6 +21,11 @@ export default async function LoginPage({ searchParams }: Props) {
             </Link>
           </p>
         </div>
+        {message === "partner-required" && (
+          <p className="text-xs text-muted-foreground border border-black px-3 py-2 bg-muted">
+            You need a partner account to list opportunities.
+          </p>
+        )}
         {error === "callback" && (
           <p className="text-xs text-destructive">
             Something went wrong. Please try again.

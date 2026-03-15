@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
+import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
+import type { OpportunityApplicationDraft } from "@/types/database";
 
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 import type { Opportunity, Artwork } from "@/types/database";
@@ -23,6 +25,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
     profile: ApplyModalProps["artistProfile"];
     artworks: Artwork[];
     badges: ApplyModalProps["badges"];
+    draft: OpportunityApplicationDraft | null;
   } | null>(null);
   const router = useRouter();
 
@@ -35,11 +38,14 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       return;
     }
 
-    const [profileResult, artworksResult] = await Promise.all([
+    const [profileResult, artworksResult, draft] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       isJobOpportunity
         ? Promise.resolve({ data: [] })
         : supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
+      opportunity.routing_type === "pipeline"
+        ? getDraft(opportunity.id)
+        : Promise.resolve(null),
     ]);
 
     const profile = profileResult.data;
@@ -64,6 +70,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         },
         artworks,
         badges,
+        draft: draft as OpportunityApplicationDraft | null,
       });
     }
     setLoading(false);
@@ -86,6 +93,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
           artistProfile={applicantData.profile}
           artistArtworks={applicantData.artworks}
           badges={applicantData.badges}
+          draft={applicantData.draft}
           isJobOpportunity={isJobOpportunity}
           professionalCvUrl={professionalCvUrl}
           onClose={() => setOpen(false)}

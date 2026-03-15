@@ -6,10 +6,13 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendApplicationConfirmation } from "@/lib/email";
+import type { OpportunityApplicationDraft } from "@/types/database";
 
 export async function updateOpportunityAdmin(
   id: string,
   data: {
+    title?: string;
+    organiser?: string;
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
@@ -24,6 +27,7 @@ export async function updateOpportunityAdmin(
     artist_payment_type?: string | null;
     travel_support?: boolean | null;
     travel_support_details?: string | null;
+    pipeline_config?: object | null;
   }
 ) {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -32,6 +36,46 @@ export async function updateOpportunityAdmin(
   if (error) throw new Error(error.message);
   revalidatePath(`/opportunities/${id}`);
   revalidatePath("/opportunities");
+}
+
+export async function saveDraft(
+  opportunityId: string,
+  artworkId: string | null,
+  answers: Record<string, string>,
+  submittedImageUrl?: string | null
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("opportunity_application_drafts")
+    .upsert({
+      opportunity_id: opportunityId,
+      artist_id: user.id,
+      artwork_id: artworkId || null,
+      submitted_image_url: submittedImageUrl || null,
+      custom_answers: answers,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "opportunity_id,artist_id" });
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getDraft(opportunityId: string): Promise<OpportunityApplicationDraft | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("opportunity_application_drafts")
+    .select("*")
+    .eq("opportunity_id", opportunityId)
+    .eq("artist_id", user.id)
+    .single();
+
+  return data ?? null;
 }
 
 export async function submitApplication(
@@ -55,6 +99,13 @@ export async function submitApplication(
     });
 
   if (error) return { error: error.message };
+
+  // Delete any saved draft on successful submission
+  await supabase
+    .from("opportunity_application_drafts")
+    .delete()
+    .eq("opportunity_id", opportunityId)
+    .eq("artist_id", user.id);
 
   // Send confirmation email fire-and-forget
   const admin = createAdminClient();

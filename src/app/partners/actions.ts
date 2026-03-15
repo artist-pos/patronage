@@ -36,9 +36,13 @@ export async function submitOpportunityAction(
   const routingType = (formData.get("routing_type") as string) || "external";
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
+  const pipelineConfigRaw = (formData.get("pipeline_config") as string) || "null";
 
   let customFields = [];
   try { customFields = JSON.parse(customFieldsRaw); } catch { customFields = []; }
+
+  let pipelineConfig = null;
+  try { pipelineConfig = JSON.parse(pipelineConfigRaw); } catch { pipelineConfig = null; }
 
   const { error } = await supabase.from("opportunity_submissions").insert({
     title,
@@ -64,6 +68,7 @@ export async function submitOpportunityAction(
     routing_type: routingType,
     custom_fields: customFields,
     show_badges_in_submission: showBadgesRaw === "true",
+    pipeline_config: pipelineConfig,
   });
 
   if (error) return { error: error.message };

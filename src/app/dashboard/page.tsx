@@ -65,13 +65,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner";
 
   // Core opportunity data — always needed
-  const [saved, applicationsData, provenanceData] = await Promise.all([
+  const [saved, applicationsData, draftsData, provenanceData] = await Promise.all([
     getSavedOpportunities(),
     supabase
       .from("opportunity_applications")
       .select("*, opportunity:opportunities(id, slug, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
       .eq("artist_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("opportunity_application_drafts")
+      .select("*, opportunity:opportunities(*)")
+      .eq("artist_id", user.id)
+      .order("updated_at", { ascending: false }),
     isPatron
       ? supabase
           .from("provenance_links")
@@ -96,6 +101,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const { closingSoon, saved: savedList, applied, expired } = categorizeSaved(saved);
   const applications = applicationsData.data ?? [];
+  const drafts = draftsData.data ?? [];
 
   const provenanceLinks = (provenanceData.data ?? []).map((row: any) => ({
     id: row.id,
@@ -110,7 +116,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     { id: "closing", label: "Closing Soon", count: closingSoon.length },
     { id: "saved", label: "Saved", count: savedList.length },
     { id: "applied", label: "Applied", count: applied.length },
-    { id: "applications", label: "Applications", count: applications.length },
+    { id: "applications", label: "Applications", count: applications.length + drafts.length },
     { id: "expired", label: "Expired", count: expired.length },
     { id: "analytics", label: "Analytics" },
     { id: "notes", label: "Notes" },
@@ -162,6 +168,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <ApplicationsTab
           initialApplications={applications as Parameters<typeof ApplicationsTab>[0]["initialApplications"]}
           userId={user.id}
+          initialDrafts={drafts as Parameters<typeof ApplicationsTab>[0]["initialDrafts"]}
         />
       )}
 

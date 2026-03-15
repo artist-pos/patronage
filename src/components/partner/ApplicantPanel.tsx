@@ -6,7 +6,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl } from "@/app/partner/dashboard/actions";
-import type { CustomField } from "@/types/database";
+import type { CustomField, PipelineConfig } from "@/types/database";
 
 interface Artist {
   id: string;
@@ -44,6 +44,7 @@ interface Opportunity {
   type?: string;
   custom_fields: CustomField[];
   show_badges_in_submission: boolean;
+  pipeline_config?: PipelineConfig | null;
 }
 
 interface Props {
@@ -224,26 +225,55 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
             )
           )}
 
-          {/* Custom answers */}
-          {(opportunity.custom_fields ?? []).length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest">Application Answers</p>
-              {(opportunity.custom_fields ?? []).map((field) => {
-                const answer = application.custom_answers?.[field.id];
-                if (!answer) return null;
-                return (
-                  <div key={field.id} className="space-y-0.5">
-                    <p className="text-xs font-medium text-muted-foreground">{field.question}</p>
-                    {field.inputType === "file" ? (
-                      <a href={answer} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                        View file →
-                      </a>
-                    ) : (
-                      <p className="text-sm">{answer}</p>
-                    )}
-                  </div>
-                );
-              })}
+          {/* Custom answers — supports both pipeline_config.questions (new) and custom_fields (legacy) */}
+          {(() => {
+            const normalisedFields = opportunity.pipeline_config?.questions?.length
+              ? opportunity.pipeline_config.questions.map((q) => ({
+                  id: q.id,
+                  label: q.label,
+                  isFile: q.type === "file_upload",
+                }))
+              : (opportunity.custom_fields ?? []).map((f) => ({
+                  id: f.id,
+                  label: f.question,
+                  isFile: f.inputType === "file",
+                }));
+            if (normalisedFields.length === 0) return null;
+            return (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest">Application Answers</p>
+                {normalisedFields.map((field) => {
+                  const answer = application.custom_answers?.[field.id];
+                  if (!answer) return null;
+                  return (
+                    <div key={field.id} className="space-y-0.5">
+                      <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                      {field.isFile ? (
+                        <a href={answer} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                          View file →
+                        </a>
+                      ) : (
+                        <p className="text-sm">{answer}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* T&C PDF download */}
+          {opportunity.pipeline_config?.terms_pdf_url && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest">Terms &amp; Conditions</p>
+              <a
+                href={opportunity.pipeline_config.terms_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs underline underline-offset-2"
+              >
+                Download PDF →
+              </a>
             </div>
           )}
 

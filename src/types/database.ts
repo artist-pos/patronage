@@ -59,6 +59,20 @@ export interface CustomField {
   inputType: 'short' | 'long' | 'file';
 }
 
+export interface PipelineQuestion {
+  id: string;
+  label: string;
+  type: 'short_text' | 'long_text' | 'file_upload';
+  required: boolean;
+  file_label?: string;
+}
+
+export interface PipelineConfig {
+  questions: PipelineQuestion[];
+  artist_documents: ('cv' | 'bio' | 'portfolio' | 'available_works')[];
+  terms_pdf_url: string | null;
+}
+
 export interface Opportunity {
   id: string;
   title: string;
@@ -96,6 +110,8 @@ export interface Opportunity {
   show_badges_in_submission: boolean;
   // Paid placement (migration 042)
   is_featured: boolean;
+  // Pipeline application config (migration 053)
+  pipeline_config?: PipelineConfig | null;
 }
 
 export interface SavedOpportunity {
@@ -136,6 +152,16 @@ export type OpportunityInsert = Omit<
   caption?: string | null;
   full_description?: string | null;
 };
+
+export interface OpportunityApplicationDraft {
+  id: string;
+  opportunity_id: string;
+  artist_id: string;
+  artwork_id: string | null;
+  submitted_image_url: string | null;
+  custom_answers: Record<string, string>;
+  updated_at: string;
+}
 
 export interface OpportunityFilters {
   type?: OppTypeEnum;

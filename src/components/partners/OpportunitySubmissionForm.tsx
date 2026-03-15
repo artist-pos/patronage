@@ -2,7 +2,19 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { X, Plus } from "lucide-react";
+import { X, Plus, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { Button } from "@/components/ui/button";
@@ -10,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
 import { COUNTRIES } from "@/lib/opportunity-constants";
-import type { Opportunity, OppTypeEnum, CountryEnum, CustomField } from "@/types/database";
+import type { Opportunity, OppTypeEnum, CountryEnum, PipelineQuestion, PipelineConfig } from "@/types/database";
 
 // ── Form opportunity types ────────────────────────────────────────────────────
 const FORM_TYPES = [
@@ -33,10 +45,16 @@ const FORM_FOCUS         = ["Public art", "Community projects", "Research", "Env
 const GRANT_SUBTYPES     = ["Project Grant", "Travel Stipend", "Residency Award", "Commissioning Fee", "Emergency Fund", "Other"];
 const CONTRACT_TYPES     = ["Permanent", "Fixed Term", "Contract / Freelance", "Part-time", "Casual"];
 
+const ARTIST_DOC_OPTIONS: { val: PipelineConfig["artist_documents"][number]; label: string; desc: string }[] = [
+  { val: "cv",              label: "Artist CV (PDF)",    desc: "Uploaded via their profile" },
+  { val: "bio",             label: "Artist biography",   desc: "From profile bio field" },
+  { val: "portfolio",       label: "Portfolio images",   desc: "From their portfolio" },
+  { val: "available_works", label: "Available works",    desc: "From their available works" },
+];
+
 // ── Field visibility ──────────────────────────────────────────────────────────
 function showField(type: string, field: string): boolean {
   const map: Record<string, string[]> = {
-    location:      ["Residency", "Commission", "Job / Employment"],
     entryFee:      ["Prize", "Open Call"],
     recipients:    ["Grant", "Prize"],
     funding:       ["Grant", "Residency", "Commission", "Prize", "Job / Employment"],
@@ -102,18 +120,105 @@ function TagButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
+// ── Sortable question card ────────────────────────────────────────────────────
+function SortableQuestionCard({
+  q,
+  idx,
+  onUpdate,
+  onDelete,
+}: {
+  q: PipelineQuestion;
+  idx: number;
+  onUpdate: (updated: PipelineQuestion) => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="border border-black p-3 space-y-2 bg-background">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="mt-1 text-muted-foreground cursor-grab active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <input
+          type="text"
+          value={q.label}
+          onChange={(e) => onUpdate({ ...q, label: e.target.value })}
+          placeholder={`Question ${idx + 1}`}
+          className="flex-1 border-0 border-b border-black/20 bg-transparent text-sm py-0.5 focus:outline-none focus:border-black"
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-foreground mt-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex gap-2 ml-6">
+        {(["short_text", "long_text", "file_upload"] as const).map((val) => (
+          <button
+            key={val}
+            type="button"
+            onClick={() => onUpdate({ ...q, type: val })}
+            className={`text-xs px-2 py-0.5 border leading-none transition-colors ${
+              q.type === val ? "border-black bg-black text-white" : "border-black/30 hover:border-black"
+            }`}
+          >
+            {val === "short_text" ? "Short text" : val === "long_text" ? "Long text" : "File upload"}
+          </button>
+        ))}
+      </div>
+      {q.type === "file_upload" && (
+        <input
+          type="text"
+          value={q.file_label ?? ""}
+          onChange={(e) => onUpdate({ ...q, file_label: e.target.value || undefined })}
+          placeholder="What file are you requesting? e.g. Portfolio PDF"
+          className="ml-6 w-full border border-black/20 bg-background px-2 py-1 text-xs focus:outline-none focus:border-black"
+        />
+      )}
+      <div className="flex items-center gap-2 ml-6">
+        <input
+          type="checkbox"
+          id={`req-${q.id}`}
+          checked={q.required}
+          onChange={(e) => onUpdate({ ...q, required: e.target.checked })}
+        />
+        <label htmlFor={`req-${q.id}`} className="text-xs text-muted-foreground cursor-pointer">
+          Required
+        </label>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = null }: { isLoggedIn?: boolean; partnerName?: string | null }) {
   const [state, action, isPending] = useActionState<SubmissionState, FormData>(
     submitOpportunityAction, {}
   );
 
+  const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const termsFileRef = useRef<HTMLInputElement>(null);
   const [dragOver,     setDragOver]     = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imgUrl,       setImgUrl]       = useState("");
 
   const [selectedType, setSelectedType] = useState("Grant");
+  const [step, setStep] = useState<1 | 2>(1);
 
   const [selectedDisciplines,    setSelectedDisciplines]    = useState<string[]>([]);
   const [selectedCareerStages,   setSelectedCareerStages]   = useState<string[]>([]);
@@ -122,16 +227,24 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   const [customEligibilityInput, setCustomEligibilityInput] = useState("");
   const [selectedFocus,          setSelectedFocus]          = useState<string[]>([]);
 
-  const [routingType,  setRoutingType]  = useState<"external" | "pipeline">("external");
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [showBadges,   setShowBadges]   = useState(true);
+  const [routingType, setRoutingType] = useState<"external" | "pipeline">("external");
+  const [showBadges,  setShowBadges]  = useState(true);
+
+  // Step 2 pipeline config state
+  const [questions, setQuestions] = useState<PipelineQuestion[]>(() => [
+    { id: crypto.randomUUID(), label: "Tell us about your practice", type: "long_text", required: true },
+    { id: crypto.randomUUID(), label: "Why are you applying for this opportunity?", type: "long_text", required: true },
+  ]);
+  const [artistDocs, setArtistDocs] = useState<PipelineConfig["artist_documents"]>(["cv", "bio"]);
+  const [termsPdfUrl, setTermsPdfUrl] = useState<string | null>(null);
+  const [uploadingTerms, setUploadingTerms] = useState(false);
 
   // Extra preview-only state for fields that aren't string/number in Opportunity
   const [entryFeePreview,      setEntryFeePreview]      = useState<number | null>(null);
   const [travelSupportPreview, setTravelSupportPreview] = useState(false);
   const [travelDetailsPreview, setTravelDetailsPreview] = useState("");
 
-  // Listing preview gate
+  // Listing preview gate (external only)
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [hasPreviewed,    setHasPreviewed]    = useState(false);
 
@@ -146,12 +259,26 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     ...selectedEligibility, ...customEligibility, ...selectedFocus,
   ];
 
+  const pipelineConfigValue: PipelineConfig = {
+    questions,
+    artist_documents: artistDocs,
+    terms_pdf_url: termsPdfUrl,
+  };
+
   function upd(key: keyof Opportunity, value: string | number | string[] | null) {
     setPreview((p) => ({ ...p, [key]: value }));
   }
 
   function toggle(tag: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) {
     setList((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+  }
+
+  function toggleDoc(val: PipelineConfig["artist_documents"][number]) {
+    setArtistDocs((prev) =>
+      (prev as string[]).includes(val)
+        ? (prev.filter((d) => d !== val) as PipelineConfig["artist_documents"])
+        : ([...prev, val] as PipelineConfig["artist_documents"])
+    );
   }
 
   function addCustomEligibility() {
@@ -180,10 +307,37 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     }
   }
 
+  async function handleTermsFile(file: File) {
+    setUploadingTerms(true);
+    try {
+      const path = `terms/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+      const { error } = await supabase.storage
+        .from("opportunity-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (!error) {
+        const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+        setTermsPdfUrl(data.publicUrl);
+      }
+    } finally {
+      setUploadingTerms(false);
+    }
+  }
+
   function onDrop(e: React.DragEvent) {
     e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file?.type.startsWith("image/")) handleImageFile(file);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setQuestions((items) => {
+        const oldIndex = items.findIndex((q) => q.id === active.id);
+        const newIndex = items.findIndex((q) => q.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   }
 
   // Build the full preview opportunity object (used by both card preview and modal)
@@ -214,9 +368,10 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     travel_support_details: travelDetailsPreview || null,
     view_count: 0,
     routing_type: routingType,
-    custom_fields: customFields,
+    custom_fields: [],
     show_badges_in_submission: showBadges,
     is_featured: false,
+    pipeline_config: routingType === "pipeline" ? pipelineConfigValue : null,
   };
 
   function openPreview() {
@@ -234,21 +389,6 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
             We&apos;ll review your listing and publish it within two business days.
           </p>
         </div>
-        {!isLoggedIn && (
-          <div className="border-t border-black pt-6 space-y-3">
-            <p className="text-sm font-medium">Create a partner account</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Sign up to track your submission, receive status updates, and manage
-              future listings directly from your partner dashboard.
-            </p>
-            <Link
-              href="/auth/signup?role=partner"
-              className="inline-block text-xs bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity"
-            >
-              Create partner account →
-            </Link>
-          </div>
-        )}
       </div>
     );
   }
@@ -273,7 +413,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         />
       )}
 
-      <form action={action} className="space-y-0">
+      <form ref={formRef} action={action} className="space-y-0">
         {state.error && <p className="text-xs text-destructive mb-4">{state.error}</p>}
 
         {/* Hidden fields */}
@@ -281,378 +421,461 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         <input type="hidden" name="featured_image_url"        value={imgUrl} />
         <input type="hidden" name="sub_categories"            value={allTags.join(",")} />
         <input type="hidden" name="routing_type"              value={routingType} />
-        <input type="hidden" name="custom_fields"             value={JSON.stringify(customFields)} />
+        <input type="hidden" name="custom_fields"             value="[]" />
         <input type="hidden" name="show_badges_in_submission" value={showBadges ? "true" : "false"} />
+        <input type="hidden" name="pipeline_config"           value={routingType === "pipeline" ? JSON.stringify(pipelineConfigValue) : "null"} />
 
-        {/* ── Section 1: Opportunity Type ──────────────────────────────────── */}
-        <Section label="Opportunity Type">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {FORM_TYPES.map(({ label, value, desc }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => { setSelectedType(value); upd("type", value); }}
-                className={`text-left p-3 border transition-colors ${
-                  selectedType === value
-                    ? "border-black bg-black text-white"
-                    : "border-black bg-background hover:bg-muted"
-                }`}
-              >
-                <p className="text-sm font-semibold">{label}</p>
-                <p className={`text-xs mt-0.5 leading-snug ${
-                  selectedType === value ? "text-white/70" : "text-muted-foreground"
-                }`}>{desc}</p>
-              </button>
-            ))}
+        {/* Step indicator (pipeline only) */}
+        {routingType === "pipeline" && (
+          <div className="text-xs text-muted-foreground font-mono mb-6 flex items-center gap-2">
+            <span className={step === 1 ? "text-foreground font-semibold" : ""}>Step 1: Opportunity details</span>
+            <span>→</span>
+            <span className={step === 2 ? "text-foreground font-semibold" : ""}>Step 2: Application setup</span>
           </div>
-        </Section>
-
-        {/* ── Section 2: Basic Information ─────────────────────────────────── */}
-        <Section label="Basic Information">
-          <Field label="Title *">
-            <Input name="title" required placeholder="e.g. Creative Communities Scheme 2026"
-              className={FIELD} onChange={(e) => upd("title", e.target.value)} />
-          </Field>
-
-          <Field label="Organisation / Funder *">
-            <Input
-              name="organiser"
-              required
-              placeholder="e.g. Creative New Zealand"
-              defaultValue={partnerName ?? ""}
-              className={FIELD}
-              onChange={(e) => upd("organiser", e.target.value)}
-            />
-            {isLoggedIn && partnerName && (
-              <p className="text-xs text-muted-foreground font-mono mt-1">
-                Autofilled from your account — edit if needed.
-              </p>
-            )}
-            {!isLoggedIn && (
-              <p className="text-xs text-muted-foreground font-mono mt-1">
-                <Link href="/auth/login?next=/partners" className="underline underline-offset-2 hover:text-foreground transition-colors">
-                  Sign in
-                </Link>
-                {" "}to automatically link this listing to your partner account.
-              </p>
-            )}
-          </Field>
-
-          <Field label="Caption (shown on card — max 160 characters)">
-            <Input name="caption" type="text" maxLength={160}
-              placeholder="One-sentence summary of the opportunity…"
-              className={FIELD} onChange={(e) => upd("caption", e.target.value || null)} />
-            <p className="text-xs text-muted-foreground font-mono mt-1">Visible by default on the listing card.</p>
-          </Field>
-
-          <Field label="Country">
-            <select name="country" className={FIELD} defaultValue="NZ"
-              onChange={(e) => upd("country", e.target.value)}>
-              {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Field>
-        </Section>
-
-        {/* ── Section 3: Dates & Funding ───────────────────────────────────── */}
-        <Section label="Dates & Funding">
-          <div className="grid grid-cols-1 sm:grid-cols-2">
-            <Field label="Opening Date">
-              <Input name="opens_at" type="date" className={FIELD}
-                onChange={(e) => upd("opens_at", e.target.value || null)} />
-            </Field>
-            <Field label="Deadline">
-              <Input name="deadline" type="date" className={FIELD}
-                onChange={(e) => upd("deadline", e.target.value || null)} />
-            </Field>
-          </div>
-
-          {showField(selectedType, "funding") && (
-            <Field label={fundingMeta.label}>
-              <Input name="funding_range" type="text" placeholder={fundingMeta.placeholder}
-                className={FIELD} onChange={(e) => upd("funding_range", e.target.value || null)} />
-            </Field>
-          )}
-
-          {showField(selectedType, "recipients") && (
-            <Field label={selectedType === "Prize" ? "Number of Winners" : "Number of Recipients"}>
-              <Input name="recipients_count" type="number" min={1} placeholder="e.g. 3"
-                className={FIELD}
-                onChange={(e) => upd("recipients_count", e.target.value ? parseInt(e.target.value) : null)} />
-            </Field>
-          )}
-
-          {showField(selectedType, "entryFee") && (
-            <Field label="Entry Fee">
-              <Input name="entry_fee" type="number" min={0} step="0.01"
-                placeholder="0 for free, leave blank if unknown" className={FIELD}
-                onChange={(e) => setEntryFeePreview(e.target.value !== "" ? parseFloat(e.target.value) : null)} />
-              <p className="text-xs text-muted-foreground font-mono mt-1">Enter 0 if there is no entry fee.</p>
-            </Field>
-          )}
-
-          {showField(selectedType, "grantSubtype") && (
-            <Field label="Grant Type">
-              <select name="grant_type" className={FIELD}
-                onChange={(e) => upd("grant_type", e.target.value)}>
-                <option value="">— Select —</option>
-                {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-          )}
-
-          {showField(selectedType, "duration") && (
-            <Field label="Residency Duration">
-              <Input name="grant_type" type="text" placeholder="e.g. 3 months"
-                className={FIELD} onChange={(e) => upd("grant_type", e.target.value || null)} />
-            </Field>
-          )}
-
-          {showField(selectedType, "contractType") && (
-            <Field label="Contract Type">
-              <select name="grant_type" className={FIELD}
-                onChange={(e) => upd("grant_type", e.target.value)}>
-                <option value="">— Select —</option>
-                {CONTRACT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-          )}
-
-          {showField(selectedType, "accommodation") && (
-            <Field label="Accommodation">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="travel_support" value="true"
-                  onChange={(e) => setTravelSupportPreview(e.target.checked)} />
-                <span className="text-sm">Accommodation included</span>
-              </label>
-              <Input name="travel_support_details" type="text"
-                placeholder="e.g. Private studio apartment provided"
-                className={`${FIELD} mt-2`}
-                onChange={(e) => setTravelDetailsPreview(e.target.value)} />
-            </Field>
-          )}
-        </Section>
-
-        {/* ── Section 4: Location (conditional) ───────────────────────────── */}
-        {showField(selectedType, "location") && (
-          <Section label="Location">
-            <Field label="City / Location">
-              <Input name="city" type="text"
-                placeholder={selectedType === "Job / Employment" ? "e.g. Auckland" : "e.g. Dunedin, or Remote"}
-                className={FIELD} onChange={(e) => upd("city" as keyof Opportunity, e.target.value || null)} />
-            </Field>
-          </Section>
         )}
 
-        {/* ── Section 5: Eligibility & Tags ───────────────────────────────── */}
-        <Section label="Eligibility & Tags">
-          <Field label="Disciplines">
-            <div className="flex flex-wrap gap-2 pt-1">
-              {FORM_DISCIPLINES.map((tag) => (
-                <TagButton key={tag} label={tag}
-                  active={selectedDisciplines.includes(tag)}
-                  onClick={() => toggle(tag, selectedDisciplines, setSelectedDisciplines)} />
-              ))}
-            </div>
-          </Field>
+        {/* ── Step 1: form sections ───────────────────────────────────────── */}
+        <div className={step === 2 ? "hidden" : ""}>
 
-          <Field label="Career Stage">
-            <div className="flex flex-wrap gap-2 pt-1">
-              {FORM_CAREER_STAGES.map((tag) => (
-                <TagButton key={tag} label={tag}
-                  active={selectedCareerStages.includes(tag)}
-                  onClick={() => toggle(tag, selectedCareerStages, setSelectedCareerStages)} />
-              ))}
-            </div>
-          </Field>
-
-          {showField(selectedType, "eligibility") && (
-            <Field label="Eligibility">
-              <div className="flex flex-wrap gap-2 pt-1">
-                {FORM_ELIGIBILITY.map((tag) => (
-                  <TagButton key={tag} label={tag}
-                    active={selectedEligibility.includes(tag)}
-                    onClick={() => toggle(tag, selectedEligibility, setSelectedEligibility)} />
-                ))}
-                {customEligibility.map((tag) => (
-                  <button key={tag} type="button"
-                    onClick={() => setCustomEligibility((prev) => prev.filter((t) => t !== tag))}
-                    className="text-xs px-2.5 py-1 border border-black bg-black text-white leading-none flex items-center gap-1.5">
-                    {tag} <X className="w-2.5 h-2.5" />
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2 mt-2">
-                <input
-                  type="text"
-                  value={customEligibilityInput}
-                  onChange={(e) => setCustomEligibilityInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomEligibility(); } }}
-                  placeholder="Add custom tag, e.g. Asian artists…"
-                  className={`${FIELD} flex-1`}
-                />
-                <button type="button" onClick={addCustomEligibility}
-                  className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors whitespace-nowrap">
-                  Add tag
+          {/* ── Section 1: Opportunity Type ────────────────────────────────── */}
+          <Section label="Opportunity Type">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {FORM_TYPES.map(({ label, value, desc }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => { setSelectedType(value); upd("type", value); }}
+                  className={`text-left p-3 border transition-colors ${
+                    selectedType === value
+                      ? "border-black bg-black text-white"
+                      : "border-black bg-background hover:bg-muted"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{label}</p>
+                  <p className={`text-xs mt-0.5 leading-snug ${
+                    selectedType === value ? "text-white/70" : "text-muted-foreground"
+                  }`}>{desc}</p>
                 </button>
-              </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* ── Section 2: Basic Information ───────────────────────────────── */}
+          <Section label="Basic Information">
+            <Field label="Title *">
+              <Input name="title" required placeholder="e.g. Creative Communities Scheme 2026"
+                className={FIELD} onChange={(e) => upd("title", e.target.value)} />
             </Field>
-          )}
 
-          <Field label="Focus">
-            <div className="flex flex-wrap gap-2 pt-1">
-              {FORM_FOCUS.map((tag) => (
-                <TagButton key={tag} label={tag}
-                  active={selectedFocus.includes(tag)}
-                  onClick={() => toggle(tag, selectedFocus, setSelectedFocus)} />
-              ))}
+            <Field label="Organisation / Funder *">
+              <Input
+                name="organiser"
+                required
+                placeholder="e.g. Creative New Zealand"
+                defaultValue={partnerName ?? ""}
+                className={FIELD}
+                onChange={(e) => upd("organiser", e.target.value)}
+              />
+              {isLoggedIn && partnerName && (
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  Autofilled from your account — edit if needed.
+                </p>
+              )}
+            </Field>
+
+            <Field label="Caption (shown on card — max 160 characters)">
+              <Input name="caption" type="text" maxLength={160}
+                placeholder="One-sentence summary of the opportunity…"
+                className={FIELD} onChange={(e) => upd("caption", e.target.value || null)} />
+              <p className="text-xs text-muted-foreground font-mono mt-1">Visible by default on the listing card.</p>
+            </Field>
+
+            <Field label="Country">
+              <select name="country" className={FIELD} defaultValue="NZ"
+                onChange={(e) => upd("country", e.target.value)}>
+                {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+          </Section>
+
+          {/* ── Section 3: Dates & Funding ─────────────────────────────────── */}
+          <Section label="Dates & Funding">
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              <Field label="Opening Date">
+                <Input name="opens_at" type="date" className={FIELD}
+                  onChange={(e) => upd("opens_at", e.target.value || null)} />
+              </Field>
+              <Field label="Deadline">
+                <Input name="deadline" type="date" className={FIELD}
+                  onChange={(e) => upd("deadline", e.target.value || null)} />
+              </Field>
             </div>
-          </Field>
-        </Section>
 
-        {/* ── Section 6: Application Method ───────────────────────────────── */}
-        <Section label="Application Method">
-          <div className="space-y-4">
-            <div className="flex gap-6">
-              {[
-                { val: "external" as const, label: "External Website",  desc: "Artists apply via your website or form" },
-                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
-              ].map(({ val, label, desc }) => (
-                <label key={val} className="flex items-start gap-2 cursor-pointer">
-                  <input type="radio" name="routing_radio" checked={routingType === val}
-                    onChange={() => setRoutingType(val)} className="mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            {routingType === "external" && (
-              <Field label="Application URL">
-                <Input name="url" type="url" placeholder="https://…" className={FIELD}
-                  onChange={(e) => upd("url", e.target.value || null)} />
+            {showField(selectedType, "funding") && (
+              <Field label={fundingMeta.label}>
+                <Input name="funding_range" type="text" placeholder={fundingMeta.placeholder}
+                  className={FIELD} onChange={(e) => upd("funding_range", e.target.value || null)} />
               </Field>
             )}
 
-            {routingType === "pipeline" && (
-              <div className="space-y-4 border border-black p-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest">Application Questions</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Artists will answer these when they apply through Patronage.
-                  </p>
+            {showField(selectedType, "recipients") && (
+              <Field label={selectedType === "Prize" ? "Number of Winners" : "Number of Recipients"}>
+                <Input name="recipients_count" type="number" min={1} placeholder="e.g. 3"
+                  className={FIELD}
+                  onChange={(e) => upd("recipients_count", e.target.value ? parseInt(e.target.value) : null)} />
+              </Field>
+            )}
+
+            {showField(selectedType, "entryFee") && (
+              <Field label="Entry Fee">
+                <Input name="entry_fee" type="number" min={0} step="0.01"
+                  placeholder="0 for free, leave blank if unknown" className={FIELD}
+                  onChange={(e) => setEntryFeePreview(e.target.value !== "" ? parseFloat(e.target.value) : null)} />
+                <p className="text-xs text-muted-foreground font-mono mt-1">Enter 0 if there is no entry fee.</p>
+              </Field>
+            )}
+
+            {showField(selectedType, "grantSubtype") && (
+              <Field label="Grant Type">
+                <select name="grant_type" className={FIELD}
+                  onChange={(e) => upd("grant_type", e.target.value)}>
+                  <option value="">— Select —</option>
+                  {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
+
+            {showField(selectedType, "duration") && (
+              <Field label="Residency Duration">
+                <Input name="grant_type" type="text" placeholder="e.g. 3 months"
+                  className={FIELD} onChange={(e) => upd("grant_type", e.target.value || null)} />
+              </Field>
+            )}
+
+            {showField(selectedType, "contractType") && (
+              <Field label="Contract Type">
+                <select name="grant_type" className={FIELD}
+                  onChange={(e) => upd("grant_type", e.target.value)}>
+                  <option value="">— Select —</option>
+                  {CONTRACT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
+
+            {showField(selectedType, "accommodation") && (
+              <Field label="Accommodation">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="travel_support" value="true"
+                    onChange={(e) => setTravelSupportPreview(e.target.checked)} />
+                  <span className="text-sm">Accommodation included</span>
+                </label>
+                <Input name="travel_support_details" type="text"
+                  placeholder="e.g. Private studio apartment provided"
+                  className={`${FIELD} mt-2`}
+                  onChange={(e) => setTravelDetailsPreview(e.target.value)} />
+              </Field>
+            )}
+          </Section>
+
+          {/* ── Section 4: Location ────────────────────────────────────────── */}
+          <Section label="Location">
+            <Field label="City / Location">
+              <Input name="city" type="text"
+                placeholder="e.g. Auckland, Wellington, or Remote"
+                className={FIELD} onChange={(e) => upd("city" as keyof Opportunity, e.target.value || null)} />
+            </Field>
+          </Section>
+
+          {/* ── Section 5: Eligibility & Tags ──────────────────────────────── */}
+          <Section label="Eligibility & Tags">
+            <Field label="Disciplines">
+              <div className="flex flex-wrap gap-2 pt-1">
+                {FORM_DISCIPLINES.map((tag) => (
+                  <TagButton key={tag} label={tag}
+                    active={selectedDisciplines.includes(tag)}
+                    onClick={() => toggle(tag, selectedDisciplines, setSelectedDisciplines)} />
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Career Stage">
+              <div className="flex flex-wrap gap-2 pt-1">
+                {FORM_CAREER_STAGES.map((tag) => (
+                  <TagButton key={tag} label={tag}
+                    active={selectedCareerStages.includes(tag)}
+                    onClick={() => toggle(tag, selectedCareerStages, setSelectedCareerStages)} />
+                ))}
+              </div>
+            </Field>
+
+            {showField(selectedType, "eligibility") && (
+              <Field label="Eligibility">
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {FORM_ELIGIBILITY.map((tag) => (
+                    <TagButton key={tag} label={tag}
+                      active={selectedEligibility.includes(tag)}
+                      onClick={() => toggle(tag, selectedEligibility, setSelectedEligibility)} />
+                  ))}
+                  {customEligibility.map((tag) => (
+                    <button key={tag} type="button"
+                      onClick={() => setCustomEligibility((prev) => prev.filter((t) => t !== tag))}
+                      className="text-xs px-2.5 py-1 border border-black bg-black text-white leading-none flex items-center gap-1.5">
+                      {tag} <X className="w-2.5 h-2.5" />
+                    </button>
+                  ))}
                 </div>
-                {customFields.map((field, idx) => (
-                  <div key={field.id} className="flex gap-2 items-start">
-                    <div className="flex-1 space-y-1">
-                      <input type="text" value={field.question}
-                        onChange={(e) => {
-                          const next = [...customFields];
-                          next[idx] = { ...next[idx], question: e.target.value };
-                          setCustomFields(next);
-                        }}
-                        placeholder={`Question ${idx + 1}`} className={FIELD} />
-                      <select value={field.inputType}
-                        onChange={(e) => {
-                          const next = [...customFields];
-                          next[idx] = { ...next[idx], inputType: e.target.value as CustomField["inputType"] };
-                          setCustomFields(next);
-                        }}
-                        className={`${FIELD} text-xs`}>
-                        <option value="short">Short answer</option>
-                        <option value="long">Long answer</option>
-                        <option value="file">File upload</option>
-                      </select>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={customEligibilityInput}
+                    onChange={(e) => setCustomEligibilityInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomEligibility(); } }}
+                    placeholder="Add custom tag, e.g. Asian artists…"
+                    className={`${FIELD} flex-1`}
+                  />
+                  <button type="button" onClick={addCustomEligibility}
+                    className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors whitespace-nowrap">
+                    Add tag
+                  </button>
+                </div>
+              </Field>
+            )}
+
+            <Field label="Focus">
+              <div className="flex flex-wrap gap-2 pt-1">
+                {FORM_FOCUS.map((tag) => (
+                  <TagButton key={tag} label={tag}
+                    active={selectedFocus.includes(tag)}
+                    onClick={() => toggle(tag, selectedFocus, setSelectedFocus)} />
+                ))}
+              </div>
+            </Field>
+          </Section>
+
+          {/* ── Section 6: Application Method ──────────────────────────────── */}
+          <Section label="Application Method">
+            <div className="space-y-4">
+              <div className="flex gap-6">
+                {[
+                  { val: "external" as const, label: "External Website",  desc: "Artists apply via your website or form" },
+                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
+                ].map(({ val, label, desc }) => (
+                  <label key={val} className="flex items-start gap-2 cursor-pointer">
+                    <input type="radio" name="routing_radio" checked={routingType === val}
+                      onChange={() => { setRoutingType(val); setStep(1); }} className="mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
                     </div>
-                    <button type="button"
-                      onClick={() => setCustomFields((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-muted-foreground hover:text-foreground mt-2">
-                      <X className="w-4 h-4" />
+                  </label>
+                ))}
+              </div>
+
+              {routingType === "external" && (
+                <Field label="Application URL">
+                  <Input name="url" type="url" placeholder="https://…" className={FIELD}
+                    onChange={(e) => upd("url", e.target.value || null)} />
+                </Field>
+              )}
+            </div>
+          </Section>
+
+          {/* ── Section 7: Description & Media ─────────────────────────────── */}
+          <Section label="Description & Media">
+            <Field label="Full Description">
+              <textarea name="full_description" rows={6}
+                placeholder="Full details, eligibility criteria, how to apply…"
+                className={`${FIELD} resize-none`}
+                onChange={(e) => upd("full_description", e.target.value || null)} />
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                Revealed when visitors click &ldquo;Read more&rdquo;.
+              </p>
+            </Field>
+
+            <Field label="Hero Image">
+              <div
+                onDrop={onDrop}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border border-black p-6 text-center cursor-pointer transition-colors text-xs text-muted-foreground ${
+                  dragOver ? "bg-muted" : "hover:bg-muted/40"
+                }`}>
+                {uploadingImg
+                  ? "Uploading…"
+                  : imgUrl
+                    ? "Image uploaded. Click or drop to replace."
+                    : "Drop an image here, or click to browse"}
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
+              </div>
+            </Field>
+
+            <Field label="Your Email (for correspondence)">
+              <Input name="submitter_email" type="email" placeholder="you@organisation.org" className={FIELD} />
+            </Field>
+          </Section>
+
+          {/* ── Preview + Submit / Next ─────────────────────────────────────── */}
+          <div className="pt-6 border-t-2 border-black space-y-3">
+            {routingType === "pipeline" ? (
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="w-full sm:w-auto border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+              >
+                Next: Configure application →
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={openPreview}
+                  className="w-full sm:w-auto border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
+                >
+                  Preview full listing →
+                </button>
+
+                {hasPreviewed ? (
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+                      {isPending ? "Submitting…" : "Submit Opportunity"}
+                    </Button>
+                    <button type="button" onClick={openPreview}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+                      Preview again
                     </button>
                   </div>
-                ))}
-                <button type="button"
-                  onClick={() => setCustomFields((prev) => [
-                    ...prev,
-                    { id: crypto.randomUUID(), question: "", inputType: "short" },
-                  ])}
-                  className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors">
-                  <Plus className="w-3 h-3" /> Add Question
-                </button>
-                <label className="flex items-center gap-2 cursor-pointer pt-2 border-t border-black/10">
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Preview your full listing before submitting.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Step 2: Pipeline configuration ─────────────────────────────── */}
+        {step === 2 && routingType === "pipeline" && (
+          <div className="space-y-0">
+
+            {/* Section A: Application Questions */}
+            <Section label="Application Questions">
+              <p className="text-xs text-muted-foreground -mt-3 mb-5">
+                Artists will answer these when they apply through Patronage. Drag to reorder.
+              </p>
+              <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {questions.map((q, idx) => (
+                      <SortableQuestionCard
+                        key={q.id}
+                        q={q}
+                        idx={idx}
+                        onUpdate={(updated) =>
+                          setQuestions((prev) => prev.map((item) => item.id === q.id ? updated : item))
+                        }
+                        onDelete={() =>
+                          setQuestions((prev) => prev.filter((item) => item.id !== q.id))
+                        }
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+              <button
+                type="button"
+                onClick={() => setQuestions((prev) => [
+                  ...prev,
+                  { id: crypto.randomUUID(), label: "", type: "long_text", required: true },
+                ])}
+                className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors mt-3"
+              >
+                <Plus className="w-3 h-3" /> Add question
+              </button>
+              <div className="border-t border-black/10 pt-4 mt-4">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showBadges}
                     onChange={(e) => setShowBadges(e.target.checked)} />
                   <span className="text-xs">Include artist reputation badges in submission view</span>
                 </label>
               </div>
-            )}
-          </div>
-        </Section>
+            </Section>
 
-        {/* ── Section 7: Description & Media ──────────────────────────────── */}
-        <Section label="Description & Media">
-          <Field label="Full Description">
-            <textarea name="full_description" rows={6}
-              placeholder="Full details, eligibility criteria, how to apply…"
-              className={`${FIELD} resize-none`}
-              onChange={(e) => upd("full_description", e.target.value || null)} />
-            <p className="text-xs text-muted-foreground font-mono mt-1">
-              Revealed when visitors click &ldquo;Read more&rdquo;.
-            </p>
-          </Field>
+            {/* Section B: Artist Documents */}
+            <Section label="Artist Documents">
+              <p className="text-xs text-muted-foreground -mt-3 mb-5">
+                These are pulled automatically from the artist&apos;s Patronage profile. Tick what you want included in each submission.
+              </p>
+              <div className="space-y-3">
+                {ARTIST_DOC_OPTIONS.map(({ val, label, desc }) => (
+                  <label key={val} className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(artistDocs as string[]).includes(val)}
+                      onChange={() => toggleDoc(val)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </Section>
 
-          <Field label="Hero Image">
-            <div
-              onDrop={onDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border border-black p-6 text-center cursor-pointer transition-colors text-xs text-muted-foreground ${
-                dragOver ? "bg-muted" : "hover:bg-muted/40"
-              }`}>
-              {uploadingImg
-                ? "Uploading…"
-                : imgUrl
-                  ? "Image uploaded. Click or drop to replace."
-                  : "Drop an image here, or click to browse"}
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+            {/* Section C: Terms & Conditions */}
+            <Section label="Terms & Conditions (optional)">
+              <p className="text-xs text-muted-foreground -mt-3 mb-5">
+                Artists will be able to download this before applying.
+              </p>
+              <div
+                onClick={() => termsFileRef.current?.click()}
+                className="border border-dashed border-black p-4 text-center cursor-pointer hover:bg-muted/40 transition-colors text-xs text-muted-foreground"
+              >
+                {uploadingTerms ? "Uploading…" : termsPdfUrl ? "File uploaded. Click to replace." : "Click to upload PDF"}
+              </div>
+              <input
+                ref={termsFileRef}
+                type="file"
+                accept="application/pdf"
                 className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
-            </div>
-          </Field>
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleTermsFile(f); }}
+              />
+              {termsPdfUrl && (
+                <div className="flex items-center gap-3 mt-2">
+                  <a href={termsPdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline underline-offset-2">
+                    Preview →
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setTermsPdfUrl(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </Section>
 
-          <Field label="Your Email (for correspondence)">
-            <Input name="submitter_email" type="email" placeholder="you@organisation.org" className={FIELD} />
-          </Field>
-        </Section>
-
-        {/* ── Preview + Submit ─────────────────────────────────────────────── */}
-        <div className="pt-6 border-t-2 border-black space-y-3">
-          <button
-            type="button"
-            onClick={openPreview}
-            className="w-full sm:w-auto border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
-          >
-            Preview full listing →
-          </button>
-
-          {hasPreviewed ? (
-            <div className="flex items-center gap-4 flex-wrap">
-              <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-                {isPending ? "Submitting…" : "Submit Opportunity"}
-              </Button>
-              <button type="button" onClick={openPreview}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
-                Preview again
+            {/* Step 2 navigation */}
+            <div className="pt-6 border-t-2 border-black flex items-center gap-4 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
+              >
+                ← Back
               </button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Publishing…" : "Publish opportunity →"}
+              </Button>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Preview your full listing before submitting.
-            </p>
-          )}
-        </div>
+          </div>
+        )}
       </form>
     </div>
   );
@@ -669,6 +892,11 @@ function ListingPreviewModal({
   onClose: () => void;
 }) {
   const location = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+
+  // Normalise preview questions
+  const previewQuestions = opp.pipeline_config?.questions?.length
+    ? opp.pipeline_config.questions.map((q) => ({ id: q.id, text: q.label }))
+    : (opp.custom_fields ?? []).map((f) => ({ id: f.id, text: f.question }));
 
   return (
     <div
@@ -798,11 +1026,11 @@ function ListingPreviewModal({
                   >
                     Apply with Patronage →
                   </button>
-                  {opp.custom_fields && opp.custom_fields.length > 0 && (
+                  {previewQuestions.length > 0 && (
                     <div className="text-xs text-muted-foreground space-y-0.5 pt-1">
                       <p className="font-semibold uppercase tracking-widest mb-1">Application will ask for:</p>
-                      {opp.custom_fields.map((f) => (
-                        <p key={f.id}>· {f.question} <span className="opacity-60">({f.inputType})</span></p>
+                      {previewQuestions.map((q) => (
+                        <p key={q.id}>· {q.text}</p>
                       ))}
                     </div>
                   )}

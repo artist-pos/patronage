@@ -15,6 +15,8 @@ interface Props {
 
 export function AdminEditOpportunityModal({ opp }: Props) {
   const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(opp.title);
+  const [organiser, setOrganiser] = useState(opp.organiser);
   const [caption, setCaption] = useState(opp.caption ?? "");
   const [fullDescription, setFullDescription] = useState(opp.full_description ?? "");
   const [url, setUrl] = useState(opp.url ?? "");
@@ -62,6 +64,8 @@ export function AdminEditOpportunityModal({ opp }: Props) {
     setSaving(true);
     try {
       await updateOpportunityAdmin(opp.id, {
+        title: title.trim() || opp.title,
+        organiser: organiser.trim() || opp.organiser,
         caption: caption.trim() || null,
         full_description: fullDescription.trim() || null,
         url: url.trim() || null,
@@ -114,6 +118,30 @@ export function AdminEditOpportunityModal({ opp }: Props) {
             </div>
 
             <div className="px-6 py-6 space-y-6">
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest">Opportunity Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Opportunity title"
+                  className={FIELD}
+                />
+              </div>
+
+              {/* Organiser */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest">Organisation / Funder</label>
+                <input
+                  type="text"
+                  value={organiser}
+                  onChange={(e) => setOrganiser(e.target.value)}
+                  placeholder="Organisation name"
+                  className={FIELD}
+                />
+              </div>
 
               {/* Caption */}
               <div className="space-y-1.5">

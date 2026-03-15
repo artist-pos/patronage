@@ -4,8 +4,8 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { X, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { submitApplication } from "@/app/opportunities/[id]/actions";
-import type { Opportunity, Artwork } from "@/types/database";
+import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
+import type { Opportunity, Artwork, OpportunityApplicationDraft } from "@/types/database";
 import type { BadgeSet } from "@/lib/badges";
 
 interface ArtistProfile {
@@ -25,20 +25,47 @@ export interface ApplyModalProps {
   badges: BadgeSet | null;
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
+  draft?: OpportunityApplicationDraft | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 type Props = ApplyModalProps;
 
-export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, isJobOpportunity = false, professionalCvUrl = null, onClose, onSuccess }: Props) {
-  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null);
-  const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(null);
-  const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(null);
+// Normalise pipeline_config.questions or custom_fields into a single shape
+interface NormalisedField {
+  id: string;
+  label: string;
+  type: "short" | "long" | "file";
+  file_label?: string;
+}
+
+function normaliseFields(opp: Opportunity): NormalisedField[] {
+  if (opp.pipeline_config?.questions?.length) {
+    return opp.pipeline_config.questions.map((q) => ({
+      id: q.id,
+      label: q.label,
+      type: q.type === "short_text" ? "short" : q.type === "long_text" ? "long" : "file",
+      file_label: q.file_label,
+    }));
+  }
+  return (opp.custom_fields ?? []).map((f) => ({
+    id: f.id,
+    label: f.question,
+    type: f.inputType,
+  }));
+}
+
+export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
+  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(draft?.artwork_id ?? null);
+  const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(draft?.submitted_image_url ?? null);
+  const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [uploadingNewImage, setUploadingNewImage] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(draft?.custom_answers ?? {});
   const [fileUploads, setFileUploads] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -46,7 +73,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
 
   const displayName = artistProfile.full_name ?? artistProfile.username;
   const exhibitionCount = (artistProfile.exhibition_history ?? []).length;
-  const customFields = opportunity.custom_fields ?? [];
+  const fields = normaliseFields(opportunity);
 
   async function handleNewImageUpload(file: File) {
     setUploadingNewImage(true);
@@ -63,7 +90,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
     setSubmittedImageUrl(publicUrl);
     setSubmittedImagePreview(URL.createObjectURL(file));
-    setSelectedArtworkId(null); // deselect any existing artwork
+    setSelectedArtworkId(null);
   }
 
   async function handleFileUpload(fieldId: string, file: File) {
@@ -80,14 +107,27 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     setAnswers((prev) => ({ ...prev, [fieldId]: publicUrl }));
   }
 
+  async function handleSaveDraft() {
+    setSavingDraft(true);
+    setDraftSaved(false);
+    const finalAnswers = { ...answers, ...fileUploads };
+    const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
+    await saveDraft(
+      opportunity.id,
+      isJobOpportunity ? null : selectedArtworkId,
+      finalAnswers,
+      effectiveImageUrl
+    );
+    setSavingDraft(false);
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 2000);
+  }
+
   async function handleSubmit() {
     setSubmitting(true);
     setError(null);
 
-    // Merge file uploads into answers
     const finalAnswers = { ...answers, ...fileUploads };
-
-    // For job applications, pass the professional CV URL as the submitted image URL
     const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
 
     const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl);
@@ -166,6 +206,21 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
               <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">{artistProfile.bio}</p>
             )}
           </div>
+
+          {/* T&C download (pipeline_config) */}
+          {opportunity.pipeline_config?.terms_pdf_url && (
+            <div className="border border-black/20 px-4 py-3 flex items-center gap-3">
+              <svg className="w-4 h-4 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <a
+                href={opportunity.pipeline_config.terms_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs underline underline-offset-2"
+              >
+                Download terms &amp; conditions →
+              </a>
+            </div>
+          )}
 
           {/* Job: Professional CV attachment — or Artist: Artwork selector */}
           {isJobOpportunity ? (
@@ -270,14 +325,17 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
             </div>
           )}
 
-          {/* Custom questions */}
-          {customFields.length > 0 && (
+          {/* Questions (normalised from pipeline_config or custom_fields) */}
+          {fields.length > 0 && (
             <div className="space-y-4">
               <p className="text-xs font-semibold uppercase tracking-widest">Questions</p>
-              {customFields.map((field) => (
+              {fields.map((field) => (
                 <div key={field.id} className="space-y-1.5">
-                  <label className="text-sm font-medium">{field.question}</label>
-                  {field.inputType === "short" && (
+                  <label className="text-sm font-medium">{field.label}</label>
+                  {field.file_label && (
+                    <p className="text-xs text-muted-foreground">{field.file_label}</p>
+                  )}
+                  {field.type === "short" && (
                     <input
                       type="text"
                       value={answers[field.id] ?? ""}
@@ -285,7 +343,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                       className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                     />
                   )}
-                  {field.inputType === "long" && (
+                  {field.type === "long" && (
                     <textarea
                       rows={4}
                       value={answers[field.id] ?? ""}
@@ -293,7 +351,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                       className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black resize-none"
                     />
                   )}
-                  {field.inputType === "file" && (
+                  {field.type === "file" && (
                     <div className="space-y-1">
                       <button
                         type="button"
@@ -320,7 +378,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
 
           {error && <p className="text-xs text-destructive">{error}</p>}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 flex-wrap">
             <button
               type="button"
               onClick={onClose}
@@ -328,6 +386,16 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
             >
               Cancel
             </button>
+            {opportunity.routing_type === "pipeline" && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={savingDraft}
+                className="flex-1 border border-black px-4 py-2.5 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                {savingDraft ? "Saving…" : draftSaved ? "Draft saved ✓" : "Save draft"}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSubmit}
