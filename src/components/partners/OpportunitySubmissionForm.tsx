@@ -739,9 +739,24 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
 
                 {hasPreviewed ? (
                   <div className="flex items-center gap-4 flex-wrap">
-                    <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-                      {isPending ? "Submitting…" : "Submit Opportunity"}
-                    </Button>
+                    {isLoggedIn ? (
+                      <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+                        {isPending ? "Submitting…" : "Submit Opportunity"}
+                      </Button>
+                    ) : (
+                      <div className="space-y-1">
+                        <a
+                          href="/auth/login?next=/partners"
+                          className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+                        >
+                          Sign in to submit →
+                        </a>
+                        <p className="text-xs text-muted-foreground">
+                          Don&apos;t have an account?{" "}
+                          <a href="/auth/signup?next=/partners" className="underline underline-offset-2">Sign up free</a>
+                        </p>
+                      </div>
+                    )}
                     <button type="button" onClick={openPreview}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
                       Preview again
@@ -870,9 +885,24 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
               >
                 ← Back
               </button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Publishing…" : "Publish opportunity →"}
-              </Button>
+              {isLoggedIn ? (
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Publishing…" : "Publish opportunity →"}
+                </Button>
+              ) : (
+                <div className="space-y-1">
+                  <a
+                    href="/auth/login?next=/partners"
+                    className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+                  >
+                    Sign in to submit →
+                  </a>
+                  <p className="text-xs text-muted-foreground">
+                    Don&apos;t have an account?{" "}
+                    <a href="/auth/signup?next=/partners" className="underline underline-offset-2">Sign up free</a>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

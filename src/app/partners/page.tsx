@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 
@@ -13,20 +12,14 @@ export default async function PartnersPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let partnerName: string | null = null;
-  let role: string | null = null;
 
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, username, role")
+      .select("full_name, username")
       .eq("id", user.id)
       .single();
     partnerName = profile?.full_name ?? profile?.username ?? null;
-    role = profile?.role ?? null;
-  }
-
-  if (!user || !["partner", "admin", "owner"].includes(role ?? "")) {
-    redirect("/auth/login?next=/partners&message=partner-required");
   }
 
   return (
@@ -101,7 +94,7 @@ export default async function PartnersPage() {
             </p>
           </div>
 
-          <OpportunitySubmissionForm isLoggedIn={true} partnerName={partnerName} />
+          <OpportunitySubmissionForm isLoggedIn={!!user} partnerName={partnerName} />
         </div>
 
       </div>
