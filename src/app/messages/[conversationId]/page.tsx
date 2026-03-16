@@ -94,8 +94,8 @@ export default async function ChatPage({ params }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8" style={{ height: "calc(100svh - 5rem)", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-black pb-4 mb-4 shrink-0">
+      {/* Header — sticky so it stays visible even if the page scrolls due to the footer */}
+      <div className="sticky top-12 z-30 bg-[#FAFAF9] flex items-center gap-3 border-b border-black pb-4 mb-4 shrink-0">
         <Link
           href="/messages"
           className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"

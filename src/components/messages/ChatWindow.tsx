@@ -8,7 +8,6 @@ import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
 import { approveDeletionRequest } from "@/app/profile/artwork-delete-actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { Message, Artwork } from "@/types/database";
 
 interface Props {
@@ -36,6 +35,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const [approvingDeletionId, setApprovingDeletionId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Stable ref — prevents the realtime subscription tearing down on every render
   const supabaseRef = useRef(createRealtimeClient());
 
@@ -77,6 +77,14 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Auto-grow textarea as content changes
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [content]);
 
   async function handleSend() {
     const trimmed = content.trim();
@@ -128,11 +136,12 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+    // Shift+Enter falls through to default — inserts a newline
   }
 
   // Split system notices from regular chat messages
@@ -422,15 +431,18 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       )}
 
       {/* Input row */}
-      <div className="border-t border-black pt-4 flex gap-2">
-        <Input
+      <div className="border-t border-black pt-4 flex gap-2 items-end">
+        <textarea
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message…"
-          className="flex-1 border border-black focus:ring-black"
+          rows={1}
           disabled={sending}
           autoFocus
+          className="flex-1 resize-none overflow-hidden border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50"
+          style={{ minHeight: "2.375rem", maxHeight: "10rem", overflowY: "auto" }}
         />
         <Button
           onClick={handleSend}
