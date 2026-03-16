@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import Parser from "rss-parser";
 import { chromium, type Browser } from "playwright";
 import type { RssItem } from "../types.js";
+import { trimHtml } from "./trim.js";
 
 const rssParser = new Parser();
 
@@ -58,15 +59,9 @@ export async function fetchPageContent(url: string): Promise<{ text: string; ogI
     $('meta[name="twitter:image"]').attr("content") ??
     null;
 
-  $("script, style, nav, footer, header, aside, [role='navigation'], [role='banner'], .cookie-banner, .ad, .advertisement").remove();
+  const text = trimHtml(rawHtml);
 
-  const text = $("main, article, .content, .main, #main, body")
-    .first()
-    .text()
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return { text: text.slice(0, 10000), ogImage, links };
+  return { text, ogImage, links };
 }
 
 // ── Browser fetch (Playwright — for JS-rendered pages) ───────────────────────
@@ -101,21 +96,9 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
 
     const rawHtml = await page.content();
     const links = extractLinksFromHtml(rawHtml, url);
+    const text = trimHtml(rawHtml);
 
-    await page.evaluate(() => {
-      document
-        .querySelectorAll(
-          "script, style, nav, footer, header, aside, [role='navigation'], [role='banner'], .cookie-banner, .ad, .advertisement"
-        )
-        .forEach((el) => el.remove());
-    });
-
-    const text = await page.evaluate(() => {
-      const el = document.querySelector("main, article, .content, .main, #main, body");
-      return el ? (el.textContent ?? "").replace(/\s+/g, " ").trim() : "";
-    });
-
-    return { text: text.slice(0, 10000), ogImage, links };
+    return { text, ogImage, links };
   } finally {
     await page.close();
   }

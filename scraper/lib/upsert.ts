@@ -113,7 +113,7 @@ function buildRecord(
     funding_range: opp.funding_range ?? null,
     featured_image_url: opp.featured_image_url ?? ogImage ?? null,
     source_url: sourceUrl,
-    disciplines: disciplines.length > 0 ? disciplines : null,
+    disciplines: disciplines.length > 0 ? disciplines : ["other"],
     is_recurring: sourceMeta?.is_recurring ?? false,
     recurrence_pattern: sourceMeta?.recurrence_pattern ?? null,
   };

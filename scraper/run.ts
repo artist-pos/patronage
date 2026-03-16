@@ -11,10 +11,11 @@ import {
 } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
 import { upsertOpportunity } from "./lib/upsert.js";
+import { filterLinks } from "./lib/filter-links.js";
 import type { Source, ScrapedOpportunity } from "./types.js";
 
 const RATE_LIMIT_MS = 2_000;
-const SOURCE_TIMEOUT_MS = 30_000;
+const SOURCE_TIMEOUT_MS = 120_000; // increased from 30s — sources with many links need more time
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -82,8 +83,12 @@ async function processSource(source: Source): Promise<SourceResult> {
       : await fetchPageContent(source.url);
 
     if (source.followLinks && links.length > 0) {
-      const detailLinks = links.slice(0, source.maxLinks ?? 20);
-      console.log(`  ↳ following ${detailLinks.length} links`);
+      const detailLinks = filterLinks(links, {
+        baseUrl: source.url,
+        linkPattern: source.linkPattern,
+        maxLinks: source.maxLinks ?? 10,
+      });
+      console.log(`  ↳ following ${detailLinks.length} links (filtered from ${links.length})`);
 
       for (const link of detailLinks) {
         try {

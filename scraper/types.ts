@@ -9,7 +9,8 @@ export interface Source {
   isListPage?: boolean;     // page lists multiple opportunities — extract all
   needsBrowser?: boolean;   // page requires JS execution (use Playwright)
   followLinks?: boolean;    // follow individual opportunity links from the list page for full detail
-  maxLinks?: number;        // cap on how many detail links to follow (default 20)
+  maxLinks?: number;        // cap on how many detail links to follow (default 10)
+  linkPattern?: string | RegExp; // only follow links whose path/URL matches this pattern
 }
 
 export interface ScrapedOpportunity {

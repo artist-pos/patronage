@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedOpportunity, RssItem } from "../types.js";
+import { withRateLimit, estimateTokens } from "./rate-limiter.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -41,18 +42,20 @@ export async function extractFromPage(
   sourceUrl: string,
   defaultCountry: string
 ): Promise<ScrapedOpportunity[]> {
+  const prompt = `Source: ${sourceUrl}\nDefault country if not specified: ${defaultCountry}\n\nContent:\n${text}`;
+  const estimated = estimateTokens(prompt);
+
   try {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Source: ${sourceUrl}\nDefault country if not specified: ${defaultCountry}\n\nContent:\n${text}`,
-        },
-      ],
-    });
+    const response = await withRateLimit(
+      () =>
+        client.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 4096,
+          system: SYSTEM,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      estimated
+    );
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "[]";
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
