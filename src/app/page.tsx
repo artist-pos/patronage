@@ -89,7 +89,7 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   const name = u.artist_full_name ?? u.artist_username;
   const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
   return (
-    <Link href={href} scroll={false} className="group block sm:inline-block border border-border bg-background">
+    <Link href={href} scroll={false} className="group block sm:inline-block sm:max-w-[280px] border border-border bg-background overflow-hidden">
       {u.image_url && (
         <div className="overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -97,12 +97,12 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
             src={u.image_url}
             alt={u.caption ?? `Update by ${name}`}
             loading="lazy"
-            className="w-full aspect-video object-cover sm:aspect-auto sm:h-[200px] sm:w-auto transition-transform duration-500 group-hover:scale-105"
+            className="w-full aspect-video object-cover sm:aspect-auto sm:h-[200px] sm:w-full transition-transform duration-500 group-hover:scale-105"
             style={{ display: "block" }}
           />
         </div>
       )}
-      <div className="px-2.5 py-1.5 border-t border-border">
+      <div className="px-2.5 py-1.5 border-t border-border min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           {u.artist_avatar_url ? (
             <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
@@ -116,7 +116,7 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
           <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
         </div>
         {u.caption && (
-          <p className="text-[10px] text-muted-foreground truncate mt-0.5">{u.caption}</p>
+          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{u.caption}</p>
         )}
       </div>
     </Link>
