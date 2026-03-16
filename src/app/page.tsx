@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -207,50 +208,47 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {/* Artists */}
+          {/* Mobile: stacked sections */}
+          <div className="lg:hidden space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Artists
-                </h3>
-                <Link
-                  href="/artists"
-                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  View all
-                </Link>
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Artists</h3>
+                <Link href="/artists" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">View all</Link>
               </div>
               <div className="flex flex-col gap-3">
-                {artists.length > 0 ? (
-                  artists.map((a) => <ArtistCard key={a.id} artist={a} compact />)
-                ) : (
-                  <p className="text-sm text-muted-foreground">No artists yet.</p>
-                )}
+                {artists.length > 0 ? artists.map((a) => <ArtistCard key={a.id} artist={a} compact />) : <p className="text-sm text-muted-foreground">No artists yet.</p>}
               </div>
             </div>
-
-            {/* Opportunities */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Opportunities
-                </h3>
-                <Link
-                  href="/opportunities"
-                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  View all
-                </Link>
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Opportunities</h3>
+                <Link href="/opportunities" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">View all</Link>
               </div>
               <div className="flex flex-col gap-2">
-                {opportunities.length > 0 ? (
-                  opportunities.map((o) => <OpportunityMiniCard key={o.id} opp={o} />)
-                ) : (
-                  <p className="text-sm text-muted-foreground">No opportunities yet.</p>
-                )}
+                {opportunities.length > 0 ? opportunities.map((o) => <OpportunityMiniCard key={o.id} opp={o} />) : <p className="text-sm text-muted-foreground">No opportunities yet.</p>}
               </div>
             </div>
+          </div>
+
+          {/* Desktop: paired grid — each artist[i] and opportunity[i] share a CSS grid row,
+              so align-items:stretch (the default) makes both cells the same height */}
+          <div className="hidden lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-3">
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Artists</h3>
+              <Link href="/artists" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">View all</Link>
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Opportunities</h3>
+              <Link href="/opportunities" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">View all</Link>
+            </div>
+            {/* Card pairs — Fragment keeps both as direct grid children so they share the row */}
+            {Array.from({ length: Math.max(artists.length, opportunities.length) }, (_, i) => (
+              <Fragment key={i}>
+                {artists[i] ? <ArtistCard artist={artists[i]} compact /> : <div />}
+                {opportunities[i] ? <OpportunityMiniCard opp={opportunities[i]} /> : <div />}
+              </Fragment>
+            ))}
           </div>
         </div>
 

@@ -103,7 +103,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex flex-col sm:flex-row border border-black sm:h-[130px]"
+        className="group flex flex-col sm:flex-row border border-black sm:h-[130px] lg:h-full"
       >
         {/* Image (desktop only) */}
         <div className="relative hidden sm:block sm:w-1/2 overflow-hidden">
