@@ -103,7 +103,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex flex-col sm:flex-row border border-black sm:h-[200px]"
+        className="group flex flex-col sm:flex-row border border-black sm:h-[130px]"
       >
         {/* Image (desktop only) */}
         <div className="relative hidden sm:block sm:w-1/2 overflow-hidden">
@@ -123,11 +123,11 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         </div>
 
         {/* Info */}
-        <div className="bg-white border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden sm:w-1/2 p-4 gap-2">
-          <div className="flex items-start gap-3">
+        <div className="bg-white border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden sm:w-1/2 p-3 gap-2">
+          <div className="flex items-start gap-2">
             {artist.avatar_url && (
-              <div className="relative w-20 h-20 shrink-0 border border-black overflow-hidden">
-                <Image src={artist.avatar_url} alt={displayName} fill className="object-cover" sizes="80px" />
+              <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
+                <Image src={artist.avatar_url} alt={displayName} fill className="object-cover" sizes="40px" />
               </div>
             )}
             <div className="flex flex-col gap-1 pt-1 min-w-0">

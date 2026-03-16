@@ -20,7 +20,7 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   return (
     <Link
       href={`/opportunities/${opp.slug ?? opp.id}`}
-      className="group relative border border-black flex sm:h-[200px] hover:bg-muted/30 transition-colors overflow-hidden"
+      className="group relative border border-black flex hover:bg-muted/30 transition-colors overflow-hidden"
     >
       {/* Closing soon badge — absolute top-left on mobile, hidden (shown inline below) on sm+ */}
       {days !== null && days <= 7 && (
@@ -45,7 +45,7 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
       )}
 
       {/* Content */}
-      <div className="p-4 flex flex-col gap-2 flex-1 min-w-0 overflow-hidden">
+      <div className="p-3 flex flex-col gap-1.5 flex-1 min-w-0 overflow-hidden">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-bold group-hover:underline underline-offset-2 leading-snug line-clamp-2">
             {opp.title}
@@ -97,7 +97,7 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
             src={u.image_url}
             alt={u.caption ?? `Update by ${name}`}
             loading="lazy"
-            className="w-full aspect-video object-cover sm:aspect-auto sm:h-[200px] sm:w-full transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-auto transition-transform duration-500 group-hover:scale-105"
             style={{ display: "block" }}
           />
         </div>
