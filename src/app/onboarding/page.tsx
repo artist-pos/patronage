@@ -9,6 +9,7 @@ import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
+import { DigestToggle } from "@/components/profile/DigestToggle";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
@@ -210,6 +211,19 @@ export default async function OnboardingPage({
           profileId={user.id}
           initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
         />
+      </section>
+
+      {/* ── Email Preferences ── */}
+      <section className="space-y-6 border-t border-border pt-12">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">Email Preferences</h2>
+          <p className="text-xs text-muted-foreground">
+            {isArtist
+              ? "You are subscribed to the weekly digest by default. Toggle off to unsubscribe."
+              : "Opt in to receive a weekly digest of new and closing-soon opportunities."}
+          </p>
+        </div>
+        <DigestToggle initial={profile.weekly_digest ?? false} />
       </section>
 
       {/* ── Danger Zone ── */}

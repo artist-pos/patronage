@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EmailCapture } from "@/components/home/EmailCapture";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { getProfiles } from "@/lib/profiles";
 import { getClosingSoonOpportunities } from "@/lib/opportunities";
@@ -278,11 +277,19 @@ export default async function Home() {
 
       </div>
 
-      {/* ── Weekly Digest – above footer, hidden for authenticated users ── */}
+      {/* ── Sign-up CTA – above footer, hidden for authenticated users ── */}
       {!isAuthenticated && (
         <div className="border-t border-border px-6 py-12 text-center">
-          <div className="max-w-md mx-auto">
-            <EmailCapture />
+          <div className="max-w-md mx-auto space-y-4">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Never miss a deadline
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Sign up to get opportunities straight to your inbox.
+            </p>
+            <Button asChild>
+              <Link href="/auth/signup">Create a free account</Link>
+            </Button>
           </div>
         </div>
       )}
