@@ -212,10 +212,17 @@ function Tile({
   }
 
   const isImage = u.content_type === "image";
-  // Non-image carousel tiles get a square tile so they have a defined width
+  // Compute the exact rendered width from stored dimensions so the caption
+  // container has an explicit pixel width and text wraps to match the image.
+  // Falls back to max-content (old behaviour) when dimensions aren't stored.
+  const knownWidth =
+    fixed && isImage && u.image_width && u.image_height
+      ? Math.round(CAROUSEL_H * (u.image_width / u.image_height))
+      : null;
+
   const fixedStyle = fixed
     ? isImage
-      ? { width: "max-content" as const }
+      ? { width: knownWidth ?? ("max-content" as const) }
       : { width: CAROUSEL_H }
     : undefined;
 
@@ -235,7 +242,7 @@ function Tile({
               <img
                 src={u.image_url}
                 alt={u.caption ?? "Studio update"}
-                style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
+                style={{ height: CAROUSEL_H, width: knownWidth ?? "auto", display: "block" }}
               />
             ) : (
               <Image
@@ -283,9 +290,9 @@ function Tile({
       </div>
 
       {(u.caption || isOwner) && (
-        <div className="space-y-0.5 w-0 min-w-full">
+        <div className="space-y-0.5">
           {u.caption && (
-            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 break-words">
+            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
               {u.caption}
             </p>
           )}
