@@ -9,9 +9,10 @@ interface Props {
   matched: Opportunity[];
   lessRelevant: Opportunity[];
   view: "gallery" | "list";
+  isAuthenticated?: boolean;
 }
 
-export function RelevantFeed({ matched, lessRelevant, view }: Props) {
+export function RelevantFeed({ matched, lessRelevant, view, isAuthenticated = false }: Props) {
   const [showAll, setShowAll] = useState(false);
 
   const renderList = (opps: Opportunity[], offset = 0) => (
@@ -23,7 +24,7 @@ export function RelevantFeed({ matched, lessRelevant, view }: Props) {
   );
 
   const renderGallery = (opps: Opportunity[], priority = false) => (
-    <MasonryGrid opportunities={opps} priorityOffset={priority ? 0 : matched.length} />
+    <MasonryGrid opportunities={opps} priorityOffset={priority ? 0 : matched.length} isAuthenticated={isAuthenticated} />
   );
 
   const all = [...matched, ...lessRelevant];

@@ -96,7 +96,7 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
 
       {/* ── Mobile drawer ─────────────────────────────── */}
       {open && (
-        <div className="sm:hidden absolute top-full left-0 right-0 bg-background border-b border-border z-50 px-6 py-4 flex flex-col gap-4 text-sm">
+        <div className="sm:hidden absolute top-full right-0 bg-background border border-border shadow-md z-50 px-6 py-4 flex flex-col gap-4 text-sm min-w-[200px]">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.href}

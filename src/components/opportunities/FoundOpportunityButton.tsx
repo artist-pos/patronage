@@ -41,7 +41,7 @@ export function FoundOpportunityButton() {
         onClick={() => setOpen(true)}
         className="text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 transition-colors hover:border-black"
       >
-        Found an opportunity? +
+        Submit an opportunity
       </button>
 
       {open && (

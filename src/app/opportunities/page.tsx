@@ -216,7 +216,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
           No opportunities match those filters. New listings are added regularly.
         </p>
       ) : (
-        <RelevantFeed matched={matched} lessRelevant={lessRelevant} view={view} />
+        <RelevantFeed matched={matched} lessRelevant={lessRelevant} view={view} isAuthenticated={!!user} />
       )}
     </div>
   );

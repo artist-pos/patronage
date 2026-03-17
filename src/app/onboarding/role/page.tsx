@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { sendWelcomeDigest } from "@/lib/digest";
+import { sendWelcomeDm } from "@/lib/welcome-dm";
 
 export const metadata = { title: "Get Started — Patronage" };
 
@@ -42,6 +43,9 @@ async function applyRole(role: string) {
     sendWelcomeDigest(email).catch(console.error);
   }
 
+  // Send role-specific welcome DM from @patronagenz
+  sendWelcomeDm(user.id, role).catch(console.error);
+
   redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
 }
 
@@ -71,18 +75,18 @@ export default async function SelectRolePage({ searchParams }: Props) {
   const roles = [
     {
       value: "artist",
-      label: "Artist",
-      description: "Build your portfolio & list works.",
+      label: "I'm an artist",
+      description: "Build your profile, find opportunities, share your practice.",
     },
     {
       value: "patron",
-      label: "Patron",
-      description: "Follow artists, enquire about works, and apply for operational roles and industry jobs.",
+      label: "I support artists",
+      description: "Follow artists, collect work, discover new practices.",
     },
     {
       value: "partner",
-      label: "Partner",
-      description: "List grants & commissions.",
+      label: "I represent an organisation",
+      description: "List opportunities and reach artists directly.",
     },
   ] as const;
 
@@ -90,9 +94,9 @@ export default async function SelectRolePage({ searchParams }: Props) {
     <div className="min-h-screen flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-2xl space-y-10">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome to Patronage</h1>
+          <h1 className="text-3xl font-bold tracking-tight">How will you use Patronage?</h1>
           <p className="text-sm text-muted-foreground">
-            Choose how you&apos;ll use the platform. This can&apos;t be changed later.
+            Choose your role. This can&apos;t be changed later.
           </p>
         </div>
 

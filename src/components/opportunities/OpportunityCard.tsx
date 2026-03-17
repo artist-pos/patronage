@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity } from "@/types/database";
+import { SaveButton } from "./SaveButton";
 
 // Tags hidden from cards — still used for filtering/matching, shown on detail page
 const HIDDEN_CARD_TAGS = new Set([
@@ -61,9 +62,11 @@ interface Props {
   view?: "gallery" | "list";
   /** Pass true for the first few above-fold cards to prioritise LCP. */
   priority?: boolean;
+  isAuthenticated?: boolean;
+  savedByUser?: boolean;
 }
 
-export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false }: Props) {
+export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
   const urgent = isClosingToday(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
@@ -169,6 +172,17 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         ) : closing && (
           <div className={`hidden md:block absolute top-2 left-2 z-10 font-mono text-xs px-3 py-1 leading-none ${urgent ? "bg-red-600 text-white" : "bg-black text-white"}`}>
             {urgent ? "Closes today" : "Closing soon"}
+          </div>
+        )}
+
+        {/* Save button — top-right, visible on card hover */}
+        {!isPreview && (
+          <div className="hidden md:block absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1" onClick={(e) => e.preventDefault()}>
+            <SaveButton
+              opportunityId={opp.id}
+              initialSaved={savedByUser}
+              isAuthenticated={isAuthenticated}
+            />
           </div>
         )}
       </div>

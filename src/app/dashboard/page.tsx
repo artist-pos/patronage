@@ -28,21 +28,29 @@ function StatCard({ label, value, description, period, prevValue }: {
   label: string; value: number; description: string; period?: string; prevValue?: number;
 }) {
   const diff = prevValue !== undefined ? value - prevValue : null;
+  const contextLine = diff !== null
+    ? diff > 0
+      ? `↑ ${diff} more than last month`
+      : diff < 0
+        ? `↓ ${Math.abs(diff)} fewer than last month`
+        : "About the same as last month"
+    : value === 0
+      ? "Nothing tracked yet — check back soon."
+      : null;
+
   return (
     <div className="border border-black p-4 space-y-1.5">
       <div className="flex items-start justify-between gap-2">
         <p className="text-2xl font-bold tabular-nums">{value.toLocaleString()}</p>
-        {diff !== null && diff !== 0 && (
-          <span className={`text-xs tabular-nums mt-1 ${diff > 0 ? "text-green-600" : "text-muted-foreground"}`}>
-            {diff > 0 ? "+" : "−"}{Math.abs(diff).toLocaleString()}
-          </span>
-        )}
       </div>
       <p className="text-[10px] font-semibold uppercase tracking-widest">{label}</p>
       <p className="text-[11px] text-muted-foreground leading-relaxed">
         {description}
         {period && <span className="ml-1 opacity-60">· {period}</span>}
       </p>
+      {contextLine && (
+        <p className="text-[11px] text-gray-400">{contextLine}</p>
+      )}
     </div>
   );
 }
@@ -237,9 +245,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               {activeTab === "closing"
                 ? "No saved opportunities closing in the next 14 days."
                 : activeTab === "saved"
-                ? "You haven't saved any opportunities yet."
+                ? "No saved opportunities. When you find something worth coming back to, save it and it'll appear here."
                 : activeTab === "applied"
-                ? "No opportunities marked as applied."
+                ? "No applications yet. When you apply through Patronage, you can track their status here."
                 : "No expired opportunities."}
             </p>
             {(activeTab === "closing" || activeTab === "saved") && (

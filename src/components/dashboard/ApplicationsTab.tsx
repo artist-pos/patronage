@@ -29,13 +29,13 @@ interface DraftWithOpportunity extends OpportunityApplicationDraft {
   opportunity: Opportunity | null;
 }
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: "Received", className: "bg-muted text-muted-foreground" },
-  shortlisted: { label: "Under Review", className: "bg-blue-50 text-blue-700 border border-blue-200" },
-  selected: { label: "Shortlisted", className: "bg-amber-50 text-amber-700 border border-amber-200" },
-  approved_pending_assets: { label: "Upload Required ⚠️", className: "bg-orange-50 text-orange-700 border border-orange-300" },
-  production_ready: { label: "Approved ✓", className: "bg-green-50 text-green-700 border border-green-200" },
-  rejected: { label: "Not Selected", className: "bg-muted text-muted-foreground" },
+const STATUS_LABELS: Record<string, { label: string; className: string; description: string }> = {
+  pending: { label: "Received", className: "bg-muted text-muted-foreground", description: "Your application has been submitted." },
+  shortlisted: { label: "Under Review", className: "bg-blue-50 text-blue-700 border border-blue-200", description: "The organiser is reviewing applications." },
+  selected: { label: "Shortlisted", className: "bg-amber-50 text-amber-700 border border-amber-200", description: "You've been shortlisted." },
+  approved_pending_assets: { label: "Upload Required", className: "bg-orange-50 text-orange-700 border border-orange-300", description: "Please upload the requested files." },
+  production_ready: { label: "Approved", className: "bg-green-50 text-green-700 border border-green-200", description: "Congratulations — you've been selected." },
+  rejected: { label: "Not Selected", className: "bg-muted text-muted-foreground", description: "Not selected this time." },
 };
 
 interface ModalState {
@@ -149,7 +149,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
   if (isEmpty) {
     return (
       <div className="py-16 text-center space-y-3">
-        <p className="text-sm text-muted-foreground">You haven&apos;t applied to any opportunities yet.</p>
+        <p className="text-sm text-muted-foreground">No applications yet. When you apply through Patronage, you can track their status here.</p>
         <Link
           href="/opportunities"
           className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
@@ -244,6 +244,8 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                     {statusInfo.label}
                   </span>
                 </div>
+
+                <p className="text-xs text-muted-foreground">{statusInfo.description}</p>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>Applied {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
