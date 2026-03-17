@@ -17,10 +17,9 @@ interface Props {
   profileId?: string;
 }
 
-// Portfolio height is h-[300px]; carousel is 75% = 225px
+// Non-image tile size (audio, video, text, embed)
 const CAROUSEL_H = 225;
-// Fixed tile width so the caption container has a known size and text wraps
-const CAROUSEL_W = 200;
+const TILE_W = 200;
 const ROW_SIZE = 8;
 
 function formatTimestamp(iso: string): string {
@@ -100,7 +99,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
           {visible.length > ROW_SIZE && (
             <button
               onClick={() => setExpanded(true)}
-              style={{ width: CAROUSEL_H, height: CAROUSEL_H }}
+              style={{ width: TILE_W, height: TILE_W }}
               className="shrink-0 border border-dashed border-black flex items-center justify-center text-xs text-muted-foreground hover:bg-muted/40 transition-colors"
             >
               +{visible.length - ROW_SIZE} more
@@ -213,18 +212,18 @@ function Tile({
   }
 
   const isImage = u.content_type === "image";
-  const tileWidth = fixed ? CAROUSEL_W : undefined;
+
+  // Image tiles: fixed width + aspect-[4/3] (matching landing page card pattern)
+  // Non-image tiles: fixed square
+  const outerClass = fixed ? "flex-none block w-[200px] border border-border bg-background" : "block border border-border bg-background";
 
   return (
-    <div className="flex-none flex flex-col gap-1" style={tileWidth ? { width: tileWidth } : undefined}>
-      <div
-        className="group relative border border-border overflow-hidden bg-muted"
-        style={{ height: CAROUSEL_H, width: tileWidth }}
+    <div className={outerClass}>
+      {/* Media */}
+      <div className={`group relative overflow-hidden bg-muted ${isImage ? "aspect-[4/3]" : ""}`}
+        style={!isImage ? { height: CAROUSEL_H, width: fixed ? TILE_W : undefined } : undefined}
       >
-        <Link
-          href={href}
-          className="absolute inset-0"
-        >
+        <Link href={href} className="absolute inset-0">
           {isImage && u.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -269,15 +268,14 @@ function Tile({
         )}
       </div>
 
+      {/* Caption / timestamp */}
       {(u.caption || isOwner) && (
-        <div className="space-y-0.5">
+        <div className="px-2 py-1.5 border-t border-border min-w-0">
           {u.caption && (
-            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
-              {u.caption}
-            </p>
+            <p className="text-[10px] text-muted-foreground line-clamp-2">{u.caption}</p>
           )}
           {isOwner && (
-            <p className="text-[9px] font-mono text-muted-foreground">
+            <p className="text-[9px] font-mono text-muted-foreground mt-0.5">
               {formatTimestamp(u.created_at)}
             </p>
           )}

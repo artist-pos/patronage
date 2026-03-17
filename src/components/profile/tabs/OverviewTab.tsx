@@ -178,13 +178,9 @@ export function OverviewTab({
               <Link
                 key={u.id}
                 href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}`}
-                className="flex-none block"
-                style={{ width: 200 }}
+                className="flex-none block w-[200px] border border-border bg-background"
               >
-                <div
-                  className="overflow-hidden border border-border bg-muted"
-                  style={{ height: 180, width: 200 }}
-                >
+                <div className="overflow-hidden bg-muted aspect-[4/3]">
                   {u.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -200,9 +196,9 @@ export function OverviewTab({
                   )}
                 </div>
                 {u.caption && (
-                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug line-clamp-2">
-                    {u.caption}
-                  </p>
+                  <div className="px-2 py-1.5 border-t border-border min-w-0">
+                    <p className="text-[10px] text-muted-foreground line-clamp-2">{u.caption}</p>
+                  </div>
                 )}
               </Link>
             ))}
