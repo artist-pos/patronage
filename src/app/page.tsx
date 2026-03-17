@@ -19,15 +19,16 @@ function daysUntil(deadline: string | null): number | null {
 function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   const days = daysUntil(opp.deadline);
   const isUrgent = days !== null && days <= 1;
+  const isSoon = days !== null && days <= 3;
   return (
     <Link
       href={`/opportunities/${opp.slug ?? opp.id}`}
       className="group relative border border-black flex hover:bg-muted/30 transition-colors overflow-hidden"
     >
-      {/* Closing soon badge — absolute top-left on mobile, hidden (shown inline below) on sm+ */}
-      {days !== null && days <= 7 && (
-        <Badge className={`absolute top-2 left-2 z-10 text-xs font-normal sm:hidden ${isUrgent ? "bg-red-600 text-white" : "bg-foreground text-background"}`}>
-          {isUrgent ? "Closes today" : "Closing soon"}
+      {/* Closing soon badge — mobile only; sm+ shows inline after title */}
+      {days !== null && days <= 7 && !isSoon && (
+        <Badge className="absolute top-2 left-2 z-10 text-xs font-normal sm:hidden bg-foreground text-background">
+          Closing soon
         </Badge>
       )}
 
@@ -51,10 +52,15 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-bold group-hover:underline underline-offset-2 leading-snug line-clamp-2">
             {opp.title}
+            {isSoon && days !== null && (
+              <span className="text-red-600 font-medium ml-1">
+                · {isUrgent ? "1d left" : `${days}d left`}
+              </span>
+            )}
           </p>
-          {days !== null && days <= 7 && (
-            <Badge className={`hidden sm:inline-flex text-xs font-normal shrink-0 ${isUrgent ? "bg-red-600 text-white" : "bg-foreground text-background"}`}>
-              {isUrgent ? "Closes today" : "Closing soon"}
+          {days !== null && days <= 7 && !isSoon && (
+            <Badge className="hidden sm:inline-flex text-xs font-normal shrink-0 bg-foreground text-background">
+              Closing soon
             </Badge>
           )}
         </div>

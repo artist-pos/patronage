@@ -34,11 +34,11 @@ export default async function FeedPage() {
           <p className="text-sm text-muted-foreground">Work in progress from the Patronage community.</p>
         </div>
         {profile && (
-          <div className="flex justify-center">
+          <div className="flex justify-end">
             <CreateUpdateModal
               profileId={profile.id}
               label="New update +"
-              className="w-full max-w-sm border border-black px-4 py-2 text-sm text-center hover:bg-black hover:text-white transition-colors"
+              className="w-auto px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
               projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
             />
           </div>

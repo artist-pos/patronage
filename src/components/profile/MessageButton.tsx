@@ -27,7 +27,7 @@ export function MessageButton({ otherUserId }: Props) {
     <button
       onClick={handleClick}
       disabled={isPending}
-      className="bg-white text-black border border-black px-4 py-1.5 text-xs hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className="bg-white text-gray-700 border border-gray-300 px-4 py-1.5 text-xs hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {isPending ? "…" : "Message"}
     </button>

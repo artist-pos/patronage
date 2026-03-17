@@ -343,7 +343,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             backgroundImage: `url("${profile.featured_image_url}")`,
             backgroundSize: "100% auto",
             backgroundRepeat: "no-repeat",
-            backgroundPosition: `center ${profile.banner_focus_y ?? 50}%`,
+            backgroundPosition: `center ${profile.banner_focus_y ?? 30}%`,
             backgroundColor: "#f5f5f4",
           }}
         />
@@ -476,7 +476,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   </div>
                 )}
                 {(profile.website_url || profile.instagram_handle || profile.cv_url) && (
-                  <div className="flex flex-col gap-2 lg:items-end mt-2">
+                  <div className="flex flex-col gap-2 lg:items-end mt-2 lg:border-l lg:border-gray-100 lg:pl-6">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
                       Links
                     </p>

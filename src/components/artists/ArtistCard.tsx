@@ -103,7 +103,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex flex-col sm:flex-row border border-black sm:h-[130px] lg:h-full"
+        className="group flex flex-col sm:flex-row border border-black sm:h-[130px] lg:h-full hover:shadow-sm transition-shadow duration-150"
       >
         {/* Image (desktop only) */}
         <div className="relative hidden sm:block sm:w-1/2 overflow-hidden">
@@ -139,13 +139,15 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
               {artist.country && <span className="text-xs text-muted-foreground">{artist.country}</span>}
             </div>
           </div>
-          {(artist.medium ?? []).length > 0 && (
+          {(artist.medium ?? []).length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {(artist.medium ?? []).slice(0, 2).map((m) => (
                 <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">{m}</span>
               ))}
             </div>
-          )}
+          ) : artist.career_stage ? (
+            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">{artist.career_stage}</span>
+          ) : null}
         </div>
       </Link>
     );

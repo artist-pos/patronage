@@ -10,7 +10,7 @@ const TAB_LABELS: Record<Tab, string> = {
   work: "Work",
   studio: "Studio",
   cv: "CV & Press",
-  support: "Support",
+  support: "Support this artist",
 };
 
 interface Props {
