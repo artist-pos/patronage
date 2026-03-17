@@ -178,27 +178,29 @@ export function OverviewTab({
               <Link
                 key={u.id}
                 href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}`}
-                className="flex-none"
+                className="flex-none block"
+                style={{ width: 200 }}
               >
                 <div
                   className="overflow-hidden border border-border bg-muted"
-                  style={{ height: 180 }}
+                  style={{ height: 180, width: 200 }}
                 >
                   {u.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={u.image_url}
                       alt={u.caption ?? "Studio update"}
-                      style={{ height: 180, width: "auto", display: "block" }}
+                      className="w-full h-full object-cover"
+                      style={{ display: "block" }}
                     />
                   ) : (
-                    <div className="h-full w-[180px] flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center">
                       <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{u.content_type}</span>
                     </div>
                   )}
                 </div>
                 {u.caption && (
-                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug line-clamp-1">
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug line-clamp-2">
                     {u.caption}
                   </p>
                 )}
