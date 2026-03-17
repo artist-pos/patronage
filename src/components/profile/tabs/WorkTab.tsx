@@ -62,7 +62,7 @@ export function WorkTab({
       {(portfolioImages.length > 0 || isOwner) && (
         <section className="space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Portfolio
+            Selected Work
           </h2>
           {portfolioImages.length > 0 ? (
             <PortfolioGrid
@@ -73,7 +73,11 @@ export function WorkTab({
               isOwner={isOwner}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">No portfolio works yet.</p>
+            isOwner ? (
+              <p className="text-sm text-muted-foreground">No work added yet. Your portfolio is how people discover your practice — even one or two pieces makes a difference.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{displayName} hasn&apos;t added work yet.</p>
+            )
           )}
         </section>
       )}

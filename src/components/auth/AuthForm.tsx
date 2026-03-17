@@ -56,7 +56,7 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError(error.message);
+        setError("That email and password combination didn't work. Try again or reset your password.");
       } else {
         router.push(next);
         router.refresh();

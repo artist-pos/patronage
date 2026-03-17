@@ -47,7 +47,7 @@ export function InfiniteFeed({ initialUpdates, initialHasMore }: Props) {
   }, [loadMore]);
 
   if (updates.length === 0) {
-    return <p className="text-sm text-muted-foreground">No updates yet. Be the first to post.</p>;
+    return <p className="text-sm text-muted-foreground">Nothing here yet. Studio updates are for works in progress, process shots, thoughts — whatever you&apos;re working on right now.</p>;
   }
 
   return (

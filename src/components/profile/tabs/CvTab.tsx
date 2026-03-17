@@ -25,14 +25,14 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, cvUrl, profil
   if (!hasContent) {
     return (
       <div className="py-8 space-y-2">
-        <p className="text-sm text-muted-foreground">No CV information added yet.</p>
+        <p className="text-sm text-muted-foreground">No exhibitions or press added yet.</p>
         {isOwner && (
           <p className="text-sm text-muted-foreground">
             <Link
               href="/profile"
               className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
-              Complete your CV in profile settings →
+              Add these in your profile settings →
             </Link>
           </p>
         )}

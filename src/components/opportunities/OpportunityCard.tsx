@@ -198,6 +198,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
             {opp.country}
           </span>
+          {opp.entry_fee === 0 && (
+            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
+              Free to enter
+            </span>
+          )}
           {opp.grant_type && (
             <span className="hidden md:inline-block text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
               {opp.grant_type}

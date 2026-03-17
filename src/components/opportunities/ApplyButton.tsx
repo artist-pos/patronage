@@ -21,6 +21,7 @@ interface Props {
 export function ApplyButton({ opportunity, isJobOpportunity = false, professionalCvUrl = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
     artworks: Artwork[];
@@ -77,6 +78,18 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
     setOpen(true);
   }
 
+  if (submitted) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Application submitted. You&apos;ll get an email confirmation, and you can track the status in your{" "}
+        <a href="/dashboard?tab=applications" className="underline underline-offset-2 hover:text-foreground transition-colors">
+          dashboard
+        </a>
+        .
+      </p>
+    );
+  }
+
   return (
     <>
       <button
@@ -99,6 +112,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
           onClose={() => setOpen(false)}
           onSuccess={() => {
             setOpen(false);
+            setSubmitted(true);
             router.refresh();
           }}
         />

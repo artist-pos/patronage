@@ -18,7 +18,7 @@ export function StudioTab({ updates, artistUsername, isOwner, projects, profileI
   if (!isOwner && !hasUpdates && !hasCreativeWork) {
     return (
       <div className="py-8">
-        <p className="text-sm text-muted-foreground">No studio updates yet.</p>
+        <p className="text-sm text-muted-foreground">Nothing here yet. Studio updates are for works in progress, process shots, thoughts — whatever you&apos;re working on right now.</p>
       </div>
     );
   }

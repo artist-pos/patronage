@@ -72,7 +72,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
 
       {artists.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
-          No artists match the current filters.
+          No artists match those filters.
         </p>
       ) : view === "list" ? (
         <div className="border-t border-black">

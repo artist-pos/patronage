@@ -116,7 +116,8 @@ export default async function OpportunityPage({ params }: Props) {
       })
     : null;
 
-  const location = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+  const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+  const location = rawLocation === "Global" ? "Open to all countries" : rawLocation;
 
   const isTrending = saveCount >= 5;
   const isPipeline = opp.routing_type === "pipeline";
