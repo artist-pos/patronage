@@ -89,25 +89,25 @@ export default async function PartnersPage() {
             </h2>
             <PricingItem
               heading="Standard listing"
-              price="Free, always"
+              badge="Free, always"
+              badgeVariant="green"
               body="No cost to list. Reviewed within 2 business days."
+            />
+            <PricingItem
+              heading="Patronage Pipeline"
+              badge="Free for the first 10 partners"
+              badgeVariant="blue"
+              body="Run your full application process on Patronage. Custom questions, applicant dashboard, status tracking. Replaces Google Forms and spreadsheets."
             />
             <PricingItem
               heading="Featured listing"
               strikePrice="$150 NZD"
               currentPrice="$75 NZD"
-              body="Pinned at top of the opportunities page, homepage, and weekly email digest for the duration of your listing. Shared across our social channels."
+              body="Pinned to the top of the opportunities page, homepage, and weekly email digest for the duration of your listing."
             />
-            <PricingItem
-              heading="Patronage Pipeline"
-              strikePrice="$200 NZD"
-              body="Run your full application process on Patronage. Custom questions, applicant dashboard, status tracking. Replaces Google Forms and spreadsheets."
-            />
-            <PricingItem
-              heading="Featured + Pipeline bundle"
-              strikePrice="$350 NZD"
-              body="Both add-ons together."
-            />
+            <p className="text-sm text-gray-400 pt-4">
+              Pipeline early access is limited to the first 10 partners. Featured rate is introductory and subject to change.
+            </p>
           </section>
         </div>
 
@@ -131,26 +131,29 @@ export default async function PartnersPage() {
 
 function PricingItem({
   heading,
-  price,
+  badge,
+  badgeVariant,
   strikePrice,
   currentPrice,
   body,
 }: {
   heading: string;
-  price?: string;
+  badge?: string;
+  badgeVariant?: "green" | "blue";
   strikePrice?: string;
   currentPrice?: string;
   body: string;
 }) {
+  const badgeClass =
+    badgeVariant === "blue"
+      ? "bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-[10px] font-medium"
+      : "bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 text-[10px] font-medium";
+
   return (
     <div className="border-t border-black py-5 space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold">{heading}</p>
-        {price && (
-          <span className="bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
-            {price}
-          </span>
-        )}
+        {badge && <span className={badgeClass}>{badge}</span>}
         {strikePrice && (
           <span className="font-mono text-xs text-muted-foreground">
             <s>{strikePrice}</s>
@@ -158,11 +161,6 @@ function PricingItem({
         )}
         {currentPrice && (
           <span className="font-mono text-xs font-medium">{currentPrice}</span>
-        )}
-        {strikePrice && (
-          <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
-            Founding partner rate
-          </span>
         )}
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
