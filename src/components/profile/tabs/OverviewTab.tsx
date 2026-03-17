@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
+import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
@@ -173,34 +174,9 @@ export function OverviewTab({
               View all →
             </Link>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none items-start">
             {selectedUpdates.map((u) => (
-              <Link
-                key={u.id}
-                href={u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}`}
-                className="flex-none block w-[200px] border border-border bg-background"
-              >
-                <div className="overflow-hidden bg-muted aspect-[4/3]">
-                  {u.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={u.image_url}
-                      alt={u.caption ?? "Studio update"}
-                      className="w-full h-full object-cover"
-                      style={{ display: "block" }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{u.content_type}</span>
-                    </div>
-                  )}
-                </div>
-                {u.caption && (
-                  <div className="px-2 py-1.5 border-t border-border min-w-0">
-                    <p className="text-[10px] text-muted-foreground line-clamp-2">{u.caption}</p>
-                  </div>
-                )}
-              </Link>
+              <StudioUpdateTile key={u.id} u={u} />
             ))}
           </div>
         </div>

@@ -4,11 +4,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtistCard } from "@/components/artists/ArtistCard";
+import { StudioFeedCard } from "@/components/feed/StudioFeedCard";
 import { getProfiles } from "@/lib/profiles";
 import { getClosingSoonOpportunities } from "@/lib/opportunities";
 import { getLatestUpdates } from "@/lib/feed";
 import { createClient } from "@/lib/supabase/server";
-import type { Opportunity, ProjectUpdateWithArtist } from "@/types/database";
+import type { Opportunity } from "@/types/database";
 
 function daysUntil(deadline: string | null): number | null {
   if (!deadline) return null;
@@ -88,43 +89,6 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   );
 }
 
-function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
-  const name = u.artist_full_name ?? u.artist_username;
-  const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
-  return (
-    <Link href={href} scroll={false} className="group block sm:inline-block sm:max-w-[280px] border border-border bg-background overflow-hidden">
-      {u.image_url && (
-        <div className="overflow-hidden bg-muted aspect-[4/3]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={u.image_url}
-            alt={u.caption ?? `Update by ${name}`}
-            loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            style={{ display: "block" }}
-          />
-        </div>
-      )}
-      <div className="px-2.5 py-1.5 border-t border-border min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          {u.artist_avatar_url ? (
-            <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
-              <Image src={u.artist_avatar_url} alt={name} fill loading="lazy" className="object-cover" sizes="20px" />
-            </div>
-          ) : (
-            <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
-              {name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
-        </div>
-        {u.caption && (
-          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{u.caption}</p>
-        )}
-      </div>
-    </Link>
-  );
-}
 
 export default async function Home() {
   const supabase = await createClient();

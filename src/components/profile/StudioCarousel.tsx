@@ -213,24 +213,41 @@ function Tile({
 
   const isImage = u.content_type === "image";
 
-  // Image tiles: fixed width + aspect-[4/3] (matching landing page card pattern)
-  // Non-image tiles: fixed square
-  const outerClass = fixed ? "flex-none block w-[200px] border border-border bg-background" : "block border border-border bg-background";
+  // Seed width from stored dimensions so there's no layout shift on load.
+  // onLoad fills it in for older images that don't have stored dimensions.
+  const [cardWidth, setCardWidth] = useState<number | null>(() =>
+    isImage && u.image_width && u.image_height
+      ? Math.round(CAROUSEL_H * (u.image_width / u.image_height))
+      : null
+  );
+
+  function handleImgLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    if (cardWidth !== null) return;
+    const img = e.currentTarget;
+    if (img.naturalWidth && img.naturalHeight) {
+      setCardWidth(Math.round(CAROUSEL_H * (img.naturalWidth / img.naturalHeight)));
+    }
+  }
+
+  // Non-image tiles (audio, video, text, embed) use a fixed square
+  const tileStyle = fixed
+    ? isImage
+      ? cardWidth ? { width: cardWidth } : undefined
+      : { width: TILE_W }
+    : undefined;
 
   return (
-    <div className={outerClass}>
+    <div className="flex-none group border border-border bg-background" style={tileStyle}>
       {/* Media */}
-      <div className={`group relative overflow-hidden bg-muted ${isImage ? "aspect-[4/3]" : ""}`}
-        style={!isImage ? { height: CAROUSEL_H, width: fixed ? TILE_W : undefined } : undefined}
-      >
+      <div className="relative overflow-hidden bg-muted" style={{ height: CAROUSEL_H }}>
         <Link href={href} className="absolute inset-0">
           {isImage && u.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={u.image_url}
               alt={u.caption ?? "Studio update"}
-              className="w-full h-full object-cover"
-              style={{ display: "block" }}
+              style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
+              onLoad={handleImgLoad}
             />
           ) : u.content_type === "audio" ? (
             <AudioTileContent u={u} />
@@ -268,11 +285,11 @@ function Tile({
         )}
       </div>
 
-      {/* Caption / timestamp */}
+      {/* Caption / timestamp — min-w-0 keeps text within card width */}
       {(u.caption || isOwner) && (
-        <div className="px-2 py-1.5 border-t border-border min-w-0">
+        <div className="px-2 py-1.5 border-t border-border min-w-0 overflow-hidden">
           {u.caption && (
-            <p className="text-[10px] text-muted-foreground line-clamp-2">{u.caption}</p>
+            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{u.caption}</p>
           )}
           {isOwner && (
             <p className="text-[9px] font-mono text-muted-foreground mt-0.5">
