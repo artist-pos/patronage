@@ -57,7 +57,7 @@ export async function upsertProfileAction(
 
   if (existing) return { fieldErrors: { username: "Username already taken." } };
 
-  const { error } = await supabase.from("profiles").upsert({
+  const profileData: Record<string, unknown> = {
     id: user.id,
     username,
     full_name,
@@ -65,10 +65,17 @@ export async function upsertProfileAction(
     country: country || null,
     career_stage: career_stage || null,
     medium: medium.length > 0 ? medium : null,
-    disciplines: disciplines.length > 0 ? disciplines : null,
     website_url,
     instagram_handle,
-  });
+  };
+  // Only write disciplines when values are present — omitting it avoids
+  // triggering the NOT NULL constraint for partners/patrons who don't
+  // have a DisciplineInput in their form.
+  if (disciplines.length > 0) {
+    profileData.disciplines = disciplines;
+  }
+
+  const { error } = await supabase.from("profiles").upsert(profileData);
 
   if (error) return { error: error.message };
 
