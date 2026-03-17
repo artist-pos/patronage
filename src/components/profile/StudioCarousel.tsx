@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X, Music, Play, ExternalLink, FileText } from "lucide-react";
 import { deleteUpdate } from "@/actions/updates";
@@ -20,6 +19,8 @@ interface Props {
 
 // Portfolio height is h-[300px]; carousel is 75% = 225px
 const CAROUSEL_H = 225;
+// Fixed tile width so the caption container has a known size and text wraps
+const CAROUSEL_W = 200;
 const ROW_SIZE = 8;
 
 function formatTimestamp(iso: string): string {
@@ -212,47 +213,26 @@ function Tile({
   }
 
   const isImage = u.content_type === "image";
-  // Compute the exact rendered width from stored dimensions so the caption
-  // container has an explicit pixel width and text wraps to match the image.
-  // Falls back to max-content (old behaviour) when dimensions aren't stored.
-  const knownWidth =
-    fixed && isImage && u.image_width && u.image_height
-      ? Math.round(CAROUSEL_H * (u.image_width / u.image_height))
-      : null;
-
-  const fixedStyle = fixed
-    ? isImage
-      ? { width: knownWidth ?? ("max-content" as const) }
-      : { width: CAROUSEL_H }
-    : undefined;
+  const tileWidth = fixed ? CAROUSEL_W : undefined;
 
   return (
-    <div className="flex-none flex flex-col gap-1" style={fixedStyle}>
+    <div className="flex-none flex flex-col gap-1" style={tileWidth ? { width: tileWidth } : undefined}>
       <div
         className="group relative border border-border overflow-hidden bg-muted"
-        style={{ height: CAROUSEL_H }}
+        style={{ height: CAROUSEL_H, width: tileWidth }}
       >
         <Link
           href={href}
-          className={fixed && isImage ? "inline-flex h-full" : "absolute inset-0"}
+          className="absolute inset-0"
         >
           {isImage && u.image_url ? (
-            fixed ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={u.image_url}
-                alt={u.caption ?? "Studio update"}
-                style={{ height: CAROUSEL_H, width: knownWidth ?? "auto", display: "block" }}
-              />
-            ) : (
-              <Image
-                src={u.image_url}
-                alt={u.caption ?? "Studio update"}
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            )
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={u.image_url}
+              alt={u.caption ?? "Studio update"}
+              className="w-full h-full object-cover"
+              style={{ display: "block" }}
+            />
           ) : u.content_type === "audio" ? (
             <AudioTileContent u={u} />
           ) : u.content_type === "video" ? (
