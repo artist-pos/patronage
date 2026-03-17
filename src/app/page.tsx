@@ -18,6 +18,7 @@ function daysUntil(deadline: string | null): number | null {
 
 function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
   const days = daysUntil(opp.deadline);
+  const isUrgent = days !== null && days <= 1;
   return (
     <Link
       href={`/opportunities/${opp.slug ?? opp.id}`}
@@ -25,8 +26,8 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
     >
       {/* Closing soon badge — absolute top-left on mobile, hidden (shown inline below) on sm+ */}
       {days !== null && days <= 7 && (
-        <Badge className="absolute top-2 left-2 z-10 text-xs font-normal bg-foreground text-background sm:hidden">
-          Closing soon
+        <Badge className={`absolute top-2 left-2 z-10 text-xs font-normal sm:hidden ${isUrgent ? "bg-red-600 text-white" : "bg-foreground text-background"}`}>
+          {isUrgent ? "Closes today" : "Closing soon"}
         </Badge>
       )}
 
@@ -52,8 +53,8 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
             {opp.title}
           </p>
           {days !== null && days <= 7 && (
-            <Badge className="hidden sm:inline-flex text-xs font-normal bg-foreground text-background shrink-0">
-              Closing soon
+            <Badge className={`hidden sm:inline-flex text-xs font-normal shrink-0 ${isUrgent ? "bg-red-600 text-white" : "bg-foreground text-background"}`}>
+              {isUrgent ? "Closes today" : "Closing soon"}
             </Badge>
           )}
         </div>
@@ -76,8 +77,8 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
             </span>
           )}
           {opp.deadline && (
-            <span className="text-xs text-muted-foreground ml-auto">
-              {days !== null && days >= 0 ? `${days}d remaining` : opp.deadline}
+            <span className={`text-xs ml-auto ${isUrgent ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+              {days !== null && days >= 0 ? (isUrgent ? "1d left" : `${days}d remaining`) : opp.deadline}
             </span>
           )}
         </div>
@@ -92,13 +93,13 @@ function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
   return (
     <Link href={href} scroll={false} className="group block sm:inline-block sm:max-w-[280px] border border-border bg-background overflow-hidden">
       {u.image_url && (
-        <div className="overflow-hidden bg-muted">
+        <div className="overflow-hidden bg-muted aspect-[4/3]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={u.image_url}
             alt={u.caption ?? `Update by ${name}`}
             loading="lazy"
-            className="w-full h-auto transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             style={{ display: "block" }}
           />
         </div>
@@ -128,6 +129,8 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
+  const isNewUser = !!user && !!user.created_at &&
+    (Date.now() - new Date(user.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
   const [artists, opportunities, updates] = await Promise.all([
     getProfiles({}, 4),
@@ -147,12 +150,9 @@ export default async function Home() {
         ) : (
           <div className="space-y-6 flex flex-col items-center text-center">
             <div className="space-y-1.5">
-              <h1 className="text-4xl font-semibold tracking-tight">Patronage</h1>
+              <h1 className="text-4xl font-semibold tracking-tight">Find funding. Build your profile. Get seen.</h1>
               <p className="text-lg text-muted-foreground">
-                Grants, residencies, and open calls for New Zealand and Australian creatives — visual artists, musicians, writers, poets, dancers, and filmmakers.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                A free professional profile and weekly-updated opportunities directory — all in one place. A community for artists, patrons, and partners.
+                Grants, residencies, and open calls for artists across Aotearoa and Australia — updated weekly, free to use.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
@@ -167,9 +167,9 @@ export default async function Home() {
                 href="/auth/signup?role=artist"
                 className="flex flex-col items-center text-center gap-1 bg-black text-white px-5 py-4 hover:bg-black/85 transition-colors"
               >
-                <span className="text-sm font-semibold">Join as a Creative</span>
+                <span className="text-sm font-semibold">Join as an Artist</span>
                 <span className="text-xs opacity-70 leading-snug">
-                  Artists, musicians, writers, poets, dancers, filmmakers
+                  Build your profile and find opportunities.
                 </span>
               </Link>
               <Link
@@ -178,7 +178,7 @@ export default async function Home() {
               >
                 <span className="text-sm font-semibold">Join as a Patron</span>
                 <span className="text-xs text-muted-foreground leading-snug">
-                  Supporters, collectors, and job seekers.
+                  Follow and collect work from artists you believe in.
                 </span>
               </Link>
               <Link
@@ -187,7 +187,7 @@ export default async function Home() {
               >
                 <span className="text-sm font-semibold">Join as a Partner</span>
                 <span className="text-xs text-muted-foreground leading-snug">
-                  Galleries, councils, organisations
+                  List opportunities and reach artists directly.
                 </span>
               </Link>
             </div>
@@ -202,9 +202,16 @@ export default async function Home() {
         {/* ── Active Directory ── */}
         <div className={`space-y-8 ${isAuthenticated ? "pt-0" : "border-t border-border pt-16"}`}>
           <div className="space-y-1 text-center">
-            <h2 className="text-xl font-semibold tracking-tight">Active Directory</h2>
+            {isAuthenticated && isNewUser && (
+              <p className="text-base text-gray-500 mb-2">
+                Welcome to Patronage. Here&rsquo;s what&rsquo;s happening.
+              </p>
+            )}
+            <h2 className="text-xl font-semibold tracking-tight">
+              {isAuthenticated ? "What\u2019s happening" : "Active Directory"}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Recently joined artists and opportunities closing soon.
+              New artists and opportunities closing soon.
             </p>
           </div>
 
@@ -256,10 +263,9 @@ export default async function Home() {
         {updates.length > 0 && (
           <div className="space-y-6 border-t border-border pt-16">
             <div className="flex items-center justify-between">
-              <div className="space-y-1 text-center flex-1">
-                <h2 className="text-xl font-semibold tracking-tight">Latest from the Studio.</h2>
-                <p className="text-sm text-muted-foreground">Updates from our artists.</p>
-              </div>
+              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                From the studio
+              </h2>
               <Link href="/feed" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
                 View all
               </Link>
@@ -280,10 +286,10 @@ export default async function Home() {
         <div className="border-t border-border px-6 py-12 text-center">
           <div className="max-w-md mx-auto space-y-4">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Never miss a deadline
+              Stay across it
             </p>
             <p className="text-sm text-muted-foreground">
-              Sign up to get opportunities straight to your inbox.
+              New opportunities in your inbox every week. Free.
             </p>
             <Button asChild>
               <Link href="/auth/signup">Create a free account</Link>

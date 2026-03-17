@@ -42,6 +42,14 @@ function isClosingSoon(opensAt: string | null, deadline: string | null): boolean
   return d <= 7;
 }
 
+function isClosingToday(opensAt: string | null, deadline: string | null): boolean {
+  if (!deadline) return false;
+  const now = Date.now();
+  if (opensAt && new Date(opensAt + "T00:00:00").getTime() > now) return false;
+  const d = Math.ceil((new Date(deadline + "T00:00:00").getTime() - now) / 86_400_000);
+  return d <= 1;
+}
+
 function isPreOpen(opensAt: string | null): boolean {
   if (!opensAt) return false;
   return new Date(opensAt + "T00:00:00").getTime() > Date.now();
@@ -57,6 +65,7 @@ interface Props {
 
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false }: Props) {
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
+  const urgent = isClosingToday(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
   const days = daysLeft(opp.opens_at ?? null, opp.deadline);
   const fundingLabel =
@@ -158,8 +167,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
             Not yet open
           </div>
         ) : closing && (
-          <div className="hidden md:block absolute top-2 left-2 z-10 bg-black text-white font-mono text-xs px-3 py-1 leading-none">
-            Closing soon
+          <div className={`hidden md:block absolute top-2 left-2 z-10 font-mono text-xs px-3 py-1 leading-none ${urgent ? "bg-red-600 text-white" : "bg-black text-white"}`}>
+            {urgent ? "Closes today" : "Closing soon"}
           </div>
         )}
       </div>
@@ -206,7 +215,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         {/* Sub-category tags — desktop only */}
         {(() => {
           const visible = (opp.sub_categories ?? []).filter(t => !HIDDEN_CARD_TAGS.has(t));
-          const shown = visible.slice(0, 3);
+          const shown = visible.slice(0, 2);
           const overflow = visible.length - shown.length;
           if (shown.length === 0) return null;
           return (

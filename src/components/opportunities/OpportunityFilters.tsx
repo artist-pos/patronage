@@ -63,7 +63,7 @@ export function OpportunityFilters() {
   }
 
   return (
-    <div className="space-y-4 pb-6 border-b border-border">
+    <div className="space-y-2 pb-6 border-b border-border">
       <div className="flex items-center justify-between gap-4">
         <div className="flex overflow-x-auto gap-x-5 scrollbar-none shrink min-w-0 pb-0.5">
           <button

@@ -132,7 +132,7 @@ export function OverviewTab({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-                Portfolio
+                Selected Work
               </h3>
               <Link
                 href={`/${username}?tab=work`}
@@ -160,17 +160,18 @@ export function OverviewTab({
       {selectedUpdates.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-              Studio
-            </h3>
-            {studioUpdates.length > 3 && (
-              <Link
-                href={`/${username}?tab=studio`}
-                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-              >
-                View all updates →
-              </Link>
-            )}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+                Studio Updates
+              </h3>
+              <p className="text-sm text-gray-400 mt-0.5">Recent updates</p>
+            </div>
+            <Link
+              href={`/${username}?tab=studio`}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              View all →
+            </Link>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {selectedUpdates.map((u) => (

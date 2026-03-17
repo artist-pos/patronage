@@ -22,7 +22,7 @@ export function ProfileTabs({ username, tab }: Props) {
   const router = useRouter();
 
   return (
-    <nav className="overflow-x-auto border-b border-border -mx-4 sm:-mx-6 px-4 sm:px-6">
+    <nav className="overflow-x-auto border-b border-border -mx-4 sm:-mx-6 px-4 sm:px-6 mt-8">
       <div className="flex min-w-max">
         {TABS.map((t) => (
           <button

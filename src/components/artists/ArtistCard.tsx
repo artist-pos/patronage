@@ -46,7 +46,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/30 transition-colors"
+        className="group flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-stone-50 transition-colors duration-100"
       >
         {/* Avatar */}
         {artist.avatar_url ? (
@@ -151,11 +151,40 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     );
   }
 
+  /* ── Gallery card (no image) — compact horizontal row ── */
+  if (!artist.primary_image_url) {
+    return (
+      <Link
+        href={`/${artist.username}`}
+        className="group flex items-center gap-3 py-3 px-4 border border-black hover:shadow-sm transition-shadow duration-150"
+      >
+        <div className="w-10 h-10 shrink-0 border border-black bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground rounded-full">
+          {displayName.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate leading-snug">{displayName}</p>
+          {artist.country && (
+            <span className="text-xs text-muted-foreground">{artist.country}</span>
+          )}
+        </div>
+        {(artist.medium ?? []).length > 0 && (
+          <div className="hidden sm:flex flex-wrap gap-1 justify-end shrink-0 max-w-[45%]">
+            {(artist.medium ?? []).slice(0, 2).map((m) => (
+              <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none whitespace-nowrap">
+                {m}
+              </span>
+            ))}
+          </div>
+        )}
+      </Link>
+    );
+  }
+
   /* ── Gallery card — horizontal bar, avatar inside info block ── */
   return (
     <Link
       href={`/${artist.username}`}
-      className="group flex flex-row border border-black h-[154px]"
+      className="group flex flex-row border border-black h-[154px] hover:shadow-sm transition-shadow duration-150"
     >
       {/* Left: image strip — 40% width */}
       <div className="relative w-2/5 shrink-0 overflow-hidden bg-muted">

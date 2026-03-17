@@ -371,12 +371,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             <div className="space-y-3 max-w-3xl">
               <div className="space-y-1">
                 <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
+                {profile.is_patronage_supported && (
+                  <p className="text-xs text-muted-foreground tracking-wide">With Patronage</p>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
-                  {profile.is_patronage_supported && (
-                    <Badge className="text-xs font-normal bg-foreground text-background">
-                      With Patronage
-                    </Badge>
-                  )}
                   <Badge className="text-xs font-normal bg-foreground text-background">
                     {profile.role === "owner" ? "Artist" : profile.role === "admin" ? "Admin" : profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                   </Badge>

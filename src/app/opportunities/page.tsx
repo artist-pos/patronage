@@ -168,13 +168,11 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Art Grants & Opportunities</h1>
-          <p className="text-sm text-muted-foreground">
-            {canScore
-              ? `${matched.length} matched · ${lessRelevant.length} less relevant`
-              : `${opportunities.length} listing${opportunities.length !== 1 ? "s" : ""}`}
-            {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
-            {opportunities.length === 48 ? " · Showing 48 results — use filters to narrow down." : ""}
-          </p>
+          {canScore && (
+            <p className="text-sm text-muted-foreground">
+              {matched.length} matched · {lessRelevant.length} less relevant
+            </p>
+          )}
         </div>
         <FoundOpportunityButton />
       </div>
@@ -192,7 +190,10 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       {/* Marketplace Stats bar */}
       <div className="border border-black px-6 py-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
         <span className="font-mono text-sm">
-          <strong>{stats.count}</strong> Active Opportunities
+          {hasManualFilters && opportunities.length < stats.count
+            ? <><strong>Showing {opportunities.length}</strong> of <strong>{stats.count}</strong> Active Opportunities</>
+            : <><strong>{stats.count}</strong> Active Opportunities</>
+          }
         </span>
         {stats.totalFunding > 0 && (
           <>
@@ -212,7 +213,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       {/* Feed */}
       {opportunities.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
-          No opportunities match the current filters.
+          No opportunities match those filters. New listings are added regularly.
         </p>
       ) : (
         <RelevantFeed matched={matched} lessRelevant={lessRelevant} view={view} />
