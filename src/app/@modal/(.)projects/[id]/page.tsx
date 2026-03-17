@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
 import { getVisibleNotes } from "@/lib/notes";
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { ModalShell } from "@/components/projects/ModalShell";
+import { ArtistProfileLink } from "@/components/projects/ArtistProfileLink";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -82,12 +82,12 @@ export default async function ProjectModal({ params }: Props) {
               </div>
             )}
             <div>
-              <Link
-                href={`/${update.artist_username}`}
-                className="text-sm font-semibold hover:underline underline-offset-2"
+              <ArtistProfileLink
+                username={update.artist_username}
+                className="text-sm font-semibold hover:underline underline-offset-2 text-left"
               >
                 {name}
-              </Link>
+              </ArtistProfileLink>
               <p className="text-xs text-muted-foreground">{date}</p>
             </div>
           </div>

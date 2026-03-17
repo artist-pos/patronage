@@ -659,20 +659,19 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
             <div className="space-y-4">
               <div className="flex gap-6">
                 {[
-                  { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form", strikePrice: null },
-                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow", strikePrice: "$200 NZD" },
-                ].map(({ val, label, desc, strikePrice }) => (
+                  { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form" },
+                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
+                ].map(({ val, label, desc }) => (
                   <label key={val} className="flex items-start gap-2 cursor-pointer">
                     <input type="radio" name="routing_radio" checked={routingType === val}
                       onChange={() => { setRoutingType(val); setStep(1); }} className="mt-0.5" />
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{label}</p>
-                        {strikePrice && (
-                          <>
-                            <span className="font-mono text-xs text-muted-foreground"><s>{strikePrice}</s></span>
-                            <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">Founding partner rate</span>
-                          </>
+                        {val === "pipeline" && (
+                          <span className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                            Free for the first 10 partners
+                          </span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{desc}</p>
@@ -688,7 +687,6 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
                     <p className="text-sm font-medium">Request featured placement</p>
                     <span className="font-mono text-xs text-muted-foreground"><s>$150 NZD</s></span>
                     <span className="font-mono text-xs font-medium">$75 NZD</span>
-                    <span className="bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[10px] font-medium">Founding partner rate</span>
                   </div>
                   <p className="text-xs text-muted-foreground">Pinned at top of the opportunities page, homepage, and weekly digest.</p>
                 </div>

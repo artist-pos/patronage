@@ -283,9 +283,9 @@ function Tile({
       </div>
 
       {(u.caption || isOwner) && (
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 w-0 min-w-full">
           {u.caption && (
-            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">
+            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 break-words">
               {u.caption}
             </p>
           )}
