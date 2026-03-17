@@ -3,6 +3,43 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+async function maybeSetVerifiedAt(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  role: string | null,
+  bio: string | null,
+  avatarUrl: string | null,
+  disciplines: string[]
+) {
+  if (role !== "artist" && role !== "owner") return;
+
+  // Check existing verified_at — avoid overwriting
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("verified_at")
+    .eq("id", userId)
+    .maybeSingle();
+  if (existing?.verified_at) return;
+
+  if (!bio || !avatarUrl || disciplines.length === 0) return;
+
+  const { count: portfolioCount } = await supabase
+    .from("portfolio_images")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", userId);
+  const { count: artworkCount } = await supabase
+    .from("artworks")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", userId);
+
+  if ((portfolioCount ?? 0) + (artworkCount ?? 0) >= 3) {
+    await supabase
+      .from("profiles")
+      .update({ verified_at: new Date().toISOString() })
+      .eq("id", userId);
+  }
+}
+
 export interface ProfileFormState {
   error?: string;
   fieldErrors?: Partial<Record<string, string>>;
@@ -78,6 +115,21 @@ export async function upsertProfileAction(
   const { error } = await supabase.from("profiles").upsert(profileData);
 
   if (error) return { error: error.message };
+
+  // Check if this artist has just become verified for the first time
+  const { data: savedProfile } = await supabase
+    .from("profiles")
+    .select("role, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  await maybeSetVerifiedAt(
+    supabase,
+    user.id,
+    savedProfile?.role ?? null,
+    bio,
+    savedProfile?.avatar_url ?? null,
+    disciplines
+  );
 
   redirect(`/${username}`);
 }

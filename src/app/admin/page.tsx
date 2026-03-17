@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { getAnalytics, getGrantPerformance, getMediumTrends } from "@/lib/admin";
+import {
+  getAnalytics,
+  getGrantPerformance,
+  getMediumTrends,
+  getArtistQualityMetrics,
+  getRetentionMetrics,
+  getOpportunityEngagement,
+  getPartnerHealth,
+  getGrowthMetrics,
+} from "@/lib/admin";
 import type { MediumTrend, GrantPerformance } from "@/lib/admin";
 
 function BarChart({ data }: { data: MediumTrend[] }) {
@@ -43,11 +52,17 @@ function Stat({ label, value, sub }: { label: string; value: number | string; su
 }
 
 export default async function AdminPage() {
-  const [a, grants, mediums] = await Promise.all([
-    getAnalytics(),
-    getGrantPerformance(),
-    getMediumTrends(),
-  ]);
+  const [a, grants, mediums, artistQuality, retention, oppEngagement, partnerHealth, growth] =
+    await Promise.all([
+      getAnalytics(),
+      getGrantPerformance(),
+      getMediumTrends(),
+      getArtistQualityMetrics(),
+      getRetentionMetrics(),
+      getOpportunityEngagement(),
+      getPartnerHealth(),
+      getGrowthMetrics(),
+    ]);
 
   const typeRows = Object.entries(a.byType).sort((x, y) => y[1] - x[1]);
   const countryRows = Object.entries(a.byCountry).sort((x, y) => y[1] - x[1]);
@@ -195,6 +210,121 @@ export default async function AdminPage() {
           Medium Trends — Last 30 Days
         </h2>
         <BarChart data={mediums} />
+      </section>
+
+      {/* ── Artist Quality ─────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Artist Quality
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <Stat
+            label="Verified artists"
+            value={`${artistQuality.verifiedCount} / ${artistQuality.totalArtists}`}
+            sub={`${artistQuality.verifiedPercent}% of total`}
+          />
+          <Stat label="Verified this week" value={artistQuality.verifiedThisWeek} />
+          <Stat label="Verified this month" value={artistQuality.verifiedThisMonth} />
+          <Stat
+            label="Avg profile completion"
+            value={`${artistQuality.avgCompletionPercent}%`}
+          />
+        </div>
+      </section>
+
+      {/* ── Retention ───────────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Retention
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Stat label="Weekly active users" value={retention.wau} sub="WAU" />
+          <Stat label="Monthly active users" value={retention.mau} sub="MAU" />
+          <Stat
+            label="WAU / MAU ratio"
+            value={`${retention.wauMauRatio}%`}
+            sub="stickiness"
+          />
+        </div>
+      </section>
+
+      {/* ── Opportunity Engagement ──────────────────── */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Opportunity Engagement
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <Stat
+            label="Avg saves / opportunity"
+            value={oppEngagement.avgSavesPerOpportunity}
+          />
+          <Stat
+            label="Click-through rate"
+            value={`${oppEngagement.clickThroughRate}%`}
+            sub="clicks ÷ views"
+          />
+          <Stat label="Pipeline apps (all time)" value={oppEngagement.pipelineAppsAllTime} />
+          <Stat label="Pipeline apps (last 30d)" value={oppEngagement.pipelineAppsLast30} />
+          <Stat
+            label="Pipeline completion"
+            value={`${oppEngagement.pipelineCompletionRate}%`}
+            sub="submitted ÷ started"
+          />
+        </div>
+      </section>
+
+      {/* ── Partner Health ──────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Partner Health
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Stat label="Active listers" value={partnerHealth.activeListers} />
+          <Stat label="Repeat listers" value={partnerHealth.repeatListers} />
+          <Stat
+            label="Pipeline adoption"
+            value={`${partnerHealth.pipelineAdoptionRate}%`}
+            sub="of partner listings"
+          />
+        </div>
+      </section>
+
+      {/* ── Growth ─────────────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Growth
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Stat label="Email subscribers" value={growth.subscriberCount} />
+        </div>
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 mt-4">
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Sign-ups this week</p>
+            <table className="w-full text-sm">
+              <tbody>
+                {Object.entries(growth.signupsThisWeekByRole).map(([role, count]) => (
+                  <tr key={role} className="border-b border-border">
+                    <td className="py-2 capitalize">{role}</td>
+                    <td className="py-2 text-right tabular-nums text-muted-foreground">{count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Sign-ups this month</p>
+            <table className="w-full text-sm">
+              <tbody>
+                {Object.entries(growth.signupsThisMonthByRole).map(([role, count]) => (
+                  <tr key={role} className="border-b border-border">
+                    <td className="py-2 capitalize">{role}</td>
+                    <td className="py-2 text-right tabular-nums text-muted-foreground">{count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       {/* ── Tools ──────────────────────────────────── */}
