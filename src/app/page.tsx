@@ -82,11 +82,6 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
               {opp.funding_range}
             </span>
           )}
-          {opp.deadline && (
-            <span className={`text-xs ml-auto ${isUrgent ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
-              {days !== null && days >= 0 ? (isUrgent ? "1d left" : `${days}d remaining`) : opp.deadline}
-            </span>
-          )}
         </div>
       </div>
     </Link>
