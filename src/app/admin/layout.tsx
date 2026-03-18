@@ -35,7 +35,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12 space-y-8">
+    <div className="px-8 py-12 space-y-8">
       <div className="border-b border-border pb-4">
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
           Admin
