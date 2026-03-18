@@ -1,70 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { updateOpportunityAdmin } from "@/app/opportunities/[id]/actions";
-import type { Opportunity, RecurrencePattern } from "@/types/database";
-import { OPP_TYPES, DISCIPLINES, FOCUS_TAGS, COUNTRIES, getFundingFieldMeta } from "@/lib/opportunity-constants";
-
-const FIELD = "w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black";
-
-const RECURRENCE_OPTIONS: { value: RecurrencePattern; label: string }[] = [
-  { value: "monthly",   label: "Monthly" },
-  { value: "bimonthly", label: "Every 2 months" },
-  { value: "quarterly", label: "Quarterly (every 3 months)" },
-  { value: "biannual",  label: "Every 6 months" },
-  { value: "annual",    label: "Annual" },
-  { value: "custom",    label: "Custom (manual dates only)" },
-];
-
-const INTERVAL_MONTHS: Record<string, number> = {
-  monthly: 1, bimonthly: 2, quarterly: 3, biannual: 6, annual: 12,
-};
-
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
-function nextCyclePreview(
-  pattern: RecurrencePattern | "",
-  openDay: string,
-  closeDay: string,
-  currentOpensAt: string,
-  currentDeadline: string,
-): string | null {
-  if (!pattern || pattern === "custom") return null;
-  const months = INTERVAL_MONTHS[pattern];
-  if (!months) return null;
-
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-NZ", { day: "numeric", month: "long" });
-
-  if (currentDeadline) {
-    const base = new Date(currentDeadline + "T00:00:00");
-    const nextDeadline = addMonths(base, months);
-    if (currentOpensAt) {
-      const nextOpen = addMonths(new Date(currentOpensAt + "T00:00:00"), months);
-      return `Next round opens ${fmt(nextOpen)}, closes ${fmt(nextDeadline)}`;
-    }
-    return `Next deadline ${fmt(nextDeadline)}`;
-  }
-
-  const od = parseInt(openDay, 10);
-  const cd = parseInt(closeDay, 10);
-  if (od >= 1 && cd >= 1) {
-    const today = new Date();
-    let nextOpen = new Date(today.getFullYear(), today.getMonth(), od);
-    if (nextOpen <= today) nextOpen = new Date(today.getFullYear(), today.getMonth() + 1, od);
-    let nextClose = new Date(nextOpen.getFullYear(), nextOpen.getMonth(), cd);
-    if (nextClose < nextOpen) nextClose = new Date(nextClose.getFullYear(), nextClose.getMonth() + 1, cd);
-    return `Next round opens ${fmt(nextOpen)}, closes ${fmt(nextClose)}`;
-  }
-
-  return null;
-}
+import type { Opportunity } from "@/types/database";
+import { OpportunityForm, oppToFormData, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   opp: Opportunity;
@@ -72,81 +13,71 @@ interface Props {
 
 export function AdminEditOpportunityModal({ opp }: Props) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(opp.title);
-  const [organiser, setOrganiser] = useState(opp.organiser);
-  const [caption, setCaption] = useState(opp.caption ?? "");
-  const [fullDescription, setFullDescription] = useState(opp.full_description ?? "");
-  const [url, setUrl] = useState(opp.url ?? "");
-  const [type, setType] = useState(opp.type);
-  const [country, setCountry] = useState(opp.country);
-  const [opensAt, setOpensAt] = useState(opp.opens_at ?? "");
-  const [deadline, setDeadline] = useState(opp.deadline ?? "");
-  const [fundingRange, setFundingRange] = useState(opp.funding_range ?? "");
-  const [imgUrl, setImgUrl] = useState(opp.featured_image_url ?? "");
-  const [tags, setTags] = useState<string[]>(opp.sub_categories ?? []);
-  const [entryFee, setEntryFee] = useState<string>(opp.entry_fee != null ? String(opp.entry_fee) : "");
-  const [artistPaymentType, setArtistPaymentType] = useState(opp.artist_payment_type ?? "");
-  const [travelSupport, setTravelSupport] = useState<boolean | null>(opp.travel_support ?? null);
-  const [travelSupportDetails, setTravelSupportDetails] = useState(opp.travel_support_details ?? "");
-  const [isRecurring, setIsRecurring] = useState(opp.is_recurring ?? false);
-  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | "">(opp.recurrence_pattern ?? "");
-  const [recurrenceOpenDay, setRecurrenceOpenDay] = useState(opp.recurrence_open_day != null ? String(opp.recurrence_open_day) : "");
-  const [recurrenceCloseDay, setRecurrenceCloseDay] = useState(opp.recurrence_close_day != null ? String(opp.recurrence_close_day) : "");
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState(opp.recurrence_end_date ?? "");
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
+  const [formData, setFormData] = useState<OpportunityFormData>(() => oppToFormData(opp));
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
-  function toggleTag(tag: string) {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+  function update(updates: Partial<OpportunityFormData>) {
+    setFormData((prev) => ({ ...prev, ...updates }));
   }
 
-  async function handleImageFile(file: File) {
-    setUploading(true);
-    try {
-      const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-      const { error } = await supabase.storage
-        .from("opportunity-images")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (!error) {
-        const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
-        setImgUrl(data.publicUrl);
-      }
-    } finally {
-      setUploading(false);
-    }
+  async function handleImgUpload(file: File): Promise<string | null> {
+    const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+    const { error } = await supabase.storage
+      .from("opportunity-images")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return null;
+    const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+    return data.publicUrl;
   }
 
   async function handleSave() {
     setSaving(true);
     try {
+      const allTags = [
+        ...formData.selectedDisciplines,
+        ...formData.selectedCareerStages,
+        ...formData.selectedEligibility,
+        ...formData.customEligibility,
+        ...formData.selectedFocus,
+      ];
+
+      const pipelineConfig = formData.routingType === "pipeline" ? {
+        questions: formData.questions,
+        artist_documents: formData.artistDocs,
+        terms_pdf_url: formData.termsPdfUrl,
+      } : null;
+
       await updateOpportunityAdmin(opp.id, {
-        title: title.trim() || opp.title,
-        organiser: organiser.trim() || opp.organiser,
-        caption: caption.trim() || null,
-        full_description: fullDescription.trim() || null,
-        url: url.trim() || null,
-        type,
-        country,
-        featured_image_url: imgUrl.trim() || null,
-        sub_categories: tags.length > 0 ? tags : null,
-        opens_at: opensAt || null,
-        deadline: deadline || null,
-        funding_range: fundingRange.trim() || null,
-        entry_fee: entryFee !== "" ? parseFloat(entryFee) : null,
-        artist_payment_type: artistPaymentType || null,
-        travel_support: travelSupport,
-        travel_support_details: travelSupportDetails.trim() || null,
-        is_recurring: isRecurring,
-        recurrence_pattern: isRecurring && recurrencePattern ? recurrencePattern : null,
-        recurrence_open_day: isRecurring && recurrenceOpenDay ? parseInt(recurrenceOpenDay, 10) : null,
-        recurrence_close_day: isRecurring && recurrenceCloseDay ? parseInt(recurrenceCloseDay, 10) : null,
-        recurrence_end_date: isRecurring && recurrenceEndDate ? recurrenceEndDate : null,
+        title: formData.title.trim() || opp.title,
+        organiser: formData.organiser.trim() || opp.organiser,
+        caption: formData.caption.trim() || null,
+        full_description: formData.fullDescription.trim() || null,
+        url: formData.url.trim() || null,
+        type: formData.type,
+        country: formData.country,
+        city: formData.city.trim() || null,
+        opens_at: formData.opensAt || null,
+        deadline: formData.deadline || null,
+        funding_range: formData.fundingRange.trim() || null,
+        featured_image_url: formData.featuredImageUrl.trim() || null,
+        sub_categories: allTags.length > 0 ? allTags : null,
+        entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
+        grant_type: formData.grantType.trim() || null,
+        recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,
+        artist_payment_type: formData.artistPaymentType || null,
+        travel_support: formData.travelSupport,
+        travel_support_details: formData.travelSupportDetails.trim() || null,
+        routing_type: formData.routingType,
+        show_badges_in_submission: formData.showBadges,
+        is_featured: formData.isFeatured,
+        pipeline_config: pipelineConfig,
+        is_recurring: formData.isRecurring,
+        recurrence_pattern: formData.isRecurring && formData.recurrencePattern ? formData.recurrencePattern : null,
+        recurrence_open_day: formData.isRecurring && formData.recurrenceOpenDay ? parseInt(formData.recurrenceOpenDay) : null,
+        recurrence_close_day: formData.isRecurring && formData.recurrenceCloseDay ? parseInt(formData.recurrenceCloseDay) : null,
+        recurrence_end_date: formData.isRecurring && formData.recurrenceEndDate ? formData.recurrenceEndDate : null,
       });
       setToast("Saved");
       setTimeout(() => {
@@ -184,376 +115,16 @@ export function AdminEditOpportunityModal({ opp }: Props) {
               </button>
             </div>
 
-            <div className="px-6 py-6 space-y-6">
-
-              {/* Title */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">Opportunity Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Opportunity title"
-                  className={FIELD}
-                />
-              </div>
-
-              {/* Organiser */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">Organisation / Funder</label>
-                <input
-                  type="text"
-                  value={organiser}
-                  onChange={(e) => setOrganiser(e.target.value)}
-                  placeholder="Organisation name"
-                  className={FIELD}
-                />
-              </div>
-
-              {/* Caption */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">
-                  Caption <span className="text-muted-foreground font-normal normal-case tracking-normal">— shown on card (max 500 chars)</span>
-                </label>
-                <textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Short summary shown on the listing card…"
-                  className={`${FIELD} resize-none`}
-                />
-                <p className="text-xs text-muted-foreground tabular-nums text-right">{caption.length}/500</p>
-              </div>
-
-              {/* Full description */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">
-                  Description <span className="text-muted-foreground font-normal normal-case tracking-normal">— shown on detail page</span>
-                </label>
-                <textarea
-                  value={fullDescription}
-                  onChange={(e) => setFullDescription(e.target.value)}
-                  rows={5}
-                  placeholder="Full details, eligibility, how to apply…"
-                  className={`${FIELD} resize-none`}
-                />
-              </div>
-
-              {/* Type + Region */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Type</label>
-                  <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={FIELD}>
-                    {OPP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Region</label>
-                  <select value={country} onChange={(e) => setCountry(e.target.value)} className={FIELD}>
-                    {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Application URL */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">Application URL</label>
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://..."
-                  className={FIELD}
-                />
-              </div>
-
-              {/* Opens + Deadline */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Opens</label>
-                  <input
-                    type="date"
-                    value={opensAt}
-                    onChange={(e) => setOpensAt(e.target.value)}
-                    className={FIELD}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Deadline</label>
-                  <input
-                    type="date"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                    className={FIELD}
-                  />
-                </div>
-              </div>
-
-              {/* Funding */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">{getFundingFieldMeta(type).label}</label>
-                <input
-                  type="text"
-                  value={fundingRange}
-                  onChange={(e) => setFundingRange(e.target.value)}
-                  placeholder={getFundingFieldMeta(type).placeholder}
-                  className={FIELD}
-                />
-              </div>
-
-              {/* Featured image */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest">Featured Image</label>
-                {imgUrl && (
-                  <div className="relative border border-black bg-[#E5E7EB] h-32 overflow-hidden flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl} alt="" className="max-h-full max-w-full object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => setImgUrl("")}
-                      className="absolute top-1 right-1 bg-black text-white w-5 h-5 flex items-center justify-center text-xs"
-                      aria-label="Remove image"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                <div
-                  onClick={() => fileRef.current?.click()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOver(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file && file.type.startsWith("image/")) handleImageFile(file);
-                  }}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  className={`border border-black border-dashed p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${dragOver ? "bg-muted" : "hover:bg-muted/40"}`}
-                >
-                  {uploading
-                    ? "Uploading…"
-                    : dragOver
-                    ? "Drop to upload"
-                    : imgUrl
-                    ? "Drop a new image or click to replace"
-                    : "Drop an image here, or click to browse"}
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
-                />
-              </div>
-
-              {/* Transparency fields */}
-              <div className="space-y-4 border border-black/20 p-4 bg-muted/20">
-                <p className="text-xs font-semibold uppercase tracking-widest">Transparency</p>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest">Entry Fee</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={entryFee}
-                      onChange={(e) => setEntryFee(e.target.value)}
-                      placeholder="0 = Free, blank = unknown"
-                      className={FIELD}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest">Artist Payment</label>
-                    <select
-                      value={artistPaymentType}
-                      onChange={(e) => setArtistPaymentType(e.target.value)}
-                      className={FIELD}
-                    >
-                      <option value="">— None / N/A —</option>
-                      <option value="Honorarium">Honorarium</option>
-                      <option value="Commission">Commission</option>
-                      <option value="Stipend">Stipend</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-widest">Travel Support</label>
-                  <div className="flex gap-3">
-                    {[{ val: null, label: "Unknown" }, { val: true, label: "Yes" }, { val: false, label: "No" }].map(({ val, label }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => setTravelSupport(val)}
-                        className={`text-xs px-3 py-1.5 border leading-none transition-colors ${
-                          travelSupport === val
-                            ? "border-black bg-black text-white"
-                            : "border-black hover:bg-muted"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {travelSupport && (
-                    <input
-                      type="text"
-                      value={travelSupportDetails}
-                      onChange={(e) => setTravelSupportDetails(e.target.value)}
-                      placeholder="e.g. flights + accommodation covered"
-                      className={FIELD}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Disciplines */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-widest">Disciplines</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {DISCIPLINES.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`text-xs px-2.5 py-1 border leading-none transition-colors ${
-                        tags.includes(tag)
-                          ? "border-black bg-black text-white"
-                          : "border-black bg-background hover:bg-muted"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Focus */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-widest">Focus</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {FOCUS_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`text-xs px-2.5 py-1 border leading-none transition-colors ${
-                        tags.includes(tag)
-                          ? "border-black bg-black text-white"
-                          : "border-black bg-background hover:bg-muted"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recurring schedule */}
-              <div className="space-y-4 border border-black/20 p-4 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-widest">Recurring Opportunity</p>
-                  <button
-                    type="button"
-                    onClick={() => setIsRecurring((v) => !v)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${isRecurring ? "bg-black" : "bg-stone-300"}`}
-                    aria-pressed={isRecurring}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? "translate-x-5" : "translate-x-0"}`}
-                    />
-                  </button>
-                </div>
-
-                {isRecurring && (
-                  <div className="space-y-4">
-                    {/* Pattern */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-widest">Pattern</label>
-                      <select
-                        value={recurrencePattern}
-                        onChange={(e) => setRecurrencePattern(e.target.value as RecurrencePattern | "")}
-                        className={FIELD}
-                      >
-                        <option value="">— Select frequency —</option>
-                        {RECURRENCE_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Open / close day */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-widest">
-                          Opens on day
-                          <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={recurrenceOpenDay}
-                          onChange={(e) => setRecurrenceOpenDay(e.target.value)}
-                          placeholder="e.g. 1"
-                          className={FIELD}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-widest">
-                          Closes on day
-                          <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={recurrenceCloseDay}
-                          onChange={(e) => setRecurrenceCloseDay(e.target.value)}
-                          placeholder="e.g. 15"
-                          className={FIELD}
-                        />
-                      </div>
-                    </div>
-
-                    {/* End date */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-widest">
-                        Schedule ends
-                        <span className="text-muted-foreground font-normal normal-case tracking-normal"> — leave blank for indefinite</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={recurrenceEndDate}
-                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                        className={FIELD}
-                      />
-                    </div>
-
-                    {/* Preview */}
-                    {(() => {
-                      const preview = nextCyclePreview(
-                        recurrencePattern,
-                        recurrenceOpenDay,
-                        recurrenceCloseDay,
-                        opensAt,
-                        deadline,
-                      );
-                      return preview ? (
-                        <p className="text-xs text-muted-foreground bg-background border border-black/10 px-3 py-2">
-                          {preview}
-                        </p>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
-              </div>
+            <div className="px-6 py-6">
+              <OpportunityForm
+                value={formData}
+                onChange={update}
+                mode="admin"
+                onImgUpload={handleImgUpload}
+              />
 
               {/* Save */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-6 mt-4 border-t border-black/20">
                 {toast && (
                   <p className={`text-xs ${toast === "Saved" ? "text-green-600" : "text-destructive"}`}>
                     {toast}
