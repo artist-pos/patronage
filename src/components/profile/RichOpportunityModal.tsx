@@ -179,6 +179,8 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       recurrence_open_day: null,
       recurrence_close_day: null,
       recurrence_end_date: null,
+      claim_token: null,
+      claim_email: null,
     };
 
     onSuccess?.(optimistic);

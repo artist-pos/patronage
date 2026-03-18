@@ -32,7 +32,6 @@ export async function getAllOpportunities(): Promise<Opportunity[]> {
   const { data, error } = await supabase
     .from("opportunities")
     .select("*")
-    .eq("status", "published")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Opportunity[];

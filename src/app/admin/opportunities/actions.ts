@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import type { Opportunity } from "@/types/database";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -25,4 +26,41 @@ export async function deleteOpportunity(id: string) {
   await supabase.from("opportunities").delete().eq("id", id);
   revalidatePath("/admin/opportunities");
   revalidatePath("/opportunities");
+}
+
+export async function createDraftUnclaimedListing(): Promise<Opportunity> {
+  await guard();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("opportunities")
+    .insert({
+      title: "Untitled listing",
+      organiser: "",
+      type: "Grant",
+      country: "NZ",
+      status: "draft_unclaimed",
+      is_active: false,
+      routing_type: "external",
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/opportunities");
+  return data as Opportunity;
+}
+
+export async function generateClaimToken(
+  id: string,
+  email?: string
+): Promise<{ claim_token: string }> {
+  await guard();
+  const supabase = await createClient();
+  const token = crypto.randomUUID();
+  const { error } = await supabase
+    .from("opportunities")
+    .update({ claim_token: token, claim_email: email ?? null })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/opportunities");
+  return { claim_token: token };
 }

@@ -62,7 +62,7 @@ export interface CustomField {
 export interface PipelineQuestion {
   id: string;
   label: string;
-  type: 'short_text' | 'long_text' | 'file_upload';
+  type: 'short_text' | 'long_text' | 'file_upload' | 'checkbox';
   required: boolean;
   file_label?: string;
 }
@@ -118,6 +118,9 @@ export interface Opportunity {
   recurrence_open_day: number | null;   // day-of-month e.g. 1
   recurrence_close_day: number | null;  // day-of-month e.g. 15
   recurrence_end_date: string | null;   // ISO date or null = indefinite
+  // Claim tokens (migration 059)
+  claim_token: string | null;
+  claim_email: string | null;
 }
 
 export type RecurrencePattern =

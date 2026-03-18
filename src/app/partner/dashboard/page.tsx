@@ -23,7 +23,7 @@ export default async function PartnerDashboardPage() {
     redirect("/");
   }
 
-  const [{ data: opportunities }, { data: submissions }] = await Promise.all([
+  const [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
     // Live pipeline opportunities owned by this partner
     supabase
       .from("opportunities")
@@ -38,6 +38,13 @@ export default async function PartnerDashboardPage() {
       .select("id, title, type, deadline, status, routing_type, created_at")
       .eq("profile_id", user.id)
       .neq("status", "approved")
+      .order("created_at", { ascending: false }),
+
+    // All claimed listings owned by this partner (any routing type)
+    supabase
+      .from("opportunities")
+      .select("id, title, type, status, is_active, routing_type, deadline")
+      .eq("profile_id", user.id)
       .order("created_at", { ascending: false }),
   ]);
 
@@ -64,7 +71,7 @@ export default async function PartnerDashboardPage() {
     if (a.status === "selected" || a.status === "approved_pending_assets" || a.status === "production_ready") entry.selected++;
   }
 
-  const hasAnything = (opportunities && opportunities.length > 0) || (submissions && submissions.length > 0);
+  const hasAnything = (opportunities && opportunities.length > 0) || (submissions && submissions.length > 0) || (allListings && allListings.length > 0);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
@@ -85,6 +92,58 @@ export default async function PartnerDashboardPage() {
         </div>
       ) : (
         <div className="space-y-8">
+
+          {/* ── Your Listings ───────────────────────────────────────────── */}
+          {allListings && allListings.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your Listings</p>
+              <div className="border border-black overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-black/20 bg-muted/30">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Title</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground hidden sm:table-cell">Type</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground hidden sm:table-cell">Deadline</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
+                      <th className="py-2 px-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allListings.map((listing: { id: string; title: string; type: string; status: string; deadline: string | null }) => {
+                      const statusColour =
+                        listing.status === "published"
+                          ? "text-green-700"
+                          : listing.status === "draft" || listing.status === "draft_unclaimed"
+                          ? "text-yellow-700"
+                          : "text-muted-foreground";
+                      const statusLabel =
+                        listing.status === "draft_unclaimed" ? "draft" : listing.status;
+                      return (
+                        <tr key={listing.id} className="border-b border-black/10 last:border-0">
+                          <td className="py-2.5 px-3 font-medium">{listing.title}</td>
+                          <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">{listing.type}</td>
+                          <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">
+                            {listing.deadline
+                              ? new Date(listing.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })
+                              : "Open"}
+                          </td>
+                          <td className={`py-2.5 px-3 ${statusColour}`}>{statusLabel}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Link
+                              href={`/partner/opportunities/${listing.id}/edit`}
+                              className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Edit →
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* ── Live pipeline opportunities ────────────────────────────── */}
           {opportunities && opportunities.length > 0 && (

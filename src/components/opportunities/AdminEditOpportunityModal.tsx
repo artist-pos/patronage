@@ -9,10 +9,18 @@ import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   opp: Opportunity;
+  /** Controlled mode — set open state externally */
+  forceOpen?: boolean;
+  onForceClose?: () => void;
 }
 
-export function AdminEditOpportunityModal({ opp }: Props) {
-  const [open, setOpen] = useState(false);
+export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Props) {
+  const isControlled = forceOpen !== undefined;
+  const [selfOpen, setSelfOpen] = useState(false);
+  const open = isControlled ? forceOpen : selfOpen;
+  const setOpen = isControlled
+    ? (val: boolean) => { if (!val) onForceClose?.(); }
+    : setSelfOpen;
   const [formData, setFormData] = useState<OpportunityFormData>(() => oppToFormData(opp));
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);

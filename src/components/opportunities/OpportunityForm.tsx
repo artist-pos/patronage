@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { X, Plus, GripVertical } from "lucide-react";
 import {
   DndContext,
@@ -250,8 +250,8 @@ function SortableQuestionCard({
           <X className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex gap-2 ml-6">
-        {(["short_text", "long_text", "file_upload"] as const).map((val) => (
+      <div className="flex flex-wrap gap-1.5 ml-6">
+        {(["short_text", "long_text", "file_upload", "checkbox"] as const).map((val) => (
           <button
             key={val}
             type="button"
@@ -260,7 +260,7 @@ function SortableQuestionCard({
               q.type === val ? "border-black bg-black text-white" : "border-black/30 hover:border-black"
             }`}
           >
-            {val === "short_text" ? "Short text" : val === "long_text" ? "Long text" : "File upload"}
+            {val === "short_text" ? "Short text" : val === "long_text" ? "Long text" : val === "file_upload" ? "File upload" : "Checkbox"}
           </button>
         ))}
       </div>
@@ -273,17 +273,24 @@ function SortableQuestionCard({
           className="ml-6 w-full border border-black/20 bg-background px-2 py-1 text-xs focus:outline-none focus:border-black"
         />
       )}
-      <div className="flex items-center gap-2 ml-6">
-        <input
-          type="checkbox"
-          id={`req-${q.id}`}
-          checked={q.required}
-          onChange={(e) => onUpdate({ ...q, required: e.target.checked })}
-        />
-        <label htmlFor={`req-${q.id}`} className="text-xs text-muted-foreground cursor-pointer">
-          Required
-        </label>
-      </div>
+      {q.type === "checkbox" && (
+        <p className="ml-6 text-xs text-muted-foreground">
+          The label above is the statement the artist confirms by ticking.
+        </p>
+      )}
+      {q.type !== "checkbox" && (
+        <div className="flex items-center gap-2 ml-6">
+          <input
+            type="checkbox"
+            id={`req-${q.id}`}
+            checked={q.required}
+            onChange={(e) => onUpdate({ ...q, required: e.target.checked })}
+          />
+          <label htmlFor={`req-${q.id}`} className="text-xs text-muted-foreground cursor-pointer">
+            Required
+          </label>
+        </div>
+      )}
     </div>
   );
 }
@@ -345,6 +352,117 @@ function nextCyclePreview(
   return null;
 }
 
+// ── Pipeline preview modal ─────────────────────────────────────────────────────
+
+const DOC_LABELS: Record<string, string> = {
+  cv: "Artist CV (PDF)",
+  bio: "Artist biography",
+  portfolio: "Portfolio images",
+  available_works: "Available works",
+};
+
+function PipelinePreviewModal({
+  questions,
+  artistDocs,
+  termsPdfUrl,
+  onClose,
+}: {
+  questions: PipelineQuestion[];
+  artistDocs: PipelineConfig["artist_documents"];
+  termsPdfUrl: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-background border border-black w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-black bg-background z-10">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest">Artist view — Application form</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">This is how the form appears to applicants. Read-only preview.</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground ml-4">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="px-6 py-6 space-y-6">
+          {artistDocs.length > 0 && (
+            <div className="border border-black/10 bg-muted/30 p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Included from your profile</p>
+              <ul className="space-y-1">
+                {artistDocs.map((doc) => (
+                  <li key={doc} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="text-green-600 font-bold">✓</span>
+                    {DOC_LABELS[doc] ?? doc}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {questions.map((q, i) => (
+            <div key={q.id} className="space-y-1.5">
+              {q.type === "checkbox" ? (
+                <label className="flex items-start gap-2 cursor-not-allowed opacity-60">
+                  <input type="checkbox" disabled className="mt-0.5 shrink-0" />
+                  <span className="text-sm">{q.label || `Confirmation ${i + 1}`}{q.required && <span className="text-destructive ml-0.5">*</span>}</span>
+                </label>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">
+                    {q.label || `Question ${i + 1}`}
+                    {q.required && <span className="text-destructive ml-0.5">*</span>}
+                  </p>
+                  {q.type === "short_text" && (
+                    <input
+                      type="text"
+                      disabled
+                      placeholder="Your answer…"
+                      className="w-full border border-black/20 bg-background px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                    />
+                  )}
+                  {q.type === "long_text" && (
+                    <textarea
+                      disabled
+                      rows={4}
+                      placeholder="Your answer…"
+                      className="w-full border border-black/20 bg-background px-3 py-2 text-sm text-muted-foreground cursor-not-allowed resize-none"
+                    />
+                  )}
+                  {q.type === "file_upload" && (
+                    <div className="border border-dashed border-black/30 p-4 text-center text-xs text-muted-foreground">
+                      {q.file_label ? `Upload: ${q.file_label}` : "Upload file"}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+
+          {termsPdfUrl && (
+            <div className="border-t border-black/10 pt-4">
+              <a
+                href={termsPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs underline underline-offset-2 text-muted-foreground"
+              >
+                Download terms & conditions (PDF) →
+              </a>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground pt-2 border-t border-black/10">
+            Artists apply using their Patronage profile — portfolio, bio, and CV already on file.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface OpportunityFormProps {
@@ -359,6 +477,8 @@ interface OpportunityFormProps {
   onImgUpload: (file: File) => Promise<string | null>;
   /** Terms PDF upload — only needed in create/pipeline mode */
   onTermsUpload?: (file: File) => Promise<string | null>;
+  /** Auto-save callback — if provided, debounces saves 10s after last change */
+  onAutoSave?: (data: OpportunityFormData) => Promise<void>;
 }
 
 export function OpportunityForm({
@@ -368,12 +488,42 @@ export function OpportunityForm({
   step = 1,
   onImgUpload,
   onTermsUpload,
+  onAutoSave,
 }: OpportunityFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const termsFileRef = useRef<HTMLInputElement>(null);
   const [imgUploading, setImgUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [termsUploading, setTermsUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // ── Auto-save ──────────────────────────────────────────────────────────────
+  const hasMountedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!onAutoSave) return;
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setDraftSaving(true);
+      try {
+        await onAutoSave(value);
+        setDraftSavedAt(new Date());
+      } catch { /* silently ignore auto-save errors */ } finally {
+        setDraftSaving(false);
+      }
+    }, 10000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   const set = (updates: Partial<OpportunityFormData>) => onChange(updates);
 
@@ -442,6 +592,20 @@ export function OpportunityForm({
 
   const step1 = (
     <>
+      {/* ── Auto-save indicator ───────────────────────────────────────── */}
+      {onAutoSave && (
+        <div className="h-5 flex items-center">
+          {draftSaving && (
+            <p className="text-xs text-muted-foreground">Saving draft…</p>
+          )}
+          {!draftSaving && draftSavedAt && (
+            <p className="text-xs text-muted-foreground">
+              Draft saved at {draftSavedAt.toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Section 1: Opportunity Type ──────────────────────────────── */}
       <Section label="Opportunity Type">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -680,6 +844,7 @@ export function OpportunityForm({
       {/* ── Section 5: Eligibility & Tags ─────────────────────────────── */}
       <Section label="Eligibility & Tags">
         <Field label="Disciplines">
+          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">Select all that apply — helps artists find opportunities relevant to their practice.</p>
           <div className="flex flex-wrap gap-2 pt-1">
             {DISCIPLINES.map((tag) => (
               <TagButton key={tag} label={tag}
@@ -690,6 +855,7 @@ export function OpportunityForm({
         </Field>
 
         <Field label="Career Stage">
+          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">Who is this open to? Leave blank if open to all career stages.</p>
           <div className="flex flex-wrap gap-2 pt-1">
             {CAREER_STAGE_TAGS.map((tag) => (
               <TagButton key={tag} label={tag}
@@ -701,6 +867,7 @@ export function OpportunityForm({
 
         {showField(value.type, "eligibility") && (
           <Field label="Eligibility">
+            <p className="text-xs text-muted-foreground -mt-0.5 mb-2">Who can apply — nationality, residency, or identity criteria.</p>
             <div className="flex flex-wrap gap-2 pt-1">
               {ELIGIBILITY_TAGS.map((tag) => (
                 <TagButton key={tag} label={tag}
@@ -721,7 +888,7 @@ export function OpportunityForm({
                 value={value.customEligibilityInput}
                 onChange={(e) => set({ customEligibilityInput: e.target.value })}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomEligibility(); } }}
-                placeholder="Add custom tag, e.g. Asian artists…"
+                placeholder="Add custom tag, e.g. Asian artists, South Island based…"
                 className={`${FIELD} flex-1`}
               />
               <button type="button" onClick={addCustomEligibility}
@@ -733,6 +900,7 @@ export function OpportunityForm({
         )}
 
         <Field label="Focus">
+          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">What the opportunity is about — themes, formats, or contexts.</p>
           <div className="flex flex-wrap gap-2 pt-1">
             {FOCUS_ONLY_TAGS.map((tag) => (
               <TagButton key={tag} label={tag}
@@ -1056,15 +1224,24 @@ export function OpportunityForm({
             </div>
           </SortableContext>
         </DndContext>
-        <button
-          type="button"
-          onClick={() => set({
-            questions: [...value.questions, { id: crypto.randomUUID(), label: "", type: "long_text", required: true }],
-          })}
-          className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors mt-3"
-        >
-          <Plus className="w-3 h-3" /> Add question
-        </button>
+        <div className="flex items-center gap-3 mt-3">
+          <button
+            type="button"
+            onClick={() => set({
+              questions: [...value.questions, { id: crypto.randomUUID(), label: "", type: "long_text", required: true }],
+            })}
+            className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+          >
+            <Plus className="w-3 h-3" /> Add question
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="flex items-center gap-1.5 text-xs border border-black/40 px-3 py-1.5 hover:bg-muted transition-colors text-muted-foreground"
+          >
+            Preview as artist →
+          </button>
+        </div>
         <div className="border-t border-black/10 pt-4 mt-4">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -1141,9 +1318,18 @@ export function OpportunityForm({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const previewModal = previewOpen ? (
+    <PipelinePreviewModal
+      questions={value.questions}
+      artistDocs={value.artistDocs}
+      termsPdfUrl={value.termsPdfUrl}
+      onClose={() => setPreviewOpen(false)}
+    />
+  ) : null;
+
   // Admin mode: render all fields (no step management)
-  if (mode === "admin") return <>{step1}</>;
+  if (mode === "admin") return <>{step1}{previewModal}</>;
 
   // Create mode: render step 1 or step 2
-  return <>{step === 1 ? step1 : step2}</>;
+  return <>{step === 1 ? step1 : step2}{previewModal}</>;
 }
