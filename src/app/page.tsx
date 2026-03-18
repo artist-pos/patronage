@@ -236,9 +236,15 @@ export default async function Home() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <div
+              className="flex flex-row flex-nowrap gap-2 overflow-x-auto sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [scroll-snap-type:x_mandatory] [-webkit-overflow-scrolling:touch]"
+            >
               {updates.map((u) => (
-                <StudioFeedCard key={u.id} u={u} />
+                <StudioFeedCard
+                  key={u.id}
+                  u={u}
+                  className="shrink-0 [scroll-snap-align:start] min-w-[72vw] sm:min-w-0"
+                />
               ))}
             </div>
           </div>

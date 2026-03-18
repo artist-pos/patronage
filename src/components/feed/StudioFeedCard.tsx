@@ -7,7 +7,7 @@ import type { ProjectUpdateWithArtist } from "@/types/database";
 
 const FEED_H = 200;
 
-export function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
+export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArtist; className?: string }) {
   const name = u.artist_full_name ?? u.artist_username;
   const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
 
@@ -29,7 +29,7 @@ export function StudioFeedCard({ u }: { u: ProjectUpdateWithArtist }) {
     <Link
       href={href}
       scroll={false}
-      className="group block sm:inline-block border border-border bg-background overflow-hidden"
+      className={`group block sm:inline-block border border-border bg-background overflow-hidden ${className}`}
       style={u.image_url && cardWidth ? { width: cardWidth } : u.image_url ? undefined : { width: 200 }}
     >
       {u.image_url && (
