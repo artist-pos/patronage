@@ -665,7 +665,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
               <div className="flex gap-6">
                 {[
                   { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form" },
-                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Native on-platform application flow" },
+                  { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Artists apply with their Patronage profile — work samples, CV, and bio already included" },
                 ].map(({ val, label, desc }) => (
                   <label key={val} className="flex items-start gap-2 cursor-pointer">
                     <input type="radio" name="routing_radio" checked={routingType === val}
@@ -675,7 +675,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
                         <p className="text-sm font-medium">{label}</p>
                         {val === "pipeline" && (
                           <span className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
-                            Free for the first 10 partners
+                            First round free
                           </span>
                         )}
                       </div>

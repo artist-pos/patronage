@@ -95,9 +95,9 @@ export default async function PartnersPage() {
             />
             <PricingItem
               heading="Patronage Pipeline"
-              badge="Free for the first 10 partners"
+              badge="First round free"
               badgeVariant="blue"
-              body="Run your full application process on Patronage. Custom questions, applicant dashboard, status tracking. Replaces Google Forms and spreadsheets."
+              body="Manage applications on Patronage instead of email and spreadsheets. Applicants apply with their artist profile — portfolio, CV, and work samples already attached. Custom questions, shortlisting dashboard, status tracking."
             />
             <PricingItem
               heading="Featured listing"
@@ -106,7 +106,7 @@ export default async function PartnersPage() {
               body="Pinned to the top of the opportunities page, homepage, and weekly email digest for the duration of your listing."
             />
             <p className="text-sm text-gray-400 pt-4">
-              Pipeline early access is limited to the first 10 partners. Featured rate is introductory and subject to change.
+              Your first Pipeline round is free. No commitment, no card required. Featured rate is introductory and subject to change.
             </p>
           </section>
         </div>
