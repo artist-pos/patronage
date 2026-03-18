@@ -28,6 +28,11 @@ export async function updateOpportunityAdmin(
     travel_support?: boolean | null;
     travel_support_details?: string | null;
     pipeline_config?: object | null;
+    is_recurring?: boolean;
+    recurrence_pattern?: string | null;
+    recurrence_open_day?: number | null;
+    recurrence_close_day?: number | null;
+    recurrence_end_date?: string | null;
   }
 ) {
   if (!(await isAdmin())) throw new Error("Not authorised");

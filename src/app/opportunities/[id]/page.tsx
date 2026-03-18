@@ -13,8 +13,18 @@ import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
 import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
+import type { RecurrencePattern } from "@/types/database";
 
 const FUNDING_TYPES = new Set(["Grant", "Prize", "Commission"]);
+
+const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
+  monthly:   "Monthly",
+  bimonthly: "Every 2 months",
+  quarterly: "Quarterly",
+  biannual:  "Every 6 months",
+  annual:    "Annual",
+  custom:    "Custom schedule",
+};
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 interface Props {
@@ -253,6 +263,11 @@ export default async function OpportunityPage({ params }: Props) {
         {isTrending && (
           <span className="text-xs border border-black bg-black text-white px-1.5 py-0.5 leading-none">Trending</span>
         )}
+        {opp.is_recurring && (
+          <span className="text-xs border border-stone-700 bg-stone-800 text-white px-1.5 py-0.5 leading-none">
+            {opp.recurrence_pattern ? RECURRENCE_LABELS[opp.recurrence_pattern] : "Recurring"}
+          </span>
+        )}
         {(opp.sub_categories ?? []).map((cat) => (
           <span
             key={cat}
@@ -317,6 +332,17 @@ export default async function OpportunityPage({ params }: Props) {
             <p className="font-mono text-sm">
               {opp.travel_support ? "Yes" : "No"}
               {opp.travel_support && opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""}
+            </p>
+          </div>
+        )}
+        {opp.is_recurring && opp.recurrence_pattern && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Schedule</p>
+            <p className="font-mono text-sm">
+              {RECURRENCE_LABELS[opp.recurrence_pattern]}
+              {opp.recurrence_open_day && opp.recurrence_close_day
+                ? ` · opens ${opp.recurrence_open_day}, closes ${opp.recurrence_close_day}`
+                : ""}
             </p>
           </div>
         )}

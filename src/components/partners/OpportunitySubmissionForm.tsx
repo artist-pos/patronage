@@ -373,6 +373,11 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     show_badges_in_submission: showBadges,
     is_featured: isFeatured,
     pipeline_config: routingType === "pipeline" ? pipelineConfigValue : null,
+    is_recurring: false,
+    recurrence_pattern: null,
+    recurrence_open_day: null,
+    recurrence_close_day: null,
+    recurrence_end_date: null,
   };
 
   function openPreview() {

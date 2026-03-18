@@ -1,7 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Opportunity } from "@/types/database";
+import type { Opportunity, RecurrencePattern } from "@/types/database";
 import { SaveButton } from "./SaveButton";
+
+const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
+  monthly:   "Monthly",
+  bimonthly: "Every 2 months",
+  quarterly: "Quarterly",
+  biannual:  "Every 6 months",
+  annual:    "Annual",
+  custom:    "Recurring",
+};
 
 // Tags hidden from cards — still used for filtering/matching, shown on detail page
 const HIDDEN_CARD_TAGS = new Set([
@@ -70,7 +79,14 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
   const urgent = isClosingToday(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
-  const days = daysLeft(opp.opens_at ?? null, opp.deadline);
+  const isRecurring = opp.is_recurring ?? false;
+  const recurringLabel = isRecurring && opp.recurrence_pattern
+    ? RECURRENCE_LABELS[opp.recurrence_pattern]
+    : isRecurring ? "Recurring" : null;
+  // For recurring opps with no deadline, show frequency instead of "Open"
+  const days = (!opp.deadline && isRecurring && opp.recurrence_pattern && opp.recurrence_pattern !== "custom")
+    ? RECURRENCE_LABELS[opp.recurrence_pattern]
+    : daysLeft(opp.opens_at ?? null, opp.deadline);
   const fundingLabel =
     opp.funding_range?.trim() ||
     (opp.funding_amount != null ? formatFunding(opp.funding_amount) : null);
@@ -111,6 +127,13 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         <span className="hidden sm:block text-xs border border-black px-1.5 py-0.5 leading-none whitespace-nowrap shrink-0">
           {opp.type}
         </span>
+
+        {/* Recurring badge */}
+        {recurringLabel && (
+          <span className="hidden md:block text-xs bg-stone-800 text-white px-1.5 py-0.5 leading-none whitespace-nowrap shrink-0">
+            {recurringLabel}
+          </span>
+        )}
 
         {/* Funding */}
         {fundingLabel && (
@@ -198,6 +221,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
             {opp.country}
           </span>
+          {recurringLabel && (
+            <span className="text-xs bg-stone-800 text-white rounded-full px-2 md:px-3 py-1 leading-none">
+              {recurringLabel}
+            </span>
+          )}
           {opp.entry_fee === 0 && (
             <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
               Free to enter

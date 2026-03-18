@@ -112,7 +112,21 @@ export interface Opportunity {
   is_featured: boolean;
   // Pipeline application config (migration 053)
   pipeline_config?: PipelineConfig | null;
+  // Recurring schedule (migration 058)
+  is_recurring: boolean;
+  recurrence_pattern: RecurrencePattern | null;
+  recurrence_open_day: number | null;   // day-of-month e.g. 1
+  recurrence_close_day: number | null;  // day-of-month e.g. 15
+  recurrence_end_date: string | null;   // ISO date or null = indefinite
 }
+
+export type RecurrencePattern =
+  | 'monthly'
+  | 'bimonthly'
+  | 'quarterly'
+  | 'biannual'
+  | 'annual'
+  | 'custom';
 
 export interface SavedOpportunity {
   id: string;

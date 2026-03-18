@@ -4,10 +4,67 @@ import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateOpportunityAdmin } from "@/app/opportunities/[id]/actions";
-import type { Opportunity } from "@/types/database";
+import type { Opportunity, RecurrencePattern } from "@/types/database";
 import { OPP_TYPES, DISCIPLINES, FOCUS_TAGS, COUNTRIES, getFundingFieldMeta } from "@/lib/opportunity-constants";
 
 const FIELD = "w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black";
+
+const RECURRENCE_OPTIONS: { value: RecurrencePattern; label: string }[] = [
+  { value: "monthly",   label: "Monthly" },
+  { value: "bimonthly", label: "Every 2 months" },
+  { value: "quarterly", label: "Quarterly (every 3 months)" },
+  { value: "biannual",  label: "Every 6 months" },
+  { value: "annual",    label: "Annual" },
+  { value: "custom",    label: "Custom (manual dates only)" },
+];
+
+const INTERVAL_MONTHS: Record<string, number> = {
+  monthly: 1, bimonthly: 2, quarterly: 3, biannual: 6, annual: 12,
+};
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+function nextCyclePreview(
+  pattern: RecurrencePattern | "",
+  openDay: string,
+  closeDay: string,
+  currentOpensAt: string,
+  currentDeadline: string,
+): string | null {
+  if (!pattern || pattern === "custom") return null;
+  const months = INTERVAL_MONTHS[pattern];
+  if (!months) return null;
+
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-NZ", { day: "numeric", month: "long" });
+
+  if (currentDeadline) {
+    const base = new Date(currentDeadline + "T00:00:00");
+    const nextDeadline = addMonths(base, months);
+    if (currentOpensAt) {
+      const nextOpen = addMonths(new Date(currentOpensAt + "T00:00:00"), months);
+      return `Next round opens ${fmt(nextOpen)}, closes ${fmt(nextDeadline)}`;
+    }
+    return `Next deadline ${fmt(nextDeadline)}`;
+  }
+
+  const od = parseInt(openDay, 10);
+  const cd = parseInt(closeDay, 10);
+  if (od >= 1 && cd >= 1) {
+    const today = new Date();
+    let nextOpen = new Date(today.getFullYear(), today.getMonth(), od);
+    if (nextOpen <= today) nextOpen = new Date(today.getFullYear(), today.getMonth() + 1, od);
+    let nextClose = new Date(nextOpen.getFullYear(), nextOpen.getMonth(), cd);
+    if (nextClose < nextOpen) nextClose = new Date(nextClose.getFullYear(), nextClose.getMonth() + 1, cd);
+    return `Next round opens ${fmt(nextOpen)}, closes ${fmt(nextClose)}`;
+  }
+
+  return null;
+}
 
 interface Props {
   opp: Opportunity;
@@ -31,6 +88,11 @@ export function AdminEditOpportunityModal({ opp }: Props) {
   const [artistPaymentType, setArtistPaymentType] = useState(opp.artist_payment_type ?? "");
   const [travelSupport, setTravelSupport] = useState<boolean | null>(opp.travel_support ?? null);
   const [travelSupportDetails, setTravelSupportDetails] = useState(opp.travel_support_details ?? "");
+  const [isRecurring, setIsRecurring] = useState(opp.is_recurring ?? false);
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | "">(opp.recurrence_pattern ?? "");
+  const [recurrenceOpenDay, setRecurrenceOpenDay] = useState(opp.recurrence_open_day != null ? String(opp.recurrence_open_day) : "");
+  const [recurrenceCloseDay, setRecurrenceCloseDay] = useState(opp.recurrence_close_day != null ? String(opp.recurrence_close_day) : "");
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(opp.recurrence_end_date ?? "");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,6 +142,11 @@ export function AdminEditOpportunityModal({ opp }: Props) {
         artist_payment_type: artistPaymentType || null,
         travel_support: travelSupport,
         travel_support_details: travelSupportDetails.trim() || null,
+        is_recurring: isRecurring,
+        recurrence_pattern: isRecurring && recurrencePattern ? recurrencePattern : null,
+        recurrence_open_day: isRecurring && recurrenceOpenDay ? parseInt(recurrenceOpenDay, 10) : null,
+        recurrence_close_day: isRecurring && recurrenceCloseDay ? parseInt(recurrenceCloseDay, 10) : null,
+        recurrence_end_date: isRecurring && recurrenceEndDate ? recurrenceEndDate : null,
       });
       setToast("Saved");
       setTimeout(() => {
@@ -383,6 +450,106 @@ export function AdminEditOpportunityModal({ opp }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Recurring schedule */}
+              <div className="space-y-4 border border-black/20 p-4 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-widest">Recurring Opportunity</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsRecurring((v) => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${isRecurring ? "bg-black" : "bg-stone-300"}`}
+                    aria-pressed={isRecurring}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? "translate-x-5" : "translate-x-0"}`}
+                    />
+                  </button>
+                </div>
+
+                {isRecurring && (
+                  <div className="space-y-4">
+                    {/* Pattern */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-widest">Pattern</label>
+                      <select
+                        value={recurrencePattern}
+                        onChange={(e) => setRecurrencePattern(e.target.value as RecurrencePattern | "")}
+                        className={FIELD}
+                      >
+                        <option value="">— Select frequency —</option>
+                        {RECURRENCE_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Open / close day */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-widest">
+                          Opens on day
+                          <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={recurrenceOpenDay}
+                          onChange={(e) => setRecurrenceOpenDay(e.target.value)}
+                          placeholder="e.g. 1"
+                          className={FIELD}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-widest">
+                          Closes on day
+                          <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={recurrenceCloseDay}
+                          onChange={(e) => setRecurrenceCloseDay(e.target.value)}
+                          placeholder="e.g. 15"
+                          className={FIELD}
+                        />
+                      </div>
+                    </div>
+
+                    {/* End date */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-widest">
+                        Schedule ends
+                        <span className="text-muted-foreground font-normal normal-case tracking-normal"> — leave blank for indefinite</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={recurrenceEndDate}
+                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                        className={FIELD}
+                      />
+                    </div>
+
+                    {/* Preview */}
+                    {(() => {
+                      const preview = nextCyclePreview(
+                        recurrencePattern,
+                        recurrenceOpenDay,
+                        recurrenceCloseDay,
+                        opensAt,
+                        deadline,
+                      );
+                      return preview ? (
+                        <p className="text-xs text-muted-foreground bg-background border border-black/10 px-3 py-2">
+                          {preview}
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Save */}
