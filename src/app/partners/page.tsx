@@ -103,7 +103,7 @@ export default async function PartnersPage() {
               heading="Featured listing"
               strikePrice="$150 NZD"
               currentPrice="$75 NZD"
-              body="Pinned to the top of the opportunities page, homepage, and weekly email digest for the duration of your listing."
+              body="Pinned to the top of the opportunities page, homepage, and weekly email digest for the duration of your listing. Shared across Patronage social channels."
             />
             <p className="text-sm text-gray-400 pt-4">
               Your first Pipeline round is free. No commitment, no card required. Featured rate is introductory and subject to change.
