@@ -8,7 +8,7 @@ export default async function AdminOpportunitiesPage() {
   const active = opps.filter((o) => o.is_active).length;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">Opportunities</h1>
         <p className="text-xs text-muted-foreground">

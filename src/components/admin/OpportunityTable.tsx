@@ -146,9 +146,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
         </Button>
       </div>
 
-      <div className="flex gap-6 items-start">
-        {/* ── Table ──────────────────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 overflow-x-auto">
+      <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="border-b border-border text-left">
@@ -244,11 +242,15 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
           )}
         </div>
 
-        {/* ── Claim panel ────────────────────────────────────────────────── */}
-        {claimOpp && claim && (
-          <div className="w-72 shrink-0 border border-black bg-background">
-            <div className="flex items-start justify-between px-4 py-3 border-b border-black/20">
-              <div className="min-w-0 pr-2">
+      {/* ── Claim modal ──────────────────────────────────────────────────── */}
+      {claimOpp && claim && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={(e) => { if (e.target === e.currentTarget) setClaimTargetId(null); }}
+        >
+          <div className="bg-background border border-black w-full max-w-sm mx-4 shadow-lg">
+            <div className="flex items-start justify-between px-5 py-4 border-b border-black/20">
+              <div className="min-w-0 pr-3">
                 <p className="text-xs font-semibold uppercase tracking-widest mb-0.5">Claim link</p>
                 <p className="text-xs text-muted-foreground truncate">{claimOpp.title}</p>
               </div>
@@ -260,7 +262,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               </button>
             </div>
 
-            <div className="px-4 py-4 space-y-4">
+            <div className="px-5 py-5 space-y-4">
               {claimUrl ? (
                 <>
                   <div className="space-y-1.5">
@@ -324,8 +326,8 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Edit modal — triggered after creating a new draft */}
       {editTarget && (
