@@ -33,7 +33,7 @@ export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArti
       style={u.image_url && cardWidth ? { width: cardWidth } : u.image_url ? undefined : { width: 200 }}
     >
       {u.image_url && (
-        <div className="overflow-hidden bg-muted" style={{ height: FEED_H }}>
+        <div className="w-fit bg-muted" style={{ height: FEED_H }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={u.image_url}
@@ -44,7 +44,7 @@ export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArti
           />
         </div>
       )}
-      <div className="px-2.5 py-1.5 border-t border-border min-w-0 overflow-hidden">
+      <div className="px-2.5 py-1.5 border-t border-border">
         <div className="flex items-center gap-1.5 min-w-0">
           {u.artist_avatar_url ? (
             <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
@@ -58,7 +58,7 @@ export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArti
           <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
         </div>
         {u.caption && (
-          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{u.caption}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 break-words whitespace-normal">{u.caption}</p>
         )}
       </div>
     </Link>

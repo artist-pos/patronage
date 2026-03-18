@@ -243,7 +243,7 @@ export default async function Home() {
                 <StudioFeedCard
                   key={u.id}
                   u={u}
-                  className="shrink-0 [scroll-snap-align:start] min-w-[72vw] sm:min-w-0"
+                  className="shrink-0 [scroll-snap-align:start]"
                 />
               ))}
             </div>
