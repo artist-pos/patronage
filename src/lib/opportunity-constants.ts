@@ -161,14 +161,14 @@ export function addMonths(date: Date, months: number): Date {
 /** Field visibility rules — which fields appear for each opportunity type */
 export function showField(type: string, field: string): boolean {
   const map: Record<string, string[]> = {
-    entryFee:      ["Prize", "Open Call", "Residency"],
-    recipients:    ["Grant", "Prize"],
-    funding:       ["Grant", "Residency", "Commission", "Prize", "Open Call", "Job / Employment"],
+    entryFee:      ["Prize", "Open Call", "Residency", "Commission", "Display"],
+    recipients:    ["Grant", "Prize", "Commission"],
+    funding:       ["Grant", "Residency", "Commission", "Prize", "Open Call", "Display", "Job / Employment", "Studio / Space", "Public Art"],
     grantSubtype:  ["Grant"],
-    duration:      ["Residency"],
+    duration:      ["Residency", "Studio / Space"],
     contractType:  ["Job / Employment"],
     accommodation: ["Residency"],
-    eligibility:   ["Grant", "Residency", "Commission", "Prize", "Open Call"],
+    eligibility:   ["Grant", "Residency", "Commission", "Prize", "Open Call", "Display", "Job / Employment", "Public Art"],
   };
   return map[field]?.includes(type) ?? true;
 }
@@ -180,5 +180,8 @@ export function getFundingFieldMeta(type: string): { label: string; placeholder:
   if (type === "Residency")        return { label: "Stipend (optional)",     placeholder: "e.g. $500/week" };
   if (type === "Commission")       return { label: "Budget",                 placeholder: "e.g. $10,000 – $50,000" };
   if (type === "Prize")            return { label: "Prize Value",            placeholder: "e.g. $5,000 first prize" };
+  if (type === "Open Call")        return { label: "Artist Fee / Award",     placeholder: "e.g. $500 participation fee" };
+  if (type === "Display")          return { label: "Artist Fee",             placeholder: "e.g. $200 hanging fee" };
+  if (type === "Public Art")       return { label: "Project Budget",         placeholder: "e.g. $20,000 – $80,000" };
   return                                   { label: "Funding Range",         placeholder: "e.g. $5,000 – $25,000" };
 }
