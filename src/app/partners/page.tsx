@@ -31,8 +31,7 @@ export default async function PartnersPage() {
           <header className="space-y-4">
             <h1 className="text-3xl font-semibold tracking-tight">Partners</h1>
             <p className="text-muted-foreground text-base leading-relaxed max-w-lg">
-              Patronage connects arts organisations, councils, foundations, and
-              private patrons with verified New Zealand and Australian artists.
+              Career infrastructure for artists in Aotearoa and Australia — and the tools for organisations to find, fund, and work with them.
             </p>
           </header>
 
@@ -73,7 +72,7 @@ export default async function PartnersPage() {
               Looking for artists rather than advertising to them? Browse the
               verified directory directly — profiles include bios, portfolio
               work, and CVs. For high-volume or recurring discovery, contact us
-              about a managed partnership arrangement.
+              about a managed ESG partnership.
             </p>
             <a
               href="mailto:hello@patronage.nz?subject=Partnership%20Enquiry"

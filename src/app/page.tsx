@@ -115,9 +115,9 @@ export default async function Home() {
         ) : (
           <div className="space-y-6 flex flex-col items-center text-center">
             <div className="space-y-1.5">
-              <h1 className="text-4xl font-semibold tracking-tight">Find funding. Build your profile. Get seen.</h1>
+              <h1 className="text-4xl font-semibold tracking-tight">Career infrastructure for artists in Aotearoa and Australia.</h1>
               <p className="text-lg text-muted-foreground">
-                Grants, residencies, and open calls for artists across Aotearoa and Australia — updated weekly, free to use.
+                Grants, residencies, open calls, commissions, and the tools to build a sustainable practice. Free to use.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
@@ -152,7 +152,7 @@ export default async function Home() {
               >
                 <span className="text-sm font-semibold">Join as a Partner</span>
                 <span className="text-xs text-muted-foreground leading-snug">
-                  List opportunities and reach artists directly.
+                  List opportunities, run applications, or invest in artists as part of your ESG strategy.
                 </span>
               </Link>
             </div>
