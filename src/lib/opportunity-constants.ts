@@ -163,7 +163,7 @@ export function showField(type: string, field: string): boolean {
   const map: Record<string, string[]> = {
     entryFee:      ["Prize", "Open Call"],
     recipients:    ["Grant", "Prize"],
-    funding:       ["Grant", "Residency", "Commission", "Prize", "Job / Employment"],
+    funding:       ["Grant", "Residency", "Commission", "Prize", "Open Call", "Job / Employment"],
     grantSubtype:  ["Grant"],
     duration:      ["Residency"],
     contractType:  ["Job / Employment"],
