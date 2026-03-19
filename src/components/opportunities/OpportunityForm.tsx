@@ -828,6 +828,111 @@ export function OpportunityForm({
         )}
       </Section>
 
+      {/* ── Recurring schedule ────────────────────────────────────────── */}
+      <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest">Recurring Opportunity</p>
+            {mode === "create" && (
+              <p className="text-xs text-muted-foreground mt-0.5">This opportunity opens on a repeating schedule</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => set({ isRecurring: !value.isRecurring })}
+            className={`relative w-10 h-5 rounded-full transition-colors ${value.isRecurring ? "bg-black" : "bg-stone-300"}`}
+            aria-pressed={value.isRecurring}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                value.isRecurring ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        {value.isRecurring && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-widest">Frequency</label>
+              <select
+                value={value.recurrencePattern}
+                onChange={(e) => set({ recurrencePattern: e.target.value as RecurrencePattern | "" })}
+                className={FIELD}
+              >
+                <option value="">— Select frequency —</option>
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {mode === "admin" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">
+                    Opens on day
+                    <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={value.recurrenceOpenDay}
+                    onChange={(e) => set({ recurrenceOpenDay: e.target.value })}
+                    placeholder="e.g. 1"
+                    className={FIELD}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest">
+                    Closes on day
+                    <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={value.recurrenceCloseDay}
+                    onChange={(e) => set({ recurrenceCloseDay: e.target.value })}
+                    placeholder="e.g. 15"
+                    className={FIELD}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-widest">
+                Schedule ends
+                <span className="text-muted-foreground font-normal normal-case tracking-normal"> — leave blank for indefinite</span>
+              </label>
+              <input
+                type="date"
+                value={value.recurrenceEndDate}
+                onChange={(e) => set({ recurrenceEndDate: e.target.value })}
+                className={FIELD}
+              />
+            </div>
+
+            {mode === "admin" && (() => {
+              const preview = nextCyclePreview(
+                value.recurrencePattern,
+                value.recurrenceOpenDay,
+                value.recurrenceCloseDay,
+                value.opensAt,
+                value.deadline,
+              );
+              return preview ? (
+                <p className="text-xs text-muted-foreground bg-background border border-black/10 px-3 py-2">
+                  {preview}
+                </p>
+              ) : null;
+            })()}
+          </div>
+        )}
+      </div>
+
       {/* ── Section 4: Location ───────────────────────────────────────── */}
       <Section label="Location">
         <Field label="City / Location">
@@ -1099,110 +1204,6 @@ export function OpportunityForm({
         </div>
       )}
 
-      {/* ── Recurring schedule ────────────────────────────────────────── */}
-      <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest">Recurring Opportunity</p>
-            {mode === "create" && (
-              <p className="text-xs text-muted-foreground mt-0.5">This opportunity opens on a repeating schedule</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => set({ isRecurring: !value.isRecurring })}
-            className={`relative w-10 h-5 rounded-full transition-colors ${value.isRecurring ? "bg-black" : "bg-stone-300"}`}
-            aria-pressed={value.isRecurring}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                value.isRecurring ? "translate-x-5" : "translate-x-0"
-              }`}
-            />
-          </button>
-        </div>
-
-        {value.isRecurring && (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">Frequency</label>
-              <select
-                value={value.recurrencePattern}
-                onChange={(e) => set({ recurrencePattern: e.target.value as RecurrencePattern | "" })}
-                className={FIELD}
-              >
-                <option value="">— Select frequency —</option>
-                {RECURRENCE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {mode === "admin" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">
-                    Opens on day
-                    <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={31}
-                    value={value.recurrenceOpenDay}
-                    onChange={(e) => set({ recurrenceOpenDay: e.target.value })}
-                    placeholder="e.g. 1"
-                    className={FIELD}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest">
-                    Closes on day
-                    <span className="text-muted-foreground font-normal normal-case tracking-normal"> of month</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={31}
-                    value={value.recurrenceCloseDay}
-                    onChange={(e) => set({ recurrenceCloseDay: e.target.value })}
-                    placeholder="e.g. 15"
-                    className={FIELD}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">
-                Schedule ends
-                <span className="text-muted-foreground font-normal normal-case tracking-normal"> — leave blank for indefinite</span>
-              </label>
-              <input
-                type="date"
-                value={value.recurrenceEndDate}
-                onChange={(e) => set({ recurrenceEndDate: e.target.value })}
-                className={FIELD}
-              />
-            </div>
-
-            {mode === "admin" && (() => {
-              const preview = nextCyclePreview(
-                value.recurrencePattern,
-                value.recurrenceOpenDay,
-                value.recurrenceCloseDay,
-                value.opensAt,
-                value.deadline,
-              );
-              return preview ? (
-                <p className="text-xs text-muted-foreground bg-background border border-black/10 px-3 py-2">
-                  {preview}
-                </p>
-              ) : null;
-            })()}
-          </div>
-        )}
-      </div>
     </>
   );
 
