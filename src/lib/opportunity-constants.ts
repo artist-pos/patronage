@@ -161,7 +161,7 @@ export function addMonths(date: Date, months: number): Date {
 /** Field visibility rules — which fields appear for each opportunity type */
 export function showField(type: string, field: string): boolean {
   const map: Record<string, string[]> = {
-    entryFee:      ["Prize", "Open Call"],
+    entryFee:      ["Prize", "Open Call", "Residency"],
     recipients:    ["Grant", "Prize"],
     funding:       ["Grant", "Residency", "Commission", "Prize", "Open Call", "Job / Employment"],
     grantSubtype:  ["Grant"],
