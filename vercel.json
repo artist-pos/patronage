@@ -5,7 +5,7 @@
   "crons": [
     {
       "path": "/api/admin/send-digest",
-      "schedule": "0 8 * * 1"
+      "schedule": "0 22 * * 2"
     }
   ]
 }
