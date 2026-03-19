@@ -39,6 +39,9 @@ export async function submitOpportunityAction(
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
   const pipelineConfigRaw = (formData.get("pipeline_config") as string) || "null";
   const isFeaturedRaw = (formData.get("is_featured") as string) ?? "false";
+  const isRecurringRaw = (formData.get("is_recurring") as string) ?? "false";
+  const recurrencePattern = (formData.get("recurrence_pattern") as string)?.trim() || null;
+  const recurrenceEndDate = (formData.get("recurrence_end_date") as string)?.trim() || null;
 
   let customFields = [];
   try { customFields = JSON.parse(customFieldsRaw); } catch { customFields = []; }
@@ -72,6 +75,9 @@ export async function submitOpportunityAction(
     show_badges_in_submission: showBadgesRaw === "true",
     pipeline_config: pipelineConfig,
     is_featured: isFeaturedRaw === "true",
+    is_recurring: isRecurringRaw === "true",
+    recurrence_pattern: recurrencePattern,
+    recurrence_end_date: recurrenceEndDate,
   });
 
   if (error) return { error: error.message };

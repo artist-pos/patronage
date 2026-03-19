@@ -204,6 +204,9 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         <input type="hidden" name="pipeline_config"            value={pipelineConfigValue ? JSON.stringify(pipelineConfigValue) : "null"} />
         <input type="hidden" name="is_featured"                value={formData.isFeatured ? "true" : "false"} />
         <input type="hidden" name="submitter_email"            value={formData.submitterEmail} />
+        <input type="hidden" name="is_recurring"               value={formData.isRecurring ? "true" : "false"} />
+        <input type="hidden" name="recurrence_pattern"         value={formData.recurrencePattern} />
+        <input type="hidden" name="recurrence_end_date"        value={formData.recurrenceEndDate} />
 
         {/* Step indicator (pipeline only) */}
         {formData.routingType === "pipeline" && (
