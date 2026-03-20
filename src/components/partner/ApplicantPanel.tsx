@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl } from "@/app/partner/dashboard/actions";
@@ -71,6 +72,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
+  const router = useRouter();
   const [status, setStatus] = useState(application.status);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -135,12 +137,13 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
               Applied {new Date(application.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          <Link
-            href={closeUrl}
+          <button
+            type="button"
+            onClick={() => { router.push(closeUrl); router.refresh(); }}
             className="text-muted-foreground hover:text-foreground"
           >
             <X className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
 
         <div className="px-6 py-6 space-y-6">

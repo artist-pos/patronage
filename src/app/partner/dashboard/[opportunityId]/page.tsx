@@ -145,29 +145,38 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
       ) : view === "gallery" ? (
         /* Gallery view */
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {enrichedApps
-            .filter((a) => a.artwork)
-            .map((app) => (
+          {enrichedApps.map((app) => {
+            const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
+            return (
               <Link
                 key={app.id}
                 href={`/partner/dashboard/${opportunityId}?view=gallery&applicant=${app.id}`}
                 className="border border-black overflow-hidden group"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={app.artwork!.url}
-                  alt={app.artwork!.caption ?? ""}
-                  className="w-full aspect-square object-cover"
-                />
+                {imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={imageUrl}
+                    alt={app.artwork?.caption ?? app.artist?.full_name ?? ""}
+                    className="w-full aspect-square object-cover"
+                  />
+                ) : (
+                  <div className="w-full aspect-square bg-muted flex items-center justify-center">
+                    <span className="text-2xl font-semibold text-muted-foreground">
+                      {(app.artist?.full_name ?? app.artist?.username ?? "?")[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div className="p-2 space-y-0.5">
                   <p className="text-xs font-semibold truncate">{app.artist?.full_name ?? app.artist?.username}</p>
-                  {app.artwork!.caption && (
-                    <p className="text-xs text-muted-foreground truncate">{app.artwork!.caption}</p>
+                  {app.artwork?.caption && (
+                    <p className="text-xs text-muted-foreground truncate">{app.artwork.caption}</p>
                   )}
                   <span className="text-[10px] bg-muted px-1.5 py-0.5 leading-none">{STATUS_LABELS[app.status] ?? app.status}</span>
                 </div>
               </Link>
-            ))}
+            );
+          })}
         </div>
       ) : (
         /* Table view */
