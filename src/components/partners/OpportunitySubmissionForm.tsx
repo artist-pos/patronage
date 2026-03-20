@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { Button } from "@/components/ui/button";
-import { OpportunityForm, defaultFormData, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
+import { OpportunityForm, defaultFormData, getDefaultPipelineSetup, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
 import { getFundingFieldMeta } from "@/lib/opportunity-constants";
 import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
@@ -53,6 +53,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   const [step, setStep] = useState<1 | 2>(1);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
+  // Track which type was used to seed step 2 defaults
+  const lastDefaultTypeRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
@@ -81,12 +83,13 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     return data.publicUrl;
   }
 
-  const allTags = [
+  // sub_categories = disciplines only; career_stage and tags go to separate columns
+  const allTags = formData.selectedDisciplines;
+  // All tags combined for preview display
+  const allTagsForPreview = [
     ...formData.selectedDisciplines,
     ...formData.selectedCareerStages,
-    ...formData.selectedEligibility,
-    ...formData.customEligibility,
-    ...formData.selectedFocus,
+    ...formData.selectedTags,
   ];
 
   const pipelineConfigValue = formData.routingType === "pipeline" ? {
@@ -113,7 +116,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     url: formData.url || null,
     funding_amount: null,
     funding_range: formData.fundingRange || null,
-    sub_categories: allTags.length > 0 ? allTags : null,
+    sub_categories: allTagsForPreview.length > 0 ? allTagsForPreview : null,
     featured_image_url: formData.featuredImageUrl || null,
     grant_type: formData.grantType || null,
     recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,
@@ -193,6 +196,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         <input type="hidden" name="funding_range"              value={formData.fundingRange} />
         <input type="hidden" name="featured_image_url"         value={formData.featuredImageUrl} />
         <input type="hidden" name="sub_categories"             value={allTags.join(",")} />
+        <input type="hidden" name="career_stage"               value={formData.selectedCareerStages.join(",")} />
+        <input type="hidden" name="tags"                       value={formData.selectedTags.join(",")} />
         <input type="hidden" name="entry_fee"                  value={formData.entryFee} />
         <input type="hidden" name="grant_type"                 value={formData.grantType} />
         <input type="hidden" name="recipients_count"           value={formData.recipientsCount} />
@@ -233,7 +238,18 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
             {formData.routingType === "pipeline" ? (
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => {
+                  // Apply smart defaults if first entry or type changed
+                  if (
+                    formData.questions.length === 0 ||
+                    lastDefaultTypeRef.current !== formData.type
+                  ) {
+                    const defaults = getDefaultPipelineSetup(formData.type);
+                    update({ questions: defaults.questions, artistDocs: defaults.artistDocs });
+                    lastDefaultTypeRef.current = formData.type;
+                  }
+                  setStep(2);
+                }}
                 className="w-full sm:w-auto border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
               >
                 Next: Configure application →

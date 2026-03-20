@@ -245,16 +245,50 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
                 {normalisedFields.map((field) => {
                   const answer = application.custom_answers?.[field.id];
                   if (!answer) return null;
+                  if (field.isFile) {
+                    // Parse as JSON array (new format) or fall back to single URL (old format)
+                    let urls: string[] = [];
+                    try {
+                      const parsed = JSON.parse(answer);
+                      urls = Array.isArray(parsed) ? parsed : [answer];
+                    } catch {
+                      urls = [answer];
+                    }
+                    return (
+                      <div key={field.id} className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                        <ul className="space-y-1">
+                          {urls.map((url, i) => {
+                            // Extract filename from storage path
+                            const parts = url.split("/");
+                            const rawName = parts[parts.length - 1]?.split("?")[0] ?? "";
+                            // Strip leading timestamp prefix (e.g. "1234567890-filename.pdf")
+                            const displayName = rawName.replace(/^\d+-/, "") || `File ${i + 1}`;
+                            return (
+                              <li key={url}>
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm underline underline-offset-2 inline-flex items-center gap-1 hover:opacity-70 transition-opacity"
+                                  title={displayName}
+                                >
+                                  {displayName}
+                                  {urls.length > 1 && (
+                                    <span className="text-xs text-muted-foreground not-underline ml-0.5">→</span>
+                                  )}
+                                </a>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={field.id} className="space-y-0.5">
                       <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
-                      {field.isFile ? (
-                        <a href={answer} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                          View file →
-                        </a>
-                      ) : (
-                        <p className="text-sm">{answer}</p>
-                      )}
+                      <p className="text-sm whitespace-pre-wrap">{answer}</p>
                     </div>
                   );
                 })}

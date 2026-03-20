@@ -24,11 +24,11 @@ export async function updateApplicationStatus(
 
   const { data: oppData } = await supabase
     .from("opportunities")
-    .select("id, title, profile_id")
+    .select("id, title, organiser, type, profile_id")
     .eq("id", app.opportunity_id as string)
     .single();
 
-  const opp = oppData as { id: string; title: string; profile_id: string | null } | null;
+  const opp = oppData as { id: string; title: string; organiser: string; type: string; profile_id: string | null } | null;
   if (!opp || opp.profile_id !== user.id) return { error: "Not authorised" };
 
   const { error } = await supabase
@@ -38,25 +38,45 @@ export async function updateApplicationStatus(
 
   if (error) return { error: error.message };
 
-  // If approving (status = approved_pending_assets), email the applicant
-  if (status === "approved_pending_assets") {
+  // Auto-create a verified profile achievement when selected or approved
+  if (status === "selected" || status === "approved_pending_assets") {
     const admin = createAdminClient();
-    const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
-    const applicantUser = authData?.user ?? null;
-    if (applicantUser?.email) {
-      const { data: artistProfile } = await admin
-        .from("profiles")
-        .select("full_name, username")
-        .eq("id", app.artist_id)
-        .single();
-      const applicantName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
-      sendHighResRequest(
-        applicantUser.email,
-        applicantName,
-        opp.title,
-        `${siteUrl}/dashboard?tab=applications`
-      ).catch(console.error);
+
+    // Upsert achievement (idempotent — unique index on profile_id + opportunity_id)
+    await admin
+      .from("profile_achievements")
+      .upsert(
+        {
+          profile_id: app.artist_id,
+          opportunity_id: app.opportunity_id,
+          opportunity_title: opp.title,
+          organisation: opp.organiser ?? "",
+          type: opp.type ?? "Grant",
+          year: new Date().getFullYear(),
+          verified: true,
+        },
+        { onConflict: "profile_id,opportunity_id" }
+      );
+
+    // Email artist when approved (requesting high-res file)
+    if (status === "approved_pending_assets") {
+      const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
+      const applicantUser = authData?.user ?? null;
+      if (applicantUser?.email) {
+        const { data: artistProfile } = await admin
+          .from("profiles")
+          .select("full_name, username")
+          .eq("id", app.artist_id)
+          .single();
+        const applicantName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+        sendHighResRequest(
+          applicantUser.email,
+          applicantName,
+          opp.title,
+          `${siteUrl}/dashboard?tab=applications`
+        ).catch(console.error);
+      }
     }
   }
 

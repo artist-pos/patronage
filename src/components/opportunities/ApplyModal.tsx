@@ -62,7 +62,9 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
   const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [uploadingNewImage, setUploadingNewImage] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>(draft?.custom_answers ?? {});
-  const [fileUploads, setFileUploads] = useState<Record<string, string>>({});
+  const [fileUploads, setFileUploads] = useState<Record<string, string[]>>({});
+  const [fileNames, setFileNames] = useState<Record<string, string[]>>({});
+  const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -93,24 +95,66 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     setSelectedArtworkId(null);
   }
 
-  async function handleFileUpload(fieldId: string, file: File) {
-    const path = `answers/${opportunity.id}/${fieldId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-    const { error: uploadError } = await supabase.storage
-      .from("opportunity-images")
-      .upload(path, file, { contentType: file.type });
-    if (uploadError) {
-      setError("File upload failed: " + uploadError.message);
-      return;
+  const FILE_CAP = 10;
+  const ACCEPTED_TYPES = ".pdf,.doc,.docx,.jpg,.jpeg,.png,.tiff,.tif,.mp4,.mp3";
+
+  async function handleFileUpload(fieldId: string, files: FileList) {
+    const current = fileUploads[fieldId] ?? [];
+    const remaining = FILE_CAP - current.length;
+    if (remaining <= 0) return;
+
+    const toUpload = Array.from(files).slice(0, remaining);
+    setUploadingFields((prev) => ({ ...prev, [fieldId]: true }));
+    setError(null);
+
+    const newUrls: string[] = [];
+    const newNames: string[] = [];
+
+    for (const file of toUpload) {
+      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+      const path = `answers/${opportunity.id}/${fieldId}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("opportunity-images")
+        .upload(path, file, { contentType: file.type });
+      if (uploadError) {
+        setError(`Upload failed for "${file.name}": ${uploadError.message}`);
+        break;
+      }
+      const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+      newUrls.push(publicUrl);
+      newNames.push(file.name);
     }
-    const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
-    setFileUploads((prev) => ({ ...prev, [fieldId]: publicUrl }));
-    setAnswers((prev) => ({ ...prev, [fieldId]: publicUrl }));
+
+    if (newUrls.length > 0) {
+      const updatedUrls = [...(fileUploads[fieldId] ?? []), ...newUrls];
+      const updatedNames = [...(fileNames[fieldId] ?? []), ...newNames];
+      setFileUploads((prev) => ({ ...prev, [fieldId]: updatedUrls }));
+      setFileNames((prev) => ({ ...prev, [fieldId]: updatedNames }));
+      const encoded = JSON.stringify(updatedUrls);
+      setAnswers((prev) => { const next = { ...prev }; next[fieldId] = encoded; return next; });
+    }
+
+    setUploadingFields((prev) => ({ ...prev, [fieldId]: false }));
+  }
+
+  function removeUploadedFile(fieldId: string, index: number) {
+    setFileUploads((prev) => {
+      const updated = (prev[fieldId] ?? []).filter((_, i) => i !== index);
+      setAnswers((ans) => ({ ...ans, [fieldId]: updated.length > 0 ? JSON.stringify(updated) : "" } as Record<string, string>));
+      return { ...prev, [fieldId]: updated };
+    });
+    setFileNames((prev) => ({
+      ...prev,
+      [fieldId]: (prev[fieldId] ?? []).filter((_, i) => i !== index),
+    }));
   }
 
   async function handleSaveDraft() {
     setSavingDraft(true);
     setDraftSaved(false);
-    const finalAnswers = { ...answers, ...fileUploads };
+    const encodedFiles: Record<string, string> = {};
+    for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
+    const finalAnswers = { ...answers, ...encodedFiles };
     const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
     await saveDraft(
       opportunity.id,
@@ -127,7 +171,9 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     setSubmitting(true);
     setError(null);
 
-    const finalAnswers = { ...answers, ...fileUploads };
+    const encodedFiles: Record<string, string> = {};
+    for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
+    const finalAnswers = { ...answers, ...encodedFiles };
     const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
 
     const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl);
@@ -352,21 +398,66 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                     />
                   )}
                   {field.type === "file" && (
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => fileRefs.current[field.id]?.click()}
-                        className="text-xs border border-black px-3 py-2 hover:bg-muted transition-colors"
-                      >
-                        {fileUploads[field.id] ? "File uploaded. Click to replace." : "Choose file"}
-                      </button>
+                    <div className="space-y-2">
+                      {/* Uploaded files list */}
+                      {(fileUploads[field.id] ?? []).length > 0 && (
+                        <ul className="space-y-1">
+                          {(fileUploads[field.id] ?? []).map((url, i) => (
+                            <li key={url} className="flex items-center gap-2 text-xs">
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline underline-offset-2 truncate max-w-[260px]"
+                                title={fileNames[field.id]?.[i] ?? url}
+                              >
+                                {fileNames[field.id]?.[i] ?? `File ${i + 1}`}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => removeUploadedFile(field.id, i)}
+                                className="text-muted-foreground hover:text-foreground shrink-0"
+                                aria-label="Remove file"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {/* Upload button (hidden when cap reached) */}
+                      {(fileUploads[field.id] ?? []).length < FILE_CAP && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileRefs.current[field.id]?.click()}
+                            disabled={uploadingFields[field.id]}
+                            className="text-xs border border-black px-3 py-2 hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            {uploadingFields[field.id]
+                              ? "Uploading…"
+                              : (fileUploads[field.id] ?? []).length > 0
+                              ? "Add more files"
+                              : "Choose files"}
+                          </button>
+                          {(fileUploads[field.id] ?? []).length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {fileUploads[field.id].length}/{FILE_CAP}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       <input
                         ref={(el) => { fileRefs.current[field.id] = el; }}
                         type="file"
+                        multiple
+                        accept={ACCEPTED_TYPES}
                         className="hidden"
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleFileUpload(field.id, f);
+                          if (e.target.files?.length) handleFileUpload(field.id, e.target.files);
+                          e.target.value = "";
                         }}
                       />
                     </div>

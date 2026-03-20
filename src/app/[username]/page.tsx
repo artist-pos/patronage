@@ -30,7 +30,7 @@ const CvTab = dynamic(() =>
 const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
@@ -218,13 +218,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   ]);
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
-  const needsPortfolio = isArtistProfile && (tab === "overview" || tab === "work");
-  const needsUpdates   = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
-  const needsProjects  = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
-  const needsSold      = isArtistProfile && tab === "work";
-  const needsCreative  = isArtistProfile && (tab === "work" || tab === "studio");
+  const needsPortfolio    = isArtistProfile && (tab === "overview" || tab === "work");
+  const needsUpdates      = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
+  const needsProjects     = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
+  const needsSold         = isArtistProfile && tab === "work";
+  const needsCreative     = isArtistProfile && (tab === "work" || tab === "studio");
+  const needsAchievements = isArtistProfile && (tab === "overview" || tab === "cv");
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements] = await Promise.all([
     needsPortfolio
       ? (() => {
           const q = supabase
@@ -257,6 +258,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("position", { ascending: true })
           .then(({ data }) => (data ?? []) as CreativeWork[])
       : Promise.resolve([] as CreativeWork[]),
+    needsAchievements
+      ? supabase
+          .from("profile_achievements")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("year", { ascending: false })
+          .then(({ data }) => (data ?? []) as ProfileAchievement[])
+      : Promise.resolve([] as ProfileAchievement[]),
   ]);
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
@@ -530,6 +539,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   exhibitions={exhibitions}
                   bibliography={bibliography}
                   receivedGrants={profile.received_grants ?? []}
+                  achievements={achievements}
                   portfolioImages={images}
                   studioUpdates={studioUpdates}
                   artistName={displayName}
@@ -572,6 +582,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   exhibitions={exhibitions}
                   bibliography={bibliography}
                   receivedGrants={profile.received_grants ?? []}
+                  achievements={achievements}
                   cvUrl={profile.cv_url}
                   profileId={profile.id}
                   username={profile.username}

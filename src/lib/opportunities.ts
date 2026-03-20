@@ -34,7 +34,15 @@ export async function getOpportunities(
     query = query.contains("sub_categories", [filters.eligibility]);
   }
   if (filters.careerStage) {
-    query = query.contains("sub_categories", [filters.careerStage]);
+    query = query.or(
+      `sub_categories.cs.{"${filters.careerStage}"},career_stage.cs.{"${filters.careerStage}"}`
+    );
+  }
+  if (filters.search) {
+    const s = filters.search.replace(/[%_]/g, "\\$&");
+    query = query.or(
+      `title.ilike.%${s}%,organiser.ilike.%${s}%,city.ilike.%${s}%,caption.ilike.%${s}%,full_description.ilike.%${s}%`
+    );
   }
 
   const { data, error } = await query.limit(limit);

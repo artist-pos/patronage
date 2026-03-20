@@ -46,9 +46,7 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
       const allTags = [
         ...formData.selectedDisciplines,
         ...formData.selectedCareerStages,
-        ...formData.selectedEligibility,
-        ...formData.customEligibility,
-        ...formData.selectedFocus,
+        ...formData.selectedTags,
       ];
 
       const pipelineConfig = formData.routingType === "pipeline" ? {
@@ -70,7 +68,9 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
         deadline: formData.deadline || null,
         funding_range: formData.fundingRange.trim() || null,
         featured_image_url: formData.featuredImageUrl.trim() || null,
-        sub_categories: allTags.length > 0 ? allTags : null,
+        sub_categories: formData.selectedDisciplines.length > 0 ? formData.selectedDisciplines : null,
+        career_stage: formData.selectedCareerStages.length > 0 ? formData.selectedCareerStages : null,
+        tags: formData.selectedTags.length > 0 ? formData.selectedTags : null,
         entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
         grant_type: formData.grantType.trim() || null,
         recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,

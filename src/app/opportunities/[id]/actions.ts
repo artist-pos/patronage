@@ -21,6 +21,8 @@ export async function updateOpportunityAdmin(
     city?: string | null;
     featured_image_url?: string | null;
     sub_categories?: string[] | null;
+    career_stage?: string[] | null;
+    tags?: string[] | null;
     opens_at?: string | null;
     deadline?: string | null;
     funding_range?: string | null;

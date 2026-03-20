@@ -88,7 +88,9 @@ export interface Opportunity {
   url: string | null;
   funding_amount: number | null;
   funding_range: string | null;    // e.g. "$25,000 – $50,000"
-  sub_categories: string[] | null; // e.g. ["Research", "Travel"]
+  sub_categories: string[] | null; // e.g. ["Research", "Travel"] — disciplines
+  tags?: string[] | null;          // freeform searchable tags (eligibility, focus, themes)
+  career_stage?: string[] | null;  // career stage tags e.g. ["Emerging", "Mid-Career"]
   featured_image_url: string | null;
   grant_type: string | null;
   recipients_count: number | null;
@@ -180,6 +182,18 @@ export interface OpportunityApplicationDraft {
   updated_at: string;
 }
 
+export interface ProfileAchievement {
+  id: string;
+  profile_id: string;
+  opportunity_id: string | null;
+  opportunity_title: string;
+  organisation: string;
+  type: string;
+  year: number;
+  verified: boolean;
+  created_at: string;
+}
+
 export interface OpportunityFilters {
   type?: OppTypeEnum;
   country?: CountryEnum;
@@ -187,6 +201,7 @@ export interface OpportunityFilters {
   freeEntry?: boolean;
   eligibility?: string;
   careerStage?: string;
+  search?: string;
 }
 
 export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";

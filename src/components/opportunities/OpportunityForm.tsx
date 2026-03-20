@@ -19,10 +19,9 @@ import type { Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern }
 import {
   FORM_TYPES,
   DISCIPLINES,
+  TAG_SUGGESTIONS,
   COUNTRIES,
   CAREER_STAGE_TAGS,
-  ELIGIBILITY_TAGS,
-  FOCUS_ONLY_TAGS,
   GRANT_SUBTYPES,
   CONTRACT_TYPES,
   ARTIST_DOC_OPTIONS,
@@ -51,10 +50,9 @@ export interface OpportunityFormData {
   // Tags by group
   selectedDisciplines: string[];
   selectedCareerStages: string[];
-  selectedEligibility: string[];
-  customEligibility: string[];
-  customEligibilityInput: string;
-  selectedFocus: string[];
+  selectedTags: string[];       // freeform tags: eligibility, focus, themes
+  tagsInput: string;            // typeahead input buffer (not persisted)
+  disciplinesInput: string;     // typeahead input buffer (not persisted)
   // Type-conditional fields
   entryFee: string;
   grantType: string;
@@ -97,10 +95,9 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     featuredImageUrl: "",
     selectedDisciplines: [],
     selectedCareerStages: [],
-    selectedEligibility: [],
-    customEligibility: [],
-    customEligibilityInput: "",
-    selectedFocus: [],
+    selectedTags: [],
+    tagsInput: "",
+    disciplinesInput: "",
     entryFee: "",
     grantType: "",
     recipientsCount: "",
@@ -110,10 +107,7 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     routingType: "external",
     isFeatured: false,
     showBadges: true,
-    questions: [
-      { id: crypto.randomUUID(), label: "Tell us about your practice", type: "long_text", required: true },
-      { id: crypto.randomUUID(), label: "Why are you applying for this opportunity?", type: "long_text", required: true },
-    ],
+    questions: [],   // smart defaults applied on step 2 entry
     artistDocs: ["cv", "bio"],
     termsPdfUrl: null,
     submitterEmail: "",
@@ -130,15 +124,20 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
   const cats = opp.sub_categories ?? [];
   const disciplineSet = new Set(DISCIPLINES);
   const careerSet = new Set(CAREER_STAGE_TAGS);
-  const eligSet = new Set(ELIGIBILITY_TAGS);
-  const focusSet = new Set(FOCUS_ONLY_TAGS);
 
+  // Disciplines come from sub_categories
   const selectedDisciplines = cats.filter((t) => disciplineSet.has(t));
-  const selectedCareerStages = cats.filter((t) => careerSet.has(t));
-  const selectedEligibility = cats.filter((t) => eligSet.has(t));
-  const selectedFocus = cats.filter((t) => focusSet.has(t));
-  const knownTags = new Set([...selectedDisciplines, ...selectedCareerStages, ...selectedEligibility, ...selectedFocus]);
-  const customEligibility = cats.filter((t) => !knownTags.has(t));
+
+  // Career stages: prefer new column, fall back to sub_categories for old data
+  const selectedCareerStages = (opp.career_stage ?? []).length > 0
+    ? (opp.career_stage ?? [])
+    : cats.filter((t) => careerSet.has(t));
+
+  // Freeform tags: prefer new column, fall back to remaining sub_categories tags (old eligibility/focus)
+  const knownTags = new Set([...selectedDisciplines, ...selectedCareerStages]);
+  const selectedTags = (opp.tags ?? []).length > 0
+    ? (opp.tags ?? [])
+    : cats.filter((t) => !knownTags.has(t));
 
   const pc = opp.pipeline_config as PipelineConfig | null;
 
@@ -157,10 +156,9 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     featuredImageUrl: opp.featured_image_url ?? "",
     selectedDisciplines,
     selectedCareerStages,
-    selectedEligibility,
-    customEligibility,
-    customEligibilityInput: "",
-    selectedFocus,
+    selectedTags,
+    tagsInput: "",
+    disciplinesInput: "",
     entryFee: opp.entry_fee != null ? String(opp.entry_fee) : "",
     grantType: opp.grant_type ?? "",
     recipientsCount: opp.recipients_count != null ? String(opp.recipients_count) : "",
@@ -203,6 +201,374 @@ export function TagButton({ label, active, onClick }: { label: string; active: b
       {label}
     </button>
   );
+}
+
+// ── Typeahead chip input ───────────────────────────────────────────────────────
+
+function TagTypeahead({
+  placeholder,
+  suggestions,
+  selected,
+  onChange,
+}: {
+  placeholder: string;
+  suggestions: string[];
+  selected: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filtered = input.trim().length > 0
+    ? suggestions.filter(
+        (s) => s.toLowerCase().includes(input.toLowerCase()) && !selected.includes(s)
+      )
+    : suggestions.filter((s) => !selected.includes(s)).slice(0, 8);
+
+  const trimmed = input.trim();
+  const exactMatch = suggestions.some((s) => s.toLowerCase() === trimmed.toLowerCase());
+  const showAdd = trimmed.length > 0 && !selected.includes(trimmed) && !exactMatch;
+
+  function addTag(tag: string) {
+    const t = tag.trim();
+    if (t && !selected.includes(t)) onChange([...selected, t]);
+    setInput("");
+    setOpen(false);
+  }
+
+  function removeTag(tag: string) {
+    onChange(selected.filter((t) => t !== tag));
+  }
+
+  return (
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => removeTag(tag)}
+              className="text-xs px-2.5 py-1 border border-black bg-black text-white leading-none flex items-center gap-1.5 hover:bg-stone-800 transition-colors"
+            >
+              {tag} <X className="w-2.5 h-2.5" />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); if (trimmed) addTag(trimmed); }
+            if (e.key === "Escape") setOpen(false);
+          }}
+          placeholder={placeholder}
+          className={FIELD}
+        />
+        {open && (filtered.length > 0 || showAdd) && (
+          <div className="absolute z-20 left-0 right-0 top-full mt-px border border-black bg-background shadow-md max-h-48 overflow-y-auto">
+            {filtered.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onMouseDown={() => addTag(s)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+            {showAdd && (
+              <button
+                type="button"
+                onMouseDown={() => addTag(trimmed)}
+                className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors border-t border-black/10"
+              >
+                Add &ldquo;{trimmed}&rdquo;
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── AI opportunity parser ─────────────────────────────────────────────────────
+
+interface ParsedOpportunity {
+  title?: string;
+  organisation?: string;
+  caption?: string;
+  type?: string;
+  country?: string;
+  opens_at?: string;
+  deadline?: string;
+  city?: string;
+  funding_range?: string;
+  entry_fee?: number | null;
+  disciplines?: string[];
+  career_stage?: string[];
+  tags?: string[];
+  full_description?: string;
+  email?: string;
+  application_url?: string;
+  type_specific?: {
+    duration?: string;
+    stipend?: string;
+    accommodation?: boolean;
+    prize_value?: string;
+    budget?: string;
+    artist_fee?: string;
+    salary?: string;
+    contract_type?: string;
+  };
+}
+
+function mapParsedToFormData(parsed: ParsedOpportunity): Partial<OpportunityFormData> {
+  const updates: Partial<OpportunityFormData> = {};
+  if (parsed.title) updates.title = parsed.title;
+  if (parsed.organisation) updates.organiser = parsed.organisation;
+  if (parsed.caption) updates.caption = parsed.caption.slice(0, 160);
+  if (parsed.full_description) updates.fullDescription = parsed.full_description;
+  if (parsed.type && FORM_TYPES.some((t) => t.value === parsed.type)) updates.type = parsed.type;
+  if (parsed.country && ["NZ", "AUS", "Global"].includes(parsed.country)) updates.country = parsed.country;
+  if (parsed.opens_at) updates.opensAt = parsed.opens_at;
+  if (parsed.deadline) updates.deadline = parsed.deadline;
+  if (parsed.city) updates.city = parsed.city;
+  if (parsed.funding_range) updates.fundingRange = parsed.funding_range;
+  if (parsed.entry_fee != null) updates.entryFee = String(parsed.entry_fee);
+  if (parsed.disciplines?.length) {
+    updates.selectedDisciplines = parsed.disciplines.filter((d) => DISCIPLINES.includes(d));
+  }
+  if (parsed.career_stage?.length) updates.selectedCareerStages = parsed.career_stage;
+  if (parsed.tags?.length) updates.selectedTags = parsed.tags;
+  if (parsed.email) updates.submitterEmail = parsed.email;
+  if (parsed.application_url) updates.url = parsed.application_url;
+  const ts = parsed.type_specific;
+  if (ts) {
+    if (ts.duration) updates.grantType = ts.duration;
+    if (ts.accommodation != null) updates.travelSupport = ts.accommodation;
+  }
+  return updates;
+}
+
+function OpportunityParser({
+  onParsed,
+}: {
+  onParsed: (updates: Partial<OpportunityFormData>, source: string) => void;
+}) {
+  const [mode, setMode] = useState<"url" | "text" | "file">("url");
+  const [urlInput, setUrlInput] = useState("");
+  const [textInput, setTextInput] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileDragOver, setFileDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function parse(inputType: "url" | "text" | "file", payload: string | File) {
+    setParsing(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("type", inputType);
+      if (inputType === "url") fd.append("url", payload as string);
+      else if (inputType === "text") fd.append("text", payload as string);
+      else fd.append("file", payload as File);
+
+      const res = await fetch("/api/parse-opportunity", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Parse failed");
+      const updates = mapParsedToFormData(data as ParsedOpportunity);
+      const sourceLabel = inputType === "url" ? "URL" : inputType === "text" ? "text" : "PDF";
+      onParsed(updates, sourceLabel);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not parse. Try pasting the text directly.");
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  return (
+    <div className="border border-black/30 bg-blue-50/20 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Autofill from URL, text, or PDF
+        </p>
+        {parsing && (
+          <span className="text-xs text-blue-600 font-medium animate-pulse">Parsing…</span>
+        )}
+      </div>
+
+      {/* Mode tabs */}
+      <div className="flex gap-1.5">
+        {(["url", "text", "file"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={`text-xs px-3 py-1 border leading-none transition-colors ${
+              mode === m ? "bg-black text-white border-black" : "border-black/40 hover:border-black"
+            }`}
+          >
+            {m === "url" ? "URL" : m === "text" ? "Text" : "PDF"}
+          </button>
+        ))}
+      </div>
+
+      {mode === "url" && (
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); if (urlInput.trim()) parse("url", urlInput.trim()); }
+            }}
+            placeholder="Paste opportunity URL…"
+            className={`${FIELD} flex-1`}
+            disabled={parsing}
+          />
+          <button
+            type="button"
+            onClick={() => urlInput.trim() && parse("url", urlInput.trim())}
+            disabled={parsing || !urlInput.trim()}
+            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
+          >
+            Autofill →
+          </button>
+        </div>
+      )}
+
+      {mode === "text" && (
+        <div className="space-y-2">
+          <textarea
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            rows={4}
+            placeholder="Paste the opportunity description, eligibility criteria, funding details…"
+            className={`${FIELD} resize-none`}
+            disabled={parsing}
+          />
+          <button
+            type="button"
+            onClick={() => textInput.trim() && parse("text", textInput.trim())}
+            disabled={parsing || !textInput.trim()}
+            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
+          >
+            Autofill →
+          </button>
+        </div>
+      )}
+
+      {mode === "file" && (
+        <div>
+          <div
+            onClick={() => !parsing && fileRef.current?.click()}
+            onDrop={(e) => {
+              e.preventDefault();
+              setFileDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f?.type === "application/pdf") parse("file", f);
+            }}
+            onDragOver={(e) => { e.preventDefault(); setFileDragOver(true); }}
+            onDragLeave={() => setFileDragOver(false)}
+            className={`border border-dashed border-black/40 p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${
+              fileDragOver ? "bg-muted" : "hover:bg-muted/40"
+            } ${parsing ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {parsing ? "Parsing PDF…" : "Drop a PDF here, or click to browse"}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) parse("file", f); }}
+          />
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// ── Smart pipeline defaults ────────────────────────────────────────────────────
+
+export function getDefaultPipelineSetup(type: string): {
+  questions: PipelineQuestion[];
+  artistDocs: PipelineConfig["artist_documents"];
+} {
+  const q = (label: string, qType: PipelineQuestion["type"], required: boolean): PipelineQuestion => ({
+    id: crypto.randomUUID(), label, type: qType, required,
+  });
+
+  switch (type) {
+    case "Grant":
+      return {
+        questions: [
+          q("Describe the project you're seeking funding for", "long_text", true),
+          q("How will the funding be used?", "long_text", true),
+          q("Upload a project budget or supporting documents", "file_upload", false),
+        ],
+        artistDocs: ["cv", "bio", "portfolio"],
+      };
+    case "Residency":
+      return {
+        questions: [
+          q("What work do you plan to develop during the residency?", "long_text", true),
+          q("Why is this residency important to your practice right now?", "long_text", true),
+        ],
+        artistDocs: ["cv", "bio", "portfolio"],
+      };
+    case "Commission":
+    case "Public Art":
+      return {
+        questions: [
+          q("Describe your proposed response to this brief", "long_text", true),
+          q("Relevant experience for this type of commission", "long_text", true),
+          q("Upload supporting images of past work", "file_upload", true),
+        ],
+        artistDocs: ["cv", "bio", "portfolio"],
+      };
+    case "Prize":
+      return {
+        questions: [
+          q("Artist statement for submitted work(s)", "long_text", true),
+          q("Upload work image(s)", "file_upload", true),
+        ],
+        artistDocs: ["cv", "bio"],
+      };
+    case "Open Call":
+      return {
+        questions: [
+          q("Describe the work or proposal you're submitting", "long_text", true),
+          q("Upload work images", "file_upload", true),
+        ],
+        artistDocs: ["cv", "bio", "portfolio"],
+      };
+    case "Job / Employment":
+      return {
+        questions: [
+          q("Why are you interested in this role?", "long_text", true),
+          q("Relevant experience and skills", "long_text", true),
+        ],
+        artistDocs: ["cv", "bio"],
+      };
+    default:
+      return {
+        questions: [
+          q("Tell us about your practice", "long_text", true),
+          q("Why are you applying for this opportunity?", "long_text", true),
+        ],
+        artistDocs: ["cv", "bio"],
+      };
+  }
 }
 
 function SortableQuestionCard({
@@ -496,6 +862,7 @@ export function OpportunityForm({
   const [dragOver, setDragOver] = useState(false);
   const [termsUploading, setTermsUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [autofillSource, setAutofillSource] = useState<string | null>(null);
 
   // ── Auto-save ──────────────────────────────────────────────────────────────
   const hasMountedRef = useRef(false);
@@ -527,7 +894,7 @@ export function OpportunityForm({
 
   const set = (updates: Partial<OpportunityFormData>) => onChange(updates);
 
-  function toggleTag(tag: string, field: "selectedDisciplines" | "selectedCareerStages" | "selectedEligibility" | "selectedFocus") {
+  function toggleTag(tag: string, field: "selectedDisciplines" | "selectedCareerStages") {
     const current = value[field] as string[];
     set({ [field]: current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag] });
   }
@@ -539,13 +906,6 @@ export function OpportunityForm({
         ? prev.filter((d) => d !== val)
         : [...prev, val]) as PipelineConfig["artist_documents"],
     });
-  }
-
-  function addCustomEligibility() {
-    const val = value.customEligibilityInput.trim();
-    if (val && !value.customEligibility.includes(val) && !value.selectedEligibility.includes(val)) {
-      set({ customEligibility: [...value.customEligibility, val], customEligibilityInput: "" });
-    }
   }
 
   function updateQuestion(updated: PipelineQuestion) {
@@ -602,6 +962,33 @@ export function OpportunityForm({
             <p className="text-xs text-muted-foreground">
               Draft saved at {draftSavedAt.toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit" })}
             </p>
+          )}
+        </div>
+      )}
+
+      {/* ── AI Parser (create mode only) ─────────────────────────────── */}
+      {mode === "create" && (
+        <div className="border-t-2 border-black pt-6 mt-8">
+          {autofillSource ? (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm">
+              <span className="text-blue-800">
+                Autofilled from {autofillSource}. Review and edit below.
+              </span>
+              <button
+                type="button"
+                onClick={() => setAutofillSource(null)}
+                className="text-xs text-blue-600 underline underline-offset-2 hover:text-blue-800 ml-4 shrink-0"
+              >
+                Try another
+              </button>
+            </div>
+          ) : (
+            <OpportunityParser
+              onParsed={(updates, source) => {
+                set(updates);
+                setAutofillSource(source);
+              }}
+            />
           )}
         </div>
       )}
@@ -946,17 +1333,18 @@ export function OpportunityForm({
         </Field>
       </Section>
 
-      {/* ── Section 5: Eligibility & Tags ─────────────────────────────── */}
-      <Section label="Eligibility & Tags">
+      {/* ── Section 5: Tags ───────────────────────────────────────────── */}
+      <Section label="Tags">
         <Field label="Disciplines">
-          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">Select all that apply — helps artists find opportunities relevant to their practice.</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {DISCIPLINES.map((tag) => (
-              <TagButton key={tag} label={tag}
-                active={value.selectedDisciplines.includes(tag)}
-                onClick={() => toggleTag(tag, "selectedDisciplines")} />
-            ))}
-          </div>
+          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">
+            Helps artists find opportunities relevant to their practice. Type to search or add custom.
+          </p>
+          <TagTypeahead
+            placeholder="e.g. Photography, Sculpture, Sound…"
+            suggestions={DISCIPLINES}
+            selected={value.selectedDisciplines}
+            onChange={(tags) => set({ selectedDisciplines: tags })}
+          />
         </Field>
 
         <Field label="Career Stage">
@@ -970,49 +1358,16 @@ export function OpportunityForm({
           </div>
         </Field>
 
-        {showField(value.type, "eligibility") && (
-          <Field label="Eligibility">
-            <p className="text-xs text-muted-foreground -mt-0.5 mb-2">Who can apply — nationality, residency, or identity criteria.</p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {ELIGIBILITY_TAGS.map((tag) => (
-                <TagButton key={tag} label={tag}
-                  active={value.selectedEligibility.includes(tag)}
-                  onClick={() => toggleTag(tag, "selectedEligibility")} />
-              ))}
-              {value.customEligibility.map((tag) => (
-                <button key={tag} type="button"
-                  onClick={() => set({ customEligibility: value.customEligibility.filter((t) => t !== tag) })}
-                  className="text-xs px-2.5 py-1 border border-black bg-black text-white leading-none flex items-center gap-1.5">
-                  {tag} <X className="w-2.5 h-2.5" />
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <input
-                type="text"
-                value={value.customEligibilityInput}
-                onChange={(e) => set({ customEligibilityInput: e.target.value })}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomEligibility(); } }}
-                placeholder="Add custom tag, e.g. Asian artists, South Island based…"
-                className={`${FIELD} flex-1`}
-              />
-              <button type="button" onClick={addCustomEligibility}
-                className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors whitespace-nowrap">
-                Add tag
-              </button>
-            </div>
-          </Field>
-        )}
-
-        <Field label="Focus">
-          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">What the opportunity is about — themes, formats, or contexts.</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {FOCUS_ONLY_TAGS.map((tag) => (
-              <TagButton key={tag} label={tag}
-                active={value.selectedFocus.includes(tag)}
-                onClick={() => toggleTag(tag, "selectedFocus")} />
-            ))}
-          </div>
+        <Field label="Tags">
+          <p className="text-xs text-muted-foreground -mt-0.5 mb-2">
+            Identity, eligibility, and thematic focus. E.g. Māori, LGBTQ+, Environmental, Site-specific.
+          </p>
+          <TagTypeahead
+            placeholder="e.g. Māori, Pasifika, Environmental, Collaborative…"
+            suggestions={TAG_SUGGESTIONS}
+            selected={value.selectedTags}
+            onChange={(tags) => set({ selectedTags: tags })}
+          />
         </Field>
       </Section>
 
@@ -1211,6 +1566,11 @@ export function OpportunityForm({
 
   const step2 = (
     <div className="space-y-0">
+      {/* Info banner */}
+      <div className="bg-blue-50 border border-blue-200 px-4 py-3 mt-2 mb-2 text-sm text-blue-800">
+        Suggested questions for a <strong>{value.type}</strong>. Artists apply with their Patronage profile — CV, bio, and portfolio already attached.
+      </div>
+
       <Section label="Application Questions">
         <p className="text-xs text-muted-foreground -mt-3 mb-5">
           Artists will answer these when they apply through Patronage. Drag to reorder.

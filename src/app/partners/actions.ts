@@ -30,6 +30,16 @@ export async function submitOpportunityAction(
     ? subCatsRaw.split(",").map((s) => s.trim()).filter(Boolean)
     : null;
 
+  const careerStageRaw = (formData.get("career_stage") as string)?.trim();
+  const careerStage = careerStageRaw
+    ? careerStageRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : null;
+
+  const tagsRaw = (formData.get("tags") as string)?.trim();
+  const tags = tagsRaw
+    ? tagsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : null;
+
   const captionRaw = (formData.get("caption") as string)?.trim();
 
   const entryFeeRaw = formData.get("entry_fee") as string;
@@ -63,6 +73,8 @@ export async function submitOpportunityAction(
     funding_range: (formData.get("funding_range") as string)?.trim() || null,
     entry_fee: entryFeeRaw !== "" && entryFeeRaw != null ? parseFloat(entryFeeRaw) : null,
     sub_categories: subCategories,
+    career_stage: careerStage,
+    tags,
     featured_image_url: (formData.get("featured_image_url") as string)?.trim() || null,
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,

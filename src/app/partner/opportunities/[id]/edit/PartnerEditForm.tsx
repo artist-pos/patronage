@@ -43,9 +43,7 @@ export function PartnerEditForm({ opp }: Props) {
     const allTags = [
       ...d.selectedDisciplines,
       ...d.selectedCareerStages,
-      ...d.selectedEligibility,
-      ...d.customEligibility,
-      ...d.selectedFocus,
+      ...d.selectedTags,
     ];
 
     const pipelineConfig =
@@ -70,7 +68,9 @@ export function PartnerEditForm({ opp }: Props) {
       deadline: d.deadline || null,
       funding_range: d.fundingRange.trim() || null,
       featured_image_url: d.featuredImageUrl.trim() || null,
-      sub_categories: allTags.length > 0 ? allTags : null,
+      sub_categories: d.selectedDisciplines.length > 0 ? d.selectedDisciplines : null,
+      career_stage: d.selectedCareerStages.length > 0 ? d.selectedCareerStages : null,
+      tags: d.selectedTags.length > 0 ? d.selectedTags : null,
       entry_fee: d.entryFee !== "" ? parseFloat(d.entryFee) : null,
       grant_type: d.grantType.trim() || null,
       recipients_count: d.recipientsCount ? parseInt(d.recipientsCount) : null,

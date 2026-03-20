@@ -71,7 +71,9 @@ function splitByRelevance(
   const lessRelevant: Opportunity[] = [];
 
   for (const opp of opportunities) {
-    const tags = opp.sub_categories ?? [];
+    const subCats = opp.sub_categories ?? [];
+    // Merge sub_categories (old format) and career_stage column (new format) for matching
+    const allOppTags = [...subCats, ...(opp.career_stage ?? [])];
 
     // Country: null/Global = open to all; otherwise must match artist's country
     const countryRelevant =
@@ -80,13 +82,13 @@ function splitByRelevance(
       opp.country === artistCountry;
 
     // Discipline: if no medium tags present → open to all disciplines
-    const mediumTags = tags.filter(t => ALL_MEDIUM_TAGS.has(t));
+    const mediumTags = subCats.filter(t => ALL_MEDIUM_TAGS.has(t));
     const disciplineRelevant =
       mediumTags.length === 0 ||
       (expandedMediums.size > 0 && mediumTags.some(t => expandedMediums.has(t)));
 
-    // Career stage: if no stage tags present → open to all; "Open" profile matches all
-    const stageTags = tags.filter(t => ALL_CAREER_STAGE_TAGS.has(t));
+    // Career stage: check both sub_categories (old) and career_stage column (new)
+    const stageTags = allOppTags.filter(t => ALL_CAREER_STAGE_TAGS.has(t));
     const careerRelevant =
       stageTags.length === 0 ||
       !artistCareerStage ||
@@ -104,7 +106,7 @@ function splitByRelevance(
 }
 
 interface PageProps {
-  searchParams: Promise<{ type?: string; country?: string; view?: string; discipline?: string; freeEntry?: string; eligibility?: string; careerStage?: string }>;
+  searchParams: Promise<{ type?: string; country?: string; view?: string; discipline?: string; freeEntry?: string; eligibility?: string; careerStage?: string; search?: string }>;
 }
 
 export default async function OpportunitiesPage({ searchParams }: PageProps) {
@@ -115,6 +117,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const freeEntry = params.freeEntry === "1";
   const eligibility = params.eligibility;
   const careerStage = params.careerStage;
+  const search = params.search?.trim() || undefined;
   const view = params.view === "list" ? "list" : "gallery";
 
   // Fetch user profile for relevance scoring (artists only)
@@ -124,7 +127,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   let artistCountry: string | null = null;
   let artistDisciplines: DisciplineEnum[] = [];
   let artistCareerStage: CareerStageEnum | null = null;
-  const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry);
+  const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
   if (user && !hasManualFilters) {
     const { data: profile } = await supabase
@@ -143,7 +146,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const canScore = !hasManualFilters && (artistDisciplines.length > 0 || !!artistCountry);
 
   const [opportunities, stats] = await Promise.all([
-    getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage }),
+    getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search }),
     getMarketplaceStats(),
   ]);
 
@@ -158,6 +161,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     discipline,
     eligibility,
     careerStage,
+    search ? `"${search}"` : undefined,
     freeEntry ? "Free Entry" : undefined,
   ].filter(Boolean);
 

@@ -69,6 +69,9 @@ export const DISCIPLINES = [
   "Printmaking",
   "Drawing",
   "Textile",
+  "Jewellery",
+  "Glass",
+  "Weaving / Fibre",
   "Film & Video",
   "Performance",
   "Installation",
@@ -82,6 +85,32 @@ export const DISCIPLINES = [
   "Multidisciplinary",
   "Arts Admin",
   "Curatorial",
+  "Public Art",
+];
+
+/** Suggested freeform tags for identity, themes, and eligibility criteria */
+export const TAG_SUGGESTIONS = [
+  "Māori",
+  "Pasifika",
+  "Indigenous",
+  "First Nations",
+  "Women",
+  "LGBTQ+",
+  "Disabled artists",
+  "CALD",
+  "Youth",
+  "Student",
+  "International",
+  "Site-specific",
+  "Socially engaged",
+  "Environmental",
+  "Research",
+  "Cross-disciplinary",
+  "Rural / Regional",
+  "Collaborative",
+  "Community",
+  "Experimental",
+  "Travel",
   "Public Art",
 ];
 

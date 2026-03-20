@@ -5,6 +5,52 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { track } from "@vercel/analytics";
 import { trackEvent } from "@/actions/trackEvent";
 
+// ── Structured description renderer ───────────────────────────────────────────
+
+/** Lines matching these patterns are rendered as bold section headings */
+const HEADING_RE = /^(#{1,3}\s+.+|.{3,60}:\s*$|[A-Z][A-Za-z /&'-]{2,50}:)$/;
+
+function StructuredDescription({ text }: { text: string }) {
+  if (!text?.trim()) return null;
+
+  // Split on double newlines (paragraph breaks) first, then single newlines within
+  const paragraphs = text.split(/\n{2,}/);
+
+  return (
+    <div className="space-y-3">
+      {paragraphs.map((para, i) => {
+        const lines = para.split("\n").filter((l) => l.trim());
+        if (lines.length === 0) return null;
+
+        const firstLine = lines[0].trim();
+        const isHeading = HEADING_RE.test(firstLine);
+
+        if (isHeading) {
+          // Clean up markdown-style hashes and trailing colons for display
+          const headingText = firstLine.replace(/^#{1,3}\s+/, "").replace(/:$/, "");
+          const rest = lines.slice(1);
+          return (
+            <div key={i} className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{headingText}</p>
+              {rest.length > 0 && (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {rest.join(" ")}
+                </p>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <p key={i} className="text-xs text-muted-foreground leading-relaxed">
+            {lines.join(" ")}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 interface Props {
   fullDescription: string | null;
   opportunityId?: string;
@@ -52,10 +98,8 @@ export function DescriptionAccordion({ fullDescription, opportunityId, title, or
         }}
       >
         <div className="overflow-hidden">
-          <div className="space-y-2 pt-0.5 pb-1">
-            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
-              {fullDescription}
-            </p>
+          <div className="space-y-3 pt-0.5 pb-1">
+            <StructuredDescription text={fullDescription} />
             {/* Read less — at the bottom of the expanded box */}
             <button
               type="button"

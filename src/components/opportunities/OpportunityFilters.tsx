@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES, ELIGIBILITY_TAGS, CAREER_STAGE_TAGS } from "@/lib/opportunity-constants";
+import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES, CAREER_STAGE_TAGS } from "@/lib/opportunity-constants";
 
 function GridIcon() {
   return (
@@ -40,10 +40,27 @@ export function OpportunityFilters() {
   const currentType = searchParams.get("type");
   const currentCountry = searchParams.get("country");
   const currentDiscipline = searchParams.get("discipline");
-  const currentEligibility = searchParams.get("eligibility");
   const currentCareerStage = searchParams.get("careerStage");
   const currentFreeEntry = searchParams.get("freeEntry") === "1";
   const currentView = searchParams.get("view") ?? "gallery";
+  const currentSearch = searchParams.get("search") ?? "";
+
+  // Debounced search input — don't push a new URL on every keystroke
+  const [searchInput, setSearchInput] = useState(currentSearch);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync input if URL param changes externally
+  useEffect(() => {
+    setSearchInput(currentSearch);
+  }, [currentSearch]);
+
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      updateParam("search", value.trim() || null);
+    }, 400);
+  }
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -126,16 +143,6 @@ export function OpportunityFilters() {
           </SelectContent>
         </Select>
 
-        <Select value={currentEligibility ?? "all"} onValueChange={(v) => updateParam("eligibility", v)}>
-          <SelectTrigger className="w-44 text-sm">
-            <SelectValue placeholder="All eligibility" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All eligibility</SelectItem>
-            {ELIGIBILITY_TAGS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
         <Select value={currentCareerStage ?? "all"} onValueChange={(v) => updateParam("careerStage", v)}>
           <SelectTrigger className="w-44 text-sm">
             <SelectValue placeholder="All career stages" />
@@ -156,6 +163,14 @@ export function OpportunityFilters() {
         >
           Free Entry
         </button>
+
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Search…"
+          className="border border-border text-sm px-3 py-1.5 bg-background placeholder:text-muted-foreground focus:outline-none focus:border-black w-40"
+        />
       </div>
     </div>
   );
