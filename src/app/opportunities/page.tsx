@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { getOpportunities, getMarketplaceStats } from "@/lib/opportunities";
-import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
@@ -92,14 +91,8 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         <p className="text-sm text-muted-foreground py-12 text-center">
           No opportunities match those filters. New listings are added regularly.
         </p>
-      ) : view === "list" ? (
-        <div className="border-t border-black">
-          {opportunities.map((opp, i) => (
-            <OpportunityCard key={opp.id} opp={opp} view="list" priority={i < 6} />
-          ))}
-        </div>
       ) : (
-        <MasonryGrid opportunities={opportunities} priorityOffset={0} isAuthenticated={!!user} />
+        <MasonryGrid opportunities={opportunities} view={view} isAuthenticated={!!user} />
       )}
     </div>
   );
