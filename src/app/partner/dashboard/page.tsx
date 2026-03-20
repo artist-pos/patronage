@@ -109,7 +109,7 @@ export default async function PartnerDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allListings.map((listing: { id: string; title: string; type: string; status: string; deadline: string | null }) => {
+                    {allListings.map((listing: { id: string; title: string; type: string; status: string; is_active: boolean; routing_type: string; deadline: string | null }) => {
                       const statusColour =
                         listing.status === "published"
                           ? "text-green-700"
@@ -118,6 +118,7 @@ export default async function PartnerDashboardPage() {
                           : "text-muted-foreground";
                       const statusLabel =
                         listing.status === "draft_unclaimed" ? "draft" : listing.status;
+                      const isPipeline = listing.routing_type === "pipeline" && listing.status === "published";
                       return (
                         <tr key={listing.id} className="border-b border-black/10 last:border-0">
                           <td className="py-2.5 px-3 font-medium">{listing.title}</td>
@@ -129,12 +130,22 @@ export default async function PartnerDashboardPage() {
                           </td>
                           <td className={`py-2.5 px-3 ${statusColour}`}>{statusLabel}</td>
                           <td className="py-2.5 px-3 text-right">
-                            <Link
-                              href={`/partner/opportunities/${listing.id}/edit`}
-                              className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              Edit →
-                            </Link>
+                            <div className="flex items-center justify-end gap-3">
+                              {isPipeline && (
+                                <Link
+                                  href={`/partner/dashboard/${listing.id}`}
+                                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  Applications →
+                                </Link>
+                              )}
+                              <Link
+                                href={`/partner/opportunities/${listing.id}/edit`}
+                                className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Edit →
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       );

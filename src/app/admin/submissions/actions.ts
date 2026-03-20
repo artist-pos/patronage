@@ -45,6 +45,7 @@ export async function approveSubmission(submissionId: string) {
     travel_support_details: sub.travel_support_details ?? null,
     routing_type: sub.routing_type ?? "external",
     custom_fields: sub.custom_fields ?? [],
+    pipeline_config: sub.pipeline_config ?? null,
     show_badges_in_submission: sub.show_badges_in_submission ?? true,
     profile_id: sub.profile_id ?? null,
     is_active: true,
