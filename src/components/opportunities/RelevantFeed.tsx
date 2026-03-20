@@ -61,9 +61,6 @@ export function RelevantFeed({ matched, lessRelevant, view, isAuthenticated = fa
 
         {showAll && (
           <div className="border-t border-dashed border-border pt-6">
-            <p className="text-xs text-muted-foreground mb-4 uppercase tracking-widest">
-              Less relevant — outside your discipline or country
-            </p>
             {view === "list"
               ? renderList(lessRelevant, matched.length)
               : renderGallery(lessRelevant)}
