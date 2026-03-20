@@ -17,6 +17,8 @@ interface Artist {
   bio: string | null;
   medium: string[] | null;
   career_stage: string | null;
+  country: string | null;
+  cv_url: string | null;
   exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null;
   received_grants: string[] | null;
   is_patronage_supported: boolean;
@@ -156,11 +158,11 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
                 </div>
               )}
               <div className="space-y-1 min-w-0">
-                <Link href={`/${artist?.username}`} target="_blank" className="font-semibold hover:underline">
-                  {displayName}
-                </Link>
+                <p className="font-semibold">{displayName}</p>
                 {artist?.career_stage && (
-                  <p className="text-xs text-muted-foreground">{artist.career_stage}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {[artist.career_stage, artist.country].filter(Boolean).join(" · ")}
+                  </p>
                 )}
                 {(artist?.medium ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-1">
@@ -172,6 +174,25 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
                 {exhibitionCount > 0 && (
                   <p className="text-xs text-muted-foreground">{exhibitionCount} exhibition{exhibitionCount !== 1 ? "s" : ""}</p>
                 )}
+                <div className="flex flex-wrap gap-3 pt-0.5">
+                  <Link
+                    href={`/${artist?.username}`}
+                    target="_blank"
+                    className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    View profile →
+                  </Link>
+                  {artist?.cv_url && (
+                    <a
+                      href={artist.cv_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Download CV →
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 
