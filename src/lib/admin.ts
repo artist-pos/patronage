@@ -430,6 +430,189 @@ export async function getGrowthMetrics(): Promise<GrowthMetrics> {
   };
 }
 
+// ── Impact Metrics ───────────────────────────────────────────────────────────
+
+export interface ImpactMetrics {
+  // Funding flow
+  totalFundingFacilitated: number;
+  fundingByType: Record<string, number>;
+  fundingByRegion: Record<string, number>;
+  avgFundingPerArtist: number;
+  distinctArtistsFunded: number;
+
+  // Career trajectory
+  artistsFundedThroughPatronage: number;
+  repeatSuccessCount: number;
+  avgDaysToFirstOpportunity: number | null;
+
+  // Economic multiplier
+  artsOrgsCount: number;
+  activeCountries: string[];
+  activeCities: string[];
+  crossBorderApps: Array<{ artistCountry: string; oppCountry: string; count: number }>;
+
+  // Platform totals for annual report
+  totalOpportunitiesTracked: number;
+  totalApplicationsProcessed: number;
+  artistDemographics: {
+    byCareerStage: Record<string, number>;
+    byCountry: Record<string, number>;
+  };
+}
+
+export async function getImpactMetrics(): Promise<ImpactMetrics> {
+  const admin = createAdminClient();
+
+  // Fetch all data in parallel
+  const [
+    { data: approvedApps },
+    { data: allOpps },
+    { data: artistProfiles },
+    { data: achievements },
+    { count: totalApps },
+  ] = await Promise.all([
+    // Applications that reached approval
+    admin
+      .from("opportunity_applications")
+      .select("opportunity_id, artist_id, status")
+      .in("status", ["selected", "approved_pending_assets", "production_ready"]),
+    // All published opportunities
+    admin
+      .from("opportunities")
+      .select("id, type, country, city, funding_amount, profile_id, is_active, status"),
+    // Artist profiles for demographics + cross-border
+    admin
+      .from("profiles")
+      .select("id, country, career_stage, created_at")
+      .in("role", ["artist", "owner"]),
+    // Verified achievements for career trajectory
+    admin
+      .from("profile_achievements")
+      .select("profile_id, created_at")
+      .eq("verified", true),
+    // Total applications processed
+    admin
+      .from("opportunity_applications")
+      .select("*", { count: "exact", head: true }),
+  ]);
+
+  // Build lookup maps
+  const oppMap = new Map<string, { type: string; country: string; city: string | null; funding_amount: number | null; profile_id: string | null }>();
+  for (const o of allOpps ?? []) {
+    oppMap.set(o.id, {
+      type: o.type ?? "",
+      country: o.country ?? "",
+      city: o.city ?? null,
+      funding_amount: o.funding_amount ?? null,
+      profile_id: o.profile_id ?? null,
+    });
+  }
+
+  const profileMap = new Map<string, { country: string | null; career_stage: string | null; created_at: string }>();
+  for (const p of artistProfiles ?? []) {
+    profileMap.set(p.id, { country: p.country ?? null, career_stage: p.career_stage ?? null, created_at: p.created_at });
+  }
+
+  // ── Funding flow ──────────────────────────────────────────────────────────
+  const fundedOppIds = new Set<string>();
+  const fundedArtistIds = new Set<string>();
+  for (const app of approvedApps ?? []) {
+    fundedOppIds.add(app.opportunity_id);
+    fundedArtistIds.add(app.artist_id);
+  }
+
+  let totalFundingFacilitated = 0;
+  const fundingByType: Record<string, number> = {};
+  const fundingByRegion: Record<string, number> = {};
+  for (const oppId of fundedOppIds) {
+    const opp = oppMap.get(oppId);
+    if (!opp?.funding_amount) continue;
+    totalFundingFacilitated += opp.funding_amount;
+    if (opp.type) fundingByType[opp.type] = (fundingByType[opp.type] ?? 0) + opp.funding_amount;
+    if (opp.country) fundingByRegion[opp.country] = (fundingByRegion[opp.country] ?? 0) + opp.funding_amount;
+  }
+
+  const distinctArtistsFunded = fundedArtistIds.size;
+  const avgFundingPerArtist = distinctArtistsFunded === 0 ? 0 : Math.round(totalFundingFacilitated / distinctArtistsFunded);
+
+  // ── Career trajectory ─────────────────────────────────────────────────────
+  const achievementsByProfile = new Map<string, string[]>(); // profile_id → [created_at, ...]
+  for (const a of achievements ?? []) {
+    const list = achievementsByProfile.get(a.profile_id) ?? [];
+    list.push(a.created_at);
+    achievementsByProfile.set(a.profile_id, list);
+  }
+  const artistsFundedThroughPatronage = achievementsByProfile.size;
+  const repeatSuccessCount = [...achievementsByProfile.values()].filter((v) => v.length >= 2).length;
+
+  // Average days from profile creation to first pipeline achievement
+  let totalDays = 0;
+  let daysCount = 0;
+  for (const [profileId, dates] of achievementsByProfile) {
+    const profile = profileMap.get(profileId);
+    if (!profile) continue;
+    const earliest = dates.reduce((a, b) => (a < b ? a : b));
+    const days = Math.floor(
+      (new Date(earliest).getTime() - new Date(profile.created_at).getTime()) / 864e5
+    );
+    if (days >= 0) { totalDays += days; daysCount++; }
+  }
+  const avgDaysToFirstOpportunity = daysCount === 0 ? null : Math.round(totalDays / daysCount);
+
+  // ── Economic multiplier ───────────────────────────────────────────────────
+  const activeOpps = (allOpps ?? []).filter((o) => o.status === "published" && o.is_active);
+  const artsOrgProfileIds = new Set<string>();
+  const activeCountriesSet = new Set<string>();
+  const activeCitiesSet = new Set<string>();
+  for (const o of activeOpps) {
+    if (o.profile_id) artsOrgProfileIds.add(o.profile_id);
+    if (o.country) activeCountriesSet.add(o.country);
+    if (o.city) activeCitiesSet.add(o.city);
+  }
+
+  // Cross-border applications
+  const crossBorderMap = new Map<string, number>();
+  for (const app of approvedApps ?? []) {
+    const opp = oppMap.get(app.opportunity_id);
+    const profile = profileMap.get(app.artist_id);
+    if (!opp?.country || !profile?.country || opp.country === profile.country) continue;
+    const key = `${profile.country}→${opp.country}`;
+    crossBorderMap.set(key, (crossBorderMap.get(key) ?? 0) + 1);
+  }
+  const crossBorderApps = [...crossBorderMap.entries()]
+    .map(([key, count]) => {
+      const [artistCountry, oppCountry] = key.split("→");
+      return { artistCountry, oppCountry, count };
+    })
+    .sort((a, b) => b.count - a.count);
+
+  // ── Artist demographics ───────────────────────────────────────────────────
+  const byCareerStage: Record<string, number> = {};
+  const byCountry: Record<string, number> = {};
+  for (const p of artistProfiles ?? []) {
+    if (p.career_stage) byCareerStage[p.career_stage] = (byCareerStage[p.career_stage] ?? 0) + 1;
+    if (p.country) byCountry[p.country] = (byCountry[p.country] ?? 0) + 1;
+  }
+
+  return {
+    totalFundingFacilitated,
+    fundingByType,
+    fundingByRegion,
+    avgFundingPerArtist,
+    distinctArtistsFunded,
+    artistsFundedThroughPatronage,
+    repeatSuccessCount,
+    avgDaysToFirstOpportunity,
+    artsOrgsCount: artsOrgProfileIds.size,
+    activeCountries: [...activeCountriesSet].sort(),
+    activeCities: [...activeCitiesSet].sort(),
+    crossBorderApps,
+    totalOpportunitiesTracked: (allOpps ?? []).length,
+    totalApplicationsProcessed: totalApps ?? 0,
+    artistDemographics: { byCareerStage, byCountry },
+  };
+}
+
 export async function getAnalytics(): Promise<Analytics> {
   const supabase = await createClient();
 

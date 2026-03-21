@@ -39,6 +39,7 @@ const TOOLS = [
   { href: "/admin/opportunities", label: "Manage Opportunities", description: "Activate, deactivate, or delete listings." },
   { href: "/admin/upload", label: "CSV Upload", description: "Bulk-import opportunities from a CSV file." },
   { href: "/admin/digest", label: "Weekly Digest", description: "Preview, export subscribers, and send the digest email." },
+  { href: "/admin/impact", label: "Impact Report", description: "Funding flow, career trajectory, economic multiplier, and annual data export." },
 ];
 
 function Stat({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
