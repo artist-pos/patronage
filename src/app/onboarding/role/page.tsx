@@ -23,7 +23,7 @@ async function applyRole(role: string) {
     .replace(/[^a-z0-9_]/g, "_")
     .slice(0, 30) ?? user.id.slice(0, 8);
 
-  const isArtist = role === "artist";
+  const isArtist = role === "artist" || role === "owner";
   await supabase.from("profiles").upsert(
     {
       id: user.id,
