@@ -54,6 +54,7 @@ interface Props {
   application: Application;
   opportunity: Opportunity;
   closeUrl: string;
+  onClose?: () => void;
 }
 
 const STATUS_OPTIONS = [
@@ -73,8 +74,17 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
-export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
+export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: Props) {
   const router = useRouter();
+
+  function handleClose() {
+    if (onClose) {
+      onClose();
+    } else {
+      router.push(closeUrl);
+      router.refresh();
+    }
+  }
   const [status, setStatus] = useState(application.status);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -128,7 +138,7 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) void e; }}
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div className="bg-background border border-black w-full max-w-lg max-h-[85vh] overflow-y-auto sm:max-h-[80vh]">
         {/* Header */}
@@ -141,8 +151,8 @@ export function ApplicantPanel({ application, opportunity, closeUrl }: Props) {
           </div>
           <button
             type="button"
-            onClick={() => { router.push(closeUrl); router.refresh(); }}
-            className="text-muted-foreground hover:text-foreground"
+            onClick={handleClose}
+            className="cursor-pointer text-muted-foreground hover:text-foreground hover:opacity-70 transition-opacity p-1 -mr-1"
           >
             <X className="w-4 h-4" />
           </button>

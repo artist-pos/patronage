@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -150,11 +151,13 @@ export default async function PartnerOpportunityPage({ params }: Props) {
       </div>
 
       {/* Client-side applications manager (filtering, CSV, gallery/table) */}
-      <ApplicationsManager
-        apps={enrichedApps}
-        opp={opp}
-        opportunityId={opportunityId}
-      />
+      <Suspense>
+        <ApplicationsManager
+          apps={enrichedApps}
+          opp={opp}
+          opportunityId={opportunityId}
+        />
+      </Suspense>
     </div>
   );
 }

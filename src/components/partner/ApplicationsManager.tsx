@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApplicantPanel } from "./ApplicantPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
@@ -47,14 +46,6 @@ interface Props {
   opportunityId: string;
 }
 
-const STATUS_OPTIONS = [
-  { val: "pending", label: "New" },
-  { val: "shortlisted", label: "Shortlist" },
-  { val: "selected", label: "Select" },
-  { val: "approved_pending_assets", label: "Approve" },
-  { val: "rejected", label: "Reject" },
-] as const;
-
 const STATUS_LABELS: Record<string, string> = {
   pending: "New",
   shortlisted: "Shortlisted",
@@ -72,10 +63,6 @@ function getQuestionFields(opp: OpportunityShape) {
   return opp.pipeline_config?.questions?.length
     ? opp.pipeline_config.questions.map((q) => ({ id: q.id, label: q.label }))
     : (opp.custom_fields ?? []).map((f) => ({ id: f.id, label: f.question }));
-}
-
-function escapeCSV(val: string) {
-  return `"${val.replace(/"/g, '""')}"`;
 }
 
 function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
@@ -106,8 +93,9 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
     ];
   });
 
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const csvContent = [headers, ...rows]
-    .map((row) => row.map(String).map(escapeCSV).join(","))
+    .map((row) => row.map(String).map(escape).join(","))
     .join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -126,13 +114,26 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
 export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedApplicantId = searchParams.get("applicant");
-  const urlView = searchParams.get("view") === "gallery" ? "gallery" : "table";
 
+  // Local state — no router.push for applicant/view, so UI is instant
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(
+    () => searchParams.get("applicant") ?? null
+  );
+  const [view, setView] = useState<"table" | "gallery">(
+    () => (searchParams.get("view") === "gallery" ? "gallery" : "table")
+  );
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [view, setView] = useState<"table" | "gallery">(urlView);
 
-  const selectedApp = selectedApplicantId ? apps.find((a) => a.id === selectedApplicantId) ?? null : null;
+  const selectedApp = selectedAppId ? apps.find((a) => a.id === selectedAppId) ?? null : null;
+
+  function openApplicant(id: string) {
+    setSelectedAppId(id);
+  }
+
+  function closeApplicant() {
+    setSelectedAppId(null);
+    router.refresh(); // pick up any status changes made inside the panel
+  }
 
   // ── Stats ────────────────────────────────────────────────────────────────
   const statusCounts: Record<string, number> = {};
@@ -154,19 +155,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
   const topLocations = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]);
   const topCareerStages = Object.entries(careerStageCounts).sort((a, b) => b[1] - a[1]);
 
-  // ── Filtered list ────────────────────────────────────────────────────────
   const filteredApps = statusFilter ? apps.filter((a) => a.status === statusFilter) : apps;
-
-  const closeUrl = `/partner/dashboard/${opportunityId}`;
-
-  function handleViewChange(v: "table" | "gallery") {
-    setView(v);
-    // keep applicant param if open
-    const params = new URLSearchParams(searchParams.toString());
-    if (v === "gallery") params.set("view", "gallery");
-    else params.delete("view");
-    router.push(`/partner/dashboard/${opportunityId}?${params.toString()}`);
-  }
 
   if (apps.length === 0) {
     return <p className="text-sm text-muted-foreground py-12 text-center">No applications yet.</p>;
@@ -180,15 +169,19 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
         <div className="flex border border-black">
           <button
             type="button"
-            onClick={() => handleViewChange("table")}
-            className={`text-xs px-3 py-1.5 transition-colors ${view === "table" ? "bg-black text-white" : "hover:bg-muted"}`}
+            onClick={() => setView("table")}
+            className={`text-xs px-3 py-1.5 transition-colors cursor-pointer ${
+              view === "table" ? "bg-black text-white" : "hover:bg-black hover:text-white"
+            }`}
           >
             Table
           </button>
           <button
             type="button"
-            onClick={() => handleViewChange("gallery")}
-            className={`text-xs px-3 py-1.5 border-l border-black transition-colors ${view === "gallery" ? "bg-black text-white" : "hover:bg-muted"}`}
+            onClick={() => setView("gallery")}
+            className={`text-xs px-3 py-1.5 border-l border-black transition-colors cursor-pointer ${
+              view === "gallery" ? "bg-black text-white" : "hover:bg-black hover:text-white"
+            }`}
           >
             Gallery
           </button>
@@ -198,7 +191,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
         <button
           type="button"
           onClick={() => exportCSV(apps, opp)}
-          className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+          className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors cursor-pointer"
         >
           Export CSV ↓
         </button>
@@ -211,7 +204,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
           <button
             type="button"
             onClick={() => setStatusFilter(null)}
-            className={`text-center group transition-opacity ${statusFilter !== null ? "opacity-40 hover:opacity-70" : ""}`}
+            className={`text-center cursor-pointer transition-opacity ${statusFilter !== null ? "opacity-40 hover:opacity-70" : ""}`}
           >
             <p className="text-2xl font-semibold">{apps.length}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-widest">Total</p>
@@ -222,7 +215,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
               key={s}
               type="button"
               onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-              className={`text-center transition-opacity ${statusFilter !== null && statusFilter !== s ? "opacity-40 hover:opacity-70" : ""}`}
+              className={`text-center cursor-pointer transition-opacity ${statusFilter !== null && statusFilter !== s ? "opacity-40 hover:opacity-70" : ""}`}
             >
               <p className={`text-2xl font-semibold ${statusFilter === s ? "underline underline-offset-2" : ""}`}>
                 {statusCounts[s]}
@@ -280,7 +273,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
             <button
               type="button"
               onClick={() => setStatusFilter(null)}
-              className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground"
+              className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               Clear filter
             </button>
@@ -300,13 +293,8 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
               <button
                 key={app.id}
                 type="button"
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  params.set("view", "gallery");
-                  params.set("applicant", app.id);
-                  router.push(`/partner/dashboard/${opportunityId}?${params.toString()}`);
-                }}
-                className="border border-black overflow-hidden group text-left"
+                onClick={() => openApplicant(app.id)}
+                className="border border-black overflow-hidden text-left cursor-pointer hover:border-black/60 transition-colors"
               >
                 {imageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -342,10 +330,8 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
               <button
                 key={app.id}
                 type="button"
-                onClick={() => {
-                  router.push(`/partner/dashboard/${opportunityId}?applicant=${app.id}`);
-                }}
-                className="w-full flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/30 transition-colors group text-left"
+                onClick={() => openApplicant(app.id)}
+                className="w-full flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/50 transition-colors cursor-pointer text-left"
               >
                 {/* Thumbnail */}
                 {imageUrl ? (
@@ -382,12 +368,13 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
         </div>
       )}
 
-      {/* Applicant panel (modal) */}
+      {/* Applicant panel (modal) — opens instantly from pre-loaded data */}
       {selectedApp && (
         <ApplicantPanel
           application={selectedApp as unknown as Parameters<typeof ApplicantPanel>[0]["application"]}
           opportunity={opp}
-          closeUrl={closeUrl}
+          closeUrl={`/partner/dashboard/${opportunityId}`}
+          onClose={closeApplicant}
         />
       )}
     </>
