@@ -58,7 +58,13 @@ export async function generateClaimToken(
   const token = crypto.randomUUID();
   const { error } = await supabase
     .from("opportunities")
-    .update({ claim_token: token, claim_email: email ?? null })
+    .update({
+      claim_token: token,
+      claim_email: email ?? null,
+      // Reset ownership so the new token isn't blocked by a previous claim
+      profile_id: null,
+      status: "draft_unclaimed",
+    })
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/opportunities");
