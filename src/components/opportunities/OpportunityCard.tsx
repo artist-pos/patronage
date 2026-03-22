@@ -165,8 +165,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
       {/* ── Image / Logo ── */}
       {/* Mobile: narrow left column; Desktop: full-width top section */}
       <div
-        className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
-        style={{ backgroundColor: "#f5f5f5" }}
+        className="relative shrink-0 w-24 aspect-square md:aspect-auto md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
+        style={{ backgroundColor: "var(--background)" }}
       >
         {opp.featured_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
