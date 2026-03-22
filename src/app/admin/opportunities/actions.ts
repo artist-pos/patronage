@@ -56,14 +56,15 @@ export async function generateClaimToken(
   await guard();
   const supabase = await createClient();
   const token = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await supabase
     .from("opportunities")
     .update({
       claim_token: token,
       claim_email: email ?? null,
+      claim_token_expires_at: expiresAt,
       // Reset ownership so the new token isn't blocked by a previous claim
       profile_id: null,
-      status: "draft_unclaimed",
     })
     .eq("id", id);
   if (error) throw new Error(error.message);

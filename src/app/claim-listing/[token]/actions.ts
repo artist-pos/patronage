@@ -11,21 +11,20 @@ export async function claimListing(
 
   const { data: opp, error: fetchError } = await admin
     .from("opportunities")
-    .select("id, status, profile_id")
+    .select("id, profile_id, claim_token_expires_at")
     .eq("claim_token", token)
     .single();
 
   if (fetchError || !opp) return { error: "Listing not found" };
   if (opp.profile_id) return { error: "Already claimed" };
 
-  const updateData: Record<string, unknown> = { profile_id: userId };
-  if (opp.status === "draft_unclaimed") {
-    updateData.status = "draft";
+  if (opp.claim_token_expires_at && new Date(opp.claim_token_expires_at) < new Date()) {
+    return { error: "This claim link has expired. Please contact hello@patronage.nz for a new one." };
   }
 
   const { error: updateError } = await admin
     .from("opportunities")
-    .update(updateData)
+    .update({ profile_id: userId })
     .eq("id", opp.id);
 
   if (updateError) return { error: updateError.message };

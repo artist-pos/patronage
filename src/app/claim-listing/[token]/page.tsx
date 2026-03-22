@@ -14,11 +14,30 @@ export default async function ClaimListingPage({ params }: Props) {
 
   const { data: opp } = await admin
     .from("opportunities")
-    .select("id, title, organiser, type, featured_image_url, status, profile_id")
+    .select("id, title, organiser, type, featured_image_url, status, profile_id, claim_token_expires_at")
     .eq("claim_token", token)
     .single();
 
   if (!opp) notFound();
+
+  const isExpired = opp.claim_token_expires_at
+    ? new Date(opp.claim_token_expires_at) < new Date()
+    : false;
+
+  if (isExpired) {
+    return (
+      <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+        <p className="text-sm font-semibold">Link expired</p>
+        <p className="text-sm text-muted-foreground">
+          This claim link expired after 14 days. Please contact{" "}
+          <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">
+            hello@patronage.nz
+          </a>{" "}
+          to request a new one.
+        </p>
+      </div>
+    );
+  }
 
   if (opp.profile_id) {
     return (
@@ -75,10 +94,7 @@ export default async function ClaimListingPage({ params }: Props) {
   }
 
   const claimPath = `/claim-listing/${token}`;
-  const isLive = opp.status === "published";
-  const heading = isLive
-    ? `${opp.organiser || "Your organisation"}, this listing is live on Patronage. Create a partner account to manage it.`
-    : `${opp.organiser || "Your organisation"}, this listing has been drafted for you on Patronage. Create a partner account to review, edit, and publish it.`;
+  const heading = `${opp.organiser || "Your organisation"}, this listing is live on Patronage. Create a partner account to manage it.`;
 
   return (
     <div className="max-w-sm mx-auto px-6 py-20 space-y-8">

@@ -120,9 +120,10 @@ export interface Opportunity {
   recurrence_open_day: number | null;   // day-of-month e.g. 1
   recurrence_close_day: number | null;  // day-of-month e.g. 15
   recurrence_end_date: string | null;   // ISO date or null = indefinite
-  // Claim tokens (migration 059)
+  // Claim tokens (migration 059 / 067)
   claim_token: string | null;
   claim_email: string | null;
+  claim_token_expires_at: string | null;
 }
 
 export type RecurrencePattern =
