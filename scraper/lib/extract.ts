@@ -4,76 +4,154 @@ import { withRateLimit, estimateTokens } from "./rate-limiter.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM = `You extract arts funding opportunities from web content. Return ONLY a valid JSON array.
+// ============================================================
+// UPGRADED SYSTEM PROMPT
+// 
+// Changes from original:
+// 1. Added relevance filter — skips commercial jobs, production crew, corporate roles
+// 2. Added missing opp types: "Job / Employment", "Studio / Space", "Public Art"
+// 3. Country outputs only "NZ" | "AUS" | "Global" (no UK/US/EU that break the DB enum)
+// 4. Better caption guidance — shorter, warmer, NZ spelling
+// 5. sub_categories as freeform tags (no fixed list constraint)
+// 6. Explicit instruction to output valid JSON (fixes Haiku parse errors)
+// ============================================================
 
-Each item in the array must have:
-- "title": string (name of the opportunity)
-- "organiser": string (organisation running it)
-- "caption": string — 250–500 character plain-English summary. Include: what it is, who it's for, what's offered, and any eligibility highlights. Write in third person, no markdown.
-- "type": one of "Grant" | "Residency" | "Commission" | "Open Call" | "Prize" | "Display"
-- "country": the primary country or eligibility — use "NZ", "AUS", "UK", "US", "EU", or "Global"
-- "opens_at": "YYYY-MM-DD" if the application window hasn't opened yet (i.e. a future open date is explicitly stated), otherwise null
-- "deadline": "YYYY-MM-DD" or null
-- "url": direct link to the opportunity page, or null
-- "funding_range": e.g. "up to $10,000" or "$5,000–$25,000" or null
-- "sub_categories": string array of relevant discipline and focus tags. Include applicable mediums (e.g. "Painting", "Sculpture", "Photography", "Ceramics", "Digital", "Printmaking", "Drawing", "Textile", "Film & Video", "Performance", "Installation", "Sound", "Poetry", "Writing", "Mixed Media") and focus tags (e.g. "Early Career", "Emerging", "Mid-Career", "Established", "Māori", "Pasifika", "Indigenous", "Youth", "International", "Travel", "Research"). Only include tags clearly supported by the content. Return [] if none apply.
-- "disciplines": string array of primary discipline tags. Use ONLY values from this list: "visual_art", "music", "poetry", "writing", "dance", "film", "photography", "craft", "performance", "other". Include all that clearly apply to this specific opportunity. Return [] if the opportunity is genuinely cross-disciplinary or the discipline cannot be determined.
+const SYSTEM = `You extract arts opportunities from web content for Patronage (patronage.nz), a platform serving artists in Aotearoa New Zealand and Australia.
 
-Rules:
-- Only include genuine arts opportunities (grants, prizes, residencies, open calls, commissions, display opportunities)
-- Only include opportunities open to individual artists or small artist collectives. Skip opportunities exclusively for established organisations, institutions, libraries, museums, universities, local councils, or corporate bodies
-- Skip job listings, internships, volunteer roles, and non-arts content
-- Skip opportunities where eligibility is restricted to a specific institution's own members, students, or staff
-- ELIGIBILITY FILTER — this platform serves NZ and Australian artists. For the "country" field, use eligibility not location of the organiser:
-  * "Global" — open to international applicants with no residency/citizenship requirement, OR the opportunity uses phrases like "open to all", "international artists welcome", "worldwide", "any nationality", or similar
-  * "NZ" — explicitly for NZ-based artists/residents
-  * "AUS" — explicitly for Australia-based artists/residents
-  * "UK" — requires UK residency, citizenship, or institutional affiliation
-  * "US" — requires US residency, citizenship, or visa status
-  * "EU" — requires EU residency or citizenship
-  * SKIP the opportunity entirely if it requires residency/citizenship in a specific country outside NZ/AUS and makes no mention of international eligibility
-  * When unsure, prefer "Global" over a country code — many US/EU/UK prizes and residencies accept international applicants even if their organiser is local
-- If a page lists multiple opportunities, return all of them (applying the eligibility filter to each)
-- If no opportunities are found, return []
-- Return only the JSON array, no other text`;
+Return ONLY a valid JSON array. No markdown fences, no explanation, no trailing commas.
+
+RELEVANCE FILTER — apply BEFORE extracting:
+- YES: grants, prizes, residencies, open calls, commissions, exhibitions, public art opportunities, studio/space access, fellowships for individual artists or small collectives
+- NO: commercial job listings (marketing manager, gallery director, production coordinator), internships, volunteer roles, institutional funding for organisations/councils/universities, calls restricted to a specific institution's own students/staff/members, film/TV production crew calls, corporate sponsorship opportunities
+- If unsure, include it but set "confidence" to "low"
+- If a page has NO relevant opportunities, return []
+
+Each item in the array:
+{
+  "title": "string — name of the opportunity",
+  "organiser": "string — organisation running it",
+  "caption": "string — one to two sentences, max 300 characters. Plain language, NZ spelling. What it is, who it's for, what's offered. No markdown, no jargon.",
+  "type": "Grant" | "Residency" | "Commission" | "Open Call" | "Prize" | "Display" | "Job / Employment" | "Studio / Space" | "Public Art",
+  "country": "NZ" | "AUS" | "Global",
+  "opens_at": "YYYY-MM-DD or null — only if a future open date is explicitly stated",
+  "deadline": "YYYY-MM-DD or null",
+  "url": "direct link to the opportunity page, or null",
+  "funding_range": "e.g. 'Up to $10,000 NZD' or '$5,000–$25,000' or null",
+  "sub_categories": ["string array — relevant tags for discipline, medium, career stage, identity, focus. Include whatever applies from the content. Examples: Painting, Sculpture, Photography, Ceramics, Digital, Printmaking, Drawing, Textile, Film & Video, Performance, Installation, Sound, Poetry, Writing, Mixed Media, Early Career, Emerging, Mid-Career, Established, Māori, Pasifika, Indigenous, First Nations, Youth, Women, LGBTQ+, International, Travel, Research, Community, Environmental, Public Art, Experimental. Add any other relevant tags not in this list."],
+  "disciplines": ["string array from: visual_art, music, poetry, writing, dance, film, photography, craft, performance, other"],
+  "confidence": "high" | "medium" | "low"
+}
+
+COUNTRY RULES — use eligibility, not organiser location:
+- "Global" — open to international applicants, OR uses phrases like "open to all", "international artists welcome", "worldwide", "any nationality". Also use "Global" for US/UK/EU opportunities that accept international applicants.
+- "NZ" — explicitly restricted to NZ-based artists, residents, or citizens
+- "AUS" — explicitly restricted to Australia-based artists, residents, or citizens
+- SKIP entirely if restricted to a single country outside NZ/AUS with no international eligibility
+- When unsure, use "Global" — many prizes and residencies accept international applicants even if their organiser is in a specific country
+
+CAPTION STYLE — NZ spelling (organisation, programme, recognised):
+GOOD: "Three-month residency in Titirangi with a $10,000 stipend. Open to NZ visual artists at any career stage."
+BAD: "Applications are invited for the 2026 iteration of the prestigious XYZ Programme, offering selected artists the opportunity to..."
+
+TYPE MAPPING:
+- Grant/fellowship/funding for projects → "Grant"
+- Artist residency/retreat/studio time → "Residency"
+- Paid commission/brief → "Commission"
+- Exhibition submission/group show call → "Open Call"
+- Prize/award/competition with monetary prize → "Prize"
+- Exhibition/display/showcase (no competition) → "Display"
+- Paid role for an artist (teaching, artist-in-residence employment, community arts worker) → "Job / Employment"
+- Studio access, workshop space, shared facility → "Studio / Space"
+- Public artwork/mural/installation commission → "Public Art"
+
+If a page lists multiple opportunities, return all of them (applying filters to each).
+Return ONLY the JSON array.`;
 
 export async function extractFromPage(
-  text: string,
-  sourceUrl: string,
-  defaultCountry: string
+    text: string,
+    sourceUrl: string,
+    defaultCountry: string
 ): Promise<ScrapedOpportunity[]> {
-  const prompt = `Source: ${sourceUrl}\nDefault country if not specified: ${defaultCountry}\n\nContent:\n${text}`;
-  const estimated = estimateTokens(prompt);
+    // Truncate to ~12k chars to stay within context limits while allowing more content than before
+    const truncated = text.slice(0, 12000);
+    const prompt = `Source: ${sourceUrl}\nDefault country if not specified: ${mapCountryForPrompt(defaultCountry)}\n\nContent:\n${truncated}`;
+    const estimated = estimateTokens(prompt);
 
-  try {
-    const response = await withRateLimit(
-      () =>
-        client.messages.create({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 4096,
-          system: SYSTEM,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      estimated
-    );
+    try {
+        const response = await withRateLimit(
+            () =>
+                client.messages.create({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4096,
+                    system: SYSTEM,
+                    messages: [{ role: "user", content: prompt }],
+                }),
+            estimated
+        );
 
-    const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "[]";
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
+        const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "[]";
 
-    const parsed = JSON.parse(jsonMatch[0]) as ScrapedOpportunity[];
-    return parsed.filter((o) => o.title && o.organiser);
-  } catch (err) {
-    console.error(`  Extract error for ${sourceUrl}:`, err instanceof Error ? err.message : err);
-    return [];
-  }
+        // Extract JSON array — handle potential markdown fences from Sonnet
+        let jsonStr = raw;
+
+        // Strip markdown fences if present
+        jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+
+        // Find the JSON array
+        const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) return [];
+
+        const parsed = JSON.parse(jsonMatch[0]) as (ScrapedOpportunity & { confidence?: string })[];
+
+        return parsed
+            // Must have title and organiser
+            .filter((o) => o.title && o.organiser)
+            // Filter out low-confidence items (the AI wasn't sure it's a real opportunity)
+            .filter((o) => o.confidence !== "low")
+            // Map country to DB-safe values
+            .map((o) => ({
+                ...o,
+                country: mapCountryForDb(o.country),
+                // Ensure caption doesn't exceed DB limit
+                caption: o.caption?.slice(0, 400) ?? null,
+            }));
+    } catch (err) {
+        console.error(`  Extract error for ${sourceUrl}:`, err instanceof Error ? err.message : err);
+        return [];
+    }
 }
 
 export async function extractFromRssItem(
-  item: RssItem,
-  sourceUrl: string,
-  defaultCountry: string
+    item: RssItem,
+    sourceUrl: string,
+    defaultCountry: string
 ): Promise<ScrapedOpportunity[]> {
-  const content = `Title: ${item.title}\nLink: ${item.link}\nDate: ${item.pubDate}\nContent: ${item.content}`;
-  return extractFromPage(content, sourceUrl, defaultCountry);
+    const content = `Title: ${item.title}\nLink: ${item.link}\nDate: ${item.pubDate}\nContent: ${item.content}`;
+    return extractFromPage(content, sourceUrl, defaultCountry);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+/**
+ * Map any country value to the three DB-safe values.
+ * UK, US, EU opportunities that made it past the relevance filter
+ * are open to international applicants, so they become "Global".
+ */
+function mapCountryForDb(country: string): string {
+    const upper = country?.toUpperCase?.() ?? "Global";
+    if (upper === "NZ") return "NZ";
+    if (upper === "AUS" || upper === "AU") return "AUS";
+    return "Global"; // UK, US, EU, and anything else → Global
+}
+
+/**
+ * Map source-level country hint to prompt-friendly value.
+ */
+function mapCountryForPrompt(country: string): string {
+    const upper = country?.toUpperCase?.() ?? "Global";
+    if (upper === "NZ") return "NZ";
+    if (upper === "AUS" || upper === "AU") return "AUS";
+    return "Global";
 }

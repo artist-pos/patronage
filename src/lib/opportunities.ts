@@ -58,7 +58,7 @@ export async function getOpportunities(
   const { data, error } = await query.limit(limit);
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Opportunity[];
+  return (data ?? []) as unknown as Opportunity[];
 }
 
 export async function getClosingSoonOpportunities(
