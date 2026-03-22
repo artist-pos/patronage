@@ -4,24 +4,22 @@
 ALTER TABLE opportunities
   ADD COLUMN IF NOT EXISTS claim_token_expires_at TIMESTAMPTZ DEFAULT NULL;
 
--- 2. Regenerate ALL opportunity slugs from titles (title + year where deadline exists).
---    Uses ROW_NUMBER to handle duplicate base slugs — second occurrence gets a short ID suffix.
+-- 2. Drop unique index before bulk update to avoid per-row constraint violations
+DROP INDEX IF EXISTS opportunities_slug_idx;
+
+-- 3. Regenerate ALL slugs from title only (no year suffix — avoids "title-2026-2026"
+--    when the year is already in the title). Duplicate base slugs get a short ID suffix.
 WITH base_slugs AS (
   SELECT
     id,
     created_at,
-    deadline,
     LEFT(
       REGEXP_REPLACE(
         REGEXP_REPLACE(LOWER(TRIM(title)), '[^a-z0-9]+', '-', 'g'),
         '^-+|-+$', '', 'g'
       ),
       70
-    ) ||
-    CASE
-      WHEN deadline IS NOT NULL THEN '-' || EXTRACT(YEAR FROM deadline)::text
-      ELSE ''
-    END AS base_slug
+    ) AS base_slug
   FROM opportunities
 ),
 ranked AS (
@@ -39,7 +37,10 @@ END
 FROM ranked r
 WHERE o.id = r.id;
 
--- 3. Trigger function: auto-generate slug on INSERT when none is provided
+-- 4. Recreate unique index
+CREATE UNIQUE INDEX opportunities_slug_idx ON opportunities (slug);
+
+-- 5. Trigger: auto-generate slug on INSERT when none provided
 CREATE OR REPLACE FUNCTION set_opportunity_slug_from_title()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -58,10 +59,6 @@ BEGIN
     ),
     70
   );
-
-  IF NEW.deadline IS NOT NULL THEN
-    v_base := v_base || '-' || EXTRACT(YEAR FROM NEW.deadline)::text;
-  END IF;
 
   v_candidate := v_base;
 
