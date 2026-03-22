@@ -143,6 +143,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     recurrence_end_date: null,
     claim_token: null,
     claim_email: null,
+    claim_token_expires_at: null,
   };
 
   // ── Success screen ──────────────────────────────────────────────────────────
