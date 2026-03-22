@@ -165,8 +165,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
       {/* ── Image / Logo ── */}
       {/* Mobile: narrow left column; Desktop: full-width top section */}
       <div
-        className="relative shrink-0 w-24 self-stretch overflow-hidden border-r border-black flex items-center justify-center md:w-full md:h-[200px] md:border-r-0 md:border-b"
-        style={{ backgroundColor: "var(--background)" }}
+        className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
+        style={{ backgroundColor: "#f5f5f5" }}
       >
         {opp.featured_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -174,7 +174,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
             src={supabaseTransform(opp.featured_image_url, { width: 400, quality: 80 }) ?? opp.featured_image_url}
             alt={opp.title}
             loading={priority ? "eager" : "lazy"}
-            className="w-full h-auto max-h-full object-contain"
+            className="absolute inset-0 w-full h-full"
+            style={{ objectFit: "contain", objectPosition: "center", display: "block" }}
           />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center font-mono text-[8px] text-muted-foreground uppercase tracking-widest text-center px-1">
