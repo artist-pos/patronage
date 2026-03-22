@@ -27,7 +27,7 @@ INSERT INTO opportunities (
   career_stage, tags, is_active, created_at
 )
 SELECT
-  title, organiser, caption, full_description, type, country, city,
+  title, organiser, caption, full_description, type::opp_type_enum, country, city,
   opens_at, deadline, url, funding_amount, funding_range, sub_categories,
   grant_type, recipients_count, submitter_email, status, profile_id,
   entry_fee, artist_payment_type, travel_support, travel_support_details,
