@@ -32,8 +32,9 @@ export default async function AdminSubmissionsPage() {
 
   const supabase = await createClient();
   const { data } = await supabase
-    .from("opportunity_submissions")
-    .select("*")
+    .from("opportunities")
+    .select("id, title, organiser, caption, full_description, type, country, city, deadline, url, funding_amount, funding_range, featured_image_url, grant_type, recipients_count, submitter_email, status, created_at")
+    .in("status", ["pending", "rejected"])
     .order("created_at", { ascending: false });
 
   const submissions = (data ?? []) as Submission[];

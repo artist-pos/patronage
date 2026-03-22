@@ -32,12 +32,12 @@ export default async function PartnerDashboardPage() {
       .eq("routing_type", "pipeline")
       .order("created_at", { ascending: false }),
 
-    // Pending / rejected submissions from this partner (not yet approved)
+    // Pending / rejected submissions from this partner (not yet published)
     supabase
-      .from("opportunity_submissions")
+      .from("opportunities")
       .select("id, title, type, deadline, status, routing_type, created_at")
       .eq("profile_id", user.id)
-      .neq("status", "approved")
+      .in("status", ["pending", "rejected"])
       .order("created_at", { ascending: false }),
 
     // All claimed listings owned by this partner (any routing type)

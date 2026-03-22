@@ -59,7 +59,9 @@ export async function submitOpportunityAction(
   let pipelineConfig = null;
   try { pipelineConfig = JSON.parse(pipelineConfigRaw); } catch { pipelineConfig = null; }
 
-  const { error } = await supabase.from("opportunity_submissions").insert({
+  const { error } = await supabase.from("opportunities").insert({
+    status: "pending",
+    is_active: false,
     title,
     organiser,
     caption: captionRaw ? captionRaw.slice(0, 160) : null,
