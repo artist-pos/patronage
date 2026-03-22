@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 import { SaveButton } from "./SaveButton";
-import { supabaseTransform } from "@/lib/image";
 
 const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   monthly:   "Monthly",
@@ -100,7 +99,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         <div className="relative w-14 h-14 shrink-0 overflow-hidden bg-white border border-black flex items-center justify-center">
           {opp.featured_image_url ? (
             <Image
-              src={supabaseTransform(opp.featured_image_url, { width: 112, quality: 80 }) ?? opp.featured_image_url}
+              src={opp.featured_image_url}
               alt={opp.title}
               width={56}
               height={56}
@@ -171,7 +170,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         {opp.featured_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={supabaseTransform(opp.featured_image_url, { width: 400, quality: 80 }) ?? opp.featured_image_url}
+            src={opp.featured_image_url}
             alt={opp.title}
             loading={priority ? "eager" : "lazy"}
             className="absolute inset-0 w-full h-full"
