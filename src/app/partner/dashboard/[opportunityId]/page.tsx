@@ -138,7 +138,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   });
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-12 space-y-6">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
       {/* Header */}
       <div className="space-y-0.5">
         <Link href="/partner/dashboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">

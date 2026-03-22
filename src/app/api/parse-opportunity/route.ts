@@ -3,6 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 
+// In-memory rate limiter (resets on cold start — acceptable for Vercel serverless)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 const SYSTEM_PROMPT = `You extract opportunity listing data for Patronage (patronage.nz), a cultural infrastructure platform for artists in Aotearoa New Zealand and Australia.
 
 Given raw text from an opportunity page, extract ALL available fields into JSON.
@@ -57,6 +74,14 @@ function stripHtml(html: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests — please wait a minute before trying again." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });

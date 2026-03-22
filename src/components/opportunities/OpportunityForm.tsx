@@ -394,107 +394,127 @@ function OpportunityParser({
   }
 
   return (
-    <div className="border border-black/30 bg-blue-50/20 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Autofill from URL, text, or PDF
-        </p>
-        {parsing && (
-          <span className="text-xs text-blue-600 font-medium animate-pulse">Parsing…</span>
-        )}
-      </div>
+    <>
+      <style>{`
+        @keyframes parser-shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+        .parser-loading {
+          background: linear-gradient(
+            90deg,
+            #f0efe8 25%,
+            #fafaf9 50%,
+            #f0efe8 75%
+          );
+          background-size: 200% 100%;
+          animation: parser-shimmer 1.5s ease-in-out infinite;
+        }
+      `}</style>
 
-      {/* Mode tabs */}
-      <div className="flex gap-1.5">
-        {(["url", "text", "file"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={`text-xs px-3 py-1 border leading-none transition-colors ${
-              mode === m ? "bg-black text-white border-black" : "border-black/40 hover:border-black"
-            }`}
-          >
-            {m === "url" ? "URL" : m === "text" ? "Text" : "PDF"}
-          </button>
-        ))}
-      </div>
-
-      {mode === "url" && (
-        <div className="flex gap-2">
-          <input
-            type="url"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); if (urlInput.trim()) parse("url", urlInput.trim()); }
-            }}
-            placeholder="Paste opportunity URL…"
-            className={`${FIELD} flex-1`}
-            disabled={parsing}
-          />
-          <button
-            type="button"
-            onClick={() => urlInput.trim() && parse("url", urlInput.trim())}
-            disabled={parsing || !urlInput.trim()}
-            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
-          >
-            Autofill →
-          </button>
+      {parsing ? (
+        <div className="parser-loading border border-black/20 flex items-center justify-center" style={{ minHeight: "120px" }}>
+          <span className="text-sm text-muted-foreground">Extracting details…</span>
         </div>
-      )}
-
-      {mode === "text" && (
-        <div className="space-y-2">
-          <textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            rows={4}
-            placeholder="Paste the opportunity description, eligibility criteria, funding details…"
-            className={`${FIELD} resize-none`}
-            disabled={parsing}
-          />
-          <button
-            type="button"
-            onClick={() => textInput.trim() && parse("text", textInput.trim())}
-            disabled={parsing || !textInput.trim()}
-            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
-          >
-            Autofill →
-          </button>
-        </div>
-      )}
-
-      {mode === "file" && (
-        <div>
-          <div
-            onClick={() => !parsing && fileRef.current?.click()}
-            onDrop={(e) => {
-              e.preventDefault();
-              setFileDragOver(false);
-              const f = e.dataTransfer.files[0];
-              if (f?.type === "application/pdf") parse("file", f);
-            }}
-            onDragOver={(e) => { e.preventDefault(); setFileDragOver(true); }}
-            onDragLeave={() => setFileDragOver(false)}
-            className={`border border-dashed border-black/40 p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${
-              fileDragOver ? "bg-muted" : "hover:bg-muted/40"
-            } ${parsing ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {parsing ? "Parsing PDF…" : "Drop a PDF here, or click to browse"}
+      ) : (
+        <div className="border border-black/30 bg-blue-50/20 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Autofill from URL, text, or PDF
+            </p>
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) parse("file", f); }}
-          />
+
+          {/* Mode tabs */}
+          <div className="flex gap-1.5">
+            {(["url", "text", "file"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`text-xs px-3 py-1 border leading-none transition-colors ${
+                  mode === m ? "bg-black text-white border-black" : "border-black/40 hover:border-black"
+                }`}
+              >
+                {m === "url" ? "URL" : m === "text" ? "Text" : "PDF"}
+              </button>
+            ))}
+          </div>
+
+          {mode === "url" && (
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); if (urlInput.trim()) parse("url", urlInput.trim()); }
+                }}
+                placeholder="Paste opportunity URL…"
+                className={`${FIELD} flex-1`}
+              />
+              <button
+                type="button"
+                onClick={() => urlInput.trim() && parse("url", urlInput.trim())}
+                disabled={!urlInput.trim()}
+                className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
+              >
+                Autofill →
+              </button>
+            </div>
+          )}
+
+          {mode === "text" && (
+            <div className="space-y-2">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                rows={4}
+                placeholder="Paste the opportunity description, eligibility criteria, funding details…"
+                className={`${FIELD} resize-none`}
+              />
+              <button
+                type="button"
+                onClick={() => textInput.trim() && parse("text", textInput.trim())}
+                disabled={!textInput.trim()}
+                className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
+              >
+                Autofill →
+              </button>
+            </div>
+          )}
+
+          {mode === "file" && (
+            <div>
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setFileDragOver(false);
+                  const f = e.dataTransfer.files[0];
+                  if (f?.type === "application/pdf") parse("file", f);
+                }}
+                onDragOver={(e) => { e.preventDefault(); setFileDragOver(true); }}
+                onDragLeave={() => setFileDragOver(false)}
+                className={`border border-dashed border-black/40 p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${
+                  fileDragOver ? "bg-muted" : "hover:bg-muted/40"
+                }`}
+              >
+                Drop a PDF here, or click to browse
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) parse("file", f); }}
+              />
+            </div>
+          )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
       )}
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </div>
+    </>
   );
 }
 
@@ -722,7 +742,7 @@ function nextCyclePreview(
 
 const DOC_LABELS: Record<string, string> = {
   cv: "Artist CV (PDF)",
-  bio: "Artist biography",
+  bio: "Artist statement",
   portfolio: "Portfolio images",
   available_works: "Available works",
 };
@@ -1378,7 +1398,7 @@ export function OpportunityForm({
             <div className="flex gap-6">
               {[
                 { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form" },
-                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Artists apply with their Patronage profile — work samples, CV, and bio already included" },
+                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Artists apply with their Patronage profile — work samples, CV, and artist statement already included" },
               ].map(({ val, label, desc }) => (
                 <label key={val} className="flex items-start gap-2 cursor-pointer">
                   <input

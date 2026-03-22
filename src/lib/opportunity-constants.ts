@@ -163,7 +163,7 @@ export const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
 /** Documents a partner can request from artist profiles in a pipeline application */
 export const ARTIST_DOC_OPTIONS: { val: PipelineConfig["artist_documents"][number]; label: string; desc: string }[] = [
   { val: "cv",              label: "Artist CV (PDF)",    desc: "Uploaded via their profile" },
-  { val: "bio",             label: "Artist biography",   desc: "From profile bio field" },
+  { val: "bio",             label: "Artist statement",    desc: "From profile bio field" },
   { val: "portfolio",       label: "Portfolio images",   desc: "From their portfolio" },
   { val: "available_works", label: "Available works",    desc: "From their available works" },
 ];

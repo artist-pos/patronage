@@ -1,9 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, OpportunityFilters, OpportunityInsert } from "@/types/database";
 
+const CARD_FIELDS = [
+  "id", "slug", "title", "organiser", "caption", "description",
+  "type", "country", "city", "deadline", "opens_at",
+  "featured_image_url", "is_featured",
+  "sub_categories", "career_stage", "tags",
+  "funding_range", "funding_amount", "entry_fee",
+  "grant_type", "recipients_count",
+  "is_recurring", "recurrence_pattern",
+].join(", ");
+
 export async function getOpportunities(
   filters: OpportunityFilters = {},
-  limit = 48
+  limit = 200
 ): Promise<Opportunity[]> {
   const supabase = await createClient();
 
@@ -11,7 +21,7 @@ export async function getOpportunities(
 
   let query = supabase
     .from("opportunities")
-    .select("*")
+    .select(CARD_FIELDS)
     .eq("is_active", true)
     .eq("status", "published")
     .or(`deadline.gte.${today},deadline.is.null`) // include open-ended (no deadline)

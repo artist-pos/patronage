@@ -63,7 +63,7 @@ export function ProfileForm({ profile, role }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bio">Bio</Label>
+        <Label htmlFor="bio">Artist statement</Label>
         <textarea
           id="bio"
           name="bio"

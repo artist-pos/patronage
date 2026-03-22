@@ -37,7 +37,7 @@ export default async function OnboardingPage({
   const showWelcomeBanner = isArtist && welcome === "1";
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
 
       {/* ── Welcome / subscription confirmation banner ── */}
       {showWelcomeBanner && (

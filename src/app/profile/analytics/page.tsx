@@ -72,7 +72,7 @@ export default async function ProfileAnalyticsPage() {
     stats.followersTotal === 0;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
 
       <div className="space-y-1 border-b border-border pb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>

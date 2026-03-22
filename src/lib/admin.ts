@@ -17,22 +17,24 @@ export async function isAdmin(): Promise<boolean> {
   return data?.role === "admin" || data?.role === "owner";
 }
 
-export async function getAllProfiles(): Promise<Profile[]> {
+export async function getAllProfiles(limit = 500, offset = 0): Promise<Profile[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
   return (data ?? []) as Profile[];
 }
 
-export async function getAllOpportunities(): Promise<Opportunity[]> {
+export async function getAllOpportunities(limit = 500, offset = 0): Promise<Opportunity[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("opportunities")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
   return (data ?? []) as Opportunity[];
 }

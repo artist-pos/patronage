@@ -10,7 +10,8 @@ async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
     .from("opportunities")
     .select("*")
     .eq("status", status)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   return (data ?? []) as Opportunity[];
 }
 

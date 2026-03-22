@@ -74,24 +74,60 @@ export default async function PartnerDashboardPage() {
   const hasAnything = (opportunities && opportunities.length > 0) || (submissions && submissions.length > 0) || (allListings && allListings.length > 0);
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Partner Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Manage your pipeline opportunities and track applications.</p>
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Partner Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your pipeline opportunities and track applications.</p>
+        </div>
+        <Link
+          href="/partners"
+          className="shrink-0 bg-black text-white text-sm px-4 py-2 hover:bg-black/80 transition-colors"
+        >
+          + Submit opportunity
+        </Link>
       </div>
 
       {!hasAnything ? (
-        <div className="py-16 text-center space-y-3">
+        <div className="py-16 text-center">
           <p className="text-sm text-muted-foreground">No opportunities yet.</p>
-          <Link
-            href="/partners"
-            className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
-          >
-            Post an Opportunity →
-          </Link>
         </div>
       ) : (
         <div className="space-y-8">
+
+          {/* ── Live pipeline opportunities ────────────────────────────── */}
+          {opportunities && opportunities.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Live</p>
+              {opportunities.map((opp: { id: string; title: string; type: string; deadline: string | null; is_active: boolean }) => {
+                const counts = countMap.get(opp.id) ?? { total: 0, pending: 0, shortlisted: 0, selected: 0 };
+                return (
+                  <Link
+                    key={opp.id}
+                    href={`/partner/dashboard/${opp.id}`}
+                    className="flex items-center justify-between border border-black p-4 hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="font-semibold text-sm">{opp.title}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span>{opp.type}</span>
+                        {opp.deadline && (
+                          <span>Deadline {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 text-xs">
+                      <span className="text-muted-foreground">{counts.total} applicant{counts.total !== 1 ? "s" : ""}</span>
+                      {counts.pending > 0 && (
+                        <span className="bg-muted px-2 py-0.5 leading-none">{counts.pending} new</span>
+                      )}
+                      <span className="text-muted-foreground group-hover:text-foreground transition-colors">→</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           {/* ── Your Listings ───────────────────────────────────────────── */}
           {allListings && allListings.length > 0 && (
@@ -156,40 +192,6 @@ export default async function PartnerDashboardPage() {
             </div>
           )}
 
-          {/* ── Live pipeline opportunities ────────────────────────────── */}
-          {opportunities && opportunities.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Live</p>
-              {opportunities.map((opp: { id: string; title: string; type: string; deadline: string | null; is_active: boolean }) => {
-                const counts = countMap.get(opp.id) ?? { total: 0, pending: 0, shortlisted: 0, selected: 0 };
-                return (
-                  <Link
-                    key={opp.id}
-                    href={`/partner/dashboard/${opp.id}`}
-                    className="flex items-center justify-between border border-black p-4 hover:bg-muted/30 transition-colors group"
-                  >
-                    <div className="space-y-0.5 min-w-0">
-                      <p className="font-semibold text-sm">{opp.title}</p>
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>{opp.type}</span>
-                        {opp.deadline && (
-                          <span>Deadline {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0 text-xs">
-                      <span className="text-muted-foreground">{counts.total} applicant{counts.total !== 1 ? "s" : ""}</span>
-                      {counts.pending > 0 && (
-                        <span className="bg-muted px-2 py-0.5 leading-none">{counts.pending} new</span>
-                      )}
-                      <span className="text-muted-foreground group-hover:text-foreground transition-colors">→</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
           {/* ── Pending submissions awaiting review ────────────────────── */}
           {submissions && submissions.length > 0 && (
             <div className="space-y-2">
@@ -217,13 +219,6 @@ export default async function PartnerDashboardPage() {
               ))}
             </div>
           )}
-
-          <Link
-            href="/partners"
-            className="inline-block text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            + Submit another opportunity
-          </Link>
         </div>
       )}
     </div>
