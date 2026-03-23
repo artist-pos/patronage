@@ -17,6 +17,7 @@ interface Artist {
   bio: string | null;
   medium: string[] | null;
   career_stage: string | null;
+  city: string | null;
   country: string | null;
   cv_url: string | null;
   exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null;
@@ -171,7 +172,7 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
                 <p className="font-semibold">{displayName}</p>
                 {artist?.career_stage && (
                   <p className="text-xs text-muted-foreground">
-                    {[artist.career_stage, artist.country].filter(Boolean).join(" · ")}
+                    {[artist.career_stage, [artist.city, artist.country].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
                   </p>
                 )}
                 {(artist?.medium ?? []).length > 0 && (

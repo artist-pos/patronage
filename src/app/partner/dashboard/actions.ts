@@ -31,9 +31,22 @@ export async function updateApplicationStatus(
   const opp = oppData as { id: string; title: string; organiser: string; type: string; profile_id: string | null } | null;
   if (!opp || opp.profile_id !== user.id) return { error: "Not authorised" };
 
+  const updatePayload: Record<string, unknown> = { status };
+  // Record when an application is first selected so we can schedule follow-ups
+  if (status === "selected" || status === "approved_pending_assets") {
+    const { data: existing } = await supabase
+      .from("opportunity_applications")
+      .select("selected_at")
+      .eq("id", applicationId)
+      .single();
+    if (!(existing as { selected_at?: string | null } | null)?.selected_at) {
+      updatePayload.selected_at = new Date().toISOString();
+    }
+  }
+
   const { error } = await supabase
     .from("opportunity_applications")
-    .update({ status })
+    .update(updatePayload)
     .eq("id", applicationId);
 
   if (error) return { error: error.message };

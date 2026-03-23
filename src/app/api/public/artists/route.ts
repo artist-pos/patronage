@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     .select(
       `username, full_name, bio,
        avatar_url, featured_image_url,
-       country, career_stage,
+       city, country, career_stage,
        disciplines, medium,
        website_url, instagram_handle,
        exhibition_history, received_grants,
@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
     bio:         p.bio,
     avatar_url:  p.avatar_url,
     featured_image_url: p.featured_image_url,
+    city:        p.city ?? null,
     country:     p.country,
     career_stage: p.career_stage,
     disciplines: (p.disciplines ?? []).map((d: string) => ({

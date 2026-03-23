@@ -408,9 +408,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                {profile.country && (
+                {(profile.country || (profile as Profile & { city?: string | null }).city) && (
                   <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                    {profile.country}
+                    {[
+                      (profile as Profile & { city?: string | null }).city,
+                      profile.country,
+                    ].filter(Boolean).join(", ")}
                   </span>
                 )}
                 {profile.career_stage && (

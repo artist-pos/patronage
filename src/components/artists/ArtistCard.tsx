@@ -4,6 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import type { ProfileWithImage } from "@/types/database";
 import type { BadgeSet } from "@/lib/badges";
 
+function locationLabel(artist: ProfileWithImage & { city?: string | null }): string | null {
+  const parts = [artist.city, artist.country].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
 interface Props {
   artist: ProfileWithImage;
   view?: "gallery" | "list";
@@ -88,10 +93,10 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
           ))}
         </div>
 
-        {/* Country */}
-        {artist.country && (
+        {/* Location */}
+        {locationLabel(artist) && (
           <span className="hidden md:block text-xs text-muted-foreground whitespace-nowrap shrink-0">
-            {artist.country}
+            {locationLabel(artist)}
           </span>
         )}
       </Link>
@@ -136,7 +141,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
                 <Badge className="text-xs font-normal bg-foreground text-background w-fit">With Patronage</Badge>
               )}
               {badges && <SecondaryBadges badges={badges} />}
-              {artist.country && <span className="text-xs text-muted-foreground">{artist.country}</span>}
+              {locationLabel(artist) && <span className="text-xs text-muted-foreground">{locationLabel(artist)}</span>}
             </div>
           </div>
           {(artist.medium ?? []).length > 0 ? (
@@ -165,8 +170,8 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate leading-snug">{displayName}</p>
-          {artist.country && (
-            <span className="text-xs text-muted-foreground">{artist.country}</span>
+          {locationLabel(artist) && (
+            <span className="text-xs text-muted-foreground">{locationLabel(artist)}</span>
           )}
         </div>
         {(artist.medium ?? []).length > 0 && (
@@ -227,8 +232,8 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
               </Badge>
             )}
             {badges && <SecondaryBadges badges={badges} />}
-            {artist.country && (
-              <span className="text-xs text-muted-foreground truncate">{artist.country}</span>
+            {locationLabel(artist) && (
+              <span className="text-xs text-muted-foreground truncate">{locationLabel(artist)}</span>
             )}
           </div>
         </div>

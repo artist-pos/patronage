@@ -213,6 +213,7 @@ export interface Profile {
   full_name: string | null;
   bio: string | null;
   country: CountryEnum | null;
+  city: string | null;
   role: "artist" | "admin" | "owner" | "patron" | "partner";
   career_stage: CareerStageEnum | null;
   medium: string[] | null;
@@ -235,6 +236,28 @@ export interface Profile {
   weekly_digest: boolean;
   support_enabled: boolean;
   disciplines: DisciplineEnum[] | null;
+  // Demographic fields — internal only, never shown on public profile
+  year_of_birth: number | null;
+  identity_tags: string[];
+  created_at: string;
+}
+
+export interface ArtistFollowup {
+  id: string;
+  profile_id: string;
+  opportunity_id: string;
+  application_id: string;
+  followup_type: '6_month' | '12_month';
+  sent_at: string | null;
+  completed_at: string | null;
+  further_opportunities: string | null;
+  exhibitions: string | null;
+  press_coverage: string | null;
+  income_from_practice: 'Increased' | 'Stayed the same' | 'Decreased' | 'Not applicable' | null;
+  community_projects: string | null;
+  testimonial: string | null;
+  testimonial_consent: boolean;
+  additional_notes: string | null;
   created_at: string;
 }
 

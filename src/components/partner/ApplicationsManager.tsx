@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApplicantPanel } from "./ApplicantPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
+import { getAgeBracket, IDENTITY_TAGS } from "@/lib/constants/demographics";
 
 export interface EnrichedApp {
   id: string;
@@ -22,12 +23,31 @@ export interface EnrichedApp {
     bio: string | null;
     medium: string[] | null;
     career_stage: string | null;
+    city: string | null;
     country: string | null;
     cv_url: string | null;
     exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null;
     received_grants: string[] | null;
     is_patronage_supported: boolean;
+    year_of_birth: number | null;
+    identity_tags: string[];
   } | null;
+}
+
+interface FollowupRow {
+  id: string;
+  profile_id: string;
+  followup_type: string;
+  sent_at: string | null;
+  completed_at: string | null;
+  further_opportunities: string | null;
+  exhibitions: string | null;
+  press_coverage: string | null;
+  income_from_practice: string | null;
+  community_projects: string | null;
+  testimonial: string | null;
+  testimonial_consent: boolean;
+  additional_notes: string | null;
 }
 
 interface OpportunityShape {
@@ -38,12 +58,14 @@ interface OpportunityShape {
   custom_fields: CustomField[];
   show_badges_in_submission: boolean;
   pipeline_config?: PipelineConfig | null;
+  view_count?: number;
 }
 
 interface Props {
   apps: EnrichedApp[];
   opp: OpportunityShape;
   opportunityId: string;
+  followups?: FollowupRow[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -69,8 +91,8 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
   const questions = getQuestionFields(opp);
   const headers = [
     "Name", "Email", "Username", "Career Stage", "Disciplines",
-    "Location", "Application Date", "Status",
-    "Profile URL", "CV URL", "Submitted Image URL",
+    "City", "Country", "Application Date", "Status", "Age Bracket",
+    "Identity Tags", "Profile URL", "CV URL", "Submitted Image URL",
     ...questions.map((q) => q.label),
   ];
 
@@ -83,9 +105,12 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
       a?.username ?? "",
       a?.career_stage ?? "",
       (a?.medium ?? []).join("; "),
+      a?.city ?? "",
       a?.country ?? "",
       new Date(app.created_at).toLocaleDateString("en-NZ"),
       STATUS_LABELS[app.status] ?? app.status,
+      getAgeBracket(a?.year_of_birth ?? null) ?? "",
+      (a?.identity_tags ?? []).join(", "),
       a?.username ? `https://patronage.nz/${a.username}` : "",
       a?.cv_url ?? "",
       app.artwork?.url ?? app.submitted_image_url ?? "",
@@ -109,13 +134,51 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
   URL.revokeObjectURL(url);
 }
 
+// ── Funnel bar ───────────────────────────────────────────────────────────────
+
+function FunnelBar({ label, count, pct, isFirst }: { label: string; count: number; pct: number | null; isFirst: boolean }) {
+  return (
+    <div className="flex items-center gap-3 min-w-0">
+      <div className="w-24 shrink-0 text-right">
+        <span className="text-xl font-semibold tabular-nums">{count.toLocaleString()}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          {!isFirst && pct !== null && (
+            <span className="text-xs text-muted-foreground">({pct.toFixed(1)}%)</span>
+          )}
+        </div>
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-black rounded-full transition-all"
+            style={{ width: `${isFirst ? 100 : (pct ?? 0)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Stat row ─────────────────────────────────────────────────────────────────
+
+function StatRow({ label, count, pct }: { label: string; count: number; pct?: number }) {
+  return (
+    <div className="flex items-center justify-between text-sm gap-4">
+      <span className="truncate">{label}</span>
+      <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+        {count}{pct !== undefined ? ` (${pct}%)` : ""}
+      </span>
+    </div>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
+export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Local state — no router.push for applicant/view, so UI is instant
   const [selectedAppId, setSelectedAppId] = useState<string | null>(
     () => searchParams.get("applicant") ?? null
   );
@@ -123,6 +186,7 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
     () => (searchParams.get("view") === "gallery" ? "gallery" : "table")
   );
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"applications" | "impact">("applications");
 
   const selectedApp = selectedAppId ? apps.find((a) => a.id === selectedAppId) ?? null : null;
 
@@ -132,14 +196,30 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
 
   function closeApplicant() {
     setSelectedAppId(null);
-    router.refresh(); // pick up any status changes made inside the panel
+    router.refresh();
   }
+
+  // ── Engagement funnel ────────────────────────────────────────────────────
+  const viewCount = opp.view_count ?? 0;
+  const appCount = apps.length;
+  const shortlistedCount = apps.filter((a) => a.status === "shortlisted").length;
+  const selectedCount = apps.filter((a) =>
+    ["selected", "approved_pending_assets", "production_ready"].includes(a.status)
+  ).length;
+
+  const appRate = viewCount > 0 ? (appCount / viewCount) * 100 : null;
+  const shortlistRate = appCount > 0 ? (shortlistedCount / appCount) * 100 : null;
+  const selectionRate = appCount > 0 ? (selectedCount / appCount) * 100 : null;
 
   // ── Stats ────────────────────────────────────────────────────────────────
   const statusCounts: Record<string, number> = {};
   const careerStageCounts: Record<string, number> = {};
   const disciplineCounts: Record<string, number> = {};
-  const locationCounts: Record<string, number> = {};
+  const cityCounts: Record<string, number> = {};
+  const ageBracketCounts: Record<string, number> = {};
+  const identityTagCounts: Record<string, number> = {};
+  let appsWithAgeData = 0;
+  let appsWithIdentityData = 0;
 
   for (const app of apps) {
     statusCounts[app.status] = (statusCounts[app.status] ?? 0) + 1;
@@ -147,15 +227,63 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
     if (a) {
       if (a.career_stage) careerStageCounts[a.career_stage] = (careerStageCounts[a.career_stage] ?? 0) + 1;
       for (const m of a.medium ?? []) disciplineCounts[m] = (disciplineCounts[m] ?? 0) + 1;
-      if (a.country) locationCounts[a.country] = (locationCounts[a.country] ?? 0) + 1;
+
+      const location = [a.city, a.country].filter(Boolean).join(", ");
+      if (location) cityCounts[location] = (cityCounts[location] ?? 0) + 1;
+
+      const bracket = getAgeBracket(a.year_of_birth);
+      if (bracket) {
+        ageBracketCounts[bracket] = (ageBracketCounts[bracket] ?? 0) + 1;
+        appsWithAgeData++;
+      }
+
+      if (a.identity_tags && a.identity_tags.length > 0) {
+        appsWithIdentityData++;
+        for (const tag of a.identity_tags) {
+          identityTagCounts[tag] = (identityTagCounts[tag] ?? 0) + 1;
+        }
+      }
     }
   }
 
   const topDisciplines = Object.entries(disciplineCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const topLocations = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]);
   const topCareerStages = Object.entries(careerStageCounts).sort((a, b) => b[1] - a[1]);
+  const sortedCities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1]);
+  const topCities = sortedCities.slice(0, 8);
+  const otherCitiesCount = sortedCities.slice(8).reduce((sum, [, c]) => sum + c, 0);
+
+  // Age brackets in canonical order
+  const AGE_BRACKET_ORDER = ["Under 25", "25–34", "35–44", "45–54", "55+"];
+  const ageBracketRows = AGE_BRACKET_ORDER
+    .map((label) => ({ label, count: ageBracketCounts[label] ?? 0 }))
+    .filter((r) => r.count > 0);
+
+  // Identity tags sorted by frequency
+  const identityTagRows = Object.entries(identityTagCounts)
+    .sort((a, b) => b[1] - a[1]);
 
   const filteredApps = statusFilter ? apps.filter((a) => a.status === statusFilter) : apps;
+
+  // ── Impact data ──────────────────────────────────────────────────────────
+  const completedFollowups = followups.filter((f) => f.completed_at);
+  const sentFollowups = followups.filter((f) => f.sent_at);
+  const testimonials = completedFollowups.filter((f) => f.testimonial_consent && f.testimonial);
+  const incomeCounts: Record<string, number> = {};
+  let furtherOppsCount = 0;
+  let exhibitionsCount = 0;
+  let pressCount = 0;
+  let communityCount = 0;
+  for (const f of completedFollowups) {
+    if (f.income_from_practice) incomeCounts[f.income_from_practice] = (incomeCounts[f.income_from_practice] ?? 0) + 1;
+    if (f.further_opportunities?.trim()) furtherOppsCount++;
+    if (f.exhibitions?.trim()) exhibitionsCount++;
+    if (f.press_coverage?.trim()) pressCount++;
+    if (f.community_projects?.trim()) communityCount++;
+  }
+
+  const totalSelected = apps.filter((a) =>
+    ["selected", "approved_pending_assets", "production_ready"].includes(a.status)
+  ).length;
 
   if (apps.length === 0) {
     return <p className="text-sm text-muted-foreground py-12 text-center">No applications yet.</p>;
@@ -163,212 +291,352 @@ export function ApplicationsManager({ apps, opp, opportunityId }: Props) {
 
   return (
     <>
-      {/* ── Controls row ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        {/* View toggle */}
-        <div className="flex border border-black">
-          <button
-            type="button"
-            onClick={() => setView("table")}
-            className={`text-xs px-3 py-1.5 transition-colors cursor-pointer ${
-              view === "table" ? "bg-black text-white" : "hover:bg-black hover:text-white"
-            }`}
-          >
-            Table
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("gallery")}
-            className={`text-xs px-3 py-1.5 border-l border-black transition-colors cursor-pointer ${
-              view === "gallery" ? "bg-black text-white" : "hover:bg-black hover:text-white"
-            }`}
-          >
-            Gallery
-          </button>
-        </div>
-
-        {/* CSV export */}
-        <button
-          type="button"
-          onClick={() => exportCSV(apps, opp)}
-          className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors cursor-pointer"
-        >
-          Export CSV ↓
-        </button>
-      </div>
-
-      {/* ── Stats panel ───────────────────────────────────────────────────── */}
-      <div className="border border-black p-5 space-y-5">
-        {/* Status breakdown — clickable to filter */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2 items-end">
-          <button
-            type="button"
-            onClick={() => setStatusFilter(null)}
-            className={`text-center cursor-pointer transition-opacity ${statusFilter !== null ? "opacity-40 hover:opacity-70" : ""}`}
-          >
-            <p className="text-2xl font-semibold">{apps.length}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest">Total</p>
-          </button>
-          <div className="w-px bg-black/10 self-stretch hidden sm:block" />
-          {STATUS_ORDER.filter((s) => statusCounts[s]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-              className={`text-center cursor-pointer transition-opacity ${statusFilter !== null && statusFilter !== s ? "opacity-40 hover:opacity-70" : ""}`}
-            >
-              <p className={`text-2xl font-semibold ${statusFilter === s ? "underline underline-offset-2" : ""}`}>
-                {statusCounts[s]}
-              </p>
-              <p className="text-xs text-muted-foreground uppercase tracking-widest">{STATUS_LABELS[s] ?? s}</p>
-            </button>
-          ))}
-        </div>
-
-        {/* Distribution columns */}
-        {(topCareerStages.length > 0 || topDisciplines.length > 0 || topLocations.length > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-black/10">
-            {topCareerStages.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Stage</p>
-                {topCareerStages.map(([stage, count]) => (
-                  <div key={stage} className="flex items-center justify-between text-sm">
-                    <span>{stage}</span>
-                    <span className="text-muted-foreground font-mono text-xs">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {topDisciplines.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Disciplines</p>
-                {topDisciplines.map(([discipline, count]) => (
-                  <div key={discipline} className="flex items-center justify-between text-sm">
-                    <span>{discipline}</span>
-                    <span className="text-muted-foreground font-mono text-xs">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {topLocations.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Location</p>
-                {topLocations.map(([loc, count]) => (
-                  <div key={loc} className="flex items-center justify-between text-sm">
-                    <span>{loc}</span>
-                    <span className="text-muted-foreground font-mono text-xs">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* ── Engagement funnel ──────────────────────────────────────────────── */}
+      {viewCount > 0 && (
+        <div className="border border-black p-5 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Engagement Funnel</p>
+          <div className="space-y-2.5">
+            <FunnelBar label="Views" count={viewCount} pct={null} isFirst />
+            <FunnelBar label="Applications" count={appCount} pct={appRate} isFirst={false} />
+            <FunnelBar label="Shortlisted" count={shortlistedCount} pct={shortlistRate} isFirst={false} />
+            <FunnelBar label="Selected" count={selectedCount} pct={selectionRate} isFirst={false} />
           </div>
-        )}
-
-        {/* Active filter indicator */}
-        {statusFilter && (
-          <div className="flex items-center gap-2 pt-2 border-t border-black/10">
-            <span className="text-xs text-muted-foreground">
-              Showing {filteredApps.length} {STATUS_LABELS[statusFilter] ?? statusFilter} application{filteredApps.length !== 1 ? "s" : ""}
-            </span>
-            <button
-              type="button"
-              onClick={() => setStatusFilter(null)}
-              className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              Clear filter
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Application list ──────────────────────────────────────────────── */}
-      {filteredApps.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">No applications match this filter.</p>
-      ) : view === "gallery" ? (
-        /* Gallery view */
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredApps.map((app) => {
-            const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
-            return (
-              <button
-                key={app.id}
-                type="button"
-                onClick={() => openApplicant(app.id)}
-                className="border border-black overflow-hidden text-left cursor-pointer hover:border-black/60 transition-colors"
-              >
-                {imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={imageUrl}
-                    alt={app.artwork?.caption ?? app.artist?.full_name ?? ""}
-                    className="w-full aspect-square object-cover"
-                  />
-                ) : (
-                  <div className="w-full aspect-square bg-muted flex items-center justify-center">
-                    <span className="text-2xl font-semibold text-muted-foreground">
-                      {(app.artist?.full_name ?? app.artist?.username ?? "?")[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="p-2 space-y-0.5">
-                  <p className="text-xs font-semibold truncate">{app.artist?.full_name ?? app.artist?.username}</p>
-                  {app.artist?.career_stage && (
-                    <p className="text-xs text-muted-foreground truncate">{app.artist.career_stage}</p>
-                  )}
-                  <span className="text-[10px] bg-muted px-1.5 py-0.5 leading-none">{STATUS_LABELS[app.status] ?? app.status}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        /* Table view */
-        <div className="border-t border-black">
-          {filteredApps.map((app) => {
-            const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
-            return (
-              <button
-                key={app.id}
-                type="button"
-                onClick={() => openApplicant(app.id)}
-                className="w-full flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/50 transition-colors cursor-pointer text-left"
-              >
-                {/* Thumbnail */}
-                {imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={imageUrl}
-                    alt=""
-                    className="w-10 h-10 object-cover border border-black/20 shrink-0"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-muted border border-black/20 shrink-0 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {(app.artist?.full_name ?? app.artist?.username ?? "?")[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">
-                    {app.artist?.full_name ?? app.artist?.username ?? "Unknown"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {[app.artist?.career_stage, app.artist?.country].filter(Boolean).join(" · ") || `@${app.artist?.username}`}
-                  </p>
-                </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
-                </span>
-                <span className="text-xs bg-muted px-2 py-0.5 leading-none whitespace-nowrap">
-                  {STATUS_LABELS[app.status] ?? app.status}
-                </span>
-              </button>
-            );
-          })}
         </div>
       )}
 
-      {/* Applicant panel (modal) — opens instantly from pre-loaded data */}
+      {/* ── Tab bar ────────────────────────────────────────────────────────── */}
+      {followups.length > 0 && (
+        <div className="flex border-b border-black/20 gap-6">
+          {(["applications", "impact"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`text-sm pb-2 border-b-2 transition-colors cursor-pointer capitalize ${
+                activeTab === tab ? "border-black font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab === "applications" ? `Applications (${apps.length})` : "Impact"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Impact tab ─────────────────────────────────────────────────────── */}
+      {activeTab === "impact" && (
+        <div className="space-y-8">
+          {/* Summary counts */}
+          <div className="border border-black p-5 space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Follow-up Summary</p>
+            <div className="flex flex-wrap gap-6 items-end">
+              <div className="text-center">
+                <p className="text-2xl font-semibold">{totalSelected}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest">Funded</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-semibold">{sentFollowups.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest">Contacted</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-semibold">{completedFollowups.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest">Responded</p>
+              </div>
+            </div>
+
+            {completedFollowups.length > 0 && (
+              <div className="pt-4 border-t border-black/10 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Outcomes reported</p>
+                {furtherOppsCount > 0 && <p className="text-sm">{furtherOppsCount} of {completedFollowups.length} reported winning or being shortlisted for further opportunities.</p>}
+                {exhibitionsCount > 0 && <p className="text-sm">{exhibitionsCount} of {completedFollowups.length} reported exhibiting new work.</p>}
+                {pressCount > 0 && <p className="text-sm">{pressCount} of {completedFollowups.length} reported press or media coverage.</p>}
+                {communityCount > 0 && <p className="text-sm">{communityCount} of {completedFollowups.length} reported community project involvement.</p>}
+                {Object.keys(incomeCounts).length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium pt-1">Income from practice:</p>
+                    {Object.entries(incomeCounts).sort((a, b) => b[1] - a[1]).map(([label, count]) => (
+                      <p key={label} className="text-sm text-muted-foreground pl-2">
+                        {label}: {count} artist{count !== 1 ? "s" : ""}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Testimonials */}
+          {testimonials.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Artist Testimonials</p>
+              {testimonials.map((f) => {
+                const app = apps.find((a) => a.artist?.id === f.profile_id);
+                const name = app?.artist?.full_name ?? app?.artist?.username ?? "Artist";
+                return (
+                  <div key={f.id} className="border border-black/20 p-4 space-y-2">
+                    <blockquote className="text-sm italic leading-relaxed">&ldquo;{f.testimonial}&rdquo;</blockquote>
+                    <p className="text-xs text-muted-foreground">— {name}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {completedFollowups.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              {sentFollowups.length > 0
+                ? `${sentFollowups.length} follow-up${sentFollowups.length !== 1 ? "s" : ""} sent — no responses yet.`
+                : "No follow-ups sent yet. Follow-ups are sent automatically at 6 and 12 months post-selection."}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Applications tab ───────────────────────────────────────────────── */}
+      {activeTab === "applications" && (
+        <>
+          {/* Controls row */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex border border-black">
+              <button
+                type="button"
+                onClick={() => setView("table")}
+                className={`text-xs px-3 py-1.5 transition-colors cursor-pointer ${
+                  view === "table" ? "bg-black text-white" : "hover:bg-black hover:text-white"
+                }`}
+              >
+                Table
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("gallery")}
+                className={`text-xs px-3 py-1.5 border-l border-black transition-colors cursor-pointer ${
+                  view === "gallery" ? "bg-black text-white" : "hover:bg-black hover:text-white"
+                }`}
+              >
+                Gallery
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => exportCSV(apps, opp)}
+              className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors cursor-pointer"
+            >
+              Export CSV ↓
+            </button>
+          </div>
+
+          {/* Stats panel */}
+          <div className="border border-black p-5 space-y-5">
+            {/* Status breakdown — clickable to filter */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 items-end">
+              <button
+                type="button"
+                onClick={() => setStatusFilter(null)}
+                className={`text-center cursor-pointer transition-opacity ${statusFilter !== null ? "opacity-40 hover:opacity-70" : ""}`}
+              >
+                <p className="text-2xl font-semibold">{apps.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest">Total</p>
+              </button>
+              <div className="w-px bg-black/10 self-stretch hidden sm:block" />
+              {STATUS_ORDER.filter((s) => statusCounts[s]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                  className={`text-center cursor-pointer transition-opacity ${statusFilter !== null && statusFilter !== s ? "opacity-40 hover:opacity-70" : ""}`}
+                >
+                  <p className={`text-2xl font-semibold ${statusFilter === s ? "underline underline-offset-2" : ""}`}>
+                    {statusCounts[s]}
+                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest">{STATUS_LABELS[s] ?? s}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Distribution columns */}
+            {(topCareerStages.length > 0 || topDisciplines.length > 0 || topCities.length > 0) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-black/10">
+                {topCareerStages.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Stage</p>
+                    {topCareerStages.map(([stage, count]) => (
+                      <StatRow key={stage} label={stage} count={count} />
+                    ))}
+                  </div>
+                )}
+                {topDisciplines.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Disciplines</p>
+                    {topDisciplines.map(([discipline, count]) => (
+                      <StatRow key={discipline} label={discipline} count={count} />
+                    ))}
+                  </div>
+                )}
+                {topCities.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Location</p>
+                    {topCities.map(([loc, count]) => (
+                      <StatRow key={loc} label={loc} count={count} />
+                    ))}
+                    {otherCitiesCount > 0 && (
+                      <p className="text-xs text-muted-foreground">{otherCitiesCount} from other locations</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Age bracket breakdown */}
+            {ageBracketRows.length > 0 && (
+              <div className="pt-4 border-t border-black/10">
+                <div className="flex items-baseline justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Age Bracket</p>
+                  <p className="text-xs text-muted-foreground">{apps.length} applicants — {appsWithAgeData} with age data</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                  {ageBracketRows.map(({ label, count }) => {
+                    const pct = appsWithAgeData > 0 ? Math.round((count / appsWithAgeData) * 100) : 0;
+                    return (
+                      <div key={label} className="border border-black/10 p-2 text-center">
+                        <p className="text-lg font-semibold">{count}</p>
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="text-xs text-muted-foreground">{pct}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Identity tags breakdown */}
+            {identityTagRows.length > 0 && (
+              <div className="pt-4 border-t border-black/10">
+                <div className="flex items-baseline justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Identity</p>
+                  <p className="text-xs text-muted-foreground">{appsWithIdentityData} of {apps.length} applicants provided identity data</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">Percentages sum to more than 100% — applicants may select multiple.</p>
+                <div className="space-y-1.5">
+                  {identityTagRows.map(([tag, count]) => {
+                    const pct = apps.length > 0 ? Math.round((count / apps.length) * 100) : 0;
+                    return (
+                      <div key={tag} className="flex items-center gap-3">
+                        <div className="w-36 shrink-0 text-sm truncate">{tag}</div>
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-black/60 rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground font-mono w-16 text-right">{count} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Active filter indicator */}
+            {statusFilter && (
+              <div className="flex items-center gap-2 pt-2 border-t border-black/10">
+                <span className="text-xs text-muted-foreground">
+                  Showing {filteredApps.length} {STATUS_LABELS[statusFilter] ?? statusFilter} application{filteredApps.length !== 1 ? "s" : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(null)}
+                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Application list */}
+          {filteredApps.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No applications match this filter.</p>
+          ) : view === "gallery" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredApps.map((app) => {
+                const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
+                return (
+                  <button
+                    key={app.id}
+                    type="button"
+                    onClick={() => openApplicant(app.id)}
+                    className="border border-black overflow-hidden text-left cursor-pointer hover:border-black/60 transition-colors"
+                  >
+                    {imageUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={imageUrl}
+                        alt={app.artwork?.caption ?? app.artist?.full_name ?? ""}
+                        className="w-full aspect-square object-cover"
+                      />
+                    ) : (
+                      <div className="w-full aspect-square bg-muted flex items-center justify-center">
+                        <span className="text-2xl font-semibold text-muted-foreground">
+                          {(app.artist?.full_name ?? app.artist?.username ?? "?")[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="p-2 space-y-0.5">
+                      <p className="text-xs font-semibold truncate">{app.artist?.full_name ?? app.artist?.username}</p>
+                      {app.artist?.career_stage && (
+                        <p className="text-xs text-muted-foreground truncate">{app.artist.career_stage}</p>
+                      )}
+                      <span className="text-[10px] bg-muted px-1.5 py-0.5 leading-none">{STATUS_LABELS[app.status] ?? app.status}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="border-t border-black">
+              {filteredApps.map((app) => {
+                const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
+                return (
+                  <button
+                    key={app.id}
+                    type="button"
+                    onClick={() => openApplicant(app.id)}
+                    className="w-full flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                  >
+                    {imageUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        className="w-10 h-10 object-cover border border-black/20 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted border border-black/20 shrink-0 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {(app.artist?.full_name ?? app.artist?.username ?? "?")[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {app.artist?.full_name ?? app.artist?.username ?? "Unknown"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[app.artist?.career_stage, [app.artist?.city, app.artist?.country].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || `@${app.artist?.username}`}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+                    </span>
+                    <span className="text-xs bg-muted px-2 py-0.5 leading-none whitespace-nowrap">
+                      {STATUS_LABELS[app.status] ?? app.status}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Applicant panel — opens instantly from pre-loaded data */}
       {selectedApp && (
         <ApplicantPanel
           application={selectedApp as unknown as Parameters<typeof ApplicantPanel>[0]["application"]}

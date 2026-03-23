@@ -34,11 +34,14 @@ interface ProfileRow {
   bio: string | null;
   medium: string[] | null;
   career_stage: string | null;
+  city: string | null;
   country: string | null;
   cv_url: string | null;
   exhibition_history: Array<{ type: string; title: string; venue: string; location: string; year: number }> | null;
   received_grants: string[] | null;
   is_patronage_supported: boolean;
+  year_of_birth: number | null;
+  identity_tags: string[] | null;
 }
 
 export default async function PartnerOpportunityPage({ params }: Props) {
@@ -51,7 +54,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const [{ data: oppData }, adminUser] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, title, organiser, type, slug, profile_id, routing_type, custom_fields, show_badges_in_submission, pipeline_config")
+      .select("id, title, organiser, type, slug, profile_id, routing_type, custom_fields, show_badges_in_submission, pipeline_config, view_count")
       .eq("id", opportunityId)
       .single(),
     isAdmin(),
@@ -70,6 +73,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     custom_fields: (oppData.custom_fields ?? []) as CustomField[],
     show_badges_in_submission: (oppData.show_badges_in_submission ?? true) as boolean,
     pipeline_config: (oppData.pipeline_config ?? null) as import("@/types/database").PipelineConfig | null,
+    view_count: (oppData.view_count ?? 0) as number,
   };
 
   // Get applications with artwork
@@ -87,7 +91,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     artistIds.length > 0
       ? supabase
           .from("profiles")
-          .select("id, username, full_name, avatar_url, bio, medium, career_stage, country, cv_url, exhibition_history, received_grants, is_patronage_supported")
+          .select("id, username, full_name, avatar_url, bio, medium, career_stage, city, country, cv_url, exhibition_history, received_grants, is_patronage_supported, year_of_birth, identity_tags")
           .in("id", artistIds)
       : { data: [] },
     artistIds.length > 0
@@ -112,6 +116,29 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     if (email) emailMap.set(artistIds[i], email);
   }
 
+  // Fetch follow-ups for impact section
+  const { data: followupsData } = await supabase
+    .from("artist_followups")
+    .select("id, profile_id, followup_type, sent_at, completed_at, further_opportunities, exhibitions, press_coverage, income_from_practice, community_projects, testimonial, testimonial_consent, additional_notes")
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: false });
+
+  const followups = (followupsData ?? []) as Array<{
+    id: string;
+    profile_id: string;
+    followup_type: string;
+    sent_at: string | null;
+    completed_at: string | null;
+    further_opportunities: string | null;
+    exhibitions: string | null;
+    press_coverage: string | null;
+    income_from_practice: string | null;
+    community_projects: string | null;
+    testimonial: string | null;
+    testimonial_consent: boolean;
+    additional_notes: string | null;
+  }>;
+
   // Build enriched apps
   const enrichedApps = apps.map((app) => {
     const profile = profileMap.get(app.artist_id) ?? null;
@@ -127,11 +154,14 @@ export default async function PartnerOpportunityPage({ params }: Props) {
             bio: profile.bio,
             medium: profile.medium,
             career_stage: profile.career_stage,
+            city: profile.city,
             country: profile.country,
             cv_url: profile.cv_url,
             exhibition_history: profile.exhibition_history as Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null,
             received_grants: profile.received_grants,
             is_patronage_supported: profile.is_patronage_supported,
+            year_of_birth: profile.year_of_birth,
+            identity_tags: profile.identity_tags ?? [],
           }
         : null,
     };
@@ -150,12 +180,13 @@ export default async function PartnerOpportunityPage({ params }: Props) {
         </p>
       </div>
 
-      {/* Client-side applications manager (filtering, CSV, gallery/table) */}
+      {/* Client-side applications manager (filtering, CSV, gallery/table, impact) */}
       <Suspense>
         <ApplicationsManager
           apps={enrichedApps}
           opp={opp}
           opportunityId={opportunityId}
+          followups={followups}
         />
       </Suspense>
     </div>

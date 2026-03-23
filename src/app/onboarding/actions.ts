@@ -59,6 +59,7 @@ export async function upsertProfileAction(
   const username = (formData.get("username") as string)?.trim().toLowerCase();
   const full_name = (formData.get("full_name") as string)?.trim() || null;
   const bio = (formData.get("bio") as string)?.trim() || null;
+  const city = (formData.get("city") as string)?.trim() || null;
   const country = (formData.get("country") as string) || null;
   const career_stage = (formData.get("career_stage") as string) || null;
   const mediumRaw = (formData.get("medium") as string) ?? "";
@@ -73,6 +74,20 @@ export async function upsertProfileAction(
     .filter(Boolean);
   const website_url = (formData.get("website_url") as string)?.trim() || null;
   const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
+
+  // Demographic fields (opt-in, private)
+  const yearOfBirthRaw = (formData.get("year_of_birth") as string)?.trim();
+  let year_of_birth: number | null = null;
+  if (yearOfBirthRaw) {
+    const parsed = parseInt(yearOfBirthRaw, 10);
+    const currentYear = new Date().getFullYear();
+    if (isNaN(parsed) || parsed < 1920 || parsed > currentYear - 10) {
+      return { fieldErrors: { year_of_birth: `Year must be between 1920 and ${currentYear - 10}.` } };
+    }
+    year_of_birth = parsed;
+  }
+
+  const identity_tags = formData.getAll("identity_tags") as string[];
 
   // Validate username
   if (!username) return { fieldErrors: { username: "Username is required." } };
@@ -99,11 +114,14 @@ export async function upsertProfileAction(
     username,
     full_name,
     bio,
+    city,
     country: country || null,
     career_stage: career_stage || null,
     medium: medium.length > 0 ? medium : null,
     website_url,
     instagram_handle,
+    year_of_birth,
+    identity_tags,
   };
   // Only write disciplines when values are present — omitting it avoids
   // triggering the NOT NULL constraint for partners/patrons who don't
