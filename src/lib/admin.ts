@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile, Opportunity } from "@/types/database";
 import { getOpportunityById } from "@/lib/opportunities";
+import { getAgeBracket } from "@/lib/constants/demographics";
 
 export async function isAdmin(): Promise<boolean> {
   const supabase = await createClient();
@@ -612,6 +613,321 @@ export async function getImpactMetrics(): Promise<ImpactMetrics> {
     totalOpportunitiesTracked: (allOpps ?? []).length,
     totalApplicationsProcessed: totalApps ?? 0,
     artistDemographics: { byCareerStage, byCountry },
+  };
+}
+
+// ── Pipeline Report ───────────────────────────────────────────────────────────
+
+export interface PipelineReportRow {
+  opportunity_id: string;
+  opportunity_title: string;
+  opportunity_type: string;
+  opportunity_deadline: string | null;
+  opportunity_organiser: string;
+  funding_amount: number | null;
+  application_id: string;
+  application_date: string;
+  application_status: string;
+  artist_id: string;
+  artist_name: string;
+  artist_email: string;
+  artist_username: string;
+  artist_city: string;
+  artist_country: string;
+  artist_career_stage: string;
+  artist_age_bracket: string;
+  artist_identity_tags: string;
+  artist_disciplines: string;
+  artist_profile_url: string;
+  artist_cv_url: string;
+  submitted_image_url: string;
+  custom_answers_json: string;
+}
+
+export interface PipelineReport {
+  // Summary
+  totalPipelineOpportunities: number;
+  totalPipelineOpportunitiesThisYear: number;
+  totalApplications: number;
+  totalApplicationsThisYear: number;
+  uniqueApplicants: number;
+  artistsFunded: number;
+  fundingDistributed: number;
+
+  // Demographics
+  byCareerStage: Record<string, number>;
+  byAgeBracket: Record<string, number>;
+  byIdentityTag: Record<string, number>;
+  byCity: [string, number][];
+  byCountry: Record<string, number>;
+  byDiscipline: [string, number][];
+  appsWithAgeData: number;
+  appsWithIdentityData: number;
+
+  // Engagement
+  avgAppsPerOpportunity: number;
+  avgConversionRate: number;
+  totalViews: number;
+  viewToAppRate: number;
+
+  // By-month time series (last 12 months)
+  applicationsByMonth: { month: string; count: number }[];
+
+  // Follow-ups
+  followupsSent: number;
+  followupsCompleted: number;
+  furtherOppsCount: number;
+  exhibitionsCount: number;
+  pressCount: number;
+  communityCount: number;
+  incomeBreakdown: Record<string, number>;
+  testimonialCount: number;
+
+  // For CSV export
+  rows: PipelineReportRow[];
+  allCustomQuestionLabels: string[];
+  // raw custom_answers per application_id for CSV export
+  customAnswersByAppId: Record<string, Record<string, string>>;
+  // question id → label mapping per opportunity
+  questionLabelsByOppId: Record<string, Record<string, string>>;
+}
+
+export async function getPipelineReport(): Promise<PipelineReport> {
+  const admin = createAdminClient();
+
+  const [
+    { data: pipelineOpps },
+    { data: allApps },
+    { data: allFollowups },
+  ] = await Promise.all([
+    admin
+      .from("opportunities")
+      .select("id, title, type, organiser, deadline, funding_amount, view_count, created_at, profile_id, custom_fields, pipeline_config")
+      .eq("routing_type", "pipeline")
+      .order("created_at", { ascending: false }),
+    admin
+      .from("opportunity_applications")
+      .select("id, opportunity_id, artist_id, status, created_at, custom_answers, submitted_image_url, artwork_id"),
+    admin
+      .from("artist_followups")
+      .select("opportunity_id, sent_at, completed_at, further_opportunities, exhibitions, press_coverage, income_from_practice, community_projects, testimonial, testimonial_consent"),
+  ]);
+
+  const oppIds = new Set((pipelineOpps ?? []).map((o) => o.id));
+  const pipelineApps = (allApps ?? []).filter((a) => oppIds.has(a.opportunity_id));
+
+  // Fetch artist profiles + emails
+  const artistIds = [...new Set(pipelineApps.map((a) => a.artist_id))];
+  const [{ data: profiles }, emailResults] = await Promise.all([
+    artistIds.length > 0
+      ? admin
+          .from("profiles")
+          .select("id, username, full_name, city, country, career_stage, year_of_birth, identity_tags, medium, cv_url")
+          .in("id", artistIds)
+      : { data: [] },
+    artistIds.length > 0
+      ? Promise.all(artistIds.map((id) => admin.auth.admin.getUserById(id)))
+      : Promise.resolve([]),
+  ]);
+
+  const profileMap = new Map<string, {
+    username: string; full_name: string | null; city: string | null; country: string | null;
+    career_stage: string | null; year_of_birth: number | null; identity_tags: string[] | null;
+    medium: string[] | null; cv_url: string | null;
+  }>();
+  for (const p of profiles ?? []) profileMap.set(p.id, p as never);
+
+  const emailMap = new Map<string, string>();
+  for (let i = 0; i < artistIds.length; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const email = (emailResults as any[])[i]?.data?.user?.email;
+    if (email) emailMap.set(artistIds[i], email);
+  }
+
+  // Build question label maps per opportunity
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const questionLabelsByOppId: Record<string, Record<string, string>> = {};
+  const allCustomQuestionLabelsSet = new Set<string>();
+
+  for (const opp of pipelineOpps ?? []) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const questions: { id: string; label: string }[] = (opp.pipeline_config as any)?.questions?.length
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? (opp.pipeline_config as any).questions.map((q: any) => ({ id: q.id, label: q.label }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      : ((opp.custom_fields as any[]) ?? []).map((f: any) => ({ id: f.id, label: f.question }));
+    const map: Record<string, string> = {};
+    for (const q of questions) {
+      map[q.id] = q.label;
+      allCustomQuestionLabelsSet.add(q.label);
+    }
+    questionLabelsByOppId[opp.id] = map;
+  }
+  const allCustomQuestionLabels = [...allCustomQuestionLabelsSet];
+
+  // Aggregate demographics
+  const byCareerStage: Record<string, number> = {};
+  const byAgeBracket: Record<string, number> = {};
+  const byIdentityTag: Record<string, number> = {};
+  const byCityMap: Record<string, number> = {};
+  const byCountry: Record<string, number> = {};
+  const byDisciplineMap: Record<string, number> = {};
+  let appsWithAgeData = 0;
+  let appsWithIdentityData = 0;
+
+  const applicationsByMonthMap: Record<string, number> = {};
+  const now = new Date();
+  // Initialise last 12 months
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    applicationsByMonthMap[key] = 0;
+  }
+
+  const customAnswersByAppId: Record<string, Record<string, string>> = {};
+  const rows: PipelineReportRow[] = [];
+  const thisYear = now.getFullYear().toString();
+
+  let totalApplicationsThisYear = 0;
+  let artistsFunded = 0;
+  let fundingDistributed = 0;
+  const fundedOppIds = new Set<string>();
+  const fundedArtistIds = new Set<string>();
+
+  const oppMap = new Map<string, typeof pipelineOpps extends (infer T)[] | null ? T : never>();
+  for (const o of pipelineOpps ?? []) oppMap.set(o.id, o as never);
+
+  for (const app of pipelineApps) {
+    const profile = profileMap.get(app.artist_id);
+    const opp = oppMap.get(app.opportunity_id);
+    if (!opp) continue;
+
+    const appDate = new Date(app.created_at);
+    const monthKey = `${appDate.getFullYear()}-${String(appDate.getMonth() + 1).padStart(2, "0")}`;
+    if (monthKey in applicationsByMonthMap) applicationsByMonthMap[monthKey]++;
+    if (app.created_at.startsWith(thisYear)) totalApplicationsThisYear++;
+
+    const isFunded = ["selected", "approved_pending_assets", "production_ready"].includes(app.status);
+    if (isFunded) {
+      fundedArtistIds.add(app.artist_id);
+      if (!fundedOppIds.has(app.opportunity_id)) {
+        fundedOppIds.add(app.opportunity_id);
+        if (opp.funding_amount) fundingDistributed += opp.funding_amount;
+      }
+    }
+
+    // Demographics
+    if (profile) {
+      if (profile.career_stage) byCareerStage[profile.career_stage] = (byCareerStage[profile.career_stage] ?? 0) + 1;
+      const city = [profile.city, profile.country].filter(Boolean).join(", ");
+      if (city) byCityMap[city] = (byCityMap[city] ?? 0) + 1;
+      if (profile.country) byCountry[profile.country] = (byCountry[profile.country] ?? 0) + 1;
+      for (const m of profile.medium ?? []) byDisciplineMap[m] = (byDisciplineMap[m] ?? 0) + 1;
+
+      const bracket = getAgeBracket(profile.year_of_birth);
+      if (bracket) { byAgeBracket[bracket] = (byAgeBracket[bracket] ?? 0) + 1; appsWithAgeData++; }
+
+      if ((profile.identity_tags ?? []).length > 0) {
+        appsWithIdentityData++;
+        for (const tag of profile.identity_tags ?? []) {
+          byIdentityTag[tag] = (byIdentityTag[tag] ?? 0) + 1;
+        }
+      }
+    }
+
+    // Custom answers (store by app id for CSV export)
+    const answers = (app.custom_answers ?? {}) as Record<string, string>;
+    customAnswersByAppId[app.id] = answers;
+
+    // Build CSV row
+    rows.push({
+      opportunity_id: app.opportunity_id,
+      opportunity_title: opp.title ?? "",
+      opportunity_type: opp.type ?? "",
+      opportunity_deadline: opp.deadline ?? null,
+      opportunity_organiser: opp.organiser ?? "",
+      funding_amount: opp.funding_amount ?? null,
+      application_id: app.id,
+      application_date: app.created_at,
+      application_status: app.status,
+      artist_id: app.artist_id,
+      artist_name: profile?.full_name ?? profile?.username ?? "",
+      artist_email: emailMap.get(app.artist_id) ?? "",
+      artist_username: profile?.username ?? "",
+      artist_city: profile?.city ?? "",
+      artist_country: profile?.country ?? "",
+      artist_career_stage: profile?.career_stage ?? "",
+      artist_age_bracket: getAgeBracket(profile?.year_of_birth ?? null) ?? "",
+      artist_identity_tags: (profile?.identity_tags ?? []).join(", "),
+      artist_disciplines: (profile?.medium ?? []).join("; "),
+      artist_profile_url: profile?.username ? `${siteUrl}/${profile.username}` : "",
+      artist_cv_url: profile?.cv_url ?? "",
+      submitted_image_url: app.submitted_image_url ?? "",
+      custom_answers_json: JSON.stringify(answers),
+    });
+  }
+
+  artistsFunded = fundedArtistIds.size;
+
+  // Engagement
+  const totalViews = (pipelineOpps ?? []).reduce((sum, o) => sum + (o.view_count ?? 0), 0);
+  const avgAppsPerOpportunity = (pipelineOpps ?? []).length === 0 ? 0 : Math.round(pipelineApps.length / (pipelineOpps ?? []).length);
+  const selectedCount = pipelineApps.filter((a) => ["selected", "approved_pending_assets", "production_ready"].includes(a.status)).length;
+  const avgConversionRate = pipelineApps.length === 0 ? 0 : Math.round((selectedCount / pipelineApps.length) * 100);
+  const viewToAppRate = totalViews === 0 ? 0 : Math.round((pipelineApps.length / totalViews) * 100);
+
+  // Follow-ups
+  const pipelineFollowups = (allFollowups ?? []).filter((f) => oppIds.has(f.opportunity_id));
+  let followupsSent = 0, followupsCompleted = 0, furtherOppsCount = 0, exhibitionsCount = 0, pressCount = 0, communityCount = 0, testimonialCount = 0;
+  const incomeBreakdown: Record<string, number> = {};
+  for (const f of pipelineFollowups) {
+    if (f.sent_at) followupsSent++;
+    if (f.completed_at) {
+      followupsCompleted++;
+      if (f.further_opportunities?.trim()) furtherOppsCount++;
+      if (f.exhibitions?.trim()) exhibitionsCount++;
+      if (f.press_coverage?.trim()) pressCount++;
+      if (f.community_projects?.trim()) communityCount++;
+      if (f.testimonial_consent && f.testimonial) testimonialCount++;
+      if (f.income_from_practice) incomeBreakdown[f.income_from_practice] = (incomeBreakdown[f.income_from_practice] ?? 0) + 1;
+    }
+  }
+
+  const applicationsByMonth = Object.entries(applicationsByMonthMap).map(([month, count]) => ({ month, count }));
+
+  return {
+    totalPipelineOpportunities: (pipelineOpps ?? []).length,
+    totalPipelineOpportunitiesThisYear: (pipelineOpps ?? []).filter((o) => o.created_at.startsWith(thisYear)).length,
+    totalApplications: pipelineApps.length,
+    totalApplicationsThisYear,
+    uniqueApplicants: artistIds.length,
+    artistsFunded,
+    fundingDistributed,
+    byCareerStage,
+    byAgeBracket,
+    byIdentityTag,
+    byCity: Object.entries(byCityMap).sort((a, b) => b[1] - a[1]).slice(0, 15),
+    byCountry,
+    byDiscipline: Object.entries(byDisciplineMap).sort((a, b) => b[1] - a[1]).slice(0, 10),
+    appsWithAgeData,
+    appsWithIdentityData,
+    avgAppsPerOpportunity,
+    avgConversionRate,
+    totalViews,
+    viewToAppRate,
+    applicationsByMonth,
+    followupsSent,
+    followupsCompleted,
+    furtherOppsCount,
+    exhibitionsCount,
+    pressCount,
+    communityCount,
+    incomeBreakdown,
+    testimonialCount,
+    rows,
+    allCustomQuestionLabels,
+    customAnswersByAppId,
+    questionLabelsByOppId,
   };
 }
 

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import type { Metadata } from "next";
 import { PartnerEditForm } from "./PartnerEditForm";
+import { CollaboratorsPanel } from "@/components/partner/CollaboratorsPanel";
+import { getCollaborators } from "@/app/partner/opportunities/[id]/collaborators/actions";
 
 export const metadata: Metadata = {
   title: "Edit Listing — Patronage",
@@ -21,18 +23,31 @@ export default async function PartnerEditPage({ params }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: opp } = await supabase
-    .from("opportunities")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [{ data: opp }, adminUser] = await Promise.all([
+    supabase.from("opportunities").select("*").eq("id", id).single(),
+    isAdmin(),
+  ]);
 
   if (!opp) notFound();
 
-  const admin = await isAdmin();
-  if (opp.profile_id !== user.id && !admin) {
-    redirect("/partner/dashboard");
+  // Allow access if owner, admin, or collaborator
+  const isOwner = opp.profile_id === user.id;
+  if (!isOwner && !adminUser) {
+    // Check collaborator access
+    const { data: collab } = await supabase
+      .from("opportunity_collaborators")
+      .select("role")
+      .eq("opportunity_id", id)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (!collab) redirect("/partner/dashboard");
   }
+
+  // Only owners and admins can manage collaborators
+  const canManageCollaborators = isOwner || adminUser;
+
+  // Fetch collaborators
+  const { collaborators = [] } = await getCollaborators(id);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-8">
@@ -48,6 +63,13 @@ export default async function PartnerEditPage({ params }: Props) {
       </div>
 
       <PartnerEditForm opp={opp} />
+
+      {/* Collaborators — owners and admins can manage; collaborators can view */}
+      <CollaboratorsPanel
+        opportunityId={id}
+        initialCollaborators={collaborators}
+        isOwner={canManageCollaborators}
+      />
     </div>
   );
 }

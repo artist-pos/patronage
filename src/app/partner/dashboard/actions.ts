@@ -7,20 +7,26 @@ import { sendHighResRequest } from "@/lib/email";
 
 export async function updateApplicationStatus(
   applicationId: string,
-  status: "pending" | "shortlisted" | "selected" | "approved_pending_assets" | "rejected"
+  status: "pending" | "shortlisted" | "selected" | "approved_pending_assets" | "production_ready" | "rejected"
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Verify partner owns this application's opportunity
-  const { data: app } = await supabase
-    .from("opportunity_applications")
-    .select("id, artist_id, opportunity_id")
-    .eq("id", applicationId)
-    .single();
+  // Check if admin/owner (parallel with app fetch)
+  const [{ data: profileData }, { data: app }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase
+      .from("opportunity_applications")
+      .select("id, status, artist_id, opportunity_id, selected_at")
+      .eq("id", applicationId)
+      .single(),
+  ]);
 
+  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!app) return { error: "Application not found" };
+
+  const oldStatus = (app as { status: string }).status;
 
   const { data: oppData } = await supabase
     .from("opportunities")
@@ -29,19 +35,24 @@ export async function updateApplicationStatus(
     .single();
 
   const opp = oppData as { id: string; title: string; organiser: string; type: string; profile_id: string | null } | null;
-  if (!opp || opp.profile_id !== user.id) return { error: "Not authorised" };
+  if (!opp) return { error: "Not authorised" };
+
+  if (opp.profile_id !== user.id && !isAdminUser) {
+    // Check editor collaborator access
+    const { data: collab } = await supabase
+      .from("opportunity_collaborators")
+      .select("role")
+      .eq("opportunity_id", app.opportunity_id as string)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  }
 
   const updatePayload: Record<string, unknown> = { status };
   // Record when an application is first selected so we can schedule follow-ups
-  if (status === "selected" || status === "approved_pending_assets") {
-    const { data: existing } = await supabase
-      .from("opportunity_applications")
-      .select("selected_at")
-      .eq("id", applicationId)
-      .single();
-    if (!(existing as { selected_at?: string | null } | null)?.selected_at) {
-      updatePayload.selected_at = new Date().toISOString();
-    }
+  // Do NOT overwrite selected_at if it already exists (even if reverting status)
+  if ((status === "selected" || status === "approved_pending_assets") && !(app as { selected_at?: string | null }).selected_at) {
+    updatePayload.selected_at = new Date().toISOString();
   }
 
   const { error } = await supabase
@@ -51,10 +62,20 @@ export async function updateApplicationStatus(
 
   if (error) return { error: error.message };
 
+  const admin = createAdminClient();
+
+  // Log status change for audit trail (fire-and-forget — table may not exist yet)
+  void admin
+    .from("application_status_log")
+    .insert({
+      application_id: applicationId,
+      old_status: oldStatus,
+      new_status: status,
+      changed_by: user.id,
+    });
+
   // Auto-create a verified profile achievement when selected or approved
   if (status === "selected" || status === "approved_pending_assets") {
-    const admin = createAdminClient();
-
     // Upsert achievement (idempotent — unique index on profile_id + opportunity_id)
     await admin
       .from("profile_achievements")
@@ -103,12 +124,16 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const { data: app } = await supabase
-    .from("opportunity_applications")
-    .select("highres_asset_url, opportunity_id")
-    .eq("id", applicationId)
-    .single();
+  const [{ data: profileData }, { data: app }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase
+      .from("opportunity_applications")
+      .select("highres_asset_url, opportunity_id")
+      .eq("id", applicationId)
+      .single(),
+  ]);
 
+  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!app) return { error: "Not found" };
 
   const { data: oppData } = await supabase
@@ -117,7 +142,17 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
     .eq("id", app.opportunity_id as string)
     .single();
 
-  if (!oppData || (oppData as { profile_id: string | null }).profile_id !== user.id) return { error: "Not authorised" };
+  const oppProfile = (oppData as { profile_id: string | null }).profile_id;
+  if (!oppData || (oppProfile !== user.id && !isAdminUser)) {
+    // Check collaborator access (editors can download)
+    const { data: collab } = await supabase
+      .from("opportunity_collaborators")
+      .select("role")
+      .eq("opportunity_id", app.opportunity_id as string)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  }
 
   const assetPath = (app.highres_asset_url as string | null)
     ?.split("/production-assets/")

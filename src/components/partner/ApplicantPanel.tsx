@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -63,6 +63,7 @@ const STATUS_OPTIONS = [
   { val: "shortlisted", label: "Shortlist" },
   { val: "selected", label: "Select" },
   { val: "approved_pending_assets", label: "Approve" },
+  { val: "production_ready", label: "Production Ready" },
   { val: "rejected", label: "Reject" },
 ] as const;
 
@@ -89,8 +90,12 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
   const [status, setStatus] = useState(application.status);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastIsUndo, setToastIsUndo] = useState(false);
+  const [undoStatus, setUndoStatus] = useState<string | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingDownload, setLoadingDownload] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<typeof STATUS_OPTIONS[number] | null>(null);
 
   const artist = application.artist;
   const displayName = artist?.full_name ?? artist?.username ?? "Unknown";
@@ -110,17 +115,46 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
       )
     : null;
 
-  async function handleStatusChange(newStatus: typeof STATUS_OPTIONS[number]["val"]) {
+  async function applyStatusChange(newStatus: typeof STATUS_OPTIONS[number]["val"]) {
+    const previousStatus = status;
     setSaving(true);
     const result = await updateApplicationStatus(application.id, newStatus);
+    setSaving(false);
     if (result.error) {
       setToast("Error: " + result.error);
+      setToastIsUndo(false);
+      setTimeout(() => setToast(null), 3000);
     } else {
       setStatus(newStatus);
-      setToast("Updated");
+      setUndoStatus(previousStatus);
+      setToastIsUndo(true);
+      setToast(`Status set to ${STATUS_LABELS[newStatus] ?? newStatus}`);
+      // Clear any existing undo timer
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = setTimeout(() => {
+        setToast(null);
+        setToastIsUndo(false);
+        setUndoStatus(null);
+      }, 5000);
     }
-    setSaving(false);
-    setTimeout(() => setToast(null), 2000);
+  }
+
+  function handleStatusChange(opt: typeof STATUS_OPTIONS[number]) {
+    // Confirm destructive/significant actions
+    if (opt.val === "rejected" || opt.val === "selected") {
+      setConfirmAction(opt);
+    } else {
+      applyStatusChange(opt.val);
+    }
+  }
+
+  async function handleUndo() {
+    if (!undoStatus) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setToast(null);
+    setToastIsUndo(false);
+    await applyStatusChange(undoStatus as typeof STATUS_OPTIONS[number]["val"]);
+    setUndoStatus(null);
   }
 
   async function handleDownload() {
@@ -378,9 +412,9 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
                 <button
                   key={opt.val}
                   type="button"
-                  onClick={() => handleStatusChange(opt.val)}
+                  onClick={() => handleStatusChange(opt)}
                   disabled={saving}
-                  className={`text-xs px-3 py-1.5 border transition-colors disabled:opacity-50 ${
+                  className={`text-xs px-3 py-1.5 border transition-colors disabled:opacity-50 cursor-pointer ${
                     opt.val === "rejected"
                       ? "border-black/30 text-muted-foreground hover:border-black"
                       : opt.val === "approved_pending_assets"
@@ -394,13 +428,61 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
             </div>
 
             {toast && (
-              <p className={`text-xs ${toast === "Updated" ? "text-green-600" : "text-destructive"}`}>
-                {toast}
-              </p>
+              <div className={`flex items-center gap-3 text-xs ${toast.startsWith("Error") ? "text-destructive" : "text-green-700"}`}>
+                <span>{toast}</span>
+                {toastIsUndo && undoStatus && (
+                  <button
+                    type="button"
+                    onClick={handleUndo}
+                    disabled={saving}
+                    className="underline underline-offset-2 text-foreground hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
+                  >
+                    Undo
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Confirmation modal */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction(null); }}
+        >
+          <div className="bg-background border border-black w-full max-w-sm p-6 space-y-4">
+            <p className="font-semibold text-sm">
+              {confirmAction.val === "rejected"
+                ? "Reject this application?"
+                : "Select this applicant?"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {confirmAction.val === "rejected"
+                ? "You can reverse this at any time by changing their status."
+                : "This will create a verified achievement on their Patronage profile. You can reverse this at any time."}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setConfirmAction(null); applyStatusChange(confirmAction.val); }}
+                disabled={saving}
+                className="flex-1 text-xs px-4 py-2 bg-black text-white hover:bg-black/80 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {saving ? "Saving…" : "Confirm"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 text-xs px-4 py-2 border border-black hover:bg-muted transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

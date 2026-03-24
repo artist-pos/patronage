@@ -19,36 +19,90 @@ export default async function PartnerDashboardPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "partner" && profile?.role !== "admin" && profile?.role !== "owner") {
+  const userRole = profile?.role;
+
+  if (userRole !== "partner" && userRole !== "admin" && userRole !== "owner") {
     redirect("/");
   }
 
-  const [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
-    // Live pipeline opportunities owned by this partner
-    supabase
-      .from("opportunities")
-      .select("id, title, type, deadline, is_active, routing_type")
-      .eq("profile_id", user.id)
-      .eq("routing_type", "pipeline")
-      .order("created_at", { ascending: false }),
+  const isAdminUser = userRole === "admin" || userRole === "owner";
 
-    // Pending / rejected submissions from this partner (not yet published)
-    supabase
-      .from("opportunities")
-      .select("id, title, type, deadline, status, routing_type, created_at")
-      .eq("profile_id", user.id)
-      .in("status", ["pending", "rejected"])
-      .order("created_at", { ascending: false }),
+  // For non-admin users: also fetch opportunity IDs they are a collaborator on
+  let collaboratorOppIds: string[] = [];
+  if (!isAdminUser) {
+    const { data: collabRows } = await supabase
+      .from("opportunity_collaborators")
+      .select("opportunity_id")
+      .eq("profile_id", user.id);
+    collaboratorOppIds = (collabRows ?? []).map((r: { opportunity_id: string }) => r.opportunity_id);
+  }
 
-    // All claimed listings owned by this partner (any routing type)
-    supabase
-      .from("opportunities")
-      .select("id, title, type, status, is_active, routing_type, deadline")
-      .eq("profile_id", user.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  // Build queries — admins see everything; others see own + collaborator opportunities
+  let [{ data: opportunities }, { data: submissions }, { data: allListings }]: [
+    { data: unknown[] | null },
+    { data: unknown[] | null },
+    { data: unknown[] | null },
+  ] = [{ data: [] }, { data: [] }, { data: [] }];
 
-  const oppIds = (opportunities ?? []).map((o: { id: string }) => o.id);
+  if (isAdminUser) {
+    [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
+      supabase
+        .from("opportunities")
+        .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+        .eq("routing_type", "pipeline")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("opportunities")
+        .select("id, title, type, deadline, status, routing_type, created_at")
+        .in("status", ["pending", "rejected"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("opportunities")
+        .select("id, title, type, status, is_active, routing_type, deadline, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+        .order("created_at", { ascending: false }),
+    ]);
+  } else {
+    // Own opps + collaborator opps
+    const ownOrCollab = collaboratorOppIds.length > 0
+      ? `profile_id.eq.${user.id},id.in.(${collaboratorOppIds.join(",")})`
+      : undefined;
+
+    [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
+      ownOrCollab
+        ? supabase
+            .from("opportunities")
+            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .eq("routing_type", "pipeline")
+            .or(ownOrCollab)
+            .order("created_at", { ascending: false })
+        : supabase
+            .from("opportunities")
+            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .eq("routing_type", "pipeline")
+            .eq("profile_id", user.id)
+            .order("created_at", { ascending: false }),
+      supabase
+        .from("opportunities")
+        .select("id, title, type, deadline, status, routing_type, created_at")
+        .eq("profile_id", user.id)
+        .in("status", ["pending", "rejected"])
+        .order("created_at", { ascending: false }),
+      ownOrCollab
+        ? supabase
+            .from("opportunities")
+            .select("id, title, type, status, is_active, routing_type, deadline, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .or(ownOrCollab)
+            .order("created_at", { ascending: false })
+        : supabase
+            .from("opportunities")
+            .select("id, title, type, status, is_active, routing_type, deadline, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .eq("profile_id", user.id)
+            .order("created_at", { ascending: false }),
+    ]);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const oppIds = (opportunities ?? []).map((o: any) => o.id);
 
   // Get application counts per opportunity
   const { data: appCounts } = oppIds.length > 0
@@ -78,14 +132,20 @@ export default async function PartnerDashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Partner Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Manage your pipeline opportunities and track applications.</p>
+          <p className="text-sm text-muted-foreground">
+            {isAdminUser
+              ? "Admin view — all partner pipelines across the platform."
+              : "Manage your pipeline opportunities and track applications."}
+          </p>
         </div>
-        <Link
-          href="/partners"
-          className="shrink-0 bg-black text-white text-sm px-4 py-2 hover:bg-black/80 transition-colors"
-        >
-          + Submit opportunity
-        </Link>
+        {!isAdminUser && (
+          <Link
+            href="/partners"
+            className="shrink-0 bg-black text-white text-sm px-4 py-2 hover:bg-black/80 transition-colors"
+          >
+            + Submit opportunity
+          </Link>
+        )}
       </div>
 
       {!hasAnything ? (
@@ -98,9 +158,17 @@ export default async function PartnerDashboardPage() {
           {/* ── Live pipeline opportunities ────────────────────────────── */}
           {opportunities && opportunities.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Live</p>
-              {opportunities.map((opp: { id: string; title: string; type: string; deadline: string | null; is_active: boolean }) => {
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Live Pipelines{isAdminUser ? ` (${opportunities.length} across all partners)` : ""}</p>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(opportunities as any[]).map((opp) => {
                 const counts = countMap.get(opp.id) ?? { total: 0, pending: 0, shortlisted: 0, selected: 0 };
+                const isCollaboratorOpp = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== user.id;
+                const partnerName = isAdminUser
+                  ? (opp.profiles as { full_name: string | null; username: string } | null)?.full_name
+                    ?? (opp.profiles as { full_name: string | null; username: string } | null)?.username
+                    ?? opp.organiser
+                    ?? null
+                  : null;
                 return (
                   <Link
                     key={opp.id}
@@ -113,6 +181,12 @@ export default async function PartnerDashboardPage() {
                         <span>{opp.type}</span>
                         {opp.deadline && (
                           <span>Deadline {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}</span>
+                        )}
+                        {partnerName && (
+                          <span className="text-stone-500">Partner: {partnerName}</span>
+                        )}
+                        {isCollaboratorOpp && (
+                          <span className="bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 text-[10px] leading-none">Collaborator</span>
                         )}
                       </div>
                     </div>
@@ -132,12 +206,15 @@ export default async function PartnerDashboardPage() {
           {/* ── Your Listings ───────────────────────────────────────────── */}
           {allListings && allListings.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your Listings</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {isAdminUser ? "All Listings" : "Your Listings"}
+              </p>
               <div className="border border-black overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-black/20 bg-muted/30">
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Title</th>
+                      {isAdminUser && <th className="text-left py-2 px-3 font-medium text-muted-foreground hidden sm:table-cell">Partner</th>}
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground hidden sm:table-cell">Type</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground hidden sm:table-cell">Deadline</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
@@ -145,7 +222,8 @@ export default async function PartnerDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allListings.map((listing: { id: string; title: string; type: string; status: string; is_active: boolean; routing_type: string; deadline: string | null }) => {
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {(allListings as any[]).map((listing) => {
                       const statusColour =
                         listing.status === "published"
                           ? "text-green-700"
@@ -155,16 +233,31 @@ export default async function PartnerDashboardPage() {
                       const statusLabel =
                         listing.status === "draft_unclaimed" ? "draft" : listing.status;
                       const isPipeline = listing.routing_type === "pipeline" && listing.status === "published";
+                      const isCollaboratorListing = !isAdminUser && collaboratorOppIds.includes(listing.id) && listing.profile_id !== user.id;
+                      const partnerName = isAdminUser
+                        ? (listing.profiles as { full_name: string | null; username: string } | null)?.full_name
+                          ?? (listing.profiles as { full_name: string | null; username: string } | null)?.username
+                          ?? listing.organiser
+                          ?? "—"
+                        : null;
                       return (
                         <tr key={listing.id} className="border-b border-black/10 last:border-0">
                           <td className="py-2.5 px-3 font-medium">{listing.title}</td>
+                          {isAdminUser && (
+                            <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">{partnerName}</td>
+                          )}
                           <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">{listing.type}</td>
                           <td className="py-2.5 px-3 text-muted-foreground hidden sm:table-cell">
                             {listing.deadline
                               ? new Date(listing.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })
                               : "Open"}
                           </td>
-                          <td className={`py-2.5 px-3 ${statusColour}`}>{statusLabel}</td>
+                          <td className={`py-2.5 px-3 ${statusColour}`}>
+                            <span>{statusLabel}</span>
+                            {isCollaboratorListing && (
+                              <span className="ml-2 bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 text-[10px] leading-none">Collaborator</span>
+                            )}
+                          </td>
                           <td className="py-2.5 px-3 text-right">
                             <div className="flex items-center justify-end gap-3">
                               {isPipeline && (
@@ -175,12 +268,14 @@ export default async function PartnerDashboardPage() {
                                   Applications →
                                 </Link>
                               )}
-                              <Link
-                                href={`/partner/opportunities/${listing.id}/edit`}
-                                className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                Edit →
-                              </Link>
+                              {!isCollaboratorListing && (
+                                <Link
+                                  href={`/partner/opportunities/${listing.id}/edit`}
+                                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  Edit →
+                                </Link>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -196,7 +291,8 @@ export default async function PartnerDashboardPage() {
           {submissions && submissions.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Awaiting Review</p>
-              {submissions.map((sub: { id: string; title: string; type: string; deadline: string | null; status: string; created_at: string }) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {(submissions as any[]).map((sub) => (
                 <div
                   key={sub.id}
                   className="flex items-center justify-between border border-black/40 p-4"

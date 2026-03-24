@@ -60,7 +60,18 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     isAdmin(),
   ]);
 
-  if (!oppData || (oppData.profile_id !== user.id && !adminUser)) notFound();
+  // Access check: owner, admin, or collaborator
+  if (!oppData) notFound();
+  if (oppData.profile_id !== user.id && !adminUser) {
+    // Check collaborator access
+    const { data: collab } = await supabase
+      .from("opportunity_collaborators")
+      .select("role")
+      .eq("opportunity_id", opportunityId)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (!collab) notFound();
+  }
 
   const opp = {
     id: oppData.id as string,

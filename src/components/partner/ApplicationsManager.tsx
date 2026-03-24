@@ -187,6 +187,8 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
   );
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"applications" | "impact">("applications");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc" | "career_stage" | "status" | "city">("date_desc");
 
   const selectedApp = selectedAppId ? apps.find((a) => a.id === selectedAppId) ?? null : null;
 
@@ -262,7 +264,28 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
   const identityTagRows = Object.entries(identityTagCounts)
     .sort((a, b) => b[1] - a[1]);
 
-  const filteredApps = statusFilter ? apps.filter((a) => a.status === statusFilter) : apps;
+  const searchLower = searchQuery.toLowerCase().trim();
+  const filteredApps = apps
+    .filter((a) => !statusFilter || a.status === statusFilter)
+    .filter((a) => {
+      if (!searchLower) return true;
+      const name = (a.artist?.full_name ?? a.artist?.username ?? "").toLowerCase();
+      const city = (a.artist?.city ?? "").toLowerCase();
+      const country = (a.artist?.country ?? "").toLowerCase();
+      const disciplines = (a.artist?.medium ?? []).join(" ").toLowerCase();
+      return name.includes(searchLower) || city.includes(searchLower) || country.includes(searchLower) || disciplines.includes(searchLower);
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "name_asc": return (a.artist?.full_name ?? a.artist?.username ?? "").localeCompare(b.artist?.full_name ?? b.artist?.username ?? "");
+        case "name_desc": return (b.artist?.full_name ?? b.artist?.username ?? "").localeCompare(a.artist?.full_name ?? a.artist?.username ?? "");
+        case "career_stage": return (a.artist?.career_stage ?? "").localeCompare(b.artist?.career_stage ?? "");
+        case "status": return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+        case "city": return (a.artist?.city ?? "").localeCompare(b.artist?.city ?? "");
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // date_desc
+      }
+    });
 
   // ── Impact data ──────────────────────────────────────────────────────────
   const completedFollowups = followups.filter((f) => f.completed_at);
@@ -395,8 +418,9 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
       {activeTab === "applications" && (
         <>
           {/* Controls row */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex border border-black">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View toggle */}
+            <div className="flex border border-black shrink-0">
               <button
                 type="button"
                 onClick={() => setView("table")}
@@ -416,10 +440,46 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
                 Gallery
               </button>
             </div>
+
+            {/* Search */}
+            <div className="relative flex-1 min-w-40">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, city, discipline…"
+                className="w-full text-xs border border-black px-3 py-1.5 bg-transparent placeholder:text-muted-foreground focus:outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="text-xs border border-black px-2 py-1.5 bg-transparent cursor-pointer focus:outline-none shrink-0"
+            >
+              <option value="date_desc">Newest first</option>
+              <option value="date_asc">Oldest first</option>
+              <option value="name_asc">Name A–Z</option>
+              <option value="name_desc">Name Z–A</option>
+              <option value="career_stage">Career stage</option>
+              <option value="status">Status</option>
+              <option value="city">City</option>
+            </select>
+
             <button
               type="button"
               onClick={() => exportCSV(apps, opp)}
-              className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors cursor-pointer"
+              className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors cursor-pointer shrink-0"
             >
               Export CSV ↓
             </button>
@@ -552,7 +612,9 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
 
           {/* Application list */}
           {filteredApps.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No applications match this filter.</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              {searchQuery ? `No results for "${searchQuery}".` : "No applications match this filter."}
+            </p>
           ) : view === "gallery" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredApps.map((app) => {

@@ -463,3 +463,23 @@ export interface ConversationWithOther {
   conv_created_at: string;
   unread_count: number;
 }
+
+export interface OpportunityCollaborator {
+  id: string;
+  opportunity_id: string;
+  profile_id: string;
+  role: "viewer" | "editor";
+  invited_by: string | null;
+  invited_at: string;
+  // Joined
+  profile?: {
+    id: string;
+    username: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+  inviter?: {
+    username: string;
+    full_name: string | null;
+  } | null;
+}
