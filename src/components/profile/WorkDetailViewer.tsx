@@ -10,10 +10,15 @@ interface Props {
 }
 
 export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) {
-  const defaultUrl =
-    galleryImages.find(i => i.is_primary)?.url ?? galleryImages[0]?.url ?? primaryUrl;
+  const defaultImg =
+    galleryImages.find(i => i.is_primary) ?? galleryImages[0] ?? null;
+  const defaultUrl = defaultImg?.url ?? primaryUrl;
 
   const [activeUrl, setActiveUrl] = useState(defaultUrl);
+
+  const activeImg = galleryImages.find(i => i.url === activeUrl) ?? null;
+  // Show per-image caption if set; fall back to the work's main caption
+  const activeCaption = activeImg?.caption?.trim() || caption;
 
   return (
     <div className="space-y-3">
@@ -23,10 +28,15 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
         <img
           key={activeUrl}
           src={activeUrl}
-          alt={caption}
+          alt={activeCaption ?? ""}
           className="w-full h-auto block max-h-[75vh] object-contain"
         />
       </div>
+
+      {/* Per-image caption */}
+      {activeCaption && (
+        <p className="text-xs text-muted-foreground leading-relaxed">{activeCaption}</p>
+      )}
 
       {/* Thumbnail strip — only when multiple images exist */}
       {galleryImages.length > 1 && (
@@ -35,6 +45,7 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
             <button
               key={img.id}
               onClick={() => setActiveUrl(img.url)}
+              title={img.caption ?? undefined}
               className={`shrink-0 w-16 h-16 border overflow-hidden bg-muted transition-opacity ${
                 activeUrl === img.url
                   ? "border-black"
@@ -42,7 +53,7 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.url} alt="" className="w-full h-full object-cover" />
+              <img src={img.url} alt={img.caption ?? ""} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

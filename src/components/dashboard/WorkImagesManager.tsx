@@ -16,6 +16,9 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
   const [images, setImages] = useState<WorkImage[]>(existingImages);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captions, setCaptions] = useState<Record<string, string>>(
+    () => Object.fromEntries(existingImages.map(i => [i.id, i.caption ?? ""]))
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -53,7 +56,9 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
         .single();
 
       if (insertError) throw insertError;
-      setImages(prev => [...prev, newRow as WorkImage]);
+      const inserted = newRow as WorkImage;
+      setImages(prev => [...prev, inserted]);
+      setCaptions(prev => ({ ...prev, [inserted.id]: "" }));
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -80,7 +85,6 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
 
   async function handleDelete(img: WorkImage) {
     const supabase = createClient();
-    // Extract storage path from URL
     const marker = "/object/public/portfolio/";
     const idx = img.url.indexOf(marker);
     if (idx !== -1) {
@@ -89,6 +93,15 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
     }
     await supabase.from("work_images").delete().eq("id", img.id);
     setImages(prev => prev.filter(i => i.id !== img.id));
+    setCaptions(prev => { const next = { ...prev }; delete next[img.id]; return next; });
+    router.refresh();
+  }
+
+  async function handleCaptionSave(id: string) {
+    const caption = captions[id]?.trim() || null;
+    const supabase = createClient();
+    await supabase.from("work_images").update({ caption }).eq("id", id);
+    setImages(prev => prev.map(img => img.id === id ? { ...img, caption } : img));
     router.refresh();
   }
 
@@ -116,15 +129,26 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
       )}
 
       {images.length > 0 && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           {images.map((img, i) => (
-            <div key={img.id} className="relative group flex flex-col gap-1">
+            <div key={img.id} className="flex flex-col gap-1.5" style={{ width: "9rem" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={img.url}
                 alt={img.caption ?? ""}
-                className={`h-16 w-auto block border ${img.is_primary ? "border-black" : "border-border"}`}
+                className={`h-24 w-full object-cover block border ${img.is_primary ? "border-black" : "border-border"}`}
               />
+
+              {/* Caption input — saves on blur */}
+              <input
+                type="text"
+                placeholder="Add caption…"
+                value={captions[img.id] ?? ""}
+                onChange={e => setCaptions(prev => ({ ...prev, [img.id]: e.target.value }))}
+                onBlur={() => handleCaptionSave(img.id)}
+                className="w-full text-[11px] border-b border-border bg-transparent px-0 py-0.5 placeholder:text-muted-foreground/50 focus:outline-none focus:border-black"
+              />
+
               <div className="flex items-center gap-1 text-[10px]">
                 <button
                   onClick={() => handleMove(img.id, -1)}
