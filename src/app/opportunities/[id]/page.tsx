@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,7 +13,12 @@ import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
 import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
-import type { RecurrencePattern } from "@/types/database";
+import type { Opportunity, RecurrencePattern } from "@/types/database";
+
+// Opt this route into Partial Pre-rendering.
+// Everything outside <Suspense> is pre-rendered at build time (near-zero TTFB).
+// User-specific islands stream in after the static shell is painted.
+export const experimental_ppr = true;
 
 const FUNDING_TYPES = new Set(["Grant", "Prize", "Commission"]);
 
@@ -24,11 +30,14 @@ const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   annual:    "Annual",
   custom:    "Custom schedule",
 };
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -67,85 +76,208 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function OpportunityPage({ params }: Props) {
-  const { id } = await params;
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+function SaveButtonSkeleton() {
+  return <div className="w-4 h-4 rounded bg-muted animate-pulse" aria-hidden="true" />;
+}
+
+function CTASkeleton() {
+  return <div className="h-12 w-48 bg-muted animate-pulse" aria-hidden="true" />;
+}
+
+// ─── Island 1: Header actions (admin controls + save button) ──────────────────
+// Calls cookies() via createClient() — lives inside a <Suspense> boundary.
+
+async function HeaderActions({
+  opportunityId,
+  opp,
+}: {
+  opportunityId: string;
+  opp: Opportunity;
+}) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const [opp, { data: { user } }] = await Promise.all([
-    getOpportunityById(id),
-    supabase.auth.getUser(),
-  ]);
-  if (!opp) notFound();
-
-  // Fetch all user-specific data in a single parallel round-trip
   let isSaved = false;
-  let saveCount = 0;
-  let existingApplication: { id: string; status: string } | null = null;
   let adminUser = false;
-  let userRole: string | null = null;
-  let professionalCvUrl: string | null = null;
-  let serverProfile: {
-    id: string;
-    full_name: string | null;
-    username: string;
-    bio: string | null;
-    avatar_url: string | null;
-    medium: string[] | null;
-    exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>;
-    received_grants: string[];
-    is_patronage_supported: boolean;
-  } | null = null;
 
   if (user) {
-    const [savedResult, countResult, appResult, profileResult] = await Promise.all([
+    const [savedResult, profileResult] = await Promise.all([
       supabase
         .from("user_saved_opportunities")
         .select("id")
         .eq("user_id", user.id)
-        .eq("opportunity_id", opp.id)
-        .single(),
-      supabase
-        .from("user_saved_opportunities")
-        .select("id", { count: "exact", head: true })
-        .eq("opportunity_id", opp.id),
-      supabase
-        .from("opportunity_applications")
-        .select("id, status")
-        .eq("opportunity_id", opp.id)
-        .eq("artist_id", user.id)
+        .eq("opportunity_id", opportunityId)
         .single(),
       supabase
         .from("profiles")
-        .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported")
+        .select("role")
         .eq("id", user.id)
         .single(),
     ]);
     isSaved = !!savedResult.data;
-    saveCount = countResult.count ?? 0;
-    existingApplication = appResult.data ?? null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pd = profileResult.data as any;
-    userRole = pd?.role ?? null;
-    professionalCvUrl = pd?.professional_cv_url ?? null;
-    adminUser = userRole === "admin" || userRole === "owner";
-    serverProfile = pd ? {
-      id: pd.id as string,
-      full_name: pd.full_name as string | null,
-      username: pd.username as string,
-      bio: pd.bio as string | null,
-      avatar_url: pd.avatar_url as string | null,
-      medium: pd.medium as string[] | null,
-      exhibition_history: (pd.exhibition_history ?? []) as Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>,
-      received_grants: (pd.received_grants ?? []) as string[],
-      is_patronage_supported: (pd.is_patronage_supported ?? false) as boolean,
-    } : null;
-  } else {
-    const { count } = await supabase
-      .from("user_saved_opportunities")
-      .select("id", { count: "exact", head: true })
-      .eq("opportunity_id", opp.id);
-    saveCount = count ?? 0;
+    adminUser =
+      profileResult.data?.role === "admin" ||
+      profileResult.data?.role === "owner";
   }
+
+  return (
+    <>
+      {adminUser && <AdminRejectButton id={opp.id} />}
+      {adminUser && <AdminEditOpportunityModal opp={opp} />}
+      <SaveButton
+        opportunityId={opp.id}
+        initialSaved={isSaved}
+        saveCount={0}
+        showCount={false}
+        isAuthenticated={!!user}
+      />
+    </>
+  );
+}
+
+// ─── Island 2: Social proof (save count + view count + trending badge) ─────────
+// Separate from HeaderActions so the count query isn't duplicated.
+
+async function SocialProof({
+  opportunityId,
+  viewCount,
+}: {
+  opportunityId: string;
+  viewCount: number;
+}) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("user_saved_opportunities")
+    .select("id", { count: "exact", head: true })
+    .eq("opportunity_id", opportunityId);
+
+  const saveCount = count ?? 0;
+  const isTrending = saveCount >= 5;
+
+  if (saveCount === 0 && viewCount === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {isTrending && (
+        <span className="text-xs border border-black bg-black text-white px-1.5 py-0.5 leading-none">
+          Trending
+        </span>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {saveCount > 0 && `Saved by ${saveCount} artist${saveCount !== 1 ? "s" : ""}`}
+        {saveCount > 0 && viewCount > 0 && " · "}
+        {viewCount > 0 && `Viewed ${viewCount} time${viewCount !== 1 ? "s" : ""}`}
+      </p>
+    </div>
+  );
+}
+
+// ─── Island 3: User CTA (apply button / already-applied state) ────────────────
+// Only rendered for pipeline opportunities. External-URL CTAs are static.
+
+async function UserCTA({
+  opportunityId,
+  opp,
+}: {
+  opportunityId: string;
+  opp: Opportunity;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <a
+        href="/auth/login"
+        className="inline-flex items-center gap-2 border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
+      >
+        Sign in to apply →
+      </a>
+    );
+  }
+
+  const isJobOpportunity = opp.type === "Job / Employment";
+
+  const [appResult, profileResult] = await Promise.all([
+    supabase
+      .from("opportunity_applications")
+      .select("id, status")
+      .eq("opportunity_id", opportunityId)
+      .eq("artist_id", user.id)
+      .single(),
+    supabase
+      .from("profiles")
+      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported")
+      .eq("id", user.id)
+      .single(),
+  ]);
+
+  const existingApplication = appResult.data ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pd = profileResult.data as any;
+  const userRole = pd?.role ?? null;
+  const isArtist = userRole === "artist" || userRole === "owner";
+  const canApply = isArtist || (userRole === "patron" && isJobOpportunity);
+  const professionalCvUrl = pd?.professional_cv_url ?? null;
+
+  if (existingApplication) {
+    return (
+      <div className="space-y-1">
+        <p className="text-sm text-muted-foreground">
+          You have already applied to this opportunity.{" "}
+          <Link href="/dashboard?tab=applications" className="underline">
+            View in dashboard →
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  if (canApply) {
+    const serverProfile = pd
+      ? {
+          id: pd.id as string,
+          full_name: pd.full_name as string | null,
+          username: pd.username as string,
+          bio: pd.bio as string | null,
+          avatar_url: pd.avatar_url as string | null,
+          medium: pd.medium as string[] | null,
+          exhibition_history: (pd.exhibition_history ?? []) as Array<{
+            type: "Solo" | "Group";
+            title: string;
+            venue: string;
+            location: string;
+            year: number;
+          }>,
+          received_grants: (pd.received_grants ?? []) as string[],
+          is_patronage_supported: (pd.is_patronage_supported ?? false) as boolean,
+        }
+      : null;
+
+    return (
+      <ApplyButton
+        opportunity={opp}
+        isJobOpportunity={isJobOpportunity}
+        professionalCvUrl={professionalCvUrl}
+        serverProfile={serverProfile}
+      />
+    );
+  }
+
+  return null;
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function OpportunityPage({ params }: Props) {
+  const { id } = await params;
+
+  // getOpportunityById uses createPublicClient() — no cookies() call.
+  // This keeps the page shell fully static for PPR pre-rendering.
+  const opp = await getOpportunityById(id);
+  if (!opp) notFound();
 
   const fundingLabel =
     opp.funding_range?.trim() ||
@@ -162,12 +294,7 @@ export default async function OpportunityPage({ params }: Props) {
   const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
   const location = rawLocation === "Global" ? "Open to all countries" : rawLocation;
 
-  const isTrending = saveCount >= 5;
   const isPipeline = opp.routing_type === "pipeline";
-
-  const isArtist = userRole === "artist" || userRole === "owner";
-  const isJobOpportunity = opp.type === "Job / Employment";
-  const canApply = isPipeline && (isArtist || (userRole === "patron" && isJobOpportunity));
 
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
   const schemaType = FUNDING_TYPES.has(opp.type) ? "Grant" : "Event";
@@ -218,9 +345,11 @@ export default async function OpportunityPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* ViewTracker fires client-side after idle — does not affect pre-render */}
       <ViewTracker opportunityId={opp.id} />
 
-      {/* Header: breadcrumb + admin edit + X close */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ✕ close is static. Admin controls + save button stream in. */}
       <div className="flex items-center justify-between">
         <Link
           href="/opportunities"
@@ -229,15 +358,9 @@ export default async function OpportunityPage({ params }: Props) {
           ← Opportunities
         </Link>
         <div className="flex items-center gap-3">
-          {adminUser && <AdminRejectButton id={opp.id} />}
-          {adminUser && <AdminEditOpportunityModal opp={opp} />}
-          <SaveButton
-            opportunityId={opp.id}
-            initialSaved={isSaved}
-            saveCount={saveCount}
-            showCount
-            isAuthenticated={!!user}
-          />
+          <Suspense fallback={<SaveButtonSkeleton />}>
+            <HeaderActions opportunityId={opp.id} opp={opp} />
+          </Suspense>
           <Link
             href="/opportunities"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors leading-none"
@@ -248,7 +371,7 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Featured image with backdrop-blur background */}
+      {/* ── Featured image — STATIC ─────────────────────────────────────── */}
       {opp.featured_image_url ? (
         <div className="relative w-full border border-black overflow-hidden bg-white">
           <div
@@ -269,7 +392,8 @@ export default async function OpportunityPage({ params }: Props) {
         <div className="w-full h-48 bg-[#E5E7EB] border border-black" />
       )}
 
-      {/* Tags */}
+      {/* ── Tags — STATIC ───────────────────────────────────────────────── */}
+      {/* isTrending requires a save count query — it streams in via SocialProof below */}
       <div className="flex flex-wrap gap-1.5">
         <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.type}</span>
         <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.country}</span>
@@ -280,9 +404,6 @@ export default async function OpportunityPage({ params }: Props) {
           <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
             {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
           </span>
-        )}
-        {isTrending && (
-          <span className="text-xs border border-black bg-black text-white px-1.5 py-0.5 leading-none">Trending</span>
         )}
         {opp.is_recurring && (
           <span className="text-xs border border-stone-700 bg-stone-800 text-white px-1.5 py-0.5 leading-none">
@@ -299,13 +420,13 @@ export default async function OpportunityPage({ params }: Props) {
         ))}
       </div>
 
-      {/* Title + organiser */}
+      {/* ── Title + organiser — STATIC ──────────────────────────────────── */}
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">{opp.title}</h1>
         <p className="text-sm text-muted-foreground font-mono">{opp.organiser}</p>
       </div>
 
-      {/* Vital stats */}
+      {/* ── Vital stats — STATIC ────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border border-black p-5">
         {fundingLabel && (
           <div>
@@ -369,16 +490,13 @@ export default async function OpportunityPage({ params }: Props) {
         )}
       </div>
 
-      {/* Social proof */}
-      {(saveCount > 0 || opp.view_count > 0) && (
-        <p className="text-xs text-muted-foreground">
-          {saveCount > 0 && `Saved by ${saveCount} artist${saveCount !== 1 ? "s" : ""}`}
-          {saveCount > 0 && opp.view_count > 0 && " · "}
-          {opp.view_count > 0 && `Viewed ${opp.view_count} time${opp.view_count !== 1 ? "s" : ""}`}
-        </p>
-      )}
+      {/* ── Social proof — DYNAMIC (save count + trending badge) ────────── */}
+      {/* fallback=null: this line is decorative; no layout shift risk */}
+      <Suspense fallback={null}>
+        <SocialProof opportunityId={opp.id} viewCount={opp.view_count} />
+      </Suspense>
 
-      {/* Description */}
+      {/* ── Description — STATIC ────────────────────────────────────────── */}
       {(opp.caption || opp.full_description || opp.description) && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -398,18 +516,13 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       )}
 
-      {/* Apply CTA */}
-      {existingApplication ? (
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            You have already applied to this opportunity.{" "}
-            <Link href="/dashboard?tab=applications" className="underline">
-              View in dashboard →
-            </Link>
-          </p>
-        </div>
-      ) : canApply ? (
-        <ApplyButton opportunity={opp} isJobOpportunity={isJobOpportunity} professionalCvUrl={professionalCvUrl} serverProfile={serverProfile} />
+      {/* ── CTA section ─────────────────────────────────────────────────── */}
+      {/* Pipeline: dynamic — shows apply / already-applied / sign-in prompt */}
+      {/* External: static — plain link, no user data needed               */}
+      {isPipeline ? (
+        <Suspense fallback={<CTASkeleton />}>
+          <UserCTA opportunityId={opp.id} opp={opp} />
+        </Suspense>
       ) : opp.url ? (
         <OpportunityCTALink
           href={opp.url}
@@ -421,7 +534,7 @@ export default async function OpportunityPage({ params }: Props) {
         />
       ) : null}
 
-      {/* Back link */}
+      {/* ── Back link — STATIC ──────────────────────────────────────────── */}
       <div className="border-t border-border pt-6">
         <Link
           href="/opportunities"

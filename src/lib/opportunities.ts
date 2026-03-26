@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Opportunity, OpportunityFilters, OpportunityInsert } from "@/types/database";
 
 const CARD_FIELDS = [
@@ -107,10 +108,11 @@ export async function getMarketplaceStats(): Promise<{
   };
 }
 
+// Uses a cookie-free public client so this function is safe to call in the
+// static pre-rendered shell of a PPR route (no cookies() call → no dynamic opt-in).
 export const getOpportunityById = cache(async function getOpportunityById(idOrSlug: string): Promise<Opportunity | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
-  // Try slug first (new SEO URLs), fall back to UUID for existing links
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
   const { data } = await supabase
