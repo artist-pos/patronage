@@ -65,12 +65,16 @@ export async function generateMetadata({ params }: Props) {
     ? `${displayName} — ${disciplineStr} | Patronage`
     : `${displayName} | Patronage`;
 
-  // Bio truncated to 155 chars
+  // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from available data
   const description = profile.bio
     ? profile.bio.length > 155
       ? profile.bio.slice(0, 152) + "…"
       : profile.bio
-    : `View ${displayName}'s profile on Patronage.`;
+    : disciplineStr && profile.country
+      ? `${displayName} is a ${disciplineStr} based in ${profile.country}. View portfolio, studio updates, and CV on Patronage.`
+      : disciplineStr
+        ? `${displayName} is a ${disciplineStr}. View portfolio, studio updates, and CV on Patronage.`
+        : `View ${displayName}'s portfolio, studio updates, and CV on Patronage.`;
 
   // OG image: featured banner first, avatar fallback
   const ogImageUrl = profile.featured_image_url ?? profile.avatar_url ?? null;

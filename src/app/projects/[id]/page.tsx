@@ -11,7 +11,6 @@ import type { ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string; u?: string; t?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -133,9 +132,8 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
   return null;
 }
 
-export default async function ProjectPage({ params, searchParams }: Props) {
+export default async function ProjectPage({ params }: Props) {
   const { id } = await params;
-  const { from, u, t } = await searchParams;
   const [update, notes] = await Promise.all([
     getUpdateById(id),
     getVisibleNotes(id),
@@ -150,15 +148,6 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const currentUserUsername = currentUserProfile?.username;
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
 
-  const backHref =
-    from === "thread" && t ? `/threads/${t}` :
-    from === "profile" && u ? `/${u}` :
-    "/feed";
-  const backLabel =
-    from === "thread" ? "← Back to thread" :
-    from === "profile" && u ? "← Back to profile" :
-    "← Back to feed";
-
   const canNote = !!user;
 
   const name = update.artist_full_name ?? update.artist_username;
@@ -171,12 +160,63 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   // For text posts the caption is part of the body, not shown separately
   const showCaption = update.content_type !== "text" && update.caption;
 
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const pageUrl = `${SITE_URL}/projects/${id}`;
+  const profileUrl = `${SITE_URL}/${update.artist_username}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "@id": pageUrl,
+        headline: update.caption ?? `Studio update by ${name}`,
+        url: pageUrl,
+        datePublished: update.created_at,
+        author: {
+          "@type": "Person",
+          "@id": profileUrl,
+          name,
+          url: profileUrl,
+        },
+        isPartOf: { "@id": profileUrl },
+        ...(update.image_url && { image: update.image_url }),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Artists", item: `${SITE_URL}/artists` },
+          { "@type": "ListItem", position: 2, name, item: profileUrl },
+          { "@type": "ListItem", position: 3, name: "Studio Update", item: pageUrl },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
-      <Link href={backHref} scroll={false} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-        {backLabel}
-      </Link>
+      {/* Permanent breadcrumb — always crawlable regardless of navigation context */}
+      <nav aria-label="Breadcrumb">
+        <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <li>
+            <Link href="/artists" className="hover:text-foreground transition-colors">
+              Artists
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li>
+            <Link href={`/${update.artist_username}`} className="hover:text-foreground transition-colors">
+              {name}
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li className="text-foreground">Studio Update</li>
+        </ol>
+      </nav>
 
       <UpdateMedia update={update} name={name} />
 

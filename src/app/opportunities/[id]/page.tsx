@@ -355,12 +355,26 @@ export default async function OpportunityPage({ params }: Props) {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       {/* ✕ close is static. Admin controls + save button stream in. */}
       <div className="flex items-center justify-between">
-        <Link
-          href="/opportunities"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Opportunities
-        </Link>
+        <nav aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <li>
+              <Link href="/opportunities" className="hover:text-foreground transition-colors">
+                Opportunities
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link
+                href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
+                className="hover:text-foreground transition-colors"
+              >
+                {opp.type}
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="text-foreground truncate max-w-[200px] sm:max-w-xs">{opp.title}</li>
+          </ol>
+        </nav>
         <div className="flex items-center gap-3">
           <Suspense fallback={<SaveButtonSkeleton />}>
             <HeaderActions opportunityId={opp.id} opp={opp} />
