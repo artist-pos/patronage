@@ -45,7 +45,7 @@ function PortfolioItem({ img, username }: { img: PortfolioImage; username: strin
         />
       </div>
       {label && (
-        <p className="text-xs uppercase tracking-wider text-neutral-600 leading-snug max-w-0 min-w-full break-words">
+        <p className="text-xs text-neutral-600 leading-snug max-w-0 min-w-full break-words">
           {label}
         </p>
       )}
