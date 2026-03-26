@@ -108,7 +108,7 @@ export default async function WorkDetailPage({ params }: Props) {
   ].filter(Boolean).join(" · ");
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <div className="max-w-6xl mx-auto px-6 py-10">
       <div className="mb-8 flex items-center gap-3 text-sm text-muted-foreground">
         <Link href={`/${username}?tab=work`} className="hover:text-foreground transition-colors">
           ← {artistName}
@@ -121,15 +121,18 @@ export default async function WorkDetailPage({ params }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-10 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-12 items-start">
         {/* Left — image viewer */}
         <WorkDetailViewer primaryUrl={work.url} galleryImages={galleryImages} caption={displayTitle} />
 
         {/* Right — sticky sidebar */}
         <div className="md:sticky md:top-6 space-y-6">
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-semibold leading-snug">{displayTitle}</h1>
-            {metaLine && <p className="text-sm text-muted-foreground">{metaLine}</p>}
+          {/* Title + meta header */}
+          <div className="space-y-2 pb-5 border-b border-border">
+            <h1 className="text-2xl font-bold leading-snug">{displayTitle}</h1>
+            {metaLine && (
+              <p className="text-sm text-muted-foreground font-normal">{metaLine}</p>
+            )}
           </div>
 
           {isAvailable && !isOwner && (
@@ -167,11 +170,9 @@ export default async function WorkDetailPage({ params }: Props) {
           )}
 
           {work.description && (
-            <div className={!isAvailable && !isSold ? "pt-3 border-t border-border" : ""}>
-              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                {work.description}
-              </p>
-            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+              {work.description}
+            </p>
           )}
 
           {isAvailable && !viewer && (

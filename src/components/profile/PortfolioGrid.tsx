@@ -23,6 +23,10 @@ function PortfolioItem({ img, username }: { img: PortfolioImage; username: strin
     setLoaded(true);
   }
 
+  const label = img.title
+    ? `${img.title}${img.year ? ` (${img.year})` : ""}`
+    : img.caption ?? null;
+
   return (
     <Link
       href={`/${username}/works/${img.slug ?? img.id}`}
@@ -40,9 +44,9 @@ function PortfolioItem({ img, username }: { img: PortfolioImage; username: strin
           onLoad={handleLoad}
         />
       </div>
-      {img.caption && (
-        <p className="text-xs text-muted-foreground leading-snug font-mono max-w-0 min-w-full break-words">
-          {img.caption}
+      {label && (
+        <p className="text-xs uppercase tracking-wider text-neutral-600 leading-snug max-w-0 min-w-full break-words">
+          {label}
         </p>
       )}
     </Link>

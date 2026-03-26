@@ -218,13 +218,20 @@ export async function setPrimaryWorkImageUrl(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Fetch linked_artwork_id to cascade
-  const { data: work } = await supabase
-    .from("portfolio_images")
-    .select("linked_artwork_id")
-    .eq("id", portfolioImageId)
-    .eq("creator_id", user.id)
-    .maybeSingle();
+  // Fetch linked_artwork_id to cascade + username for profile revalidation
+  const [workResult, profileResult] = await Promise.all([
+    supabase
+      .from("portfolio_images")
+      .select("linked_artwork_id")
+      .eq("id", portfolioImageId)
+      .eq("creator_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single(),
+  ]);
 
   await Promise.all([
     supabase
@@ -232,15 +239,19 @@ export async function setPrimaryWorkImageUrl(
       .update({ url: newPrimaryUrl })
       .eq("id", portfolioImageId)
       .eq("creator_id", user.id),
-    work?.linked_artwork_id
+    workResult.data?.linked_artwork_id
       ? supabase
           .from("artworks")
           .update({ url: newPrimaryUrl })
-          .eq("id", work.linked_artwork_id)
+          .eq("id", workResult.data.linked_artwork_id)
           .eq("creator_id", user.id)
       : null,
   ]);
+
   revalidatePath("/dashboard/works");
+  if (profileResult.data?.username) {
+    revalidatePath(`/${profileResult.data.username}`);
+  }
   return {};
 }
 
