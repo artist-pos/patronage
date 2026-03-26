@@ -23,7 +23,7 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
   const hasMultiple = images.length > 1;
   const activeImg = images[activeIndex] ?? null;
   const activeUrl = activeImg?.url ?? primaryUrl;
-  const activeCaption = activeImg?.caption?.trim() || caption;
+  const activeCaption = activeImg?.caption?.trim() || null;
 
   // Fade caption out then in whenever the active image changes
   useEffect(() => {
@@ -51,7 +51,7 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
         <img
           key={activeUrl}
           src={activeUrl}
-          alt={activeCaption ?? ""}
+          alt={activeCaption ?? caption}
           style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", display: "block" }}
         />
 
