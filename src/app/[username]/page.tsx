@@ -350,7 +350,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           className="w-full aspect-[42/9]"
           style={{
             backgroundImage: `url("${supabaseTransform(profile.featured_image_url, { width: 1600, quality: 85 }) ?? profile.featured_image_url}")`,
-            backgroundSize: "100% auto",
+            backgroundSize: "cover",
             backgroundRepeat: "no-repeat",
             backgroundPosition: `center ${profile.banner_focus_y ?? 30}%`,
             backgroundColor: "#f5f5f4",
