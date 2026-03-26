@@ -7,7 +7,7 @@ const CARD_FIELDS = [
   "id", "slug", "title", "organiser", "caption", "description",
   "type", "country", "city", "deadline", "opens_at",
   "featured_image_url", "is_featured",
-  "sub_categories", "career_stage", "tags",
+  "sub_categories",
   "funding_range", "funding_amount", "entry_fee",
   "grant_type", "recipients_count",
   "is_recurring", "recurrence_pattern",

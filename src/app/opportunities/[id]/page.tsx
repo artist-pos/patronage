@@ -258,7 +258,15 @@ async function UserCTA({
 
     return (
       <ApplyButton
-        opportunity={opp}
+        opportunity={{
+          id: opp.id,
+          title: opp.title,
+          type: opp.type,
+          routing_type: opp.routing_type,
+          show_badges_in_submission: opp.show_badges_in_submission,
+          pipeline_config: opp.pipeline_config,
+          custom_fields: opp.custom_fields,
+        }}
         isJobOpportunity={isJobOpportunity}
         professionalCvUrl={professionalCvUrl}
         serverProfile={serverProfile}

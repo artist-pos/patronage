@@ -7,10 +7,22 @@ import { createClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
 import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
-import type { OpportunityApplicationDraft } from "@/types/database";
+import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum } from "@/types/database";
 
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
-import type { Opportunity, Artwork } from "@/types/database";
+import type { Artwork } from "@/types/database";
+
+// Only the fields ApplyButton + ApplyModal actually use — avoids serializing
+// full_description, organiser, slug, image URLs, and 20+ other unused fields.
+export interface OpportunityForApply {
+  id: string;
+  title: string;
+  type: OppTypeEnum;
+  routing_type: "external" | "pipeline";
+  show_badges_in_submission: boolean;
+  pipeline_config?: PipelineConfig | null;
+  custom_fields: CustomField[];
+}
 
 interface ServerProfile {
   id: string;
@@ -25,7 +37,7 @@ interface ServerProfile {
 }
 
 interface Props {
-  opportunity: Opportunity;
+  opportunity: OpportunityForApply;
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
   serverProfile?: ServerProfile | null;

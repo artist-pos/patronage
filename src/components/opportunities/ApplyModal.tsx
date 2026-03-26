@@ -5,7 +5,8 @@ import Image from "next/image";
 import { X, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
-import type { Opportunity, Artwork, OpportunityApplicationDraft } from "@/types/database";
+import type { Artwork, OpportunityApplicationDraft } from "@/types/database";
+import type { OpportunityForApply } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
 
 interface ArtistProfile {
@@ -19,7 +20,7 @@ interface ArtistProfile {
 }
 
 export interface ApplyModalProps {
-  opportunity: Opportunity;
+  opportunity: OpportunityForApply;
   artistProfile: ArtistProfile;
   artistArtworks: Artwork[];
   badges: BadgeSet | null;
@@ -40,7 +41,7 @@ interface NormalisedField {
   file_label?: string;
 }
 
-function normaliseFields(opp: Opportunity): NormalisedField[] {
+function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
   if (opp.pipeline_config?.questions?.length) {
     return opp.pipeline_config.questions.map((q) => ({
       id: q.id,
