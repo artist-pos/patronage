@@ -226,25 +226,20 @@ export async function setPrimaryWorkImageUrl(
     .eq("creator_id", user.id)
     .maybeSingle();
 
-  const ops: Promise<unknown>[] = [
+  await Promise.all([
     supabase
       .from("portfolio_images")
       .update({ url: newPrimaryUrl })
       .eq("id", portfolioImageId)
       .eq("creator_id", user.id),
-  ];
-
-  if (work?.linked_artwork_id) {
-    ops.push(
-      supabase
-        .from("artworks")
-        .update({ url: newPrimaryUrl })
-        .eq("id", work.linked_artwork_id)
-        .eq("creator_id", user.id),
-    );
-  }
-
-  await Promise.all(ops);
+    work?.linked_artwork_id
+      ? supabase
+          .from("artworks")
+          .update({ url: newPrimaryUrl })
+          .eq("id", work.linked_artwork_id)
+          .eq("creator_id", user.id)
+      : null,
+  ]);
   revalidatePath("/dashboard/works");
   return {};
 }

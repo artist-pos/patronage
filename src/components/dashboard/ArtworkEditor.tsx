@@ -46,10 +46,14 @@ interface Props {
 
 function GalleryItem({
   img,
+  isSelected,
+  onSelect,
   onSetPrimary,
   onDelete,
 }: {
   img: WorkImage;
+  isSelected: boolean;
+  onSelect: () => void;
   onSetPrimary: () => void;
   onDelete: () => void;
 }) {
@@ -64,8 +68,9 @@ function GalleryItem({
         transition,
         opacity: isDragging ? 0.35 : 1,
       }}
-      className={`relative group w-[72px] h-[72px] shrink-0 overflow-hidden bg-muted border ${
-        img.is_primary ? "border-black" : "border-border"
+      onClick={onSelect}
+      className={`relative group w-[72px] h-[72px] shrink-0 overflow-hidden bg-muted border cursor-pointer ${
+        isSelected ? "border-black ring-2 ring-black ring-offset-1" : img.is_primary ? "border-black" : "border-border"
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -82,7 +87,7 @@ function GalleryItem({
 
       {/* Delete */}
       <button
-        onClick={onDelete}
+        onClick={e => { e.stopPropagation(); onDelete(); }}
         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white w-4 h-4 flex items-center justify-center text-[11px] leading-none"
         aria-label="Remove image"
       >
@@ -91,7 +96,7 @@ function GalleryItem({
 
       {/* Primary label */}
       <button
-        onClick={onSetPrimary}
+        onClick={e => { e.stopPropagation(); onSetPrimary(); }}
         className={`absolute bottom-0 left-0 right-0 text-[9px] py-[3px] text-center transition-colors ${
           img.is_primary
             ? "bg-black text-white"
@@ -118,6 +123,8 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
   const [images, setImages] = useState<WorkImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [captionDrafts, setCaptionDrafts] = useState<Record<string, string>>({});
 
   // UI
   const [saving, setSaving] = useState(false);
@@ -138,8 +145,16 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
       .eq("portfolio_image_id", work.id)
       .order("position", { ascending: true })
       .then(({ data }) => {
-        setImages(data ?? []);
+        const rows = data ?? [];
+        setImages(rows);
         setLoadingImages(false);
+        // Initialise caption drafts from existing captions
+        const drafts: Record<string, string> = {};
+        rows.forEach(img => { drafts[img.id] = img.caption ?? ""; });
+        setCaptionDrafts(drafts);
+        // Auto-select the primary (or first) image
+        const primary = rows.find(i => i.is_primary) ?? rows[0];
+        if (primary) setSelectedImageId(primary.id);
       });
   }, [work.id]);
 
@@ -186,6 +201,17 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     setPrimaryWorkImageUrl(work.id, target.url);
   }
 
+  async function handleSaveCaption(id: string, value: string) {
+    const supabase = createClient();
+    await supabase
+      .from("work_images")
+      .update({ caption: value.trim() || null })
+      .eq("id", id);
+    setImages(prev =>
+      prev.map(img => img.id === id ? { ...img, caption: value.trim() || null } : img)
+    );
+  }
+
   async function handleDeleteImage(img: WorkImage) {
     const supabase = createClient();
     const marker = "/object/public/portfolio/";
@@ -229,7 +255,10 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
         .single();
 
       if (insertError) throw insertError;
-      setImages(prev => [...prev, newRow as WorkImage]);
+      const inserted = newRow as WorkImage;
+      setImages(prev => [...prev, inserted]);
+      setCaptionDrafts(prev => ({ ...prev, [inserted.id]: "" }));
+      setSelectedImageId(inserted.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -335,6 +364,8 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
                       <GalleryItem
                         key={img.id}
                         img={img}
+                        isSelected={img.id === selectedImageId}
+                        onSelect={() => setSelectedImageId(img.id)}
                         onSetPrimary={() => handleSetPrimary(img.id)}
                         onDelete={() => handleDeleteImage(img)}
                       />
@@ -366,6 +397,26 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
               <p className="text-[10px] text-muted-foreground">
                 Drag to reorder · first image is shown as primary
               </p>
+            )}
+
+            {/* Per-image caption input — shown for the selected image */}
+            {selectedImageId && captionDrafts[selectedImageId] !== undefined && (
+              <div className="space-y-1 pt-1">
+                <label className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+                  Image Caption
+                </label>
+                <input
+                  key={selectedImageId}
+                  type="text"
+                  value={captionDrafts[selectedImageId]}
+                  onChange={e =>
+                    setCaptionDrafts(prev => ({ ...prev, [selectedImageId]: e.target.value }))
+                  }
+                  onBlur={e => handleSaveCaption(selectedImageId, e.target.value)}
+                  placeholder="Add a caption for this image…"
+                  className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
+                />
+              </div>
             )}
           </div>
         </div>

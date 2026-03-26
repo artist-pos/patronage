@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { WorkImage } from "@/types/database";
 
@@ -18,11 +18,19 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
 
   const defaultIndex = Math.max(0, images.findIndex(i => i.is_primary));
   const [activeIndex, setActiveIndex] = useState(defaultIndex);
+  const [captionOpacity, setCaptionOpacity] = useState(1);
 
   const hasMultiple = images.length > 1;
   const activeImg = images[activeIndex] ?? null;
   const activeUrl = activeImg?.url ?? primaryUrl;
   const activeCaption = activeImg?.caption?.trim() || caption;
+
+  // Fade caption out then in whenever the active image changes
+  useEffect(() => {
+    setCaptionOpacity(0);
+    const t = setTimeout(() => setCaptionOpacity(1), 80);
+    return () => clearTimeout(t);
+  }, [activeIndex]);
 
   function handlePrev() {
     setActiveIndex(i => (i - 1 + images.length) % images.length);
@@ -67,10 +75,15 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
         )}
       </div>
 
-      {/* Per-image caption */}
-      {activeCaption && (
-        <p className="text-xs text-muted-foreground leading-relaxed">{activeCaption}</p>
-      )}
+      {/* Caption area — always rendered at fixed min-height to prevent layout shift */}
+      <div
+        className="min-h-[2.5rem] transition-opacity duration-300"
+        style={{ opacity: captionOpacity }}
+      >
+        {activeCaption && (
+          <p className="text-sm text-neutral-500 leading-relaxed">{activeCaption}</p>
+        )}
+      </div>
 
       {/* Thumbnail strip — only when multiple images */}
       {hasMultiple && (
