@@ -5,11 +5,6 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "";
 
 const nextConfig: NextConfig = {
-  // Partial Pre-rendering: static shell served from CDN at near-zero TTFB;
-  // user-specific Suspense islands stream in after. Opt individual routes in
-  // with `export const experimental_ppr = true` at the route segment level.
-  // Renamed from experimental.ppr in Next.js 16.
-  cacheComponents: true,
   experimental: {
     // Transforms `import { X } from 'lucide-react'` to direct module paths at
     // build time — avoids loading all 1,500+ icons on every cold start.

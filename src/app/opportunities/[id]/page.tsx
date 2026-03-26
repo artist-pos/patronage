@@ -15,10 +15,6 @@ import { DescriptionAccordion } from "@/components/opportunities/DescriptionAcco
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 
-// Opt this route into Partial Pre-rendering.
-// Everything outside <Suspense> is pre-rendered at build time (near-zero TTFB).
-// User-specific islands stream in after the static shell is painted.
-export const experimental_ppr = true;
 
 const FUNDING_TYPES = new Set(["Grant", "Prize", "Commission"]);
 
