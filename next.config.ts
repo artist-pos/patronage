@@ -5,6 +5,12 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Transforms `import { X } from 'lucide-react'` to direct module paths at
+    // build time — avoids loading all 1,500+ icons on every cold start.
+    // Zero code changes needed; TypeScript support fully preserved.
+    optimizePackageImports: ["lucide-react"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
