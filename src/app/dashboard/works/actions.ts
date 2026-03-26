@@ -208,6 +208,47 @@ export async function publishPortfolioWorkAsAvailable(
   return {};
 }
 
+// ── Set primary image (cascades to portfolio_images.url + artworks.url) ──────
+
+export async function setPrimaryWorkImageUrl(
+  portfolioImageId: string,
+  newPrimaryUrl: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Fetch linked_artwork_id to cascade
+  const { data: work } = await supabase
+    .from("portfolio_images")
+    .select("linked_artwork_id")
+    .eq("id", portfolioImageId)
+    .eq("creator_id", user.id)
+    .maybeSingle();
+
+  const ops: Promise<unknown>[] = [
+    supabase
+      .from("portfolio_images")
+      .update({ url: newPrimaryUrl })
+      .eq("id", portfolioImageId)
+      .eq("creator_id", user.id),
+  ];
+
+  if (work?.linked_artwork_id) {
+    ops.push(
+      supabase
+        .from("artworks")
+        .update({ url: newPrimaryUrl })
+        .eq("id", work.linked_artwork_id)
+        .eq("creator_id", user.id),
+    );
+  }
+
+  await Promise.all(ops);
+  revalidatePath("/dashboard/works");
+  return {};
+}
+
 // ── Unpublish ────────────────────────────────────────────────────────────────
 
 export async function unpublishPortfolioWork(workId: string): Promise<{ error?: string }> {

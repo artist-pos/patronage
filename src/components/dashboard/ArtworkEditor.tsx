@@ -20,7 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { updateWorkMetadata } from "@/app/dashboard/works/actions";
+import { updateWorkMetadata, setPrimaryWorkImageUrl } from "@/app/dashboard/works/actions";
 import type { WorkImage } from "@/types/database";
 
 export interface EditableWork {
@@ -170,15 +170,20 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     const reordered = reorderWithPrimary(arrayMove(images, oldIndex, newIndex));
     setImages(reordered);
     persistOrder(reordered);
+    // If the primary image changed (position 0 changed), cascade URL update
+    if (reordered[0] && reordered[0].url !== images[0]?.url) {
+      setPrimaryWorkImageUrl(work.id, reordered[0].url);
+    }
   }
 
   function handleSetPrimary(id: string) {
-    const reordered = reorderWithPrimary([
-      images.find(i => i.id === id)!,
-      ...images.filter(i => i.id !== id),
-    ]);
+    const target = images.find(i => i.id === id);
+    if (!target) return;
+    const reordered = reorderWithPrimary([target, ...images.filter(i => i.id !== id)]);
     setImages(reordered);
     persistOrder(reordered);
+    // Cascade new primary URL to portfolio_images.url (and artworks.url if linked)
+    setPrimaryWorkImageUrl(work.id, target.url);
   }
 
   async function handleDeleteImage(img: WorkImage) {
