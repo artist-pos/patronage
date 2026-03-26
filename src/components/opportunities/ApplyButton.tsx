@@ -12,13 +12,26 @@ import type { OpportunityApplicationDraft } from "@/types/database";
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 import type { Opportunity, Artwork } from "@/types/database";
 
+interface ServerProfile {
+  id: string;
+  full_name: string | null;
+  username: string;
+  bio: string | null;
+  avatar_url: string | null;
+  medium: string[] | null;
+  exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>;
+  received_grants: string[];
+  is_patronage_supported: boolean;
+}
+
 interface Props {
   opportunity: Opportunity;
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
+  serverProfile?: ServerProfile | null;
 }
 
-export function ApplyButton({ opportunity, isJobOpportunity = false, professionalCvUrl = null }: Props) {
+export function ApplyButton({ opportunity, isJobOpportunity = false, professionalCvUrl = null, serverProfile = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -39,18 +52,21 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       return;
     }
 
-    const [profileResult, artworksResult, draft] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
+    const [artworksResult, draft, profileResult] = await Promise.all([
       isJobOpportunity
-        ? Promise.resolve({ data: [] })
+        ? Promise.resolve({ data: [] as Artwork[] })
         : supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
       opportunity.routing_type === "pipeline"
         ? getDraft(opportunity.id)
         : Promise.resolve(null),
+      // Use the server-prefetched profile if available — skips a DB round-trip
+      serverProfile
+        ? Promise.resolve({ data: serverProfile })
+        : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
     ]);
 
-    const profile = profileResult.data;
     const artworks = (artworksResult.data ?? []) as Artwork[];
+    const profile = profileResult.data;
 
     if (profile) {
       const collectedSet = artworks.some((a: Artwork) => a.current_owner_id !== a.creator_id);

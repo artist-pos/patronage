@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, OpportunityFilters, OpportunityInsert } from "@/types/database";
 
@@ -106,7 +107,7 @@ export async function getMarketplaceStats(): Promise<{
   };
 }
 
-export async function getOpportunityById(idOrSlug: string): Promise<Opportunity | null> {
+export const getOpportunityById = cache(async function getOpportunityById(idOrSlug: string): Promise<Opportunity | null> {
   const supabase = await createClient();
 
   // Try slug first (new SEO URLs), fall back to UUID for existing links
@@ -120,7 +121,7 @@ export async function getOpportunityById(idOrSlug: string): Promise<Opportunity 
     .single();
 
   return data as Opportunity | null;
-}
+});
 
 export async function insertOpportunities(rows: OpportunityInsert[]) {
   const supabase = await createClient();

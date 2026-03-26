@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getOpportunityById } from "@/lib/opportunities";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
-import { isAdmin } from "@/lib/admin";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModalDynamic";
 import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
 import { SaveButton } from "@/components/opportunities/SaveButton";
@@ -72,20 +71,33 @@ export default async function OpportunityPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [opp, adminUser, { data: { user } }] = await Promise.all([
+  const [opp, { data: { user } }] = await Promise.all([
     getOpportunityById(id),
-    isAdmin(),
     supabase.auth.getUser(),
   ]);
   if (!opp) notFound();
 
-  // Check if user saved this opportunity
+  // Fetch all user-specific data in a single parallel round-trip
   let isSaved = false;
   let saveCount = 0;
   let existingApplication: { id: string; status: string } | null = null;
+  let adminUser = false;
+  let userRole: string | null = null;
+  let professionalCvUrl: string | null = null;
+  let serverProfile: {
+    id: string;
+    full_name: string | null;
+    username: string;
+    bio: string | null;
+    avatar_url: string | null;
+    medium: string[] | null;
+    exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>;
+    received_grants: string[];
+    is_patronage_supported: boolean;
+  } | null = null;
 
   if (user) {
-    const [savedResult, countResult, appResult] = await Promise.all([
+    const [savedResult, countResult, appResult, profileResult] = await Promise.all([
       supabase
         .from("user_saved_opportunities")
         .select("id")
@@ -102,10 +114,31 @@ export default async function OpportunityPage({ params }: Props) {
         .eq("opportunity_id", opp.id)
         .eq("artist_id", user.id)
         .single(),
+      supabase
+        .from("profiles")
+        .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported")
+        .eq("id", user.id)
+        .single(),
     ]);
     isSaved = !!savedResult.data;
     saveCount = countResult.count ?? 0;
     existingApplication = appResult.data ?? null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pd = profileResult.data as any;
+    userRole = pd?.role ?? null;
+    professionalCvUrl = pd?.professional_cv_url ?? null;
+    adminUser = userRole === "admin" || userRole === "owner";
+    serverProfile = pd ? {
+      id: pd.id as string,
+      full_name: pd.full_name as string | null,
+      username: pd.username as string,
+      bio: pd.bio as string | null,
+      avatar_url: pd.avatar_url as string | null,
+      medium: pd.medium as string[] | null,
+      exhibition_history: (pd.exhibition_history ?? []) as Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>,
+      received_grants: (pd.received_grants ?? []) as string[],
+      is_patronage_supported: (pd.is_patronage_supported ?? false) as boolean,
+    } : null;
   } else {
     const { count } = await supabase
       .from("user_saved_opportunities")
@@ -132,18 +165,6 @@ export default async function OpportunityPage({ params }: Props) {
   const isTrending = saveCount >= 5;
   const isPipeline = opp.routing_type === "pipeline";
 
-  // Get user profile to determine role and professional CV
-  let userRole: string | null = null;
-  let professionalCvUrl: string | null = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, professional_cv_url")
-      .eq("id", user.id)
-      .single();
-    userRole = profile?.role ?? null;
-    professionalCvUrl = (profile as { professional_cv_url?: string | null } | null)?.professional_cv_url ?? null;
-  }
   const isArtist = userRole === "artist" || userRole === "owner";
   const isJobOpportunity = opp.type === "Job / Employment";
   const canApply = isPipeline && (isArtist || (userRole === "patron" && isJobOpportunity));
@@ -388,7 +409,7 @@ export default async function OpportunityPage({ params }: Props) {
           </p>
         </div>
       ) : canApply ? (
-        <ApplyButton opportunity={opp} isJobOpportunity={isJobOpportunity} professionalCvUrl={professionalCvUrl} />
+        <ApplyButton opportunity={opp} isJobOpportunity={isJobOpportunity} professionalCvUrl={professionalCvUrl} serverProfile={serverProfile} />
       ) : opp.url ? (
         <OpportunityCTALink
           href={opp.url}
