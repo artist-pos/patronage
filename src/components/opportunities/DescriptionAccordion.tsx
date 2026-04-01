@@ -8,7 +8,10 @@ import { trackEvent } from "@/actions/trackEvent";
 // ── Structured description renderer ───────────────────────────────────────────
 
 /** Lines matching these patterns are rendered as bold section headings */
-const HEADING_RE = /^(#{1,3}\s+.+|.{3,60}:\s*$|[A-Z][A-Za-z /&'-]{2,50}:)$/;
+const HEADING_RE = /^(#{1,3}\s+.+|.{3,60}[?:]\s*$|[A-Z][A-Z\s/&'()-]{3,59})$/;
+// Matches:  ## Markdown heading
+//           Any line ending with : or ? (e.g. "Eligibility:", "Who can apply?")
+//           ALL-CAPS lines like "SUBMISSION GUIDELINES"
 
 /** Render inline **bold** and _italic_ markdown tokens */
 function renderInline(text: string): React.ReactNode {
