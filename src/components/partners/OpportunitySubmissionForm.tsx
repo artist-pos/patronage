@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { OpportunityForm, defaultFormData, getDefaultPipelineSetup, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
 import { getFundingFieldMeta } from "@/lib/opportunity-constants";
+import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
 
 // ── Image resize ──────────────────────────────────────────────────────────────
@@ -465,9 +466,7 @@ function ListingPreviewModal({
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">About</h2>
                 {opp.caption && <p className="text-sm leading-relaxed">{opp.caption}</p>}
                 {opp.full_description && (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                    {opp.full_description}
-                  </p>
+                  <StructuredDescription text={opp.full_description} />
                 )}
               </div>
             )}

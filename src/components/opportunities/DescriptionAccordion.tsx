@@ -27,7 +27,7 @@ function renderInline(text: string): React.ReactNode {
   );
 }
 
-function StructuredDescription({ text }: { text: string }) {
+export function StructuredDescription({ text }: { text: string }) {
   if (!text?.trim()) return null;
 
   // Split on double newlines (paragraph breaks) first, then single newlines within
