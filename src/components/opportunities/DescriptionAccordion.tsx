@@ -10,6 +10,23 @@ import { trackEvent } from "@/actions/trackEvent";
 /** Lines matching these patterns are rendered as bold section headings */
 const HEADING_RE = /^(#{1,3}\s+.+|.{3,60}:\s*$|[A-Z][A-Za-z /&'-]{2,50}:)$/;
 
+/** Render inline **bold** and _italic_ markdown tokens */
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*\n]+\*\*|_[^_\n]+_)/g);
+  if (parts.length === 1) return text;
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**"))
+          return <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
+        if (part.startsWith("_") && part.endsWith("_"))
+          return <em key={i} className="italic">{part.slice(1, -1)}</em>;
+        return part;
+      })}
+    </>
+  );
+}
+
 function StructuredDescription({ text }: { text: string }) {
   if (!text?.trim()) return null;
 
@@ -34,16 +51,30 @@ function StructuredDescription({ text }: { text: string }) {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{headingText}</p>
               {rest.length > 0 && (
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {rest.join(" ")}
+                  {renderInline(rest.join(" "))}
                 </p>
               )}
             </div>
           );
         }
 
+        // Bullet list: all non-empty lines start with "- "
+        const isBulletList = lines.every((l) => l.startsWith("- ") || l.startsWith("* "));
+        if (isBulletList) {
+          return (
+            <ul key={i} className="list-disc pl-4 space-y-0.5">
+              {lines.map((l, j) => (
+                <li key={j} className="text-xs text-muted-foreground leading-relaxed">
+                  {renderInline(l.replace(/^[-*] /, ""))}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
         return (
           <p key={i} className="text-xs text-muted-foreground leading-relaxed">
-            {lines.join(" ")}
+            {renderInline(lines.join(" "))}
           </p>
         );
       })}

@@ -155,6 +155,7 @@ function buildRecord(
         title: opp.title.slice(0, 255),
         organiser: opp.organiser.slice(0, 255),
         caption: opp.caption?.slice(0, 400) ?? null,
+        full_description: opp.full_description?.slice(0, 3000) ?? null,
         type: normaliseType(opp.type),
         country: mapCountry(opp.country),
         opens_at: opp.opens_at ?? null,

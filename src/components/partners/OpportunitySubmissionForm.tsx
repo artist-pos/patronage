@@ -200,6 +200,7 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         <input type="hidden" name="career_stage"               value={formData.selectedCareerStages.join(",")} />
         <input type="hidden" name="tags"                       value={formData.selectedTags.join(",")} />
         <input type="hidden" name="entry_fee"                  value={formData.entryFee} />
+        <input type="hidden" name="entry_fee_currency"         value={formData.entryFeeCurrency ?? "NZD"} />
         <input type="hidden" name="grant_type"                 value={formData.grantType} />
         <input type="hidden" name="recipients_count"           value={formData.recipientsCount} />
         <input type="hidden" name="travel_support"             value={formData.travelSupport === true ? "true" : ""} />

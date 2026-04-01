@@ -149,5 +149,21 @@ export async function upsertProfileAction(
     disciplines
   );
 
+  // Ensure artist/owner is in the subscriber list (safety net for flows that
+  // bypass the role selection page, e.g. Google OAuth without a pre-selected role)
+  const isArtistRole = savedProfile?.role === "artist" || savedProfile?.role === "owner";
+  if (isArtistRole && user.email) {
+    const email = user.email.toLowerCase().trim();
+    await supabase
+      .from("subscribers")
+      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+    // Also ensure digest flags are on if they were never set
+    await supabase
+      .from("profiles")
+      .update({ marketing_subscription: true, weekly_digest: true })
+      .eq("id", user.id)
+      .eq("marketing_subscription", false);
+  }
+
   redirect(`/${username}`);
 }

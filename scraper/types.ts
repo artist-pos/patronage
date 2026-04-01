@@ -23,6 +23,7 @@ export interface ScrapedOpportunity {
   deadline: string | null; // YYYY-MM-DD
   url: string | null;
   funding_range: string | null;
+  full_description: string | null; // structured description with "Heading:" section lines
   featured_image_url: string | null;
   disciplines: string[];   // discipline_enum values — extracted by AI or inherited from source
 }

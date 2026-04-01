@@ -43,6 +43,7 @@ export async function submitOpportunityAction(
   const captionRaw = (formData.get("caption") as string)?.trim();
 
   const entryFeeRaw = formData.get("entry_fee") as string;
+  const entryFeeCurrency = ((formData.get("entry_fee_currency") as string) || "NZD").trim().toUpperCase();
   const travelSupportRaw = formData.get("travel_support") as string;
   const routingType = (formData.get("routing_type") as string) || "external";
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
@@ -59,6 +60,19 @@ export async function submitOpportunityAction(
   let pipelineConfig = null;
   try { pipelineConfig = JSON.parse(pipelineConfigRaw); } catch { pipelineConfig = null; }
 
+  const localAmount = entryFeeRaw !== "" && entryFeeRaw != null ? parseFloat(entryFeeRaw) : null;
+  let entryFeeNZD = localAmount;
+  if (localAmount !== null && entryFeeCurrency !== "NZD") {
+    try {
+      const rateRes = await fetch(`https://api.frankfurter.app/latest?from=${entryFeeCurrency}&to=NZD`);
+      const rateData = await rateRes.json() as { rates?: { NZD?: number } };
+      const rate = rateData.rates?.NZD ?? 1;
+      entryFeeNZD = Math.round(localAmount * rate * 100) / 100;
+    } catch {
+      // fallback: store local amount as-is
+    }
+  }
+
   const { error } = await supabase.from("opportunities").insert({
     status: "pending",
     is_active: false,
@@ -73,7 +87,9 @@ export async function submitOpportunityAction(
     deadline: deadline || null,
     url: (formData.get("url") as string)?.trim() || null,
     funding_range: (formData.get("funding_range") as string)?.trim() || null,
-    entry_fee: entryFeeRaw !== "" && entryFeeRaw != null ? parseFloat(entryFeeRaw) : null,
+    entry_fee: entryFeeNZD,
+    entry_fee_currency: entryFeeCurrency !== "NZD" ? entryFeeCurrency : null,
+    entry_fee_local: entryFeeCurrency !== "NZD" ? localAmount : null,
     sub_categories: subCategories,
     career_stage: careerStage,
     tags,

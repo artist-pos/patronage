@@ -26,7 +26,9 @@ export async function updateOpportunityAdmin(
     opens_at?: string | null;
     deadline?: string | null;
     funding_range?: string | null;
-    entry_fee?: number | null;
+    entry_fee?: number | null;         // amount in entry_fee_currency; server converts to NZD
+    entry_fee_currency?: string | null;
+    entry_fee_local?: number | null;
     grant_type?: string | null;
     recipients_count?: number | null;
     artist_payment_type?: string | null;
@@ -45,7 +47,26 @@ export async function updateOpportunityAdmin(
 ) {
   if (!(await isAdmin())) throw new Error("Not authorised");
   const admin = createAdminClient();
-  const { error } = await admin.from("opportunities").update(data).eq("id", id);
+
+  const updateData = { ...data };
+  const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();
+  if (data.entry_fee != null && currency !== "NZD") {
+    try {
+      const rateRes = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=NZD`);
+      const rateData = await rateRes.json() as { rates?: { NZD?: number } };
+      const rate = rateData.rates?.NZD ?? 1;
+      updateData.entry_fee_local = data.entry_fee;
+      updateData.entry_fee = Math.round(data.entry_fee * rate * 100) / 100;
+      updateData.entry_fee_currency = currency;
+    } catch {
+      // keep as-is on failure
+    }
+  } else if (currency === "NZD") {
+    updateData.entry_fee_local = null;
+    updateData.entry_fee_currency = null;
+  }
+
+  const { error } = await admin.from("opportunities").update(updateData).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/opportunities/${id}`);
   revalidatePath("/opportunities");

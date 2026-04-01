@@ -72,6 +72,7 @@ export function PartnerEditForm({ opp }: Props) {
       career_stage: d.selectedCareerStages.length > 0 ? d.selectedCareerStages : null,
       tags: d.selectedTags.length > 0 ? d.selectedTags : null,
       entry_fee: d.entryFee !== "" ? parseFloat(d.entryFee) : null,
+      entry_fee_currency: d.entryFeeCurrency || "NZD",
       grant_type: d.grantType.trim() || null,
       recipients_count: d.recipientsCount ? parseInt(d.recipientsCount) : null,
       artist_payment_type: d.artistPaymentType || null,

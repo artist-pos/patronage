@@ -72,6 +72,7 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
         career_stage: formData.selectedCareerStages.length > 0 ? formData.selectedCareerStages : null,
         tags: formData.selectedTags.length > 0 ? formData.selectedTags : null,
         entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
+        entry_fee_currency: formData.entryFeeCurrency || "NZD",
         grant_type: formData.grantType.trim() || null,
         recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,
         artist_payment_type: formData.artistPaymentType || null,

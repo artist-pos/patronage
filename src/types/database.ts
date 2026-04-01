@@ -101,7 +101,9 @@ export interface Opportunity {
   profile_id: string | null;
   created_at: string;
   // Transparency fields (migration 035)
-  entry_fee: number | null;
+  entry_fee: number | null;          // always NZD equivalent
+  entry_fee_currency: string | null; // ISO 4217 code (migration 075), null = NZD
+  entry_fee_local: number | null;    // original amount in entry_fee_currency (migration 075)
   artist_payment_type: string | null;
   travel_support: boolean | null;
   travel_support_details: string | null;

@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Label } from "@/components/ui/label";
+import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
 import type { Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
 import {
   FORM_TYPES,
@@ -55,6 +56,7 @@ export interface OpportunityFormData {
   disciplinesInput: string;     // typeahead input buffer (not persisted)
   // Type-conditional fields
   entryFee: string;
+  entryFeeCurrency: string; // ISO 4217, default "NZD"
   grantType: string;
   recipientsCount: string;
   // Transparency
@@ -99,6 +101,7 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     tagsInput: "",
     disciplinesInput: "",
     entryFee: "",
+    entryFeeCurrency: "NZD",
     grantType: "",
     recipientsCount: "",
     artistPaymentType: "",
@@ -159,7 +162,8 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     selectedTags,
     tagsInput: "",
     disciplinesInput: "",
-    entryFee: opp.entry_fee != null ? String(opp.entry_fee) : "",
+    entryFee: opp.entry_fee_local != null ? String(opp.entry_fee_local) : (opp.entry_fee != null ? String(opp.entry_fee) : ""),
+    entryFeeCurrency: opp.entry_fee_currency ?? "NZD",
     grantType: opp.grant_type ?? "",
     recipientsCount: opp.recipients_count != null ? String(opp.recipients_count) : "",
     artistPaymentType: opp.artist_payment_type ?? "",
@@ -878,6 +882,7 @@ export function OpportunityForm({
 }: OpportunityFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const termsFileRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [imgUploading, setImgUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [termsUploading, setTermsUploading] = useState(false);
@@ -1132,17 +1137,34 @@ export function OpportunityForm({
         )}
 
         {showField(value.type, "entryFee") && (
-          <Field label="Entry Fee">
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={value.entryFee}
-              onChange={(e) => set({ entryFee: e.target.value })}
-              placeholder="0 for free, leave blank if unknown"
-              className={FIELD}
-            />
-            <p className="text-xs text-muted-foreground font-mono mt-1">Enter 0 if there is no entry fee.</p>
+          <Field label={value.entryFeeCurrency && value.entryFeeCurrency !== "NZD" ? `Entry Fee (${value.entryFeeCurrency})` : "Entry Fee"}>
+            <div className="flex gap-2">
+              <select
+                value={value.entryFeeCurrency}
+                onChange={(e) => set({ entryFeeCurrency: e.target.value })}
+                style={{ width: "5.5rem", flexShrink: 0 }}
+                className={FIELD}
+              >
+                {["NZD", "AUD", "USD", "EUR", "GBP", "CAD"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={value.entryFee}
+                onChange={(e) => set({ entryFee: e.target.value })}
+                placeholder="0 for free, leave blank if unknown"
+                className={FIELD}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+            </div>
+            {value.entryFeeCurrency && value.entryFeeCurrency !== "NZD" ? (
+              <p className="text-xs text-muted-foreground font-mono mt-1">Will be converted to NZD equivalent on save.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground font-mono mt-1">Enter 0 if there is no entry fee.</p>
+            )}
           </Field>
         )}
 
@@ -1472,12 +1494,17 @@ export function OpportunityForm({
       {/* ── Section 7: Description & Media ────────────────────────────── */}
       <Section label="Description & Media">
         <Field label={mode === "admin" ? "Description — shown on detail page" : "Full Description"}>
+          <DescriptionToolbar
+            textareaRef={descriptionRef}
+            onChange={(v) => set({ fullDescription: v })}
+          />
           <textarea
+            ref={descriptionRef}
             value={value.fullDescription}
             onChange={(e) => set({ fullDescription: e.target.value })}
             rows={mode === "admin" ? 5 : 6}
             placeholder="Full details, eligibility criteria, how to apply…"
-            className={`${FIELD} resize-none`}
+            className={`${FIELD} resize-none rounded-t-none`}
           />
           {mode === "create" && (
             <p className="text-xs text-muted-foreground font-mono mt-1">
@@ -1551,16 +1578,31 @@ export function OpportunityForm({
           <p className="text-xs font-semibold uppercase tracking-widest">Transparency</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">Entry Fee</label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={value.entryFee}
-                onChange={(e) => set({ entryFee: e.target.value })}
-                placeholder="0 = Free, blank = unknown"
-                className={FIELD}
-              />
+              <label className="text-xs font-semibold uppercase tracking-widest">
+                {value.entryFeeCurrency && value.entryFeeCurrency !== "NZD" ? `Entry Fee (${value.entryFeeCurrency})` : "Entry Fee"}
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={value.entryFeeCurrency}
+                  onChange={(e) => set({ entryFeeCurrency: e.target.value })}
+                  style={{ width: "5.5rem", flexShrink: 0 }}
+                  className={FIELD}
+                >
+                  {["NZD", "AUD", "USD", "EUR", "GBP", "CAD"].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={value.entryFee}
+                  onChange={(e) => set({ entryFee: e.target.value })}
+                  placeholder="0 = Free, blank = unknown"
+                  className={FIELD}
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest">Artist Payment</label>

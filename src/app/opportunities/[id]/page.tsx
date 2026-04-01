@@ -477,7 +477,13 @@ export default async function OpportunityPage({ params }: Props) {
         {opp.entry_fee !== null && opp.entry_fee !== undefined && (
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Entry Fee</p>
-            <p className="font-mono text-sm">{opp.entry_fee === 0 ? "Free" : `$${opp.entry_fee}`}</p>
+            <p className="font-mono text-sm">
+              {opp.entry_fee === 0
+                ? "Free"
+                : opp.entry_fee_currency && opp.entry_fee_local != null
+                  ? `NZD ~${Math.round(opp.entry_fee)} (${opp.entry_fee_currency} ${opp.entry_fee_local})`
+                  : `NZD ${opp.entry_fee}`}
+            </p>
           </div>
         )}
         {opp.artist_payment_type && (
