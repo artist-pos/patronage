@@ -30,55 +30,71 @@ function renderInline(text: string): React.ReactNode {
 export function StructuredDescription({ text }: { text: string }) {
   if (!text?.trim()) return null;
 
-  // Split on double newlines (paragraph breaks) first, then single newlines within
-  const paragraphs = text.split(/\n{2,}/);
+  // Split on every newline — each line is its own visual block so a single
+  // Enter in the textarea creates visible spacing between sections.
+  const lines = text.split("\n");
+
+  // Group consecutive bullet lines into a single <ul> block.
+  type Block =
+    | { type: "heading"; text: string }
+    | { type: "bullet"; items: string[] }
+    | { type: "text"; text: string }
+    | { type: "spacer" };
+
+  const blocks: Block[] = [];
+  let bulletBuffer: string[] = [];
+
+  function flushBullets() {
+    if (bulletBuffer.length) {
+      blocks.push({ type: "bullet", items: [...bulletBuffer] });
+      bulletBuffer = [];
+    }
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      flushBullets();
+      // Blank lines become spacers only if last block isn't already a spacer
+      if (blocks.length && blocks[blocks.length - 1].type !== "spacer") {
+        blocks.push({ type: "spacer" });
+      }
+      continue;
+    }
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      bulletBuffer.push(line.replace(/^[-*] /, ""));
+      continue;
+    }
+    flushBullets();
+    if (HEADING_RE.test(line)) {
+      blocks.push({ type: "heading", text: line.replace(/^#{1,3}\s+/, "").replace(/:$/, "") });
+    } else {
+      blocks.push({ type: "text", text: line });
+    }
+  }
+  flushBullets();
 
   return (
-    <div className="space-y-3">
-      {paragraphs.map((para, i) => {
-        const lines = para.split("\n").filter((l) => l.trim());
-        if (lines.length === 0) return null;
-
-        const firstLine = lines[0].trim();
-        const isHeading = HEADING_RE.test(firstLine);
-
-        if (isHeading) {
-          // Clean up markdown-style hashes and trailing colons for display
-          const headingText = firstLine.replace(/^#{1,3}\s+/, "").replace(/:$/, "");
-          const rest = lines.slice(1);
-          return (
-            <div key={i} className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{headingText}</p>
-              {rest.length > 0 && (
-                <p className="text-xs text-foreground leading-relaxed">
-                  {rest.map((line, j) => (
-                    <span key={j}>{renderInline(line)}{j < rest.length - 1 && <br />}</span>
-                  ))}
-                </p>
-              )}
-            </div>
-          );
-        }
-
-        // Bullet list: all non-empty lines start with "- " or "* "
-        const isBulletList = lines.every((l) => l.startsWith("- ") || l.startsWith("* "));
-        if (isBulletList) {
-          return (
-            <ul key={i} className="list-disc pl-4 space-y-0.5">
-              {lines.map((l, j) => (
-                <li key={j} className="text-xs text-foreground leading-relaxed">
-                  {renderInline(l.replace(/^[-*] /, ""))}
-                </li>
-              ))}
-            </ul>
-          );
-        }
-
+    <div className="space-y-2">
+      {blocks.map((block, i) => {
+        if (block.type === "spacer") return <div key={i} className="h-1" />;
+        if (block.type === "heading") return (
+          <p key={i} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pt-1">
+            {block.text}
+          </p>
+        );
+        if (block.type === "bullet") return (
+          <ul key={i} className="list-disc pl-4 space-y-0.5">
+            {block.items.map((item, j) => (
+              <li key={j} className="text-xs text-foreground leading-relaxed">
+                {renderInline(item)}
+              </li>
+            ))}
+          </ul>
+        );
         return (
           <p key={i} className="text-xs text-foreground leading-relaxed">
-            {lines.map((line, j) => (
-              <span key={j}>{renderInline(line)}{j < lines.length - 1 && <br />}</span>
-            ))}
+            {renderInline(block.text)}
           </p>
         );
       })}
