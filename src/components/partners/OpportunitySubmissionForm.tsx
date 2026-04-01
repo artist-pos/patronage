@@ -127,6 +127,8 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
     profile_id: null,
     created_at: new Date().toISOString(),
     entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
+    entry_fee_currency: null,
+    entry_fee_local: null,
     artist_payment_type: null,
     travel_support: formData.travelSupport,
     travel_support_details: formData.travelSupportDetails || null,
