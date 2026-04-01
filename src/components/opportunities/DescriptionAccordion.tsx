@@ -79,7 +79,7 @@ export function StructuredDescription({ text }: { text: string }) {
       {blocks.map((block, i) => {
         if (block.type === "spacer") return <div key={i} className="h-1" />;
         if (block.type === "heading") return (
-          <p key={i} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pt-1">
+          <p key={i} className="text-xs font-semibold uppercase tracking-widest text-foreground pt-1">
             {block.text}
           </p>
         );
