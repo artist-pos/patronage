@@ -50,21 +50,23 @@ function StructuredDescription({ text }: { text: string }) {
             <div key={i} className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{headingText}</p>
               {rest.length > 0 && (
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {renderInline(rest.join(" "))}
+                <p className="text-xs text-foreground leading-relaxed">
+                  {rest.map((line, j) => (
+                    <span key={j}>{renderInline(line)}{j < rest.length - 1 && <br />}</span>
+                  ))}
                 </p>
               )}
             </div>
           );
         }
 
-        // Bullet list: all non-empty lines start with "- "
+        // Bullet list: all non-empty lines start with "- " or "* "
         const isBulletList = lines.every((l) => l.startsWith("- ") || l.startsWith("* "));
         if (isBulletList) {
           return (
             <ul key={i} className="list-disc pl-4 space-y-0.5">
               {lines.map((l, j) => (
-                <li key={j} className="text-xs text-muted-foreground leading-relaxed">
+                <li key={j} className="text-xs text-foreground leading-relaxed">
                   {renderInline(l.replace(/^[-*] /, ""))}
                 </li>
               ))}
@@ -73,8 +75,10 @@ function StructuredDescription({ text }: { text: string }) {
         }
 
         return (
-          <p key={i} className="text-xs text-muted-foreground leading-relaxed">
-            {renderInline(lines.join(" "))}
+          <p key={i} className="text-xs text-foreground leading-relaxed">
+            {lines.map((line, j) => (
+              <span key={j}>{renderInline(line)}{j < lines.length - 1 && <br />}</span>
+            ))}
           </p>
         );
       })}
