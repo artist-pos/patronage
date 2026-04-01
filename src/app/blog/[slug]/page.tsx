@@ -49,7 +49,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   return (
-    <article className="max-w-2xl mx-auto px-6 py-16 space-y-8">
+    <article className="max-w-[1600px] mx-auto px-6 py-16 space-y-8">
       {/* Back link */}
       <Link
         href="/blog"
@@ -64,7 +64,7 @@ export default async function BlogPostPage({ params }: Props) {
           <img
             src={post.image_url}
             alt=""
-            className="w-full max-h-[480px] object-cover"
+            className="w-full h-auto"
           />
         </div>
       )}
