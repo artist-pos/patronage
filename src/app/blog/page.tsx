@@ -26,7 +26,7 @@ export default async function BlogPage() {
     .order("published_at", { ascending: false, nullsFirst: false });
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
+    <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-12">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Blog</h1>
         <p className="text-muted-foreground">
@@ -49,7 +49,7 @@ export default async function BlogPage() {
                   <img
                     src={post.image_url}
                     alt=""
-                    className="w-full h-52 object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
               ) : (
