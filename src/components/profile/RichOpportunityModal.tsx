@@ -166,6 +166,8 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       profile_id: null,
       created_at: new Date().toISOString(),
       entry_fee: entryFee !== "" ? parseFloat(entryFee) : null,
+      entry_fee_currency: null,
+      entry_fee_local: null,
       artist_payment_type: null,
       travel_support: null,
       travel_support_details: null,
