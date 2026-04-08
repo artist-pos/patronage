@@ -141,12 +141,12 @@ function OppGrid({ opps, today, emptyMessage }: {
 }
 
 export function SocialContentPanel({
-  newThisWeek,
+  closingIn3Weeks,
   closingSoon,
   finalCall,
   today,
 }: {
-  newThisWeek: SocialOpp[];
+  closingIn3Weeks: SocialOpp[];
   closingSoon: SocialOpp[];
   finalCall: SocialOpp[];
   today: string;
@@ -158,7 +158,7 @@ export function SocialContentPanel({
   const closingNext3 = finalCall.filter((o) => o.deadline !== today);
 
   const currentOpps =
-    view === "new" ? newThisWeek
+    view === "new" ? closingIn3Weeks
     : view === "closing-soon" ? closingSoon
     : finalCall;
 
@@ -170,7 +170,7 @@ export function SocialContentPanel({
   }
 
   const VIEWS: { id: View; label: string }[] = [
-    { id: "new", label: "New This Week" },
+    { id: "new", label: "Closing in 3 Weeks" },
     { id: "closing-soon", label: "Closing Soon" },
     { id: "final-call", label: "Final Call" },
   ];
@@ -202,12 +202,12 @@ export function SocialContentPanel({
         </button>
       </div>
 
-      {/* View: New This Week */}
+      {/* View: Closing in 3 Weeks */}
       {view === "new" && (
         <OppGrid
-          opps={newThisWeek}
+          opps={closingIn3Weeks}
           today={today}
-          emptyMessage="No new opportunities published in the last 7 days."
+          emptyMessage="No opportunities closing in the next 3 weeks."
         />
       )}
 

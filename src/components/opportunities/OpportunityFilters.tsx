@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -43,24 +43,6 @@ export function OpportunityFilters() {
   const currentCareerStage = searchParams.get("careerStage");
   const currentFreeEntry = searchParams.get("freeEntry") === "1";
   const currentView = searchParams.get("view") ?? "gallery";
-  const currentSearch = searchParams.get("search") ?? "";
-
-  // Debounced search input — don't push a new URL on every keystroke
-  const [searchInput, setSearchInput] = useState(currentSearch);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Sync input if URL param changes externally
-  useEffect(() => {
-    setSearchInput(currentSearch);
-  }, [currentSearch]);
-
-  function handleSearchChange(value: string) {
-    setSearchInput(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      updateParam("search", value.trim() || null);
-    }, 400);
-  }
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -163,14 +145,6 @@ export function OpportunityFilters() {
         >
           Free Entry
         </button>
-
-        <input
-          type="search"
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search…"
-          className="border border-border text-sm px-3 py-1.5 bg-background placeholder:text-muted-foreground focus:outline-none focus:border-black w-40"
-        />
       </div>
     </div>
   );

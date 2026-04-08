@@ -37,8 +37,9 @@ export default async function SocialPage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 7);
+  const twentyOneDaysLater = new Date(today);
+  twentyOneDaysLater.setDate(today.getDate() + 21);
+  const twentyOneDaysLaterStr = twentyOneDaysLater.toISOString().split("T")[0];
 
   const sevenDaysLater = new Date(today);
   sevenDaysLater.setDate(today.getDate() + 7);
@@ -52,17 +53,17 @@ export default async function SocialPage() {
   threeDaysLater.setDate(today.getDate() + 3);
   const threeDaysLaterStr = threeDaysLater.toISOString().split("T")[0];
 
-  const [newRes, soonRes, finalRes] = await Promise.all([
-    // New This Week — created in last 7 days, not yet expired
+  const [closingIn3WeeksRes, soonRes, finalRes] = await Promise.all([
+    // Closing in 3 Weeks — deadline between today and 21 days from now
     supabase
       .from("opportunities")
       .select(FIELDS)
       .eq("is_active", true)
       .eq("status", "published")
-      .gte("created_at", sevenDaysAgo.toISOString())
-      .or(`deadline.gte.${todayStr},deadline.is.null`)
-      .order("deadline", { ascending: true, nullsFirst: false })
-      .limit(5),
+      .gte("deadline", todayStr)
+      .lte("deadline", twentyOneDaysLaterStr)
+      .order("deadline", { ascending: true })
+      .limit(10),
 
     // Closing Soon — deadline in 7–14 days
     supabase
@@ -96,7 +97,7 @@ export default async function SocialPage() {
         </p>
       </div>
       <SocialContentPanel
-        newThisWeek={(newRes.data ?? []) as unknown as SocialOpp[]}
+        closingIn3Weeks={(closingIn3WeeksRes.data ?? []) as unknown as SocialOpp[]}
         closingSoon={(soonRes.data ?? []) as unknown as SocialOpp[]}
         finalCall={(finalRes.data ?? []) as unknown as SocialOpp[]}
         today={todayStr}

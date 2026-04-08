@@ -991,8 +991,8 @@ export function OpportunityForm({
         </div>
       )}
 
-      {/* ── AI Parser (create mode only) ─────────────────────────────── */}
-      {mode === "create" && (
+      {/* ── AI Parser (create + admin mode) ─────────────────────────── */}
+      {(mode === "create" || mode === "admin") && (
         <div className="border-t-2 border-black pt-6 mt-8">
           {autofillSource ? (
             <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm">

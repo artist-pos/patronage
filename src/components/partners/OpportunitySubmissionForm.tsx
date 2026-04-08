@@ -13,7 +13,8 @@ import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
 
 // ── Image resize ──────────────────────────────────────────────────────────────
 const MAX_IMG_PX = 1600;
-async function resizeToJpeg(file: File): Promise<Blob> {
+async function resizeImage(file: File): Promise<Blob> {
+  const isPng = file.type === "image/png";
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const src = URL.createObjectURL(file);
@@ -22,12 +23,26 @@ async function resizeToJpeg(file: File): Promise<Blob> {
       const canvas = document.createElement("canvas");
       canvas.width  = Math.round(img.width  * scale);
       canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const ctx = canvas.getContext("2d")!;
+      if (!isPng) {
+        // For non-PNG formats, fill white so any semi-transparent areas composite correctly
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(src);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg", 0.9
-      );
+      if (isPng) {
+        // Preserve transparency — keep as PNG
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
+          "image/png"
+        );
+      } else {
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
+          "image/jpeg", 0.9
+        );
+      }
     };
     img.onerror = reject;
     img.src = src;
@@ -64,11 +79,14 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
   }
 
   async function handleImgUpload(file: File): Promise<string | null> {
-    const blob = await resizeToJpeg(file);
-    const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+    const isPng = file.type === "image/png";
+    const blob = await resizeImage(file);
+    const ext = isPng ? "png" : "jpg";
+    const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9]/gi, "_");
+    const path = `${Date.now()}-${baseName}.${ext}`;
     const { error } = await supabase.storage
       .from("opportunity-images")
-      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+      .upload(path, blob, { contentType: isPng ? "image/png" : "image/jpeg", upsert: false });
     if (error) return null;
     const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
     return data.publicUrl;

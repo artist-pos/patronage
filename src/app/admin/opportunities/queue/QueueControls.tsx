@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
+import {
+  OpportunityForm,
+  oppToFormData,
+  type OpportunityFormData,
+} from "@/components/opportunities/OpportunityForm";
 import { approveOpportunity, rejectOpportunity, approveAll, rejectAll, updateQueueOpportunity } from "./actions";
 import type { Opportunity } from "@/types/database";
 
@@ -10,133 +16,131 @@ interface Props {
   tab: string;
 }
 
-const TYPES = ["Grant", "Residency", "Commission", "Open Call", "Prize", "Display", "Job / Employment", "Studio / Space", "Public Art"];
-const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"];
+function buildUpdatePayload(d: OpportunityFormData) {
+  const currency = (d.entryFeeCurrency || "NZD").toUpperCase();
+  const entryFee = d.entryFee !== "" ? parseFloat(d.entryFee) : null;
+  const entryFeeLocal = currency !== "NZD" && entryFee != null ? entryFee : null;
+  const entryFeeNzd = currency === "NZD" ? entryFee : null; // currency conversion skipped for admin — stored as-is
 
-function EditForm({ opp, onDone }: { opp: Opportunity; onDone: () => void }) {
+  return {
+    title: d.title.trim(),
+    organiser: d.organiser.trim(),
+    caption: d.caption.trim() || null,
+    type: d.type,
+    country: d.country,
+    city: d.city.trim() || null,
+    opens_at: d.opensAt || null,
+    deadline: d.deadline || null,
+    url: d.url.trim() || null,
+    funding_range: d.fundingRange.trim() || null,
+    full_description: d.fullDescription.trim() || null,
+    featured_image_url: d.featuredImageUrl.trim() || null,
+    sub_categories: d.selectedDisciplines.length > 0 ? d.selectedDisciplines : null,
+    career_stage: d.selectedCareerStages.length > 0 ? d.selectedCareerStages : null,
+    tags: d.selectedTags.length > 0 ? d.selectedTags : null,
+    entry_fee: entryFeeNzd,
+    entry_fee_currency: currency !== "NZD" ? currency : null,
+    entry_fee_local: entryFeeLocal,
+    grant_type: d.grantType.trim() || null,
+    recipients_count: d.recipientsCount ? parseInt(d.recipientsCount) : null,
+    artist_payment_type: d.artistPaymentType || null,
+    travel_support: d.travelSupport,
+    travel_support_details: d.travelSupportDetails.trim() || null,
+    is_recurring: d.isRecurring,
+    recurrence_pattern: d.recurrencePattern || null,
+    recurrence_open_day: d.recurrenceOpenDay ? parseInt(d.recurrenceOpenDay) : null,
+    recurrence_close_day: d.recurrenceCloseDay ? parseInt(d.recurrenceCloseDay) : null,
+    recurrence_end_date: d.recurrenceEndDate || null,
+  };
+}
+
+function AdminQueueEditForm({ opp, onDone }: { opp: Opportunity; onDone: () => void }) {
+  const [formData, setFormData] = useState<OpportunityFormData>(() => oppToFormData(opp));
   const [saving, setSaving] = useState(false);
-  const [values, setValues] = useState({
-    title: opp.title,
-    organiser: opp.organiser,
-    caption: opp.caption ?? "",
-    type: opp.type,
-    country: opp.country,
-    opens_at: opp.opens_at ?? "",
-    deadline: opp.deadline ?? "",
-    url: opp.url ?? "",
-    funding_range: opp.funding_range ?? "",
-    full_description: opp.full_description ?? "",
-  });
+  const [approving, setApproving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const supabase = createClient();
 
-  function set(key: string, val: string) {
-    setValues((prev) => ({ ...prev, [key]: val }));
+  function update(updates: Partial<OpportunityFormData>) {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  }
+
+  async function handleImgUpload(file: File): Promise<string | null> {
+    const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+    const { error } = await supabase.storage
+      .from("opportunity-images")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return null;
+    const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+    return data.publicUrl;
   }
 
   async function handleSave() {
     setSaving(true);
-    await updateQueueOpportunity(opp.id, {
-      title: values.title,
-      organiser: values.organiser,
-      caption: values.caption || null,
-      type: values.type,
-      country: values.country,
-      opens_at: values.opens_at || null,
-      deadline: values.deadline || null,
-      url: values.url || null,
-      funding_range: values.funding_range || null,
-      full_description: values.full_description || null,
-    });
-    setSaving(false);
-    onDone();
+    try {
+      await updateQueueOpportunity(opp.id, buildUpdatePayload(formData));
+      setToast("Saved");
+      setTimeout(() => setToast(null), 3000);
+    } catch {
+      setToast("Save failed");
+      setTimeout(() => setToast(null), 4000);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const inputCls = "w-full border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:border-black";
-  const selectCls = "w-full border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:border-black";
-  const labelCls = "block text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wider";
+  async function handleSaveAndApprove() {
+    setApproving(true);
+    try {
+      await updateQueueOpportunity(opp.id, buildUpdatePayload(formData));
+      await approveOpportunity(opp.id);
+      onDone();
+    } catch {
+      setToast("Failed to save and approve");
+      setTimeout(() => setToast(null), 4000);
+      setApproving(false);
+    }
+  }
 
   return (
-    <div className="border-t border-border mt-3 pt-3 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Title</label>
-          <input className={inputCls} value={values.title} onChange={(e) => set("title", e.target.value)} />
-        </div>
-        <div>
-          <label className={labelCls}>Organiser</label>
-          <input className={inputCls} value={values.organiser} onChange={(e) => set("organiser", e.target.value)} />
-        </div>
-      </div>
+    <div className="border-t border-border mt-4 pt-4">
+      <OpportunityForm
+        value={formData}
+        onChange={update}
+        mode="admin"
+        onImgUpload={handleImgUpload}
+      />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Type</label>
-          <select className={selectCls} value={values.type} onChange={(e) => set("type", e.target.value)}>
-            {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+      <div className="flex items-center justify-between pt-4 border-t border-black/20 mt-4">
+        <div className="flex items-center gap-3">
+          {toast && (
+            <p className={`text-xs ${toast === "Saved" ? "text-green-600" : "text-destructive"}`}>
+              {toast}
+            </p>
+          )}
+          <button
+            onClick={onDone}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
         </div>
-        <div>
-          <label className={labelCls}>Country</label>
-          <select className={selectCls} value={values.country} onChange={(e) => set("country", e.target.value)}>
-            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving || approving}
+            className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+          <button
+            onClick={handleSaveAndApprove}
+            disabled={saving || approving || !formData.title.trim() || !formData.organiser.trim()}
+            className="text-xs border border-black bg-black text-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40"
+          >
+            {approving ? "Publishing…" : "Save & Approve"}
+          </button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label className={labelCls}>Opens</label>
-          <input type="date" className={inputCls} value={values.opens_at} onChange={(e) => set("opens_at", e.target.value)} />
-        </div>
-        <div>
-          <label className={labelCls}>Deadline</label>
-          <input type="date" className={inputCls} value={values.deadline} onChange={(e) => set("deadline", e.target.value)} />
-        </div>
-        <div>
-          <label className={labelCls}>Funding</label>
-          <input className={inputCls} value={values.funding_range} onChange={(e) => set("funding_range", e.target.value)} placeholder="e.g. $5,000" />
-        </div>
-      </div>
-
-      <div>
-        <label className={labelCls}>URL</label>
-        <input className={inputCls} value={values.url} onChange={(e) => set("url", e.target.value)} placeholder="https://…" />
-      </div>
-
-      <div>
-        <label className={labelCls}>Caption (≤160 chars)</label>
-        <input
-          className={inputCls}
-          value={values.caption}
-          maxLength={160}
-          onChange={(e) => set("caption", e.target.value)}
-        />
-        <p className="text-[10px] text-muted-foreground mt-0.5">{values.caption.length}/160</p>
-      </div>
-
-      <div>
-        <label className={labelCls}>Full description</label>
-        <textarea
-          className={`${inputCls} resize-none`}
-          rows={4}
-          value={values.full_description}
-          onChange={(e) => set("full_description", e.target.value)}
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={handleSave}
-          disabled={saving || !values.title.trim() || !values.organiser.trim()}
-          className="text-xs border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-40"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          onClick={onDone}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );
@@ -306,9 +310,9 @@ export function QueueControls({ opps, tab }: Props) {
               </div>
             </div>
 
-            {/* Inline edit form */}
+            {/* Full inline edit form */}
             {editingId === opp.id && (
-              <EditForm opp={opp} onDone={() => setEditingId(null)} />
+              <AdminQueueEditForm opp={opp} onDone={() => setEditingId(null)} />
             )}
           </div>
         ))}
