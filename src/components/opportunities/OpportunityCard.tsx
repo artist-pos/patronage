@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 import { SaveButton } from "./SaveButton";
+import { OpportunityImageArea } from "./OpportunityImageArea";
 
 const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   monthly:   "Monthly",
@@ -163,52 +164,20 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
       {/* ── Image / Logo ── */}
       {/* Mobile: narrow left column; Desktop: full-width top section */}
-      <div
-        className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
-        style={{ backgroundColor: "#f5f5f5" }}
-      >
-        {opp.featured_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={opp.featured_image_url}
-            alt={opp.title}
-            loading={priority ? "eager" : "lazy"}
-            className="absolute inset-0 w-full h-full"
-            style={{ objectFit: "contain", objectPosition: "center", display: "block" }}
-          />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center font-mono text-[8px] text-muted-foreground uppercase tracking-widest text-center px-1">
-            {opp.type}
-          </span>
-        )}
-
-        {/* Overlays — desktop only */}
-        {fundingLabel && (
-          <div className="hidden md:block absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
-            {fundingLabel}
-          </div>
-        )}
-        {preOpen ? (
-          <div className="hidden md:block absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 leading-none">
-            Not yet open
-          </div>
-        ) : closing && (
-          <div className={`hidden md:block absolute top-2 left-2 z-10 font-mono text-xs px-3 py-1 leading-none ${urgent ? "bg-red-600 text-white" : "bg-black text-white"}`}>
-            {urgent ? "Closes today" : "Closing soon"}
-          </div>
-        )}
-
-        {/* Save button — top-right, visible on card hover */}
-        {!isPreview && (
-          <div className="hidden md:block absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1" onClick={(e) => e.preventDefault()}>
-            <SaveButton
-              opportunityId={opp.id}
-              initialSaved={savedByUser}
-              isAuthenticated={isAuthenticated}
-            />
-          </div>
-        )}
-      </div>
+      <OpportunityImageArea
+        imageUrl={opp.featured_image_url ?? null}
+        alt={opp.title}
+        type={opp.type}
+        priority={priority}
+        fundingLabel={fundingLabel}
+        preOpen={preOpen}
+        closing={closing}
+        urgent={urgent}
+        isPreview={isPreview}
+        opportunityId={opp.id}
+        initialSaved={savedByUser}
+        isAuthenticated={isAuthenticated}
+      />
 
       {/* ── Content ── */}
       <div className="p-3 md:p-5 flex flex-col gap-1.5 md:gap-2 flex-1 min-w-0">
