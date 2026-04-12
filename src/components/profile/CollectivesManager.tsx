@@ -46,6 +46,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(msg: string) {
@@ -71,9 +72,12 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
+    setFormError(null);
     const result = await createCollective({ name: name.trim(), description: description.trim() || undefined });
     if (result.error) {
-      showToast(result.error);
+      setFormError(result.error);
+      setSaving(false);
+      return;
     } else {
       const newMembership: CollectiveMember = {
         id: crypto.randomUUID(),
@@ -101,6 +105,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
       showToast("Collective created.");
     }
     setSaving(false);
+
   }
 
   async function handleAddMembers(collectiveId: string) {
@@ -320,17 +325,18 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
               className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black resize-none"
             />
           </div>
+          {formError && <p className="text-xs text-destructive">{formError}</p>}
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={saving || !name.trim()}
               className="text-sm bg-black text-white px-4 py-2 hover:bg-stone-800 disabled:opacity-50 transition-colors"
             >
-              {saving ? "Creating…" : "Create"}
+              {saving ? "Creating…" : "Create collective"}
             </button>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setName(""); setDescription(""); }}
+              onClick={() => { setShowForm(false); setName(""); setDescription(""); setFormError(null); }}
               className="text-sm px-4 py-2 border border-border hover:bg-muted transition-colors"
             >
               Cancel

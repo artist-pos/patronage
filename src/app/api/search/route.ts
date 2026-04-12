@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const raw = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  // Strip leading @ so searching "@username" works the same as "username"
+  const q = raw.startsWith("@") ? raw.slice(1) : raw;
   if (q.length < 2) return NextResponse.json({ opportunities: [], artists: [] });
 
   const supabase = await createClient();

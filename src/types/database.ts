@@ -300,12 +300,15 @@ export interface PortfolioImage {
   created_at: string;
 }
 
+export type SupportTierType = "one_off" | "recurring" | "service" | "project";
+
 export interface SupportTier {
   id: string;
   profile_id: string;
   title: string;
   price: number;
   description: string | null;
+  tier_type: SupportTierType | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;
