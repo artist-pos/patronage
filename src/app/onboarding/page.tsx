@@ -18,10 +18,17 @@ import type { ExhibitionEntry, BibliographyEntry, SupportTier, CollectiveMember 
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
+const ARTIST_TABS = [
+  { value: "profile", label: "Profile" },
+  { value: "collectives", label: "Collectives & Groups" },
+  { value: "support", label: "Support Tiers" },
+] as const;
+type ArtistTab = typeof ARTIST_TABS[number]["value"];
+
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; tab?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -36,33 +43,39 @@ export default async function OnboardingPage({
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
 
-  // Fetch support tiers + collective memberships for artist settings
-  const [tiersResult, collectivesResult] = await Promise.all([
-    isArtist
-      ? supabase
+  const [tiersData, membershipsData] = isArtist
+    ? await Promise.all([
+        supabase
           .from("support_tiers")
           .select("*")
           .eq("profile_id", user.id)
           .order("sort_order", { ascending: true })
-      : Promise.resolve({ data: null }),
-    isArtist
-      ? supabase
+          .then(r => r.data),
+        supabase
           .from("collective_members")
           .select("*, collective:collectives(*)")
           .eq("user_id", user.id)
           .order("joined_at", { ascending: true })
-      : Promise.resolve({ data: null }),
-  ]);
-  const initialTiers = (tiersResult.data ?? []) as SupportTier[];
-  const initialMemberships = (collectivesResult.data ?? []) as CollectiveMember[];
+          .then(r => r.data),
+      ])
+    : [null, null];
 
-  const { welcome } = await searchParams;
+  const initialTiers = (tiersData ?? []) as SupportTier[];
+  const initialMemberships = (membershipsData ?? []) as CollectiveMember[];
+
+  const { welcome, tab: rawTab } = await searchParams;
+
+  const activeTab: ArtistTab =
+    isArtist && (rawTab === "collectives" || rawTab === "support")
+      ? rawTab
+      : "profile";
+
   const showWelcomeBanner = isArtist && welcome === "1";
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
 
-      {/* ── Welcome / subscription confirmation banner ── */}
+      {/* Welcome banner */}
       {showWelcomeBanner && (
         <div className="border border-black bg-black text-white px-6 py-4 space-y-0.5">
           <p className="text-sm font-semibold">Welcome to Patronage!</p>
@@ -72,220 +85,238 @@ export default async function OnboardingPage({
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="space-y-1 border-b border-border pb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
           {isArtist ? "Edit your artist profile" : "Update your profile"}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {isArtist
-            ? "Update your public artist profile."
-            : "Update your profile."}
+          {isArtist ? "Update your public artist profile." : "Update your profile."}
         </p>
       </div>
 
-      {/* ── Two-column grid: Visuals + Profile Details ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-16 gap-10 items-start">
-
-        {/* Left: Visuals */}
-        <section className="space-y-8">
-          <h2 className="text-base font-semibold">Visuals</h2>
-
-          <div className="space-y-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Profile Picture</p>
-              <p className="text-xs text-muted-foreground">
-                Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
-              </p>
-            </div>
-            <AvatarUploader profileId={user.id} />
-          </div>
-
-          <div className="space-y-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Featured Image</p>
-              <p className="text-xs text-muted-foreground">
-                Displayed as the background of your directory card. Landscape works best.
-              </p>
-            </div>
-            <FeaturedImageUploader profileId={user.id} />
-          </div>
-        </section>
-
-        {/* Right: Profile Details */}
-        <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
-          <h2 className="text-base font-semibold">Profile details</h2>
-          <ProfileForm profile={profile} role={profile.role} />
-        </section>
-      </div>
-
-      {/* ── Artist-only: Works ── */}
+      {/* Tab nav — artist only */}
       {isArtist && (
-        <section className="border-t border-border pt-12">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold">Works</h2>
-              <p className="text-xs text-muted-foreground">
-                Upload, reorder, and manage your portfolio, available works, and sales history.
-              </p>
-            </div>
+        <div className="flex border-b border-border -mt-2">
+          {ARTIST_TABS.map(({ value, label }) => (
             <Link
-              href="/dashboard/works"
-              className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors whitespace-nowrap"
+              key={value}
+              href={value === "profile" ? "/profile/edit" : `/profile/edit?tab=${value}`}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                activeTab === value
+                  ? "border-black text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
             >
-              Manage your works →
+              {label}
             </Link>
-          </div>
-        </section>
+          ))}
+        </div>
       )}
 
-      {/* ── Artist-only: CV (public) ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">CV</h2>
-            <p className="text-xs text-muted-foreground">
-              Upload a PDF of your CV. It will be publicly linked from your profile.
-            </p>
+      {/* ── Tab: Profile ── */}
+      {activeTab === "profile" && (
+        <div className="space-y-12">
+
+          {/* Two-column: Visuals + Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-16 gap-10 items-start">
+            <section className="space-y-8">
+              <h2 className="text-base font-semibold">Visuals</h2>
+              <div className="space-y-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Profile Picture</p>
+                  <p className="text-xs text-muted-foreground">
+                    Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
+                  </p>
+                </div>
+                <AvatarUploader profileId={user.id} />
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Featured Image</p>
+                  <p className="text-xs text-muted-foreground">
+                    Displayed as the background of your directory card. Landscape works best.
+                  </p>
+                </div>
+                <FeaturedImageUploader profileId={user.id} />
+              </div>
+            </section>
+
+            <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
+              <h2 className="text-base font-semibold">Profile details</h2>
+              <ProfileForm profile={profile} role={profile.role} />
+            </section>
           </div>
-          <PortfolioUploader profileId={user.id} mode="cv" />
-        </section>
+
+          {/* Works (artist) */}
+          {isArtist && (
+            <section className="border-t border-border pt-12">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold">Works</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Upload, reorder, and manage your portfolio, available works, and sales history.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/works"
+                  className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors whitespace-nowrap"
+                >
+                  Manage your works →
+                </Link>
+              </div>
+            </section>
+          )}
+
+          {/* CV (artist) */}
+          {isArtist && (
+            <section className="space-y-6 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">CV</h2>
+                <p className="text-xs text-muted-foreground">
+                  Upload a PDF of your CV. It will be publicly linked from your profile.
+                </p>
+              </div>
+              <PortfolioUploader profileId={user.id} mode="cv" />
+            </section>
+          )}
+
+          {/* Professional CV (artist private) */}
+          {isArtist && (
+            <section className="space-y-6 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Professional CV</h2>
+                <p className="text-xs text-muted-foreground">
+                  Upload a PDF of your professional CV. This is <strong>not</strong> shown publicly — it is shared privately with partners only when you apply for roles through Patronage.
+                </p>
+              </div>
+              <PortfolioUploader profileId={user.id} mode="professional-cv" />
+            </section>
+          )}
+
+          {/* Exhibition History (artist) */}
+          {isArtist && (
+            <section className="space-y-6 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Exhibition History</h2>
+                <p className="text-xs text-muted-foreground">
+                  List solo and group exhibitions. Displayed on your public profile grouped by type.
+                </p>
+              </div>
+              <ExhibitionEditor
+                profileId={user.id}
+                initial={(profile.exhibition_history ?? []) as ExhibitionEntry[]}
+              />
+            </section>
+          )}
+
+          {/* Grants (artist) */}
+          {isArtist && (
+            <section className="space-y-6 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Grants Received</h2>
+                <p className="text-xs text-muted-foreground">
+                  List grants, awards, or funding you have received. These appear as trust signals on your profile.
+                </p>
+              </div>
+              <GrantsSection initialGrants={(profile as unknown as { received_grants?: string[] }).received_grants ?? []} />
+            </section>
+          )}
+
+          {/* Professional CV (patron) */}
+          {profile.role === "patron" && (
+            <section className="space-y-6 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Professional CV</h2>
+                <p className="text-xs text-muted-foreground">
+                  Upload a PDF of your professional CV. This is shared privately with partners when you apply for roles through Patronage.
+                </p>
+              </div>
+              <PortfolioUploader profileId={user.id} mode="professional-cv" />
+            </section>
+          )}
+
+          {/* List an Opportunity (non-artist) */}
+          {!isArtist && (
+            <section className="space-y-4 border-t border-border pt-12">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Opportunities</h2>
+                <p className="text-xs text-muted-foreground">
+                  Post an open call, commission, grant, or other opportunity for artists. Listings appear on your public profile.
+                </p>
+              </div>
+              <RichOpportunityModal triggerLabel="List an Opportunity" />
+            </section>
+          )}
+
+          {/* Media & Press */}
+          <section className="space-y-6 border-t border-border pt-12">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Media & Press</h2>
+              <p className="text-xs text-muted-foreground">
+                {isArtist
+                  ? "Reviews, interviews, and features. Displayed as bibliographic citations on your public profile."
+                  : "Press coverage, interviews, and features relevant to your work."}
+              </p>
+            </div>
+            <BibliographyEditor
+              profileId={user.id}
+              initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
+            />
+          </section>
+
+          {/* Email Preferences */}
+          <section className="space-y-6 border-t border-border pt-12">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Email Preferences</h2>
+              <p className="text-xs text-muted-foreground">
+                {isArtist
+                  ? "You are subscribed to the weekly digest by default. Toggle off to unsubscribe."
+                  : "Opt in to receive a weekly digest of new and closing-soon opportunities."}
+              </p>
+            </div>
+            <DigestToggle initial={profile.weekly_digest ?? false} />
+          </section>
+
+          {/* Danger Zone */}
+          <section className="space-y-4 border-t border-black pt-12 mt-12">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
+              <p className="text-xs text-muted-foreground">
+                Terminating your account is permanent. Your profile, portfolio images, and all data will be deleted immediately and cannot be recovered.
+              </p>
+            </div>
+            <TerminateAccountButton />
+          </section>
+        </div>
       )}
 
-      {/* ── Artist-only: Professional CV (private) ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Professional CV</h2>
-            <p className="text-xs text-muted-foreground">
-              Upload a PDF of your professional CV. This is <strong>not</strong> shown publicly — it is shared privately with partners only when you apply for roles through Patronage.
-            </p>
-          </div>
-          <PortfolioUploader profileId={user.id} mode="professional-cv" />
-        </section>
-      )}
-
-      {/* ── Artist-only: Exhibition History ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Exhibition History</h2>
-            <p className="text-xs text-muted-foreground">
-              List solo and group exhibitions. Displayed on your public profile grouped by type.
-            </p>
-          </div>
-          <ExhibitionEditor
-            profileId={user.id}
-            initial={(profile.exhibition_history ?? []) as ExhibitionEntry[]}
-          />
-        </section>
-      )}
-
-      {/* ── Artist-only: Grants Received ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Grants Received</h2>
-            <p className="text-xs text-muted-foreground">
-              List grants, awards, or funding you have received. These appear as trust signals on your profile.
-            </p>
-          </div>
-          <GrantsSection initialGrants={(profile as unknown as { received_grants?: string[] }).received_grants ?? []} />
-        </section>
-      )}
-
-      {/* ── Artist-only: Support Tiers ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Support Tiers</h2>
-            <p className="text-xs text-muted-foreground">
-              Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest.
-            </p>
-          </div>
-          <SupportTiersManager initialTiers={initialTiers} />
-        </section>
-      )}
-
-      {/* ── Artist-only: Collectives & Groups ── */}
-      {isArtist && (
-        <section className="space-y-6 border-t border-border pt-12">
+      {/* ── Tab: Collectives & Groups ── */}
+      {activeTab === "collectives" && (
+        <div className="space-y-6 max-w-2xl">
           <div className="space-y-1">
             <h2 className="text-base font-semibold">Collectives & Groups</h2>
             <p className="text-xs text-muted-foreground">
-              Create or join artist collectives. Collectives let you group your practice with other artists and appear together on Patronage.
+              Create or join artist collectives. Expand a collective to manage members — search for artists by name or username to add them.
             </p>
           </div>
           <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
-        </section>
+        </div>
       )}
 
-      {/* ── Patron: Professional CV ── */}
-      {profile.role === "patron" && (
-        <section className="space-y-6 border-t border-border pt-12">
+      {/* ── Tab: Support Tiers ── */}
+      {activeTab === "support" && (
+        <div className="space-y-6 max-w-2xl">
           <div className="space-y-1">
-            <h2 className="text-base font-semibold">Professional CV</h2>
+            <h2 className="text-base font-semibold">Support Tiers</h2>
             <p className="text-xs text-muted-foreground">
-              Upload a PDF of your professional CV. This is shared privately with partners when you apply for roles through Patronage.
+              Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest. Choose a quick-start preset or create a custom tier.
             </p>
           </div>
-          <PortfolioUploader profileId={user.id} mode="professional-cv" />
-        </section>
+          <SupportTiersManager initialTiers={initialTiers} />
+        </div>
       )}
 
-      {/* ── Patron / Partner: List an Opportunity ── */}
-      {!isArtist && (
-        <section className="space-y-4 border-t border-border pt-12">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Opportunities</h2>
-            <p className="text-xs text-muted-foreground">
-              Post an open call, commission, grant, or other opportunity for artists. Listings appear on your public profile.
-            </p>
-          </div>
-          <RichOpportunityModal triggerLabel="List an Opportunity" />
-        </section>
-      )}
-
-      {/* ── Media & Press (all roles) ── */}
-      <section className="space-y-6 border-t border-border pt-12">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold">Media & Press</h2>
-          <p className="text-xs text-muted-foreground">
-            {isArtist
-              ? "Reviews, interviews, and features. Displayed as bibliographic citations on your public profile."
-              : "Press coverage, interviews, and features relevant to your work."}
-          </p>
-        </div>
-        <BibliographyEditor
-          profileId={user.id}
-          initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
-        />
-      </section>
-
-      {/* ── Email Preferences ── */}
-      <section className="space-y-6 border-t border-border pt-12">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold">Email Preferences</h2>
-          <p className="text-xs text-muted-foreground">
-            {isArtist
-              ? "You are subscribed to the weekly digest by default. Toggle off to unsubscribe."
-              : "Opt in to receive a weekly digest of new and closing-soon opportunities."}
-          </p>
-        </div>
-        <DigestToggle initial={profile.weekly_digest ?? false} />
-      </section>
-
-      {/* ── Danger Zone ── */}
-      <section className="space-y-4 border-t border-black pt-12 mt-12">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
-          <p className="text-xs text-muted-foreground">
-            Terminating your account is permanent. Your profile, portfolio
-            images, and all data will be deleted immediately and cannot be recovered.
-          </p>
-        </div>
-        <TerminateAccountButton />
-      </section>
     </div>
   );
 }

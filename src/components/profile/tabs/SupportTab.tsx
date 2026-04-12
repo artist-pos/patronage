@@ -54,7 +54,13 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
   return (
     <div className="py-8 space-y-4">
       {isOwner && (
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-4">
+          <a
+            href="/profile/edit?tab=support"
+            className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Manage tiers →
+          </a>
           <button
             onClick={handleToggle}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -69,7 +75,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
           {isOwner ? (
             <p className="text-sm text-muted-foreground">
               No support tiers yet.{" "}
-              <a href="/profile#support-tiers" className="underline underline-offset-2 hover:text-foreground">
+              <a href="/profile/edit?tab=support" className="underline underline-offset-2 hover:text-foreground">
                 Add tiers in your profile settings →
               </a>
             </p>

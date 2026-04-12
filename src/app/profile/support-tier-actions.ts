@@ -37,6 +37,32 @@ export async function createSupportTier(data: {
   return {};
 }
 
+export async function updateSupportTier(
+  tierId: string,
+  data: { title: string; price: number; description?: string }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  if (!data.title.trim()) return { error: "Title is required" };
+  if (data.price <= 0) return { error: "Price must be greater than 0" };
+
+  const { error } = await supabase
+    .from("support_tiers")
+    .update({
+      title: data.title.trim(),
+      price: data.price,
+      description: data.description?.trim() || null,
+    })
+    .eq("id", tierId)
+    .eq("profile_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/profile/edit");
+  return {};
+}
+
 export async function deleteSupportTier(tierId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
