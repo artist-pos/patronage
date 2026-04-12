@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Check, X, ChevronDown, ChevronUp, Mail, Send } from "lucide-react";
+import { Pencil, Check, X, ChevronDown, ChevronUp, Mail, Download, Copy } from "lucide-react";
 import {
   createSupportTier,
   updateSupportTier,
   deleteSupportTier,
   toggleSupportTierActive,
   getSupportIntentsForProfile,
-  broadcastToSupporters,
 } from "@/app/profile/support-tier-actions";
+import type { SupportIntentWithProfile } from "@/app/profile/support-tier-actions";
 import type { SupportTier, SupportTierType } from "@/types/database";
 
 interface Props {
@@ -23,34 +23,47 @@ const TIER_TYPE_LABELS: Record<SupportTierType, string> = {
   project: "Project",
 };
 
-const PRESETS: Array<{ type: SupportTierType; name: string; title: string; price: number; description: string }> = [
+const PRESET_GROUPS: Array<{
+  type: SupportTierType;
+  label: string;
+  bestFor: string;
+  presets: Array<{ title: string; price: number; priceLabel: string; description: string }>;
+}> = [
   {
     type: "one_off",
-    name: "The Micro-Grant",
-    title: "The Micro-Grant",
-    price: 25,
-    description: "Fuel for the next week of production.",
+    label: "One-Off Support",
+    bestFor: "Low-friction validation.",
+    presets: [
+      { title: "Studio Fuel", price: 10, priceLabel: "$10 – $50", description: "A quick contribution to cover a specific material cost — like a tube of paint, a roll of film, or a 3D scan processing fee." },
+      { title: "Research Grant", price: 100, priceLabel: "$100 – $500", description: "A one-time boost to fund the deep-work phase of a new concept, helping you step away from commercial work for a few days." },
+    ],
   },
   {
     type: "recurring",
-    name: "The Studio Member",
-    title: "The Studio Member",
-    price: 15,
-    description: "Monthly access to the raw R&D.",
+    label: "Recurring Support",
+    bestFor: "Consistent income and community building.",
+    presets: [
+      { title: "Studio Pass", price: 5, priceLabel: "$5 – $15/month", description: "Monthly access to a process feed — behind-the-scenes sketches, experiments, or drafts that aren't ready for the public eye." },
+      { title: "Patron", price: 25, priceLabel: "$25 – $50/month", description: "A commitment to your long-term practice. Often includes a monthly shout-out or an invitation to a private annual studio tour." },
+    ],
   },
   {
     type: "service",
-    name: "The Print Club",
-    title: "The Print Club",
-    price: 50,
-    description: "A physical portfolio building over time.",
+    label: "Service / Product",
+    bestFor: "Creating tangible value for the supporter.",
+    presets: [
+      { title: "Print Club", price: 50, priceLabel: "$50 – $150/quarter", description: "Every three months, the supporter receives a signed, limited-edition small-format print or high-res digital asset." },
+      { title: "Monthly Demo", price: 20, priceLabel: "$20/month", description: "An unreleased track, a raw file, or a project source file delivered once a month — for musicians and digital artists." },
+    ],
   },
   {
     type: "project",
-    name: "The Production Partner",
-    title: "The Production Partner",
-    price: 200,
-    description: "Enabling a specific, measurable public outcome.",
+    label: "Project Support",
+    bestFor: "Funding a specific outcome with measurable impact.",
+    presets: [
+      { title: "Production Partner", price: 500, priceLabel: "$500 – $2,500", description: "Directly funds the fabrication of a single public work. The supporter is credited in the project's digital provenance on the platform." },
+      { title: "Exhibition Sponsor", price: 5000, priceLabel: "$5,000+", description: "Covers the logistical costs of a full installation or exhibition — including site permits, insurance, and professional documentation." },
+    ],
   },
 ];
 
@@ -64,7 +77,7 @@ interface TierFormState {
   tier_type: SupportTierType | "";
 }
 
-type IntentRow = { id: string; tier_id: string; email: string; created_at: string };
+type IntentRow = SupportIntentWithProfile;
 
 const EMPTY_FORM: TierFormState = { title: "", price: "", description: "", tier_type: "" };
 
@@ -82,15 +95,10 @@ export function SupportTiersManager({ initialTiers }: Props) {
   const [intents, setIntents] = useState<IntentRow[] | null>(null);
   const [loadingIntents, setLoadingIntents] = useState(false);
   const [showIntents, setShowIntents] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Broadcast
-  const [showBroadcast, setShowBroadcast] = useState(false);
-  const [broadcastMsg, setBroadcastMsg] = useState("");
-  const [broadcasting, setBroadcasting] = useState(false);
-  const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
-
-  function applyPreset(preset: typeof PRESETS[0]) {
-    setForm({ title: preset.title, price: String(preset.price), description: preset.description, tier_type: preset.type });
+  function applyPreset(type: SupportTierType, preset: { title: string; price: number; description: string }) {
+    setForm({ title: preset.title, price: String(preset.price), description: preset.description, tier_type: type });
     setShowForm(true);
   }
 
@@ -194,24 +202,35 @@ export function SupportTiersManager({ initialTiers }: Props) {
     setLoadingIntents(false);
   }
 
-  async function handleBroadcast(e: React.FormEvent) {
-    e.preventDefault();
-    if (!broadcastMsg.trim()) return;
-    setBroadcasting(true);
-    const result = await broadcastToSupporters(broadcastMsg.trim());
-    if (result.error) {
-      setBroadcastResult(`Error: ${result.error}`);
-    } else {
-      setBroadcastResult(
-        result.sent === 0
-          ? "No supporter emails to send to yet."
-          : `Sent to ${result.sent} supporter${result.sent !== 1 ? "s" : ""}.`
-      );
-      setBroadcastMsg("");
-      setShowBroadcast(false);
+  function handleCopyEmails() {
+    if (!intents?.length) return;
+    const unique = [...new Set(intents.map(i => i.email))].join(", ");
+    navigator.clipboard.writeText(unique);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }
+
+  function handleExportCSV() {
+    if (!intents?.length) return;
+    const rows = [["Email", "Name", "Patronage username", "Tier", "Date"]];
+    for (const i of intents) {
+      const tierName = tiers.find(t => t.id === i.tier_id)?.title ?? "";
+      rows.push([
+        i.email,
+        i.profile?.full_name ?? "",
+        i.profile?.username ?? "",
+        tierName,
+        new Date(i.created_at).toLocaleDateString("en-NZ"),
+      ]);
     }
-    setBroadcasting(false);
-    setTimeout(() => setBroadcastResult(null), 5000);
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "supporters.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Group intents by tier for the dashboard
@@ -273,11 +292,31 @@ export function SupportTiersManager({ initialTiers }: Props) {
                         {(intentsByTier[tier.id] ?? []).length} interested
                       </p>
                     )}
-                    {/* Intent email list under this tier */}
+                    {/* Intent list under this tier */}
                     {showIntents && intents !== null && (intentsByTier[tier.id] ?? []).length > 0 && (
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-2 space-y-2">
                         {(intentsByTier[tier.id] ?? []).map(i => (
-                          <p key={i.id} className="text-[11px] text-muted-foreground font-mono">{i.email}</p>
+                          <div key={i.id} className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              {i.profile ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[11px] font-medium text-foreground">{i.profile.full_name ?? i.profile.username}</span>
+                                  <span className="text-[11px] text-muted-foreground">·</span>
+                                  <span className="text-[11px] text-muted-foreground font-mono">{i.email}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground font-mono">{i.email}</span>
+                              )}
+                            </div>
+                            {i.profile && (
+                              <a
+                                href={`/${i.profile.username}`}
+                                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                              >
+                                View profile →
+                              </a>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -306,7 +345,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
         <p className="text-sm text-muted-foreground">No tiers yet. Choose a starting point below or create a custom tier.</p>
       )}
 
-      {/* Intent dashboard + broadcast row */}
+      {/* Supporter list controls */}
       {tiers.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
           <button
@@ -319,80 +358,61 @@ export function SupportTiersManager({ initialTiers }: Props) {
             <Mail className="w-3.5 h-3.5" />
             {loadingIntents ? "Loading…" : showIntents ? `Hide supporters (${totalIntents})` : "See interested supporters"}
           </button>
-          <span className="text-border text-xs">·</span>
-          <button
-            type="button"
-            onClick={() => setShowBroadcast(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Send className="w-3.5 h-3.5" />
-            Email supporters
-          </button>
-          {broadcastResult && (
-            <span className="text-xs text-muted-foreground">{broadcastResult}</span>
+          {intents !== null && intents.length > 0 && (
+            <>
+              <span className="text-border text-xs">·</span>
+              <button
+                type="button"
+                onClick={handleCopyEmails}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copied ? "Copied!" : "Copy emails"}
+              </button>
+              <span className="text-border text-xs">·</span>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </>
           )}
         </div>
       )}
 
-      {/* Broadcast form */}
-      {showBroadcast && (
-        <form onSubmit={handleBroadcast} className="space-y-3 border border-border p-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Email all supporters</p>
-          <p className="text-xs text-muted-foreground">
-            This will send an email to everyone who has expressed interest in any of your tiers. Keep it personal and relevant — they signed up because they care about your work.
-          </p>
-          <textarea
-            value={broadcastMsg}
-            onChange={e => setBroadcastMsg(e.target.value)}
-            rows={5}
-            placeholder="Write your message here…"
-            className={`${inputCls} resize-none`}
-            required
-          />
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={broadcasting || !broadcastMsg.trim()}
-              className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 disabled:opacity-40 transition-opacity"
-            >
-              {broadcasting ? "Sending…" : "Send to supporters"}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowBroadcast(false); setBroadcastMsg(""); }}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Preset grid */}
+      {/* Preset grid — grouped by category */}
       {!showForm && (
-        <div className="space-y-2">
+        <div className="space-y-4">
           <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Quick start</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {PRESETS.map(preset => {
-              const alreadyAdded = tiers.some(t => t.title === preset.title);
-              return (
-                <button
-                  key={preset.name}
-                  type="button"
-                  onClick={() => applyPreset(preset)}
-                  disabled={alreadyAdded}
-                  className="text-left border border-border p-3 hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed space-y-1"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{TIER_TYPE_LABELS[preset.type]}</span>
-                  </div>
-                  <p className="text-xs font-medium">{preset.name}</p>
-                  <p className="text-[11px] text-muted-foreground italic">&ldquo;{preset.description}&rdquo;</p>
-                  <p className="text-[11px] text-muted-foreground">NZD {preset.price}</p>
-                </button>
-              );
-            })}
-          </div>
+          {PRESET_GROUPS.map(group => (
+            <div key={group.type} className="space-y-2">
+              <div>
+                <p className="text-xs font-medium">{group.label}</p>
+                <p className="text-[11px] text-muted-foreground">Best for: {group.bestFor}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {group.presets.map(preset => {
+                  const alreadyAdded = tiers.some(t => t.title === preset.title);
+                  return (
+                    <button
+                      key={preset.title}
+                      type="button"
+                      onClick={() => applyPreset(group.type, preset)}
+                      disabled={alreadyAdded}
+                      className="text-left border border-border p-3 hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed space-y-1"
+                    >
+                      <p className="text-xs font-medium">{preset.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{preset.description}</p>
+                      <p className="text-[11px] text-muted-foreground">{preset.priceLabel}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

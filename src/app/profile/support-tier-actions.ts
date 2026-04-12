@@ -3,14 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { Resend } from "resend";
 import type { SupportTierType } from "@/types/database";
-
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is not set");
-  return new Resend(key);
-}
 
 export async function createSupportTier(data: {
   title: string;
@@ -124,16 +117,25 @@ export async function registerSupportIntent(
 
 // ── Intent dashboard ─────────────────────────────────────────────────────────
 
+export type SupportIntentWithProfile = {
+  id: string;
+  tier_id: string;
+  email: string;
+  created_at: string;
+  profile?: { username: string; full_name: string | null; avatar_url: string | null };
+};
+
 export async function getSupportIntentsForProfile(): Promise<{
-  intents?: Array<{ id: string; tier_id: string; email: string; created_at: string }>;
+  intents?: SupportIntentWithProfile[];
   error?: string;
 }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Join via support_tiers to scope to this artist only
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
     .from("support_intents")
     .select("id, tier_id, email, created_at, support_tiers!inner(profile_id)")
     .eq("support_tiers.profile_id", user.id)
@@ -141,63 +143,20 @@ export async function getSupportIntentsForProfile(): Promise<{
 
   if (error) return { error: error.message };
 
-  return {
-    intents: ((data ?? []) as unknown as Array<{ id: string; tier_id: string; email: string; created_at: string }>),
-  };
-}
+  const rows = (data ?? []) as Array<{ id: string; tier_id: string; email: string; created_at: string }>;
 
-// ── Broadcast email to all supporters ────────────────────────────────────────
+  // Look up Patronage profiles for supporter emails via DB function
+  const uniqueEmails = [...new Set(rows.map(r => r.email))];
+  const profileMap: Record<string, { username: string; full_name: string | null; avatar_url: string | null }> = {};
 
-export async function broadcastToSupporters(message: string): Promise<{ sent?: number; error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  if (!message.trim()) return { error: "Message cannot be empty." };
-
-  // Fetch artist profile for display name + get all unique supporter emails
-  const admin = createAdminClient();
-  const [{ data: profile }, { data: intents }] = await Promise.all([
-    admin.from("profiles").select("full_name, username").eq("id", user.id).single(),
-    admin
-      .from("support_intents")
-      .select("email, support_tiers!inner(profile_id)")
-      .eq("support_tiers.profile_id", user.id),
-  ]);
-
-  const artistName = profile?.full_name ?? profile?.username ?? "An artist on Patronage";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
-
-  // Deduplicate emails
-  const emails = [...new Set((intents ?? []).map((i: { email: string }) => i.email))];
-  if (emails.length === 0) return { sent: 0 };
-
-  const resend = getResend();
-
-  // Send in batches of 50 (Resend batch limit)
-  let sent = 0;
-  for (let i = 0; i < emails.length; i += 50) {
-    const batch = emails.slice(i, i + 50);
-    await resend.batch.send(
-      batch.map(email => ({
-        from: `Patronage <noreply@patronage.nz>`,
-        to: email,
-        subject: `A message from ${artistName}`,
-        html: `
-          <p style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#111;">
-            ${message.replace(/\n/g, "<br/>")}
-          </p>
-          <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-          <p style="font-family:sans-serif;font-size:12px;color:#888;">
-            You're receiving this because you expressed interest in supporting
-            <strong>${artistName}</strong> on Patronage.<br/>
-            <a href="${siteUrl}/unsubscribe?email=${encodeURIComponent(email)}" style="color:#888;">Unsubscribe</a>
-          </p>
-        `,
-      }))
-    );
-    sent += batch.length;
+  if (uniqueEmails.length > 0) {
+    const { data: profileRows } = await admin.rpc("get_profiles_by_emails", { emails: uniqueEmails });
+    for (const row of (profileRows ?? []) as Array<{ email: string; username: string; full_name: string | null; avatar_url: string | null }>) {
+      profileMap[row.email] = { username: row.username, full_name: row.full_name, avatar_url: row.avatar_url };
+    }
   }
 
-  return { sent };
+  return {
+    intents: rows.map(r => ({ ...r, profile: profileMap[r.email] })),
+  };
 }
