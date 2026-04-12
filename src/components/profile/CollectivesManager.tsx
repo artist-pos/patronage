@@ -54,6 +54,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const pending = memberships.filter(m => m.status === "pending");
   const accepted = memberships.filter(m => m.status === "accepted");
@@ -197,6 +198,20 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
       );
       showToast("Joined collective.");
     }
+  }
+
+  async function handleSave() {
+    // Commit pending member invites for the currently expanded collective
+    if (expandedId && (pickerValue[expandedId]?.length > 0 || emailInput[expandedId]?.includes("@"))) {
+      if (pickerValue[expandedId]?.length > 0) await handleAddMembers(expandedId);
+      if (emailInput[expandedId]?.includes("@")) await handleInviteByEmail(expandedId);
+    }
+    // Commit a pending create form
+    if (showForm && name.trim()) {
+      await handleCreate(new Event("submit") as unknown as React.FormEvent);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   }
 
   async function handleDecline(collectiveId: string) {
@@ -460,6 +475,19 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
           Create a collective
         </button>
       )}
+
+      {/* Save button */}
+      <div className="pt-4 border-t border-border flex items-center gap-4">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="text-sm bg-black text-white px-5 py-2 hover:opacity-80 disabled:opacity-40 transition-opacity"
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {saved && <span className="text-xs text-muted-foreground">Changes saved.</span>}
+      </div>
     </div>
   );
 }

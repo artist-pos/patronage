@@ -96,6 +96,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
   const [loadingIntents, setLoadingIntents] = useState(false);
   const [showIntents, setShowIntents] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   function applyPreset(type: SupportTierType, preset: { title: string; price: number; description: string }) {
     setForm({ title: preset.title, price: String(preset.price), description: preset.description, tier_type: type });
@@ -231,6 +232,15 @@ export function SupportTiersManager({ initialTiers }: Props) {
     a.download = "supporters.csv";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleSave() {
+    // If the create form is open and valid, submit it first
+    if (showForm && form.title.trim() && form.price) {
+      await handleCreate(new Event("submit") as unknown as React.FormEvent);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   }
 
   // Group intents by tier for the dashboard
@@ -447,6 +457,19 @@ export function SupportTiersManager({ initialTiers }: Props) {
           + Custom tier
         </button>
       )}
+
+      {/* Save button */}
+      <div className="pt-4 border-t border-border flex items-center gap-4">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="text-sm bg-black text-white px-5 py-2 hover:opacity-80 disabled:opacity-40 transition-opacity"
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {saved && <span className="text-xs text-muted-foreground">Changes saved.</span>}
+      </div>
     </div>
   );
 }
