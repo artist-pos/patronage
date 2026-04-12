@@ -6,7 +6,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
 
-  const [{ data: profiles }, { data: opportunities }] = await Promise.all([
+  const [{ data: profiles }, { data: opportunities }, { data: blogPosts }] = await Promise.all([
     supabase
       .from("profiles")
       .select("username, created_at")
@@ -16,6 +16,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select("id, slug, created_at, deadline")
       .eq("is_active", true)
       .eq("status", "published"),
+    supabase
+      .from("blog_posts")
+      .select("slug, published_at, created_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false }),
   ]);
 
   const CATEGORY_SLUGS = [
@@ -24,9 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: BASE_URL,                        lastModified: new Date(), changeFrequency: "daily",  priority: 1.0 },
-    { url: `${BASE_URL}/opportunities`,     lastModified: new Date(), changeFrequency: "daily",  priority: 1.0 },
-    { url: `${BASE_URL}/artists`,           lastModified: new Date(), changeFrequency: "daily",  priority: 1.0 },
+    { url: BASE_URL,                        lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
+    { url: `${BASE_URL}/opportunities`,     lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
+    { url: `${BASE_URL}/artists`,           lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
+    { url: `${BASE_URL}/feed`,              lastModified: new Date(), changeFrequency: "daily",   priority: 0.8 },
+    { url: `${BASE_URL}/blog`,             lastModified: new Date(), changeFrequency: "weekly",  priority: 0.7 },
+    { url: `${BASE_URL}/partner`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     ...CATEGORY_SLUGS.map((slug) => ({
       url: `${BASE_URL}/artists/${slug}`,
       lastModified: new Date(),
@@ -53,5 +61,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...profileRoutes, ...opportunityRoutes];
+  const blogRoutes: MetadataRoute.Sitemap = (blogPosts ?? []).map((p) => ({
+    url: `${BASE_URL}/blog/${p.slug}`,
+    lastModified: p.published_at ? new Date(p.published_at) : p.created_at ? new Date(p.created_at) : new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...profileRoutes, ...opportunityRoutes, ...blogRoutes];
 }

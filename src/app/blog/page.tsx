@@ -44,12 +44,12 @@ export default async function BlogPage() {
               href={`/blog/${post.slug}`}
               className="group space-y-3"
             >
-              <div className="aspect-video overflow-hidden rounded-xl bg-stone-100">
+              <div className="aspect-video overflow-hidden rounded-xl bg-black flex items-center justify-center">
                 {post.image_url && (
                   <img
                     src={post.image_url}
                     alt=""
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-contain transition-opacity duration-300 group-hover:opacity-85"
                   />
                 )}
               </div>

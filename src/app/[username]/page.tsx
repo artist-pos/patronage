@@ -82,7 +82,8 @@ export async function generateMetadata({ params }: Props) {
     ? { url: ogImageUrl, width: 1200, height: 630, alt: `${displayName} — Patronage` }
     : null;
 
-  const profileUrl = `/${username}`;
+  const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const profileUrl = `${BASE_URL}/${username}`;
 
   return {
     title,

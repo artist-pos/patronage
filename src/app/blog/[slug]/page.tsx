@@ -7,23 +7,49 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
   const { data: post } = await supabase
     .from("blog_posts")
-    .select("title, image_url")
+    .select("title, image_url, body, published_at, created_at")
     .eq("slug", slug)
     .eq("status", "published")
     .single();
 
   if (!post) return { title: "Post not found — Patronage" };
 
+  const title = `${post.title} — Patronage Blog`;
+  const canonicalUrl = `${BASE_URL}/blog/${slug}`;
+
+  // Strip HTML tags for description, take first 155 chars
+  const rawText = (post.body ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const description = rawText.length > 155 ? rawText.slice(0, 152) + "…" : rawText || undefined;
+
+  const publishedTime = post.published_at ?? post.created_at ?? undefined;
+
   return {
-    title: `${post.title} — Patronage Blog`,
-    openGraph: post.image_url
-      ? { images: [{ url: post.image_url }] }
-      : undefined,
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "article",
+      ...(publishedTime && { publishedTime }),
+      ...(post.image_url && {
+        images: [{ url: post.image_url, width: 1200, height: 630, alt: post.title }],
+      }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(post.image_url && { images: [post.image_url] }),
+    },
   };
 }
 
@@ -132,12 +158,12 @@ export default async function BlogPostPage({ params }: Props) {
                   href={`/blog/${p.slug}`}
                   className="group flex flex-col gap-2"
                 >
-                  <div className="aspect-video overflow-hidden rounded-lg bg-stone-100">
+                  <div className="aspect-video overflow-hidden rounded-lg bg-black flex items-center justify-center">
                     {p.image_url && (
                       <img
                         src={p.image_url}
                         alt=""
-                        className="w-full h-full object-cover group-hover:opacity-85 transition-opacity"
+                        className="w-full h-full object-contain group-hover:opacity-85 transition-opacity"
                       />
                     )}
                   </div>
