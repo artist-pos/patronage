@@ -234,8 +234,8 @@ export interface Profile {
   hide_sold_section: boolean;
   collection_public: boolean;
   received_grants: string[];
-  marketing_subscription: boolean;
-  weekly_digest: boolean;
+  marketing_subscription: boolean | null;
+  weekly_digest: boolean | null;
   support_enabled: boolean;
   disciplines: DisciplineEnum[] | null;
   // Demographic fields — internal only, never shown on public profile

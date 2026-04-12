@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { updateDigestSubscription } from "@/app/profile/privacy-actions";
 
 interface Props {
   initial: boolean;
+  /** When true, silently syncs the subscription on mount (used for artists whose db value is null) */
+  autoSync?: boolean;
 }
 
-export function DigestToggle({ initial }: Props) {
+export function DigestToggle({ initial, autoSync }: Props) {
   const [subscribed, setSubscribed] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Silently subscribe on mount when the db value was null and we defaulted to true
+  useEffect(() => {
+    if (autoSync && initial) {
+      updateDigestSubscription(true).catch(console.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function toggle() {
     const next = !subscribed;

@@ -275,7 +275,10 @@ export default async function OnboardingPage({
                   : "Opt in to receive a weekly digest of new and closing-soon opportunities."}
               </p>
             </div>
-            <DigestToggle initial={profile.weekly_digest ?? false} />
+            <DigestToggle
+              initial={profile.weekly_digest ?? (isArtist ? true : false)}
+              autoSync={isArtist && profile.weekly_digest === null}
+            />
           </section>
 
           {/* Danger Zone */}
