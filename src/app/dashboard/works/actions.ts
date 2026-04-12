@@ -42,6 +42,12 @@ export async function createPortfolioWork(data: {
   dimensions: string | null;
   description: string | null;
   position: number;
+  contentType?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  textContent?: string;
+  embedUrl?: string;
+  embedProvider?: string;
 }): Promise<{ id?: string; slug?: string; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -80,6 +86,12 @@ export async function createPortfolioWork(data: {
       dimensions: data.dimensions || null,
       description: data.description || null,
       slug,
+      ...(data.contentType && data.contentType !== "image" && { content_type: data.contentType }),
+      ...(data.audioUrl && { audio_url: data.audioUrl }),
+      ...(data.videoUrl && { video_url: data.videoUrl }),
+      ...(data.textContent && { text_content: data.textContent }),
+      ...(data.embedUrl && { embed_url: data.embedUrl }),
+      ...(data.embedProvider && { embed_provider: data.embedProvider }),
     })
     .select("id, slug")
     .single();

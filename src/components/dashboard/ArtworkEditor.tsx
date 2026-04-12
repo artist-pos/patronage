@@ -199,6 +199,8 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     persistOrder(reordered);
     // Cascade new primary URL to portfolio_images.url (and artworks.url if linked)
     setPrimaryWorkImageUrl(work.id, target.url);
+    // Immediately update parent WorksTable state so Thumb re-renders without a hard refresh
+    onSaved({ url: target.url });
   }
 
   async function handleSaveCaption(id: string, value: string) {

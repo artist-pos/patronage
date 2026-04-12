@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles";
 import { WorkDetailViewer } from "@/components/profile/WorkDetailViewer";
 import { WorkDetailActions } from "@/components/profile/WorkDetailActions";
+import { WorkEngagementTracker } from "@/components/profile/WorkEngagementTracker";
 import type { WorkImage } from "@/types/database";
 
 interface Props {
@@ -25,9 +26,11 @@ async function getWorkData(username: string, slug: string) {
     title: string | null; year: number | null; medium: string | null;
     dimensions: string | null; linked_artwork_id: string | null;
     hide_from_archive: boolean; content_type: string;
+    audio_url: string | null; video_url: string | null;
+    text_content: string | null; embed_url: string | null; embed_provider: string | null;
   };
 
-  const WORK_SELECT = "id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, hide_from_archive, content_type";
+  const WORK_SELECT = "id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, hide_from_archive, content_type, audio_url, video_url, text_content, embed_url, embed_provider";
 
   let work: WorkRow | null = null;
 
@@ -109,6 +112,7 @@ export default async function WorkDetailPage({ params }: Props) {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
+      {!isOwner && <WorkEngagementTracker workId={work.id} />}
       <div className="mb-8 flex items-center gap-3 text-sm text-muted-foreground">
         <Link href={`/${username}?tab=work`} className="hover:text-foreground transition-colors">
           ← {artistName}
@@ -122,8 +126,44 @@ export default async function WorkDetailPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-12 items-start">
-        {/* Left — image viewer */}
-        <WorkDetailViewer primaryUrl={work.url} galleryImages={galleryImages} caption={displayTitle} />
+        {/* Left — media viewer */}
+        {work.content_type === "audio" && work.audio_url && (
+          <div className="bg-stone-900 text-white flex flex-col items-center justify-center gap-6 p-10 min-h-[320px]">
+            {work.url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={work.url} alt="" className="w-32 h-32 object-cover rounded" />
+            )}
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio controls src={work.audio_url} className="w-full max-w-md" />
+          </div>
+        )}
+        {work.content_type === "video" && work.video_url && (
+          <div className="bg-black flex items-center justify-center min-h-[320px]">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video controls src={work.video_url} className="w-full max-h-[600px]" />
+          </div>
+        )}
+        {(work.content_type === "video" || work.content_type === "embed") && !work.video_url && work.embed_url && (
+          <div className="aspect-video bg-black">
+            <iframe
+              src={work.embed_url}
+              className="w-full h-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              frameBorder="0"
+              title={displayTitle}
+            />
+          </div>
+        )}
+        {work.content_type === "text" && work.text_content && (
+          <div className="bg-stone-50 p-8 min-h-[320px] overflow-y-auto max-h-[700px]">
+            <pre className="font-mono text-sm text-stone-800 leading-relaxed whitespace-pre-wrap">
+              {work.text_content}
+            </pre>
+          </div>
+        )}
+        {(work.content_type === "image" || (!work.content_type) || (work.content_type === "audio" && !work.audio_url)) && (
+          <WorkDetailViewer primaryUrl={work.url} galleryImages={galleryImages} caption={displayTitle} />
+        )}
 
         {/* Right — sticky sidebar */}
         <div className="md:sticky md:top-6 space-y-6">

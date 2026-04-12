@@ -69,6 +69,7 @@ interface Props {
   soldWorks: SoldRow[];
   featuredCount: number;
   profileId: string;
+  engagementMap?: Record<string, { view: number; play: number }>;
 }
 
 function formatPrice(price: string | null, currency: string): string {
@@ -116,6 +117,7 @@ export function WorksTable({
   soldWorks,
   featuredCount,
   profileId,
+  engagementMap = {},
 }: Props) {
   const router = useRouter();
   const [portfolio, setPortfolio] = useState<PortfolioRow[]>(portfolioWorks);
@@ -306,6 +308,18 @@ export function WorksTable({
                         {work.medium ? ` · ${work.medium}` : ""}
                       </p>
                     </div>
+
+                    {(() => {
+                      const stats = engagementMap[work.id];
+                      if (!stats) return null;
+                      const isMedia = work.content_type === "audio" || work.content_type === "video";
+                      return (
+                        <div className="hidden sm:flex items-center gap-2 shrink-0 text-[10px] text-muted-foreground">
+                          {stats.view > 0 && <span>👁 {stats.view}</span>}
+                          {isMedia && stats.play > 0 && <span>▶ {stats.play}</span>}
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-2 shrink-0">
                       {work.is_featured && <Badge>★ Featured</Badge>}

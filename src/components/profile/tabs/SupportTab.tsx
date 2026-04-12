@@ -2,16 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { toggleSupportEnabled } from "@/app/profile/support-actions";
+import { SupportIntentModal } from "@/components/profile/SupportIntentModal";
+import type { SupportTier } from "@/types/database";
 
 interface Props {
   supportEnabled: boolean;
   isOwner: boolean;
   artistName: string;
+  tiers?: SupportTier[];
 }
 
-export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName }: Props) {
+export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName, tiers = [] }: Props) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [, startTransition] = useTransition();
+  const [selectedTier, setSelectedTier] = useState<SupportTier | null>(null);
 
   function handleToggle() {
     startTransition(async () => {
@@ -45,24 +49,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
     );
   }
 
-  const sections = [
-    {
-      title: "Monthly Support",
-      description: `Support ${artistName}'s practice with a recurring monthly contribution.`,
-    },
-    {
-      title: "One-time Support",
-      description: "Make a one-time contribution to support a specific project or purchase.",
-    },
-    {
-      title: "Editions & Prints",
-      description: "Limited edition prints and artist multiples available for purchase.",
-    },
-    {
-      title: "Membership",
-      description: "Join the inner circle with access to exclusive updates and early previews.",
-    },
-  ];
+  const activeTiers = tiers.filter(t => t.is_active);
 
   return (
     <div className="py-8 space-y-4">
@@ -76,28 +63,50 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
           </button>
         </div>
       )}
-      {sections.map((section) => (
-        <div
-          key={section.title}
-          className="border border-border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-        >
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold">{section.title}</h3>
-            <p className="text-xs text-muted-foreground">{section.description}</p>
-          </div>
-          <div className="relative group">
+
+      {activeTiers.length === 0 ? (
+        <div className="space-y-4">
+          {isOwner ? (
+            <p className="text-sm text-muted-foreground">
+              No support tiers yet.{" "}
+              <a href="/profile#support-tiers" className="underline underline-offset-2 hover:text-foreground">
+                Add tiers in your profile settings →
+              </a>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Support tiers coming soon.</p>
+          )}
+        </div>
+      ) : (
+        activeTiers.map(tier => (
+          <div
+            key={tier.id}
+            className="border border-border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">{tier.title}</h3>
+              <p className="text-xs text-muted-foreground">
+                NZD {tier.price.toLocaleString("en-NZ")}
+                {tier.description ? ` — ${tier.description}` : ""}
+              </p>
+            </div>
             <button
-              disabled
-              className="text-sm border border-black px-4 py-2 opacity-40 cursor-not-allowed whitespace-nowrap"
+              onClick={() => setSelectedTier(tier)}
+              className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
             >
               {isOwner ? "Configure →" : `Support ${artistName}`}
             </button>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-foreground text-background text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Stripe integration coming soon
-            </span>
           </div>
-        </div>
-      ))}
+        ))
+      )}
+
+      {selectedTier && (
+        <SupportIntentModal
+          tier={selectedTier}
+          artistName={artistName}
+          onClose={() => setSelectedTier(null)}
+        />
+      )}
     </div>
   );
 }

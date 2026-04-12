@@ -2,11 +2,22 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { detectOrientation } from "@/lib/image";
-import { createPortfolioWork } from "@/app/dashboard/works/actions";
+import { createPortfolioWork, publishPortfolioWorkAsAvailable } from "@/app/dashboard/works/actions";
 
 const MAX_PX = 1600;
+
+type ContentTab = "image" | "audio" | "video" | "text" | "embed";
+
+const TABS: { type: ContentTab; label: string; icon: React.ReactNode }[] = [
+  { type: "image",  label: "Image",   icon: <ImageIcon className="w-3.5 h-3.5" /> },
+  { type: "audio",  label: "Audio",   icon: <Music className="w-3.5 h-3.5" /> },
+  { type: "video",  label: "Video",   icon: <Play className="w-3.5 h-3.5" /> },
+  { type: "text",   label: "Writing", icon: <Type className="w-3.5 h-3.5" /> },
+  { type: "embed",  label: "Embed",   icon: <ExternalLink className="w-3.5 h-3.5" /> },
+];
 
 async function resizeToJpeg(file: File): Promise<{
   blob: Blob;
@@ -38,6 +49,41 @@ async function resizeToJpeg(file: File): Promise<{
   });
 }
 
+function toEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+      return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
+    }
+    if (u.hostname === "youtu.be") {
+      return `https://www.youtube.com/embed${u.pathname}`;
+    }
+    if (u.hostname.includes("vimeo.com") && /^\/\d+/.test(u.pathname)) {
+      return `https://player.vimeo.com/video${u.pathname}`;
+    }
+    if (u.hostname.includes("soundcloud.com")) {
+      return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23000000&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function detectProvider(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com") || u.hostname === "youtu.be") return "YouTube";
+    if (u.hostname.includes("vimeo.com")) return "Vimeo";
+    if (u.hostname.includes("soundcloud.com")) return "SoundCloud";
+    if (u.hostname.includes("bandcamp.com")) return "Bandcamp";
+    if (u.hostname.includes("spotify.com")) return "Spotify";
+    return u.hostname.replace("www.", "");
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   profileId: string;
   onCancel: () => void;
@@ -48,41 +94,170 @@ const inputCls =
   "w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black";
 
 export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const imageFileRef = useRef<HTMLInputElement>(null);
+  const audioFileRef = useRef<HTMLInputElement>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
+
+  const [tab, setTab] = useState<ContentTab>("image");
+
+  // Image
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Audio
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  // Video
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+
+  // Writing
+  const [textContent, setTextContent] = useState("");
+
+  // Embed
+  const [embedUrl, setEmbedUrl] = useState("");
+
+  // Metadata
   const [title, setTitle] = useState("");
   const [year, setYear] = useState("");
   const [medium, setMedium] = useState("");
   const [dimensions, setDimensions] = useState("");
   const [description, setDescription] = useState("");
+
+  // Commerce
+  const [listForSale, setListForSale] = useState(false);
+  const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState<"NZD" | "AUD">("NZD");
+  const [commerceFormat, setCommerceFormat] = useState("");
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleTabChange(t: ContentTab) {
+    setTab(t);
+    setError(null);
+  }
+
+  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  }
+
+  function handleAudioFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAudioFile(f);
+  }
+
+  function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setCoverFile(f);
+    setCoverPreview(URL.createObjectURL(f));
+  }
+
+  function handleVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setVideoFile(f);
+  }
+
+  function validate(): string | null {
+    if (tab === "image" && !imageFile) return "Please select an image.";
+    if (tab === "audio" && !audioFile) return "Please select an audio file.";
+    if (tab === "video" && !videoFile && !videoUrl.trim()) return "Please upload a video or enter a URL.";
+    if (tab === "text" && !textContent.trim()) return "Please enter some text.";
+    if (tab === "embed" && !embedUrl.trim()) return "Please enter an embed URL.";
+    return null;
   }
 
   async function handleSave() {
-    if (!file) { setError("Please select an image first."); return; }
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
     setSaving(true);
     setError(null);
 
     try {
       const supabase = createClient();
-      const { blob, orientation, width, height } = await resizeToJpeg(file);
-      const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+      let url = "";
+      let orientation: "landscape" | "portrait" | "square" = "portrait";
+      let naturalWidth = 0;
+      let naturalHeight = 0;
+      let audioUrlResult: string | undefined;
+      let videoUrlResult: string | undefined;
+      let finalEmbedUrl: string | undefined;
+      let embedProvider: string | undefined;
 
-      const { error: upErr } = await supabase.storage
-        .from("portfolio")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-      if (upErr) throw upErr;
+      // ── Image ────────────────────────────────────────────────────────────────
+      if (tab === "image" && imageFile) {
+        const { blob, orientation: ori, width, height } = await resizeToJpeg(imageFile);
+        orientation = ori;
+        naturalWidth = width;
+        naturalHeight = height;
+        const path = `${profileId}/${Date.now()}-${imageFile.name.replace(/[^a-z0-9.]/gi, "_")}`;
+        const { error: upErr } = await supabase.storage
+          .from("portfolio")
+          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
+        url = urlData.publicUrl;
+      }
 
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
+      // ── Audio ────────────────────────────────────────────────────────────────
+      if (tab === "audio" && audioFile) {
+        const ext = audioFile.name.split(".").pop() ?? "mp3";
+        const path = `${profileId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("audio")
+          .upload(path, audioFile, { contentType: audioFile.type || "audio/mpeg" });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from("audio").getPublicUrl(path);
+        audioUrlResult = urlData.publicUrl;
+
+        // Optional cover art
+        if (coverFile) {
+          const { blob: coverBlob } = await resizeToJpeg(coverFile);
+          const coverPath = `${profileId}/${Date.now()}-cover.jpg`;
+          const { error: coverErr } = await supabase.storage
+            .from("portfolio")
+            .upload(coverPath, coverBlob, { contentType: "image/jpeg", upsert: false });
+          if (!coverErr) {
+            const { data: coverUrlData } = supabase.storage.from("portfolio").getPublicUrl(coverPath);
+            url = coverUrlData.publicUrl;
+          }
+        }
+      }
+
+      // ── Video ────────────────────────────────────────────────────────────────
+      if (tab === "video") {
+        if (videoFile) {
+          const ext = videoFile.name.split(".").pop() ?? "mp4";
+          const path = `${profileId}/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from("video")
+            .upload(path, videoFile, { contentType: videoFile.type || "video/mp4" });
+          if (upErr) throw upErr;
+          const { data: urlData } = supabase.storage.from("video").getPublicUrl(path);
+          videoUrlResult = urlData.publicUrl;
+        } else if (videoUrl.trim()) {
+          const converted = toEmbedUrl(videoUrl.trim());
+          finalEmbedUrl = converted ?? videoUrl.trim();
+          embedProvider = detectProvider(videoUrl.trim()) ?? undefined;
+        }
+      }
+
+      // ── Embed ────────────────────────────────────────────────────────────────
+      if (tab === "embed" && embedUrl.trim()) {
+        const converted = toEmbedUrl(embedUrl.trim());
+        finalEmbedUrl = converted ?? embedUrl.trim();
+        embedProvider = detectProvider(embedUrl.trim()) ?? undefined;
+      }
 
       // Get current max position
       const { data: existing } = await supabase
@@ -95,19 +270,35 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
       const position = (existing?.[0]?.position ?? -1) + 1;
 
       const result = await createPortfolioWork({
-        url: urlData.publicUrl,
+        url,
         orientation,
-        naturalWidth: width,
-        naturalHeight: height,
+        naturalWidth,
+        naturalHeight,
         title: title || null,
         year: year ? parseInt(year) : null,
         medium: medium || null,
         dimensions: dimensions || null,
         description: description || null,
         position,
+        contentType: tab,
+        audioUrl: audioUrlResult,
+        videoUrl: videoUrlResult,
+        textContent: tab === "text" ? textContent.trim() : undefined,
+        embedUrl: finalEmbedUrl,
+        embedProvider,
       });
 
       if (result.error) throw new Error(result.error);
+
+      // If listing for sale, also publish as available work
+      if (listForSale && result.id) {
+        await publishPortfolioWorkAsAvailable(result.id, {
+          price: price || "0",
+          currency,
+          poa: !price,
+          edition: commerceFormat || "",
+        });
+      }
 
       router.refresh();
       onSaved();
@@ -116,6 +307,8 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
       setSaving(false);
     }
   }
+
+  const showMediumDimensions = tab === "image" || tab === "video";
 
   return (
     <div className="border border-black bg-background">
@@ -132,78 +325,211 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
         </button>
       </div>
 
+      {/* Format tabs */}
+      <div className="flex border-b border-black">
+        {TABS.map(({ type, label, icon }) => (
+          <button
+            key={type}
+            onClick={() => handleTabChange(type)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] transition-colors ${
+              tab === type
+                ? "bg-black text-white"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {icon}
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Two-column body */}
       <div className="flex min-h-0">
-        {/* Left — Image upload */}
+        {/* Left — format-specific upload/input */}
         <div className="w-[38%] shrink-0 border-r border-black p-5 space-y-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
-            Image
-          </p>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-            id="new-work-upload"
-          />
-
-          {preview ? (
-            <div className="space-y-3">
-              <div
-                className="border border-border bg-muted overflow-hidden flex items-center justify-center"
-                style={{ aspectRatio: "4/3" }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={preview} alt="" className="w-full h-full object-contain" />
-              </div>
-              <label
-                htmlFor="new-work-upload"
-                className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2"
-              >
-                Change image
-              </label>
-            </div>
-          ) : (
-            <label
-              htmlFor="new-work-upload"
-              className="flex flex-col items-center justify-center border border-dashed border-border cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground"
-              style={{ aspectRatio: "4/3" }}
-            >
-              <span className="text-sm">+ Upload image</span>
-              <span className="text-[10px] mt-1">JPEG, PNG, WebP</span>
-            </label>
+          {/* ── Image ── */}
+          {tab === "image" && (
+            <>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Image</p>
+              <input ref={imageFileRef} type="file" accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageFileChange} className="hidden" id="new-work-image" />
+              {imagePreview ? (
+                <div className="space-y-3">
+                  <div className="border border-border bg-muted overflow-hidden flex items-center justify-center" style={{ aspectRatio: "4/3" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="" className="w-full h-full object-contain" />
+                  </div>
+                  <label htmlFor="new-work-image"
+                    className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
+                    Change image
+                  </label>
+                </div>
+              ) : (
+                <label htmlFor="new-work-image"
+                  className="flex flex-col items-center justify-center border border-dashed border-border cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground"
+                  style={{ aspectRatio: "4/3" }}>
+                  <span className="text-sm">+ Upload image</span>
+                  <span className="text-[10px] mt-1">JPEG, PNG, WebP</span>
+                </label>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Additional gallery images can be added after saving via the Edit button.
+              </p>
+            </>
           )}
 
-          <p className="text-[10px] text-muted-foreground">
-            Gallery images can be added after saving via the Edit button.
-          </p>
+          {/* ── Audio ── */}
+          {tab === "audio" && (
+            <>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Audio file</p>
+              <input ref={audioFileRef} type="file"
+                accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/flac,audio/aac,audio/x-m4a"
+                onChange={handleAudioFileChange} className="hidden" id="new-work-audio" />
+              <label htmlFor="new-work-audio"
+                className={`flex flex-col items-center justify-center border cursor-pointer hover:border-black transition-colors py-8 ${
+                  audioFile ? "border-black bg-muted" : "border-dashed border-border text-muted-foreground hover:text-foreground"
+                }`}>
+                {audioFile ? (
+                  <>
+                    <Music className="w-5 h-5 mb-2" />
+                    <span className="text-[11px] text-center px-2 truncate max-w-full">{audioFile.name}</span>
+                    <span className="text-[10px] text-muted-foreground mt-1">Click to change</span>
+                  </>
+                ) : (
+                  <>
+                    <Music className="w-5 h-5 mb-2" />
+                    <span className="text-sm">+ Upload audio</span>
+                    <span className="text-[10px] mt-1">MP3, WAV, FLAC, AAC · 50 MB max</span>
+                  </>
+                )}
+              </label>
+
+              <div className="space-y-2">
+                <p className="text-[10px] text-muted-foreground">Cover art (optional)</p>
+                <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={handleCoverFileChange} className="hidden" id="new-work-cover" />
+                {coverPreview ? (
+                  <div className="space-y-2">
+                    <div className="w-16 h-16 border border-border overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <label htmlFor="new-work-cover"
+                      className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
+                      Change cover
+                    </label>
+                  </div>
+                ) : (
+                  <label htmlFor="new-work-cover"
+                    className="inline-block text-[11px] border border-dashed border-border px-3 py-1.5 cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground">
+                    + Add cover image
+                  </label>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Video ── */}
+          {tab === "video" && (
+            <>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Video</p>
+              <input ref={videoFileRef} type="file"
+                accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                onChange={handleVideoFileChange} className="hidden" id="new-work-video" />
+              <label htmlFor="new-work-video"
+                className={`flex flex-col items-center justify-center border cursor-pointer hover:border-black transition-colors py-8 ${
+                  videoFile ? "border-black bg-muted" : "border-dashed border-border text-muted-foreground hover:text-foreground"
+                }`}>
+                {videoFile ? (
+                  <>
+                    <Play className="w-5 h-5 mb-2" />
+                    <span className="text-[11px] text-center px-2 truncate max-w-full">{videoFile.name}</span>
+                    <span className="text-[10px] text-muted-foreground mt-1">Click to change</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 mb-2" />
+                    <span className="text-sm">+ Upload video</span>
+                    <span className="text-[10px] mt-1">MP4, WebM, MOV · 200 MB max</span>
+                  </>
+                )}
+              </label>
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">Or paste a YouTube / Vimeo URL</p>
+                <input type="url" value={videoUrl}
+                  onChange={e => { setVideoUrl(e.target.value); if (videoFile) setVideoFile(null); }}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className={`${inputCls} text-[11px]`} />
+              </div>
+            </>
+          )}
+
+          {/* ── Writing ── */}
+          {tab === "text" && (
+            <>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Writing</p>
+              <textarea
+                value={textContent}
+                onChange={e => setTextContent(e.target.value)}
+                placeholder="Poem, lyrics, artist statement, short fiction…"
+                rows={14}
+                className={`${inputCls} resize-none font-mono text-sm leading-relaxed`}
+              />
+            </>
+          )}
+
+          {/* ── Embed ── */}
+          {tab === "embed" && (
+            <>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Embed</p>
+              <div className="space-y-2">
+                <input type="url" value={embedUrl}
+                  onChange={e => setEmbedUrl(e.target.value)}
+                  placeholder="YouTube, Vimeo, SoundCloud, Spotify…"
+                  className={inputCls} />
+                {embedUrl && detectProvider(embedUrl) && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Provider detected: {detectProvider(embedUrl)}
+                  </p>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Paste the URL of the page (not an embed code). Supports YouTube, Vimeo, SoundCloud, Bandcamp, Spotify.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Right — Metadata */}
-        <div className="flex-1 p-5 space-y-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
-            Details
-          </p>
+        <div className="flex-1 p-5 space-y-4 overflow-y-auto">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Details</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1">
               <label className="text-[11px] text-muted-foreground">Title</label>
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Untitled" className={inputCls} />
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+                placeholder="Untitled" className={inputCls} />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground">Year</label>
-              <input type="number" value={year} onChange={e => setYear(e.target.value)} placeholder={String(new Date().getFullYear())} className={inputCls} />
+              <input type="number" value={year} onChange={e => setYear(e.target.value)}
+                placeholder={String(new Date().getFullYear())} className={inputCls} />
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Medium</label>
-              <input type="text" value={medium} onChange={e => setMedium(e.target.value)} placeholder="Oil on canvas" className={inputCls} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Dimensions</label>
-              <input type="text" value={dimensions} onChange={e => setDimensions(e.target.value)} placeholder="60 × 90 cm" className={inputCls} />
-            </div>
+            {showMediumDimensions && (
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Medium</label>
+                <input type="text" value={medium} onChange={e => setMedium(e.target.value)}
+                  placeholder="Oil on canvas" className={inputCls} />
+              </div>
+            )}
+            {showMediumDimensions && (
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Dimensions</label>
+                <input type="text" value={dimensions} onChange={e => setDimensions(e.target.value)}
+                  placeholder="60 × 90 cm" className={inputCls} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -211,10 +537,55 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Notes about this work — materials, context, edition details…"
-              rows={6}
+              placeholder="Notes about this work — context, edition details…"
+              rows={4}
               className={`${inputCls} resize-none`}
             />
+          </div>
+
+          {/* Commerce toggle */}
+          <div className="border-t border-border pt-4 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={listForSale}
+                onChange={e => setListForSale(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-[11px] text-muted-foreground">List for sale</span>
+            </label>
+
+            {listForSale && (
+              <div className="space-y-3 pl-5">
+                <div className="flex gap-2">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Price</label>
+                    <input type="number" value={price} onChange={e => setPrice(e.target.value)}
+                      placeholder="Price on enquiry if blank" className={inputCls} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-muted-foreground">Currency</label>
+                    <select value={currency} onChange={e => setCurrency(e.target.value as "NZD" | "AUD")}
+                      className={inputCls}>
+                      <option value="NZD">NZD</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">Format</label>
+                  <select value={commerceFormat} onChange={e => setCommerceFormat(e.target.value)}
+                    className={inputCls}>
+                    <option value="">Select format…</option>
+                    <option value="Original">Original</option>
+                    <option value="Print">Print</option>
+                    <option value="Digital Download">Digital Download</option>
+                    <option value="Commission">Commission</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -224,7 +595,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
         <div className="flex items-center gap-3">
           <button
             onClick={handleSave}
-            disabled={saving || !file}
+            disabled={saving}
             className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
           >
             {saving ? "Saving…" : "Add Work"}

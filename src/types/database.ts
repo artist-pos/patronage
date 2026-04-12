@@ -288,12 +288,25 @@ export interface PortfolioImage {
   audio_url: string | null;
   video_url: string | null;
   text_content: string | null;
+  embed_url: string | null;
+  embed_provider: string | null;
   title: string | null;
   year: number | null;
   medium: string | null;
   dimensions: string | null;
   linked_artwork_id: string | null;
   slug: string | null;
+  created_at: string;
+}
+
+export interface SupportTier {
+  id: string;
+  profile_id: string;
+  title: string;
+  price: number;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
   created_at: string;
 }
 

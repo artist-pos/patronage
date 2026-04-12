@@ -10,9 +10,10 @@ import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import { DigestToggle } from "@/components/profile/DigestToggle";
+import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ExhibitionEntry, BibliographyEntry } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, SupportTier } from "@/types/database";
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
@@ -33,6 +34,17 @@ export default async function OnboardingPage({
   if (!profile?.role) redirect("/onboarding/role");
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
+
+  // Fetch support tiers for artist settings
+  const { data: tiersData } = isArtist
+    ? await supabase
+        .from("support_tiers")
+        .select("*")
+        .eq("profile_id", user.id)
+        .order("sort_order", { ascending: true })
+    : { data: null };
+  const initialTiers = (tiersData ?? []) as SupportTier[];
+
   const { welcome } = await searchParams;
   const showWelcomeBanner = isArtist && welcome === "1";
 
@@ -168,6 +180,19 @@ export default async function OnboardingPage({
             </p>
           </div>
           <GrantsSection initialGrants={(profile as unknown as { received_grants?: string[] }).received_grants ?? []} />
+        </section>
+      )}
+
+      {/* ── Artist-only: Support Tiers ── */}
+      {isArtist && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Support Tiers</h2>
+            <p className="text-xs text-muted-foreground">
+              Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest.
+            </p>
+          </div>
+          <SupportTiersManager initialTiers={initialTiers} />
         </section>
       )}
 

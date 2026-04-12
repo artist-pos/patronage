@@ -53,6 +53,22 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false }),
   ]);
 
+  // Fetch engagement counts for portfolio works
+  const portfolioIds = (portfolioResult.data ?? []).map((w: { id: string }) => w.id);
+  const engagementMap: Record<string, { view: number; play: number }> = {};
+  if (portfolioIds.length > 0) {
+    const { data: engagementRows } = await supabase
+      .from("engagement_logs")
+      .select("work_id, event_type")
+      .in("work_id", portfolioIds);
+    for (const row of engagementRows ?? []) {
+      const r = row as { work_id: string; event_type: string };
+      if (!engagementMap[r.work_id]) engagementMap[r.work_id] = { view: 0, play: 0 };
+      if (r.event_type === "view") engagementMap[r.work_id].view++;
+      if (r.event_type === "play") engagementMap[r.work_id].play++;
+    }
+  }
+
   // is_featured requires migration 041 — fetch separately so the page works without it
   const { data: featuredRows } = await supabase
     .from("portfolio_images")
@@ -132,6 +148,7 @@ export default async function DashboardWorksPage({ searchParams }: PageProps) {
             soldWorks={soldWorks}
             featuredCount={featuredCount}
             profileId={user.id}
+            engagementMap={engagementMap}
           />
           <AddPortfolioWorkButton profileId={user.id} />
 

@@ -30,7 +30,7 @@ const CvTab = dynamic(() =>
 const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier } from "@/types/database";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
@@ -228,8 +228,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsSold         = isArtistProfile && tab === "work";
   const needsCreative     = isArtistProfile && (tab === "work" || tab === "studio");
   const needsAchievements = isArtistProfile && (tab === "overview" || tab === "cv");
+  const needsTiers        = isArtistProfile && tab === "support" && profile.support_enabled;
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers] = await Promise.all([
     needsPortfolio
       ? (() => {
           const q = supabase
@@ -270,6 +271,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("year", { ascending: false })
           .then(({ data }) => (data ?? []) as ProfileAchievement[])
       : Promise.resolve([] as ProfileAchievement[]),
+    needsTiers
+      ? supabase
+          .from("support_tiers")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("sort_order", { ascending: true })
+          .then(({ data }) => (data ?? []) as SupportTier[])
+      : Promise.resolve([] as SupportTier[]),
   ]);
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
@@ -603,6 +612,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   supportEnabled={profile.support_enabled}
                   isOwner={isOwner}
                   artistName={displayName}
+                  tiers={supportTiers}
                 />
               )}
             </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Music, Play, Type, ExternalLink } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
 import { trackEvent } from "@/actions/trackEvent";
 import { toggleFeaturedWork } from "@/app/profile/available-work-actions";
@@ -40,6 +40,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
     }
     setToggling(false);
   }
+
   useEffect(() => {
     if (profileId) {
       trackEvent("artwork_view", { profile_id: profileId, artwork_id: img.id }).catch(() => {});
@@ -60,6 +61,8 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
     artistName &&
     (viewerRole === "patron" || viewerRole === "partner");
 
+  const ct = img.content_type ?? "image";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md p-4"
@@ -72,32 +75,89 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
           sm:grid-cols-[1fr_260px] sm:[grid-template-rows:1fr]
         "
       >
-        {/* ── Image panel ── */}
+        {/* ── Media panel ── */}
         <div className="relative overflow-hidden bg-muted group">
-          <Image
-            src={img.url}
-            alt={img.caption ?? "Portfolio work"}
-            fill
-            style={{ objectFit: "contain" }}
-          />
 
-          {/* Prev arrow */}
+          {/* Audio */}
+          {ct === "audio" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-stone-900 text-white p-8">
+              {img.url && (
+                <div className="absolute inset-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.url} alt="" className="w-full h-full object-cover opacity-30" />
+                </div>
+              )}
+              <div className="relative flex flex-col items-center gap-4">
+                <Music className="w-10 h-10 text-white/60" />
+                {img.audio_url && (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <audio controls src={img.audio_url} className="w-full max-w-xs" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Video (uploaded file) */}
+          {ct === "video" && img.video_url && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video controls src={img.video_url} className="max-w-full max-h-full" />
+            </div>
+          )}
+
+          {/* Video (embed URL) or Embed */}
+          {((ct === "video" && !img.video_url && img.embed_url) || ct === "embed") && img.embed_url && (
+            <iframe
+              src={img.embed_url}
+              className="absolute inset-0 w-full h-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              frameBorder="0"
+              title={img.caption ?? "Embedded content"}
+            />
+          )}
+
+          {/* Writing */}
+          {ct === "text" && (
+            <div className="absolute inset-0 overflow-y-auto p-8 bg-stone-50">
+              <pre className="font-mono text-sm text-stone-800 leading-relaxed whitespace-pre-wrap">
+                {img.text_content}
+              </pre>
+            </div>
+          )}
+
+          {/* Embed with no URL */}
+          {ct === "embed" && !img.embed_url && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-900 text-white">
+              <ExternalLink className="w-8 h-8 text-white/60" />
+              <p className="text-sm text-white/60">{img.embed_provider ?? "Embed"}</p>
+            </div>
+          )}
+
+          {/* Image (default) */}
+          {(ct === "image" || ct === "document") && img.url && (
+            <Image
+              src={img.url}
+              alt={img.caption ?? "Portfolio work"}
+              fill
+              style={{ objectFit: "contain" }}
+            />
+          )}
+
+          {/* Prev/Next arrows */}
           {hasPrev && (
             <button
               onClick={onPrev}
               aria-label="Previous artwork"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black z-10"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-
-          {/* Next arrow */}
           {hasNext && (
             <button
               onClick={onNext}
               aria-label="Next artwork"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black z-10"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -117,6 +177,15 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-3 min-h-0">
+            {ct !== "image" && ct !== "document" && (
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                {ct === "audio" && <Music className="w-3 h-3" />}
+                {ct === "video" && <Play className="w-3 h-3" />}
+                {ct === "text" && <Type className="w-3 h-3" />}
+                {ct === "embed" && <ExternalLink className="w-3 h-3" />}
+                {ct === "audio" ? "Audio" : ct === "video" ? "Video" : ct === "text" ? "Writing" : img.embed_provider ?? "Embed"}
+              </p>
+            )}
             {img.caption && (
               <p className="text-sm font-bold leading-snug">{img.caption}</p>
             )}
