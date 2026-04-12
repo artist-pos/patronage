@@ -17,6 +17,7 @@ import type { Artwork } from "@/types/database";
 export interface OpportunityForApply {
   id: string;
   title: string;
+  organiser: string;
   type: OppTypeEnum;
   routing_type: "external" | "pipeline";
   show_badges_in_submission: boolean;

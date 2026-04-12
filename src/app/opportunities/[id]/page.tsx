@@ -257,6 +257,7 @@ async function UserCTA({
         opportunity={{
           id: opp.id,
           title: opp.title,
+          organiser: opp.organiser,
           type: opp.type,
           routing_type: opp.routing_type,
           show_badges_in_submission: opp.show_badges_in_submission,

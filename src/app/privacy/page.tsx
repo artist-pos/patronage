@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">Privacy Policy</h1>
-        <p className="text-sm text-muted-foreground">Last updated: March 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: April 2026</p>
       </header>
 
       <Section title="1. What We Collect">
@@ -30,6 +30,20 @@ export default function PrivacyPage() {
           <Item label="Usage data">
             Basic analytics such as page visits may be collected by our hosting provider
             (Vercel). We do not use third-party advertising trackers.
+          </Item>
+          <Item label="Engagement data">
+            We collect anonymised engagement data such as view and play counts on public
+            works. This data is used to provide analytics to artists and for aggregated
+            platform reporting. It does not identify individual visitors.
+          </Item>
+          <Item label="Cookies & sessions">
+            We use essential cookies for authentication and session management. We do not
+            use advertising or tracking cookies.
+          </Item>
+          <Item label="Waitlist emails">
+            If you submit your email through a waitlist or notification form without
+            creating an account, we store and use it only to send the notification you
+            requested. You can unsubscribe at any time.
           </Item>
         </ul>
       </Section>
@@ -102,6 +116,12 @@ export default function PrivacyPage() {
               Google Privacy Policy
             </a>
           </Item>
+          <Item label="Funding partners">
+            For partner-funded opportunities, your application responses may be shared
+            with the funding partner for application evaluation and aggregated impact
+            reporting. This is always disclosed before you submit. Partners cannot use
+            your individual data for marketing without your separate consent.
+          </Item>
         </ul>
       </Section>
 
@@ -112,7 +132,23 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="5. Data Retention & Deletion">
+      <Section title="5. Government & Policy Data Sharing">
+        <p>
+          We may share aggregated, anonymised platform data with government agencies and
+          arts policy bodies to inform arts funding policy and sector research. This data
+          never identifies individual artists or users.
+        </p>
+      </Section>
+
+      <Section title="6. International Users">
+        <p>
+          Patronage is based in New Zealand and your data is processed in accordance with
+          the New Zealand Privacy Act 2020. If you are located outside New Zealand, we aim
+          to meet equivalent international standards including the GDPR where applicable.
+        </p>
+      </Section>
+
+      <Section title="7. Data Retention & Deletion">
         <p>
           Your data is retained for as long as your account is active. To request deletion
           of your account and associated data, email us at{" "}
@@ -126,7 +162,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="6. Changes">
+      <Section title="8. Changes">
         <p>
           We may update this policy as the platform evolves. We&rsquo;ll notify users of
           material changes via email. Continued use of Patronage after changes are posted
@@ -134,7 +170,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="7. Contact">
+      <Section title="9. Contact">
         <p>
           Questions or concerns about your privacy?{" "}
           <a

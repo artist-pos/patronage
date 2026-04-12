@@ -8,7 +8,7 @@ export default function TermsPage() {
     <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: March 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: April 2026</p>
       </header>
 
       <Section title="1. Who We Are">
@@ -74,10 +74,61 @@ export default function TermsPage() {
           <li>Impersonate another person or misrepresent your identity or role</li>
           <li>Upload content that is unlawful, defamatory, or infringes a third party&rsquo;s rights</li>
           <li>Attempt to circumvent any security or access controls on the platform</li>
+          <li>Generate, upload, or distribute AI-generated work represented as original human-created art</li>
         </ul>
       </Section>
 
-      <Section title="6. Changes">
+      <Section title="6. Aggregated Content">
+        <p>
+          Patronage aggregates arts opportunities from third-party sources. These listings
+          link to the original source and we do not claim ownership of third-party content.
+          Accuracy is not guaranteed — always check the original listing before applying or
+          making decisions based on the information shown.
+        </p>
+      </Section>
+
+      <Section title="7. Analytics & Engagement Data">
+        <p>
+          We collect anonymised engagement data on public works — such as view and play
+          counts. This data is visible to the artist who owns the work and may be included
+          in aggregated platform reporting. It is never sold or shared individually with
+          third parties.
+        </p>
+      </Section>
+
+      <Section title="8. Waitlist & Notification Emails">
+        <p>
+          If you provide your email through a waitlist or notification form without creating
+          an account, we store it only to notify you as requested. You can unsubscribe at
+          any time by following the link in any email we send you.
+        </p>
+      </Section>
+
+      <Section title="9. Partner Opportunity Data">
+        <p>
+          When applying for partner-funded opportunities, some application questions may be
+          set by the funding partner. Your responses to those questions may be shared with
+          the partner for the purpose of evaluating your application and for aggregated
+          impact reporting.
+        </p>
+        <p className="mt-3">
+          Before submitting an application you will be shown which organisation is running
+          the opportunity and what data will be shared with them. By submitting, you consent
+          to that data being shared with the named partner for the stated purpose. Partners
+          are contractually prohibited from using individual application data for direct
+          marketing unless you separately opt in.
+        </p>
+      </Section>
+
+      <Section title="10. Collective Accounts">
+        <p>
+          Artists can create collective accounts to represent a group practice. The admin of
+          a collective account is responsible for all content and activity posted under that
+          account.
+        </p>
+      </Section>
+
+      <Section title="11. Changes">
         <p>
           We may update these terms from time to time. Continued use of the platform after
           changes are posted constitutes acceptance of the revised terms. Significant changes
@@ -85,7 +136,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="7. Contact">
+      <Section title="12. Contact">
         <p>
           Questions about these terms?{" "}
           <a

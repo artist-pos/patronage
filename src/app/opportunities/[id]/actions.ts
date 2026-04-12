@@ -116,7 +116,8 @@ export async function submitApplication(
   opportunityId: string,
   artworkId: string | null,
   answers: Record<string, string>,
-  submittedImageUrl?: string | null
+  submittedImageUrl?: string | null,
+  partnerMarketingOptIn?: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -130,6 +131,7 @@ export async function submitApplication(
       artwork_id: artworkId || null,
       submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
+      partner_marketing_opt_in: partnerMarketingOptIn ?? false,
     });
 
   if (error) return { error: error.message };

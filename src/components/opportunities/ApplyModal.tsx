@@ -66,6 +66,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
   const [fileUploads, setFileUploads] = useState<Record<string, string[]>>({});
   const [fileNames, setFileNames] = useState<Record<string, string[]>>({});
   const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -177,7 +178,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     const finalAnswers = { ...answers, ...encodedFiles };
     const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
 
-    const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl);
+    const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl, marketingOptIn);
     setSubmitting(false);
 
     if (result.error) {
@@ -465,6 +466,30 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Partner data disclosure — shown for all pipeline opportunities */}
+          {opportunity.routing_type === "pipeline" && (
+            <div className="space-y-3">
+              <div className="border border-black/20 bg-stone-50 px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+                This opportunity is run by <strong className="text-foreground">{opportunity.organiser}</strong>.
+                Your responses will be shared with <strong className="text-foreground">{opportunity.organiser}</strong> for
+                application evaluation. <strong className="text-foreground">{opportunity.organiser}</strong> will also
+                receive aggregated reporting on all applicants. Your individual data will not be
+                used for marketing.
+              </div>
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                  className="mt-0.5 shrink-0 accent-black"
+                />
+                <span className="text-xs text-muted-foreground">
+                  I&rsquo;m happy for <strong className="text-foreground">{opportunity.organiser}</strong> to contact me about their services.
+                </span>
+              </label>
             </div>
           )}
 
