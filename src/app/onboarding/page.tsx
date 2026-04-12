@@ -11,9 +11,10 @@ import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import { DigestToggle } from "@/components/profile/DigestToggle";
 import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
+import { CollectivesManager } from "@/components/profile/CollectivesManager";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ExhibitionEntry, BibliographyEntry, SupportTier } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, SupportTier, CollectiveMember } from "@/types/database";
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
@@ -35,15 +36,25 @@ export default async function OnboardingPage({
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
 
-  // Fetch support tiers for artist settings
-  const { data: tiersData } = isArtist
-    ? await supabase
-        .from("support_tiers")
-        .select("*")
-        .eq("profile_id", user.id)
-        .order("sort_order", { ascending: true })
-    : { data: null };
-  const initialTiers = (tiersData ?? []) as SupportTier[];
+  // Fetch support tiers + collective memberships for artist settings
+  const [tiersResult, collectivesResult] = await Promise.all([
+    isArtist
+      ? supabase
+          .from("support_tiers")
+          .select("*")
+          .eq("profile_id", user.id)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: null }),
+    isArtist
+      ? supabase
+          .from("collective_members")
+          .select("*, collective:collectives(*)")
+          .eq("user_id", user.id)
+          .order("joined_at", { ascending: true })
+      : Promise.resolve({ data: null }),
+  ]);
+  const initialTiers = (tiersResult.data ?? []) as SupportTier[];
+  const initialMemberships = (collectivesResult.data ?? []) as CollectiveMember[];
 
   const { welcome } = await searchParams;
   const showWelcomeBanner = isArtist && welcome === "1";
@@ -193,6 +204,19 @@ export default async function OnboardingPage({
             </p>
           </div>
           <SupportTiersManager initialTiers={initialTiers} />
+        </section>
+      )}
+
+      {/* ── Artist-only: Collectives & Groups ── */}
+      {isArtist && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold">Collectives & Groups</h2>
+            <p className="text-xs text-muted-foreground">
+              Create or join artist collectives. Collectives let you group your practice with other artists and appear together on Patronage.
+            </p>
+          </div>
+          <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
         </section>
       )}
 

@@ -296,6 +296,7 @@ export interface PortfolioImage {
   dimensions: string | null;
   linked_artwork_id: string | null;
   slug: string | null;
+  collaborator_ids: string[];
   created_at: string;
 }
 
@@ -308,6 +309,23 @@ export interface SupportTier {
   sort_order: number;
   is_active: boolean;
   created_at: string;
+}
+
+export interface Collective {
+  id: string;
+  name: string;
+  description: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CollectiveMember {
+  id: string;
+  collective_id: string;
+  user_id: string;
+  role: "admin" | "member";
+  joined_at: string;
+  collective?: Collective;
 }
 
 export interface Artwork {

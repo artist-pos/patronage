@@ -44,17 +44,15 @@ export default async function BlogPage() {
               href={`/blog/${post.slug}`}
               className="group space-y-3"
             >
-              {post.image_url ? (
-                <div className="overflow-hidden rounded-xl bg-stone-100">
+              <div className="aspect-video overflow-hidden rounded-xl bg-stone-100">
+                {post.image_url && (
                   <img
                     src={post.image_url}
                     alt=""
-                    className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                </div>
-              ) : (
-                <div className="w-full h-52 rounded-xl bg-stone-100" />
-              )}
+                )}
+              </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
                   {formatDate(post.published_at ?? post.created_at)}

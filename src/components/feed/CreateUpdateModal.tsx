@@ -7,7 +7,10 @@ import { X, ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createProject } from "@/actions/projects";
 import { detectOrientation } from "@/lib/image";
+import { CollaboratorPicker } from "@/components/profile/CollaboratorPicker";
 import type { ContentTypeEnum, ImageOrientation } from "@/types/database";
+
+type CollaboratorEntry = { id: string; username: string; full_name: string | null; avatar_url: string | null };
 
 const MAX_PX = 1600;
 const MAX_PROJ_TITLE = 140;
@@ -130,6 +133,9 @@ export function CreateUpdateModal({
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectLead, setNewProjectLead] = useState("");
 
+  // Collaborators
+  const [collaborators, setCollaborators] = useState<CollaboratorEntry[]>([]);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -149,6 +155,7 @@ export function CreateUpdateModal({
     setSelectedProjectId("");
     setNewProjectTitle("");
     setNewProjectLead("");
+    setCollaborators([]);
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
     if (videoInputRef.current) videoInputRef.current.value = "";
@@ -287,6 +294,7 @@ export function CreateUpdateModal({
           orientation: imageOrientation,
           image_width,
           image_height,
+          ...(collaborators.length > 0 && { collaborator_ids: collaborators.map(c => c.id) }),
         });
       if (dbErr) { setError(dbErr.message); setUploading(false); return; }
 
@@ -536,6 +544,19 @@ export function CreateUpdateModal({
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Collaborators */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Credits
+                </p>
+                <CollaboratorPicker
+                  value={collaborators}
+                  onChange={setCollaborators}
+                  excludeIds={[profileId]}
+                  label="Tag other artists in this update"
+                />
               </div>
 
               {error && <p className="text-xs text-destructive">{error}</p>}

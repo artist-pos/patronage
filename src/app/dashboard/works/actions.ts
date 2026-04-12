@@ -48,6 +48,7 @@ export async function createPortfolioWork(data: {
   textContent?: string;
   embedUrl?: string;
   embedProvider?: string;
+  collaboratorIds?: string[];
 }): Promise<{ id?: string; slug?: string; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -92,6 +93,7 @@ export async function createPortfolioWork(data: {
       ...(data.textContent && { text_content: data.textContent }),
       ...(data.embedUrl && { embed_url: data.embedUrl }),
       ...(data.embedProvider && { embed_provider: data.embedProvider }),
+      ...(data.collaboratorIds?.length && { collaborator_ids: data.collaboratorIds }),
     })
     .select("id, slug")
     .single();

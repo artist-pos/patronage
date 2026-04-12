@@ -6,6 +6,7 @@ import { ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { detectOrientation } from "@/lib/image";
 import { createPortfolioWork, publishPortfolioWorkAsAvailable } from "@/app/dashboard/works/actions";
+import { CollaboratorPicker } from "@/components/profile/CollaboratorPicker";
 
 const MAX_PX = 1600;
 
@@ -126,6 +127,9 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
   const [medium, setMedium] = useState("");
   const [dimensions, setDimensions] = useState("");
   const [description, setDescription] = useState("");
+
+  // Collaborators
+  const [collaborators, setCollaborators] = useState<{ id: string; username: string; full_name: string | null; avatar_url: string | null }[]>([]);
 
   // Commerce
   const [listForSale, setListForSale] = useState(false);
@@ -286,6 +290,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
         textContent: tab === "text" ? textContent.trim() : undefined,
         embedUrl: finalEmbedUrl,
         embedProvider,
+        collaboratorIds: collaborators.length > 0 ? collaborators.map(c => c.id) : undefined,
       });
 
       if (result.error) throw new Error(result.error);
@@ -542,6 +547,12 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
               className={`${inputCls} resize-none`}
             />
           </div>
+
+          {/* Collaborators */}
+          <CollaboratorPicker
+            value={collaborators}
+            onChange={setCollaborators}
+          />
 
           {/* Commerce toggle */}
           <div className="border-t border-border pt-4 space-y-3">

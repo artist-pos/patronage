@@ -132,15 +132,15 @@ export default async function BlogPostPage({ params }: Props) {
                   href={`/blog/${p.slug}`}
                   className="group flex flex-col gap-2"
                 >
-                  {p.image_url && (
-                    <div className="overflow-hidden rounded-lg aspect-video bg-muted">
+                  <div className="aspect-video overflow-hidden rounded-lg bg-stone-100">
+                    {p.image_url && (
                       <img
                         src={p.image_url}
                         alt=""
                         className="w-full h-full object-cover group-hover:opacity-85 transition-opacity"
                       />
-                    </div>
-                  )}
+                    )}
+                  </div>
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium leading-snug group-hover:underline group-hover:underline-offset-2">
                       {p.title}
