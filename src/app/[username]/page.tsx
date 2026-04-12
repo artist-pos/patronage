@@ -223,15 +223,16 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   ]);
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
-  const needsPortfolio    = isArtistProfile && (tab === "overview" || tab === "work");
-  const needsUpdates      = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
-  const needsProjects     = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
-  const needsSold         = isArtistProfile && tab === "work";
-  const needsCreative     = isArtistProfile && (tab === "work" || tab === "studio");
-  const needsAchievements = isArtistProfile && (tab === "overview" || tab === "cv");
-  const needsTiers        = isArtistProfile && tab === "support" && profile.support_enabled;
+  const needsPortfolio        = isArtistProfile && (tab === "overview" || tab === "work");
+  const needsUpdates          = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
+  const needsProjects         = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
+  const needsSold             = isArtistProfile && tab === "work";
+  const needsCreative         = isArtistProfile && (tab === "work" || tab === "studio");
+  const needsAchievements     = isArtistProfile && (tab === "overview" || tab === "cv");
+  const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
+  const needsCollaborations   = isArtistProfile && tab === "work";
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks] = await Promise.all([
     needsPortfolio
       ? (() => {
           const q = supabase
@@ -280,6 +281,17 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("sort_order", { ascending: true })
           .then(({ data }) => (data ?? []) as SupportTier[])
       : Promise.resolve([] as SupportTier[]),
+    needsCollaborations
+      ? supabase
+          .from("portfolio_images")
+          .select("id, url, caption, creator_profile:profile_id(username, full_name)")
+          .contains("collaborator_ids", [profile.id])
+          .eq("is_available", false)
+          .order("created_at", { ascending: false })
+          .limit(24)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data }) => (data ?? []) as unknown as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>)
+      : Promise.resolve([] as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>),
   ]);
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
@@ -580,6 +592,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   hideSoldSection={profile.hide_sold_section}
                   displayName={displayName}
+                  collaboratedWorks={collaboratedWorks}
                 />
               )}
 

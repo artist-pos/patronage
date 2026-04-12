@@ -532,3 +532,52 @@ function buildMessageNotificationHtml({
 </body>
 </html>`;
 }
+
+export async function sendCollectiveInvitation({
+  email,
+  collectiveName,
+  inviterName,
+  token,
+}: {
+  email: string;
+  collectiveName: string;
+  inviterName: string;
+  token: string;
+}): Promise<void> {
+  const resend = getResend();
+  const claimUrl = `${SITE_URL}/join?token=${token}`;
+
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `${inviterName} invited you to join "${collectiveName}" on Patronage`,
+    html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#fff;font-family:sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:40px 24px;max-width:560px;margin:0 auto;">
+
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Collective Invitation</p>
+
+      <p style="margin:0 0 16px;font-size:15px;">
+        <strong>${inviterName}</strong> has invited you to join
+        <strong>${collectiveName}</strong> on Patronage — a platform for NZ and Australian artists.
+      </p>
+
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">
+        Click the link below to accept. If you don't have an account yet, you'll be able to create one first.
+      </p>
+
+      <a href="${claimUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Accept invitation →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        This invitation expires in 30 days. If you weren't expecting this, you can ignore it.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}

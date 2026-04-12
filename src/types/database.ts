@@ -327,7 +327,20 @@ export interface CollectiveMember {
   collective_id: string;
   user_id: string;
   role: "admin" | "member";
+  status: "pending" | "accepted";
   joined_at: string;
+  collective?: Collective;
+}
+
+export interface CollectiveEmailInvitation {
+  id: string;
+  collective_id: string;
+  email: string;
+  token: string;
+  invited_by: string;
+  claimed_by: string | null;
+  created_at: string;
+  expires_at: string;
   collective?: Collective;
 }
 
