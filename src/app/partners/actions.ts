@@ -2,6 +2,55 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { notifyOpportunitySubmission } from "@/lib/email";
+import { Resend } from "resend";
+
+export async function submitActivationEnquiry(data: {
+  name: string;
+  organisation: string;
+  email: string;
+  interests: string[];
+  message: string;
+}): Promise<{ error?: string }> {
+  const name = data.name.trim();
+  const email = data.email.trim();
+  const message = data.message.trim();
+  if (!name || !email || !message) return { error: "Name, email, and message are required." };
+
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM ?? "Patronage <hello@patronage.nz>";
+  if (!key) return { error: "Email not configured." };
+
+  const resend = new Resend(key);
+  const interestList = data.interests.length > 0 ? data.interests.join(", ") : "Not specified";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;">
+  <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;">New activation enquiry</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:6px 0;font-weight:600;width:140px;">Name</td><td>${name}</td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Organisation</td><td>${data.organisation || "Not provided"}</td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Interests</td><td>${interestList}</td></tr>
+  </table>
+  <div style="margin-top:16px;padding:12px;background:#f9f9f9;border-left:3px solid #000;">
+    <p style="margin:0;font-size:14px;line-height:1.6;">${message.replace(/\n/g, "<br>")}</p>
+  </div>
+</body>
+</html>`;
+
+  const { error } = await resend.emails.send({
+    from,
+    to: "hello@patronage.nz",
+    replyTo: email,
+    subject: `Activation enquiry — ${name}${data.organisation ? ` (${data.organisation})` : ""}`,
+    html,
+  });
+
+  if (error) return { error: (error as { message?: string }).message ?? "Failed to send." };
+  return {};
+}
 
 export interface SubmissionState {
   success?: boolean;

@@ -58,14 +58,25 @@ function fmtDate(iso: string | null | undefined): string | null {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = null }: { isLoggedIn?: boolean; partnerName?: string | null }) {
+export function OpportunitySubmissionForm({
+  isLoggedIn = false,
+  partnerName = null,
+  initialTier,
+}: {
+  isLoggedIn?: boolean;
+  partnerName?: string | null;
+  initialTier?: "standard" | "featured" | "pipeline";
+}) {
   const [state, action, isPending] = useActionState<SubmissionState, FormData>(
     submitOpportunityAction, {}
   );
 
-  const [formData, setFormData] = useState<OpportunityFormData>(() =>
-    defaultFormData(partnerName ?? "")
-  );
+  const [formData, setFormData] = useState<OpportunityFormData>(() => {
+    const base = defaultFormData(partnerName ?? "");
+    if (initialTier === "pipeline") base.routingType = "pipeline";
+    if (initialTier === "featured") base.isFeatured = true;
+    return base;
+  });
   const [step, setStep] = useState<1 | 2>(1);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
@@ -259,24 +270,33 @@ export function OpportunitySubmissionForm({ isLoggedIn = false, partnerName = nu
         {step === 1 && (
           <div className="pt-6 border-t-2 border-black space-y-3">
             {formData.routingType === "pipeline" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  // Apply smart defaults if first entry or type changed
-                  if (
-                    formData.questions.length === 0 ||
-                    lastDefaultTypeRef.current !== formData.type
-                  ) {
-                    const defaults = getDefaultPipelineSetup(formData.type);
-                    update({ questions: defaults.questions, artistDocs: defaults.artistDocs });
-                    lastDefaultTypeRef.current = formData.type;
-                  }
-                  setStep(2);
-                }}
-                className="w-full sm:w-auto border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
-              >
-                Next: Configure application →
-              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => { setShowFullPreview(true); setHasPreviewed(true); }}
+                  className="border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
+                >
+                  Preview listing →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Apply smart defaults if first entry or type changed
+                    if (
+                      formData.questions.length === 0 ||
+                      lastDefaultTypeRef.current !== formData.type
+                    ) {
+                      const defaults = getDefaultPipelineSetup(formData.type);
+                      update({ questions: defaults.questions, artistDocs: defaults.artistDocs });
+                      lastDefaultTypeRef.current = formData.type;
+                    }
+                    setStep(2);
+                  }}
+                  className="border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+                >
+                  Configure pipeline →
+                </button>
+              </div>
             ) : (
               <>
                 <button
