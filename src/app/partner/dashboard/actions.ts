@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendHighResRequest } from "@/lib/email";
+import { createCampaignForSelection } from "@/lib/campaigns";
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -91,6 +92,25 @@ export async function updateApplicationStatus(
         },
         { onConflict: "profile_id,opportunity_id" }
       );
+
+    // Auto-create campaign + QR when first selected (fire-and-forget — idempotent)
+    if (status === "selected") {
+      const { data: artistProfile } = await admin
+        .from("profiles")
+        .select("username")
+        .eq("id", app.artist_id as string)
+        .single();
+      if (artistProfile?.username) {
+        createCampaignForSelection({
+          artistProfileId: app.artist_id as string,
+          artistUsername: artistProfile.username,
+          opportunityId: app.opportunity_id as string,
+          opportunityTitle: opp.title,
+          opportunityType: opp.type ?? "other",
+          applicationId: applicationId,
+        }).catch(console.error);
+      }
+    }
 
     // Email artist when approved (requesting high-res file)
     if (status === "approved_pending_assets") {
