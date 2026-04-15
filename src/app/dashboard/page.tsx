@@ -5,11 +5,7 @@ import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunitie
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import { ProvenanceBanner } from "@/components/dashboard/ProvenanceBanner";
-import { FollowersTab } from "@/components/analytics/FollowersTab";
 import { ManageNotesList } from "@/components/profile/ManageNotesList";
-import { getProfileById } from "@/lib/profiles";
-import { getProfileStats } from "@/lib/profileAnalytics";
-import { getFollowers } from "@/lib/follows";
 import { getMyWrittenNotes } from "@/lib/notes";
 import type { Metadata } from "next";
 
@@ -21,39 +17,9 @@ interface PageProps {
   searchParams: Promise<{ tab?: string }>;
 }
 
-const TABS = ["closing", "saved", "applied", "applications", "expired", "analytics", "notes"] as const;
+const TABS = ["closing", "saved", "applied", "applications", "expired", "notes"] as const;
 type Tab = typeof TABS[number];
 
-function StatCard({ label, value, description, period, prevValue }: {
-  label: string; value: number; description: string; period?: string; prevValue?: number;
-}) {
-  const diff = prevValue !== undefined ? value - prevValue : null;
-  const contextLine = diff !== null
-    ? diff > 0
-      ? `↑ ${diff} more than last month`
-      : diff < 0
-        ? `↓ ${Math.abs(diff)} fewer than last month`
-        : "About the same as last month"
-    : value === 0
-      ? "Nothing tracked yet — check back soon."
-      : null;
-
-  return (
-    <div className="border border-black p-4 space-y-1.5">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-2xl font-bold tabular-nums">{value.toLocaleString()}</p>
-      </div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest">{label}</p>
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        {description}
-        {period && <span className="ml-1 opacity-60">· {period}</span>}
-      </p>
-      {contextLine && (
-        <p className="text-[11px] text-gray-400">{contextLine}</p>
-      )}
-    </div>
-  );
-}
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const supabase = await createClient();
@@ -70,7 +36,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .eq("id", user.id)
     .single();
   const isPatron = userProfile?.role === "patron" || userProfile?.role === "partner";
-  const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner";
 
   // Core opportunity data — always needed
   const [saved, applicationsData, draftsData, provenanceData] = await Promise.all([
@@ -95,15 +60,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       : Promise.resolve({ data: [] }),
   ]);
 
-  // Analytics tab data
-  const [profile, analyticsStats, followers] = activeTab === "analytics"
-    ? await Promise.all([
-        getProfileById(user.id),
-        getProfileStats(user.id),
-        getFollowers(user.id),
-      ])
-    : [null, null, null];
-
   // Notes tab data
   const notes = activeTab === "notes" ? await getMyWrittenNotes(user.id) : null;
 
@@ -126,7 +82,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     { id: "applied", label: "Applied", count: applied.length },
     { id: "applications", label: "Applications", count: applications.length + drafts.length },
     { id: "expired", label: "Expired", count: expired.length },
-    { id: "analytics", label: "Analytics" },
     { id: "notes", label: "Notes" },
   ];
 
@@ -180,53 +135,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         />
       )}
 
-      {/* ── Analytics tab ── */}
-      {activeTab === "analytics" && analyticsStats && (
-        <div className="space-y-10">
-          <section className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Audience</p>
-            <div className="flex items-end gap-5">
-              <div className="space-y-0.5">
-                <p className="text-5xl font-bold tabular-nums">{analyticsStats.followersTotal.toLocaleString()}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Total Followers</p>
-              </div>
-              {analyticsStats.followersGained30 > 0 && (
-                <p className="text-sm text-green-600 mb-1">+{analyticsStats.followersGained30} this month</p>
-              )}
-            </div>
-            {followers && <FollowersTab followers={followers} />}
-          </section>
-
-          <section className="space-y-4 border-t border-border pt-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Discovery</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <StatCard label="Profile Views" value={analyticsStats.profileViews30} prevValue={analyticsStats.profileViewsPrev30} description="Visits to your public profile" period="30d" />
-              <StatCard label="CV Downloads" value={analyticsStats.cvClicks30} description="Clicks on your CV link" period="30d" />
-              <StatCard label="Website Clicks" value={analyticsStats.websiteClicks30} description="Clicks through to your website" period="30d" />
-            </div>
-          </section>
-
-          <section className="space-y-4 border-t border-border pt-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Engagement</p>
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="Artwork Views" value={analyticsStats.artworkViews30} description="Times your portfolio works were opened" period="30d" />
-              <StatCard label="Followers Gained" value={analyticsStats.followersGained30} description="New followers in the last 30 days" period="30d" />
-            </div>
-          </section>
-
-          {isArtist && (
-            <section className="space-y-4 border-t border-border pt-8">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Activity</p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <StatCard label="Applied" value={analyticsStats.opportunitiesApplied} description="Opportunities applied to through Patronage" />
-                <StatCard label="Saved" value={analyticsStats.opportunitiesSaved} description="Opportunities bookmarked or saved" />
-                <StatCard label="Works Added" value={analyticsStats.worksAdded30} description="New works added to your portfolio" period="30d" />
-              </div>
-            </section>
-          )}
-        </div>
-      )}
-
       {/* ── Notes tab ── */}
       {activeTab === "notes" && notes !== null && (
         <div className="space-y-4">
@@ -238,7 +146,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       )}
 
       {/* ── Opportunity list tabs ── */}
-      {!["applications", "analytics", "notes"].includes(activeTab) && (
+      {!["applications", "notes"].includes(activeTab) && (
         currentList.length === 0 ? (
           <div className="py-16 text-center space-y-3">
             <p className="text-sm text-muted-foreground">

@@ -100,7 +100,7 @@ export async function createPortfolioWork(data: {
 
   if (error || !row) return { error: error?.message ?? "Insert failed" };
 
-  revalidatePath("/dashboard/works");
+  revalidatePath("/studio");
   return { id: row.id, slug: row.slug ?? undefined };
 }
 
@@ -147,7 +147,7 @@ export async function updateWorkMetadata(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/works");
+  revalidatePath("/studio");
   return { slug: newSlug };
 }
 
@@ -218,7 +218,7 @@ export async function publishPortfolioWorkAsAvailable(
     if (linkError) return { error: linkError.message };
   }
 
-  revalidatePath("/dashboard/works");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -262,7 +262,7 @@ export async function setPrimaryWorkImageUrl(
       : null,
   ]);
 
-  revalidatePath("/dashboard/works");
+  revalidatePath("/studio");
   if (profileResult.data?.username) {
     revalidatePath(`/${profileResult.data.username}`);
   }
@@ -293,6 +293,6 @@ export async function unpublishPortfolioWork(workId: string): Promise<{ error?: 
 
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/works");
+  revalidatePath("/studio");
   return {};
 }

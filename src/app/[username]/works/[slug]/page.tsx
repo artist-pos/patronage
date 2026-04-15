@@ -120,7 +120,7 @@ export default async function WorkDetailPage({ params }: Props) {
         {isOwner && (
           <>
             <span className="text-border">·</span>
-            <Link href="/dashboard/works" className="hover:text-foreground transition-colors">My Works</Link>
+            <Link href="/studio" className="hover:text-foreground transition-colors">Studio</Link>
           </>
         )}
       </div>

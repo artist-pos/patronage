@@ -10,18 +10,16 @@ import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import { DigestToggle } from "@/components/profile/DigestToggle";
-import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ExhibitionEntry, BibliographyEntry, SupportTier, CollectiveMember } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, CollectiveMember } from "@/types/database";
 
 export const metadata = { title: "Edit Profile — Patronage" };
 
 const ARTIST_TABS = [
   { value: "profile", label: "Profile" },
   { value: "collectives", label: "Collectives & Groups" },
-  { value: "support", label: "Support Tiers" },
 ] as const;
 type ArtistTab = typeof ARTIST_TABS[number]["value"];
 
@@ -43,31 +41,21 @@ export default async function OnboardingPage({
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
 
-  const [tiersData, membershipsData] = isArtist
-    ? await Promise.all([
-        supabase
-          .from("support_tiers")
-          .select("*")
-          .eq("profile_id", user.id)
-          .order("sort_order", { ascending: true })
-          .then(r => r.data),
-        supabase
-          .from("collective_members")
-          .select("*, collective:collectives(*)")
-          .eq("user_id", user.id)
-          .order("joined_at", { ascending: true })
-          .then(r => r.data),
-      ])
-    : [null, null];
+  const { data: membershipsRaw } = isArtist
+    ? await supabase
+        .from("collective_members")
+        .select("*, collective:collectives(*)")
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: true })
+    : { data: null };
 
-  const initialTiers = (tiersData ?? []) as SupportTier[];
-  const initialMemberships = (membershipsData ?? []) as CollectiveMember[];
+  const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
 
   const { welcome, tab: rawTab } = await searchParams;
 
   const activeTab: ArtistTab =
-    isArtist && (rawTab === "collectives" || rawTab === "support")
-      ? rawTab
+    isArtist && rawTab === "collectives"
+      ? "collectives"
       : "profile";
 
   const showWelcomeBanner = isArtist && welcome === "1";
@@ -159,7 +147,7 @@ export default async function OnboardingPage({
                   </p>
                 </div>
                 <Link
-                  href="/dashboard/works"
+                  href="/studio"
                   className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors whitespace-nowrap"
                 >
                   Manage your works →
@@ -304,19 +292,6 @@ export default async function OnboardingPage({
             </p>
           </div>
           <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
-        </div>
-      )}
-
-      {/* ── Tab: Support Tiers ── */}
-      {activeTab === "support" && (
-        <div className="space-y-6 max-w-2xl">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold">Support Tiers</h2>
-            <p className="text-xs text-muted-foreground">
-              Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest. Choose a quick-start preset or create a custom tier.
-            </p>
-          </div>
-          <SupportTiersManager initialTiers={initialTiers} />
         </div>
       )}
 

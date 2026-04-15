@@ -48,7 +48,7 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
               )}
               {isArtist && (
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard/works">My Works</Link>
+                  <Link href="/studio">Studio</Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
@@ -61,6 +61,9 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                     <span className="w-1.5 h-1.5 bg-black rounded-full" />
                   )}
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile/edit">Edit Profile</Link>
               </DropdownMenuItem>
               {isPartner && (
                 <DropdownMenuItem asChild>
@@ -116,8 +119,8 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                   </Link>
                 )}
                 {isArtist && (
-                  <Link href="/dashboard/works" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    My Works
+                  <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Studio
                   </Link>
                 )}
                 <Link href="/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -130,6 +133,9 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                 >
                   Messages
                   {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
+                </Link>
+                <Link href="/profile/edit" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  Edit Profile
                 </Link>
                 {isPartner && (
                   <Link href="/partner/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
