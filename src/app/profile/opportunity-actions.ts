@@ -13,8 +13,11 @@ export async function postOpportunity(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
+
   const { error } = await supabase.from("opportunities").insert({
-    profile_id: user.id,
+    profile_id: isAdminUser ? null : user.id,
     title: formData.title.trim().slice(0, 140),
     organiser: "", // not required for profile opportunities
     type: formData.type,
@@ -55,8 +58,11 @@ export async function postProfileOpportunity(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
+
   const { error } = await supabase.from("opportunities").insert({
-    profile_id: user.id,
+    profile_id: isAdminUser ? null : user.id,
     title: formData.title.trim().slice(0, 140),
     organiser: formData.organiser?.trim() || "",
     type: formData.type,

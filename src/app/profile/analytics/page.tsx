@@ -1,18 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getProfileStats } from "@/lib/profileAnalytics";
 import { getFollowers } from "@/lib/follows";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
+import { ProfileViewsChartWrapper } from "@/components/analytics/ProfileViewsChartWrapper";
 
 export const metadata = { title: "Analytics — Patronage" };
-
-const ProfileViewsChart = dynamic(
-  () => import("@/components/analytics/ProfileViewsChart").then((m) => m.ProfileViewsChart),
-  { ssr: false }
-);
 
 const RANGE_OPTIONS = [
   { label: "7d", days: 7 },
@@ -162,7 +157,7 @@ export default async function ProfileAnalyticsPage({ searchParams }: PageProps) 
             period={periodLabel}
           />
         </div>
-        <ProfileViewsChart data={stats.profileViewsTimeline} days={days} />
+        <ProfileViewsChartWrapper data={stats.profileViewsTimeline} days={days} />
       </section>
 
       {/* ── Engagement ── */}

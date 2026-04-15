@@ -16,18 +16,34 @@ async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
 }
 
 export default async function QueuePage() {
-  const opps = await getQueueOpportunities("pending");
+  const [pending, rejected] = await Promise.all([
+    getQueueOpportunities("pending"),
+    getQueueOpportunities("rejected"),
+  ]);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Scraper Queue</h1>
-        <p className="text-xs text-muted-foreground">
-          Review opportunities found by the scraper before they go live. Rejected opportunities are permanently deleted.
-        </p>
+    <div className="space-y-10">
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight">Scraper Queue</h1>
+          <p className="text-xs text-muted-foreground">
+            Review opportunities found by the scraper before they go live.
+          </p>
+        </div>
+        <QueueControls opps={pending} tab="pending" />
       </div>
 
-      <QueueControls opps={opps} tab="pending" />
+      {rejected.length > 0 && (
+        <div className="space-y-4 border-t border-border pt-8">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold tracking-tight">Rejected ({rejected.length})</h2>
+            <p className="text-xs text-muted-foreground">
+              Accidentally rejected? Use Restore to re-publish.
+            </p>
+          </div>
+          <QueueControls opps={rejected} tab="rejected" />
+        </div>
+      )}
     </div>
   );
 }

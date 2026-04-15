@@ -17,6 +17,7 @@ export async function approveOpportunity(id: string) {
     .eq("id", id);
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/opportunities");
+  revalidatePath(`/opportunities/${id}`);
 }
 
 export async function rejectOpportunity(id: string) {
@@ -39,6 +40,7 @@ export async function approveAll(ids: string[]) {
     .in("id", ids);
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/opportunities");
+  revalidatePath("/opportunities/[id]", "page");
 }
 
 export async function rejectAll(ids: string[]) {
