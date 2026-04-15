@@ -125,7 +125,17 @@ export async function POST(req: NextRequest) {
   } else if (type === "file") {
     const file = formData.get("file") as File;
     if (!file) return NextResponse.json({ error: "File required" }, { status: 400 });
+    // M4: Reject files over 10 MB
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large — maximum 10 MB." }, { status: 413 });
+    }
     const buffer = await file.arrayBuffer();
+    // H6: Magic byte check — must be PDF (only type accepted here)
+    const magic = new Uint8Array(buffer.slice(0, 4));
+    const isPdf = magic[0] === 0x25 && magic[1] === 0x50 && magic[2] === 0x44 && magic[3] === 0x46;
+    if (!isPdf) {
+      return NextResponse.json({ error: "Only PDF files are accepted." }, { status: 415 });
+    }
     const base64 = Buffer.from(buffer).toString("base64");
     content = [{
       type: "document",

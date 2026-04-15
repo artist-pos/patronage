@@ -18,7 +18,7 @@ async function sendDigest(): Promise<{ sent: number; errors: number }> {
 
   const { data: subscribers, error } = await admin
     .from("subscribers")
-    .select("email");
+    .select("email, unsubscribe_token");
 
   if (error || !subscribers?.length) {
     return { sent: 0, errors: 0 };
@@ -33,11 +33,11 @@ async function sendDigest(): Promise<{ sent: number; errors: number }> {
   let errors = 0;
 
   // Resend supports batch sending up to 100 emails; send in chunks
-  const emails = subscribers.map((s) => ({
+  const emails = (subscribers as Array<{ email: string; unsubscribe_token?: string }>).map((s) => ({
     from: FROM,
     to: s.email,
     subject: "Patronage — weekly opportunities digest",
-    html: buildDigestHtml(data, SITE_URL, s.email),
+    html: buildDigestHtml(data, SITE_URL, s.unsubscribe_token),
   }));
 
   const resend = getResend();

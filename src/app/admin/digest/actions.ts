@@ -27,7 +27,7 @@ export async function sendDigestAction(): Promise<{
   const supabase = await createClient();
   const { data: subs, error } = await supabase
     .from("subscribers")
-    .select("email");
+    .select("email, unsubscribe_token");
 
   if (error) return { ok: false, sent: 0, message: error.message };
   if (!subs || subs.length === 0)
@@ -42,11 +42,11 @@ export async function sendDigestAction(): Promise<{
   const subject = `Patronage — opportunities digest ${new Date().toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}`;
   const resend = new Resend(apiKey);
 
-  const emails = subs.map((s) => ({
+  const emails = (subs as Array<{ email: string; unsubscribe_token?: string }>).map((s) => ({
     from,
     to: s.email,
     subject,
-    html: buildDigestHtml(digestData, siteUrl, s.email),
+    html: buildDigestHtml(digestData, siteUrl, s.unsubscribe_token),
   }));
 
   let sent = 0;

@@ -9,10 +9,12 @@ const FROM = process.env.RESEND_FROM ?? "Patronage <noreply@patronage.nz>";
 // Vercel cron config (vercel.json): { "path": "/api/cron/send-followups", "schedule": "0 9 * * *" }
 
 export async function GET(req: NextRequest) {
-  // Guard: only allow requests with the cron secret (or from localhost in dev)
-  const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 

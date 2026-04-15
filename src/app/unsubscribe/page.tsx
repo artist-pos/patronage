@@ -5,22 +5,33 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Unsubscribe — Patronage" };
 
 interface Props {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ token?: string }>;
 }
 
 export default async function UnsubscribePage({ searchParams }: Props) {
-  const { email } = await searchParams;
+  const { token } = await searchParams;
 
-  let status: "success" | "missing" | "error" = "missing";
+  let status: "success" | "missing" | "not_found" | "error" = "missing";
 
-  if (email) {
+  if (token) {
     const admin = createAdminClient();
-    const { error } = await admin
+    const { data: sub, error: fetchErr } = await admin
       .from("subscribers")
-      .delete()
-      .eq("email", email.toLowerCase().trim());
+      .select("email")
+      .eq("unsubscribe_token", token)
+      .maybeSingle();
 
-    status = error ? "error" : "success";
+    if (fetchErr) {
+      status = "error";
+    } else if (!sub) {
+      status = "not_found";
+    } else {
+      const { error: deleteErr } = await admin
+        .from("subscribers")
+        .delete()
+        .eq("unsubscribe_token", token);
+      status = deleteErr ? "error" : "success";
+    }
   }
 
   return (
@@ -33,13 +44,19 @@ export default async function UnsubscribePage({ searchParams }: Props) {
 
           {status === "success" && (
             <p className="text-sm text-muted-foreground">
-              {email} has been removed from the weekly digest. You won&apos;t receive any further emails.
+              You&apos;ve been removed from the weekly digest. You won&apos;t receive any further emails.
             </p>
           )}
 
           {status === "missing" && (
             <p className="text-sm text-muted-foreground">
-              No email address provided. Please use the unsubscribe link from your digest email.
+              No unsubscribe token provided. Please use the unsubscribe link from your digest email.
+            </p>
+          )}
+
+          {status === "not_found" && (
+            <p className="text-sm text-muted-foreground">
+              This unsubscribe link is invalid or has already been used.
             </p>
           )}
 

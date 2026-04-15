@@ -16,12 +16,20 @@ export async function sendWelcomeDigest(email: string): Promise<void> {
   const data = await getDigestData();
   if (data.newOpps.length === 0 && data.closingSoon.length === 0) return;
 
+  // Look up unsubscribe token for this subscriber
+  const supabase = await createClient();
+  const { data: sub } = await supabase
+    .from("subscribers")
+    .select("unsubscribe_token")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle();
+
   const resend = new Resend(key);
   await resend.emails.send({
     from: FROM,
     to: email,
     subject: "Welcome to Patronage — your first opportunities digest",
-    html: buildDigestHtml(data, SITE_URL, email),
+    html: buildDigestHtml(data, SITE_URL, (sub as { unsubscribe_token?: string } | null)?.unsubscribe_token),
   });
 }
 
@@ -168,11 +176,11 @@ function sectionHeader(label: string): string {
 
 // ── Main builder ──────────────────────────────────────────────────────────────
 
-export function buildDigestHtml(data: DigestData, siteUrl: string, subscriberEmail?: string): string {
+export function buildDigestHtml(data: DigestData, siteUrl: string, unsubscribeToken?: string): string {
   const { newOpps, closingSoon } = data;
 
-  const unsubscribeUrl = subscriberEmail
-    ? `${siteUrl}/unsubscribe?email=${encodeURIComponent(subscriberEmail)}`
+  const unsubscribeUrl = unsubscribeToken
+    ? `${siteUrl}/unsubscribe?token=${unsubscribeToken}`
     : `${siteUrl}/unsubscribe`;
 
   // ── Section computation ────────────────────────────────────────────────────
