@@ -188,6 +188,8 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     // If the primary image changed (position 0 changed), cascade URL update
     if (reordered[0] && reordered[0].url !== images[0]?.url) {
       setPrimaryWorkImageUrl(work.id, reordered[0].url);
+      // Update parent WorksTable so the thumbnail re-renders without a hard refresh
+      onSaved({ url: `${reordered[0].url}?t=${Date.now()}` });
     }
   }
 
@@ -199,8 +201,9 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     persistOrder(reordered);
     // Cascade new primary URL to portfolio_images.url (and artworks.url if linked)
     setPrimaryWorkImageUrl(work.id, target.url);
-    // Immediately update parent WorksTable state so Thumb re-renders without a hard refresh
-    onSaved({ url: target.url });
+    // Update parent WorksTable so the thumbnail re-renders without a hard refresh
+    // ?t= busts the browser cache in case the element key hasn't changed
+    onSaved({ url: `${target.url}?t=${Date.now()}` });
   }
 
   async function handleSaveCaption(id: string, value: string) {
