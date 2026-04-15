@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { sendClaimInvite } from "@/app/admin/opportunities/claim-actions";
 import {
-  sendClaimInvite,
   buildClaimOnlyBody,
   buildClaimPipelineBody,
   buildTemplateSubject,
   buildClaimUrl,
-} from "@/app/admin/opportunities/claim-actions";
+} from "@/app/admin/opportunities/claim-templates";
 import type { Opportunity } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";

@@ -5,8 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import {
+  buildClaimOnlyBody,
+  buildClaimPipelineBody,
+  buildTemplateSubject,
+  buildClaimUrl,
+  type TemplateVars,
+} from "./claim-templates";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 const FROM = "Blake Aitken <blake@patronage.nz>";
 
 function getResend(): Resend {
@@ -34,7 +40,6 @@ function getNext9amNZST(): string {
 // ── Plain-text → HTML conversion ─────────────────────────────────────────────
 
 function bodyToHtml(text: string): string {
-  // Escape HTML, then linkify URLs, then convert newlines
   const escaped = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -52,7 +57,6 @@ function bodyToHtml(text: string): string {
 
 export async function trackClaimOpen(token: string): Promise<void> {
   const admin = createAdminClient();
-  // Fetch current values
   const { data: opp } = await admin
     .from("opportunities")
     .select("id, claim_link_opened_at, claim_link_open_count")
@@ -88,7 +92,6 @@ export async function sendClaimInvite(
 
   const supabase = await createClient();
 
-  // Ensure the opportunity has a claim token; generate one if missing
   const { data: opp } = await supabase
     .from("opportunities")
     .select("id, claim_token, claim_token_expires_at")
@@ -99,7 +102,6 @@ export async function sendClaimInvite(
 
   let claimToken = opp.claim_token;
   if (!claimToken || !opp.claim_token_expires_at || new Date(opp.claim_token_expires_at) < new Date()) {
-    // Generate a fresh token (14-day expiry)
     claimToken = crypto.randomUUID();
     await supabase
       .from("opportunities")
@@ -123,7 +125,6 @@ export async function sendClaimInvite(
 
   if (sendError) return { error: (sendError as { message?: string }).message ?? "Send failed." };
 
-  // Record the send
   await supabase
     .from("opportunities")
     .update({
@@ -138,64 +139,7 @@ export async function sendClaimInvite(
   return { scheduledFor: scheduledAt };
 }
 
-// ── Build template text (with all placeholders replaced) ─────────────────────
-
-export interface TemplateVars {
-  recipientName: string;
-  opportunityTitle: string;
-  claimUrl: string;
-}
-
-export function buildClaimOnlyBody(vars: TemplateVars): string {
-  return `Kia ora ${vars.recipientName},
-
-My name's Blake. I'm an artist and the founder of Patronage, a career infrastructure platform for New Zealand creatives.
-
-Your ${vars.opportunityTitle} is already live on our directory to help drive visibility. Listing opportunities on Patronage is always completely free.
-
-Claim your listing here:
-${vars.claimUrl}
-
-Feel free to get in touch if you have any questions.
-
-patronage.nz/partners
-Blake Aitken · patronage.nz/blakeaitken · +64 27 536 4850`;
-}
-
-export function buildClaimPipelineBody(vars: TemplateVars): string {
-  return `Kia ora ${vars.recipientName},
-
-My name's Blake. I'm an artist and the founder of Patronage, a career infrastructure platform for New Zealand creatives.
-
-Your ${vars.opportunityTitle} is already live on our directory to help drive visibility. Listing opportunities on Patronage is always completely free. Claim your listing and open your free Partner account here:
-
-${vars.claimUrl}
-
-I noticed your submission process currently runs through manual channels. That administrative friction — downloading forms, organising folders, matching emails to applications — is exactly what our Pipeline tool was built to address.
-
-For now, all you need to do is claim your listing. But when you're ready to streamline applications, you can run your next round through our Pipeline dashboard completely free of charge. Artists apply with one click — CVs, portfolios, and answers to your questions arrive standardised in one secure dashboard.
-
-Feel free to claim the listing today, and keep us in mind for your next round.
-
-patronage.nz/partners
-Blake Aitken · patronage.nz/blakeaitken · +64 27 536 4850`;
-}
-
-export function buildTemplateSubject(
-  template: "claim_only" | "claim_pipeline",
-  opportunityTitle: string
-): string {
-  if (template === "claim_only") {
-    return `${opportunityTitle} is live on Patronage`;
-  }
-  return `${opportunityTitle} is live on Patronage — streamline your next round`;
-}
-
-export function buildClaimUrl(token: string): string {
-  return `${SITE_URL}/claim-listing/${token}`;
-}
-
-// ── Bulk send claim invites ───────────────────────────────────────────────────
+// ── Bulk send (individual item, called client-side in loop) ───────────────────
 
 export interface BulkSendItem {
   opportunityId: string;
@@ -207,23 +151,6 @@ export interface BulkSendItem {
   alreadySent: boolean;
 }
 
-export interface BulkSendInput {
-  items: BulkSendItem[];
-  template: "claim_only" | "claim_pipeline";
-  scheduleFor9am: boolean;
-  includeAlreadySent: boolean;
-}
-
-export interface BulkSendResult {
-  sent: number;
-  scheduled: number;
-  skippedAlreadySent: number;
-  skippedNoEmail: number;
-  failed: number;
-  errors: string[];
-}
-
-// Individual item send for bulk (called client-side in a loop with delay)
 export async function sendSingleBulkInvite(
   item: BulkSendItem,
   template: "claim_only" | "claim_pipeline",
@@ -233,7 +160,6 @@ export async function sendSingleBulkInvite(
 
   const supabase = await createClient();
 
-  // Ensure token exists
   let claimToken = item.claimToken;
   if (!claimToken || !item.claimTokenExpiresAt || new Date(item.claimTokenExpiresAt) < new Date()) {
     claimToken = crypto.randomUUID();
