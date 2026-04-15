@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Transforms `import { X } from 'lucide-react'` to direct module paths at
     // build time — avoids loading all 1,500+ icons on every cold start.
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["lucide-react", "recharts"],
   },
   images: {
     formats: ["image/avif", "image/webp"],

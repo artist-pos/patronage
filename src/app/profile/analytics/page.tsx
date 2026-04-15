@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getProfileStats } from "@/lib/profileAnalytics";
@@ -7,6 +8,17 @@ import { getFollowers } from "@/lib/follows";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
 
 export const metadata = { title: "Analytics — Patronage" };
+
+const ProfileViewsChart = dynamic(
+  () => import("@/components/analytics/ProfileViewsChart").then((m) => m.ProfileViewsChart),
+  { ssr: false }
+);
+
+const RANGE_OPTIONS = [
+  { label: "7d", days: 7 },
+  { label: "30d", days: 30 },
+  { label: "90d", days: 90 },
+] as const;
 
 function StatCard({
   label,
@@ -50,7 +62,11 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-export default async function ProfileAnalyticsPage() {
+interface PageProps {
+  searchParams: Promise<{ range?: string }>;
+}
+
+export default async function ProfileAnalyticsPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
@@ -60,8 +76,12 @@ export default async function ProfileAnalyticsPage() {
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
 
+  const { range } = await searchParams;
+  const days = range === "7" ? 7 : range === "90" ? 90 : 30;
+  const periodLabel = days === 7 ? "7d" : days === 90 ? "90d" : "30d";
+
   const [stats, followers] = await Promise.all([
-    getProfileStats(user.id),
+    getProfileStats(user.id, days),
     getFollowers(user.id),
   ]);
 
@@ -74,11 +94,29 @@ export default async function ProfileAnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
 
-      <div className="space-y-1 border-b border-border pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="text-sm text-muted-foreground">
-          How your profile is performing — last 30 days.
-        </p>
+      <div className="flex items-end justify-between gap-4 border-b border-border pb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground">
+            How your profile is performing.
+          </p>
+        </div>
+        {/* Date range toggle */}
+        <div className="flex gap-1 shrink-0">
+          {RANGE_OPTIONS.map(({ label, days: d }) => (
+            <Link
+              key={label}
+              href={`/profile/analytics?range=${d}`}
+              className={`text-xs px-3 py-1.5 border transition-colors ${
+                days === d
+                  ? "border-black bg-black text-white"
+                  : "border-border hover:border-black"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ── Audience ── */}
@@ -93,34 +131,15 @@ export default async function ProfileAnalyticsPage() {
           </div>
           {stats.followersGained30 > 0 && (
             <p className="text-sm text-green-600 mb-1">
-              +{stats.followersGained30} this month
+              +{stats.followersGained30} this period
             </p>
           )}
         </div>
         <FollowersTab followers={followers} />
       </section>
 
-      {/*
-        TODO: Date range selector — replace the hardcoded 30-day window with a
-        client-side toggle (7d / 30d / 90d / all time). The analytics_events table
-        already stores created_at on every row; getProfileStats() just needs a
-        `since` parameter threaded through, and the page needs to re-fetch on change.
-
-        TODO: Profile views line chart — recharts is already installed. The
-        analytics_events rows for event_type="profile_view" have created_at
-        timestamps. Group by day (truncate to date), fill gaps with 0, and render
-        a <LineChart> from recharts below the StatCard grid. This is more useful
-        than the 30-day total alone because it shows trend direction.
-
-        TODO: Per-work engagement breakdown — analytics_events rows with
-        event_type="artwork_view" carry payload.portfolio_image_id (or similar).
-        Join against portfolio_images to show a ranked list: which works are
-        getting opened, and how often. Render as a simple table or bar chart
-        beneath the Engagement section.
-      */}
-
       {/* ── Discovery ── */}
-      <section className="space-y-4 border-t border-border pt-8">
+      <section className="space-y-5 border-t border-border pt-8">
         <SectionLabel label="Discovery" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard
@@ -128,21 +147,22 @@ export default async function ProfileAnalyticsPage() {
             value={stats.profileViews30}
             prevValue={stats.profileViewsPrev30}
             description="Visits to your public profile, excluding your own"
-            period="30d"
+            period={periodLabel}
           />
           <StatCard
             label="CV Downloads"
             value={stats.cvClicks30}
             description="Clicks on your CV link"
-            period="30d"
+            period={periodLabel}
           />
           <StatCard
             label="Website Clicks"
             value={stats.websiteClicks30}
             description="Clicks through to your personal website"
-            period="30d"
+            period={periodLabel}
           />
         </div>
+        <ProfileViewsChart data={stats.profileViewsTimeline} days={days} />
       </section>
 
       {/* ── Engagement ── */}
@@ -153,13 +173,13 @@ export default async function ProfileAnalyticsPage() {
             label="Artwork Views"
             value={stats.artworkViews30}
             description="Times your portfolio works were opened"
-            period="30d"
+            period={periodLabel}
           />
           <StatCard
             label="Followers Gained"
             value={stats.followersGained30}
-            description="New followers in the last 30 days"
-            period="30d"
+            description={`New followers in the last ${days} days`}
+            period={periodLabel}
           />
         </div>
       </section>
@@ -183,7 +203,7 @@ export default async function ProfileAnalyticsPage() {
               label="Works Added"
               value={stats.worksAdded30}
               description="New works added to your portfolio"
-              period="30d"
+              period={periodLabel}
             />
           </div>
         </section>
