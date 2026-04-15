@@ -19,10 +19,69 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
-import { X } from "lucide-react";
+import { X, Mail } from "lucide-react";
+import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
+import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import type { Opportunity } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
+type ClaimStatus = "none" | "scheduled" | "sent" | "opened" | "claimed";
+type ClaimFilter = "all" | ClaimStatus;
+
+function getClaimStatus(o: Opportunity): ClaimStatus {
+  if (o.profile_id) return "claimed";
+  if (o.claim_link_opened_at) return "opened";
+  if (o.claim_invite_sent_at) return "sent";
+  if (o.claim_invite_scheduled_for) return "scheduled";
+  return "none";
+}
+
+function ClaimStatusBadge({ opp }: { opp: Opportunity }) {
+  const status = getClaimStatus(opp);
+
+  const styles: Record<ClaimStatus, string> = {
+    none: "text-muted-foreground",
+    scheduled: "bg-blue-50 text-blue-700 border border-blue-200",
+    sent: "bg-stone-100 text-stone-600 border border-stone-200",
+    opened: "bg-amber-50 text-amber-700 border border-amber-200",
+    claimed: "bg-green-100 text-green-700 border border-green-200",
+  };
+
+  const labels: Record<ClaimStatus, string> = {
+    none: "—",
+    scheduled: "Scheduled",
+    sent: "Sent",
+    opened: "Opened",
+    claimed: "Claimed",
+  };
+
+  let tooltip = "";
+  if (status === "scheduled" && opp.claim_invite_scheduled_for) {
+    tooltip = `Scheduled for ${new Date(opp.claim_invite_scheduled_for).toLocaleString("en-NZ")}`;
+  } else if (status === "sent" && opp.claim_invite_sent_at) {
+    tooltip = `Sent ${new Date(opp.claim_invite_sent_at).toLocaleString("en-NZ")}`;
+    if (opp.claim_invite_email) tooltip += ` to ${opp.claim_invite_email}`;
+  } else if (status === "opened" && opp.claim_link_opened_at) {
+    tooltip = `First opened ${new Date(opp.claim_link_opened_at).toLocaleString("en-NZ")}`;
+    if (opp.claim_link_open_count > 1) tooltip += ` · ${opp.claim_link_open_count} opens`;
+  } else if (status === "claimed") {
+    tooltip = "Listing has been claimed by an organisation";
+  }
+
+  if (status === "none") {
+    return <span className="text-[11px] text-muted-foreground">—</span>;
+  }
+
+  return (
+    <span
+      title={tooltip || undefined}
+      className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium cursor-default ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -56,6 +115,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [editTarget, setEditTarget] = useState<Opportunity | null>(null);
   const [newListingPending, setNewListingPending] = useState(false);
   const [claimTargetId, setClaimTargetId] = useState<string | null>(null);
+
+  // Claim invite state
+  const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPanelOpen, setBulkPanelOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
 
   const [claimState, setClaimState] = useState<Record<string, ClaimState>>(
     () =>
@@ -127,14 +193,81 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
     });
   }
 
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(visibleIds: string[]) {
+    const allSelected = visibleIds.every(id => selected.has(id));
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  }
+
   const claimOpp = claimTargetId ? opps.find((o) => o.id === claimTargetId) ?? null : null;
   const claim = claimTargetId ? claimState[claimTargetId] : null;
   const claimUrl = claim?.token ? `${SITE_URL}/claim-listing/${claim.token}` : null;
+  const inviteOpp = inviteTargetId ? opps.find(o => o.id === inviteTargetId) ?? null : null;
+  const selectedOpps = opps.filter(o => selected.has(o.id));
+
+  // Filter opps by claim status
+  const filteredOpps = claimFilter === "all"
+    ? opps
+    : opps.filter(o => getClaimStatus(o) === claimFilter);
+
+  const visibleIds = filteredOpps.map(o => o.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
 
   return (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-end mb-4">
+      {/* Header toolbar */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          {/* Claim filter */}
+          <select
+            value={claimFilter}
+            onChange={e => setClaimFilter(e.target.value as ClaimFilter)}
+            className="text-xs border border-border px-2 py-1.5 focus:outline-none focus:border-black bg-background"
+          >
+            <option value="all">All claim statuses</option>
+            <option value="none">No invite sent</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="sent">Sent</option>
+            <option value="opened">Opened</option>
+            <option value="claimed">Claimed</option>
+          </select>
+
+          {/* Bulk invite button */}
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setBulkPanelOpen(true)}
+              className="text-xs bg-black text-white px-3 py-1.5 hover:bg-black/80 transition-colors"
+            >
+              Send claim invites ({selected.size})
+            </button>
+          )}
+        </div>
+
         <Button
           size="sm"
           variant="outline"
@@ -146,103 +279,141 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Title</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Type</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Country</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Deadline</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Status</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Actions</th>
-                <th className="py-3 pr-4 font-medium text-muted-foreground">Claim</th>
-                <th className="py-3 font-medium text-muted-foreground">Report</th>
-              </tr>
-            </thead>
-            <tbody>
-              {opps.map((o) => {
-                const expired = o.deadline && o.deadline < today;
-                const isSelected = claimTargetId === o.id;
-                const hasToken = !!(claimState[o.id]?.token);
+      {/* Toast */}
+      {toast && (
+        <div className="mb-3 text-xs bg-black text-white px-4 py-2.5">
+          {toast}
+        </div>
+      )}
 
-                return (
-                  <tr
-                    key={o.id}
-                    className={`border-b border-border transition-colors ${isSelected ? "bg-blue-50/40" : ""}`}
-                  >
-                    <td className="py-3 pr-4 max-w-[200px]">
-                      <span className="line-clamp-1">{o.title}</span>
-                      <span className="text-muted-foreground block truncate">{o.organiser}</span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <Badge variant="outline" className="text-xs font-normal">{o.type}</Badge>
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">{o.country}</td>
-                    <td className="py-3 pr-4">
-                      <span className={expired ? "text-destructive" : "text-muted-foreground"}>
-                        {o.deadline ?? "Open"}{expired && " (expired)"}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <StatusBadge status={o.status} />
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="flex gap-1.5">
-                        <Button
-                          size="sm"
-                          variant={o.is_active ? "outline" : "default"}
-                          disabled={isPending}
-                          onClick={() => act(() => toggleOpportunityActive(o.id, o.is_active))}
-                          className="text-xs h-7 px-2"
-                        >
-                          {o.is_active ? "Deactivate" : "Activate"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isPending}
-                          onClick={() => setDeleteTarget(o)}
-                          className="text-xs h-7 px-2 text-destructive hover:text-destructive"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th className="py-3 pr-3 font-medium text-muted-foreground w-8">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={() => toggleSelectAll(visibleIds)}
+                  className="cursor-pointer"
+                />
+              </th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Title</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Type</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Country</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Deadline</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Status</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Claim status</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Actions</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Claim</th>
+              <th className="py-3 font-medium text-muted-foreground">Report</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOpps.map((o) => {
+              const expired = o.deadline && o.deadline < today;
+              const isClaimSelected = claimTargetId === o.id;
+              const hasToken = !!(claimState[o.id]?.token);
+              const isChecked = selected.has(o.id);
+
+              return (
+                <tr
+                  key={o.id}
+                  className={`border-b border-border transition-colors ${isClaimSelected ? "bg-blue-50/40" : isChecked ? "bg-muted/30" : ""}`}
+                >
+                  <td className="py-3 pr-3">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleSelect(o.id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
+                  <td className="py-3 pr-4 max-w-[200px]">
+                    <span className="line-clamp-1">{o.title}</span>
+                    <span className="text-muted-foreground block truncate">{o.organiser}</span>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Badge variant="outline" className="text-xs font-normal">{o.type}</Badge>
+                  </td>
+                  <td className="py-3 pr-4 text-muted-foreground">{o.country}</td>
+                  <td className="py-3 pr-4">
+                    <span className={expired ? "text-destructive" : "text-muted-foreground"}>
+                      {o.deadline ?? "Open"}{expired && " (expired)"}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <StatusBadge status={o.status} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <ClaimStatusBadge opp={o} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant={o.is_active ? "outline" : "default"}
+                        disabled={isPending}
+                        onClick={() => act(() => toggleOpportunityActive(o.id, o.is_active))}
+                        className="text-xs h-7 px-2"
+                      >
+                        {o.is_active ? "Deactivate" : "Activate"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isPending}
+                        onClick={() => setDeleteTarget(o)}
+                        className="text-xs h-7 px-2 text-destructive hover:text-destructive"
+                      >
+                        Delete
+                      </Button>
                       <button
                         type="button"
-                        onClick={() => setClaimTargetId(isSelected ? null : o.id)}
-                        className={`text-xs px-2 py-1 border transition-colors ${
-                          isSelected
-                            ? "border-black bg-black text-white"
-                            : hasToken
-                            ? "border-green-600 text-green-700 hover:bg-green-50"
-                            : "border-black/40 text-muted-foreground hover:border-black hover:text-foreground"
-                        }`}
+                        title="Send claim invite"
+                        onClick={() => setInviteTargetId(o.id)}
+                        className="inline-flex items-center justify-center h-7 w-7 border border-border hover:border-black transition-colors text-muted-foreground hover:text-foreground"
                       >
-                        {hasToken ? "Link ready" : "Claim link"}
+                        <Mail className="w-3.5 h-3.5" />
                       </button>
-                    </td>
-                    <td className="py-3">
-                      <Link
-                        href={`/admin/opportunities/${o.id}/report`}
-                        className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Report →
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {opps.length === 0 && (
-            <p className="text-sm text-muted-foreground py-8 text-center">No opportunities yet.</p>
-          )}
-        </div>
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <button
+                      type="button"
+                      onClick={() => setClaimTargetId(isClaimSelected ? null : o.id)}
+                      className={`text-xs px-2 py-1 border transition-colors ${
+                        isClaimSelected
+                          ? "border-black bg-black text-white"
+                          : hasToken
+                          ? "border-green-600 text-green-700 hover:bg-green-50"
+                          : "border-black/40 text-muted-foreground hover:border-black hover:text-foreground"
+                      }`}
+                    >
+                      {hasToken ? "Link ready" : "Claim link"}
+                    </button>
+                  </td>
+                  <td className="py-3">
+                    <Link
+                      href={`/admin/opportunities/${o.id}/report`}
+                      className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Report →
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {filteredOpps.length === 0 && (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            {claimFilter !== "all" ? "No opportunities with this claim status." : "No opportunities yet."}
+          </p>
+        )}
+      </div>
 
-      {/* ── Claim modal ──────────────────────────────────────────────────── */}
+      {/* ── Claim link modal ──────────────────────────────────────────────── */}
       {claimOpp && claim && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -327,6 +498,33 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Claim invite panel ────────────────────────────────────────────── */}
+      {inviteOpp && (
+        <ClaimInvitePanel
+          opp={inviteOpp}
+          onClose={() => setInviteTargetId(null)}
+          onSent={(msg) => {
+            setInviteTargetId(null);
+            showToast(msg);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* ── Bulk claim panel ──────────────────────────────────────────────── */}
+      {bulkPanelOpen && selectedOpps.length > 0 && (
+        <BulkClaimPanel
+          opps={selectedOpps}
+          onClose={() => setBulkPanelOpen(false)}
+          onDone={(msg) => {
+            setBulkPanelOpen(false);
+            setSelected(new Set());
+            showToast(msg);
+            router.refresh();
+          }}
+        />
       )}
 
       {/* Edit modal — triggered after creating a new draft */}

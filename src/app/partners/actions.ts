@@ -4,6 +4,41 @@ import { createClient } from "@/lib/supabase/server";
 import { notifyOpportunitySubmission } from "@/lib/email";
 import { Resend } from "resend";
 
+// ── Admin: update an activation type row ─────────────────────────────────────
+
+export async function updateActivationType(
+  id: string,
+  data: {
+    title?: string;
+    description?: string;
+    image_url?: string | null;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  // Verify admin/owner role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (!profile || !["admin", "owner"].includes(profile.role ?? "")) {
+    return { error: "Not authorised." };
+  }
+
+  const { error } = await supabase
+    .from("activation_types")
+    .update(data)
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function submitActivationEnquiry(data: {
   name: string;
   organisation: string;

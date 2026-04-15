@@ -126,6 +126,13 @@ export interface Opportunity {
   claim_token: string | null;
   claim_email: string | null;
   claim_token_expires_at: string | null;
+  // Claim invite tracking (migration 090)
+  claim_invite_sent_at: string | null;
+  claim_invite_email: string | null;
+  claim_invite_scheduled_for: string | null;
+  claim_invite_template: 'claim_only' | 'claim_pipeline' | null;
+  claim_link_opened_at: string | null;
+  claim_link_open_count: number;
 }
 
 export type RecurrencePattern =

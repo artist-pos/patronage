@@ -100,6 +100,25 @@ export default async function ProfileAnalyticsPage() {
         <FollowersTab followers={followers} />
       </section>
 
+      {/*
+        TODO: Date range selector — replace the hardcoded 30-day window with a
+        client-side toggle (7d / 30d / 90d / all time). The analytics_events table
+        already stores created_at on every row; getProfileStats() just needs a
+        `since` parameter threaded through, and the page needs to re-fetch on change.
+
+        TODO: Profile views line chart — recharts is already installed. The
+        analytics_events rows for event_type="profile_view" have created_at
+        timestamps. Group by day (truncate to date), fill gaps with 0, and render
+        a <LineChart> from recharts below the StatCard grid. This is more useful
+        than the 30-day total alone because it shows trend direction.
+
+        TODO: Per-work engagement breakdown — analytics_events rows with
+        event_type="artwork_view" carry payload.portfolio_image_id (or similar).
+        Join against portfolio_images to show a ranked list: which works are
+        getting opened, and how often. Render as a simple table or bar chart
+        beneath the Engagement section.
+      */}
+
       {/* ── Discovery ── */}
       <section className="space-y-4 border-t border-border pt-8">
         <SectionLabel label="Discovery" />

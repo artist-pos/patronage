@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimListing } from "./actions";
+import { TrackClaimOpen } from "./TrackClaimOpen";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -98,6 +99,9 @@ export default async function ClaimListingPage({ params }: Props) {
 
   return (
     <div className="max-w-sm mx-auto px-6 py-20 space-y-8">
+      {/* Fire-and-forget: track that the claim link was opened */}
+      <TrackClaimOpen token={token} />
+
       {/* Listing preview card */}
       <div className="border border-black overflow-hidden">
         {opp.featured_image_url && (

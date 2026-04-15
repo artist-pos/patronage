@@ -71,6 +71,28 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   const landingUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/live/${c.slug}/${profile.username}`;
 
+  /*
+    TODO: Campaign analytics — QR scans are tracked in engagement_logs with
+    event_type="qr_scan" and a campaign_id in the payload. To build the timeline
+    chart:
+
+    1. Query engagement_logs WHERE payload->>'campaign_id' = campaign.id,
+       grouped by date (date_trunc('day', created_at)) to get scans_per_day[].
+
+    2. Render a recharts <AreaChart> or <BarChart> with:
+       - X axis: date range from campaign_start_date to campaign_end_date
+       - Y axis: scan count
+       - A reference area shading the active campaign window
+       - Zero-filled days so gaps don't produce misleading slopes
+
+    3. Show aggregate totals alongside: total scans, unique days with activity,
+       peak day. These can be computed client-side from the scans_per_day array.
+
+    4. The engagement_logs table (migration 086) already has the right schema;
+       no new migration needed. Just add the query to this server component
+       and pass the data to a new <CampaignScanChart> client component.
+  */
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
       {/* Breadcrumb */}

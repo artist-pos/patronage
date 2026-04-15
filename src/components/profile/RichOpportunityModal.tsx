@@ -184,6 +184,12 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       claim_token: null,
       claim_email: null,
       claim_token_expires_at: null,
+      claim_invite_sent_at: null,
+      claim_invite_email: null,
+      claim_invite_scheduled_for: null,
+      claim_invite_template: null,
+      claim_link_opened_at: null,
+      claim_link_open_count: 0,
     };
 
     onSuccess?.(optimistic);

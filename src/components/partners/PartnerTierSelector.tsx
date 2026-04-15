@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 import { ActivationsColumn } from "@/components/partners/ActivationsColumn";
+import { PipelineConfigPanel, type PipelineExternalConfig } from "@/components/partners/PipelineConfigPanel";
+import type { ActivationType } from "@/app/partners/page";
 
 type Tier = "standard" | "featured" | "pipeline";
 
@@ -34,138 +36,208 @@ const TIERS = [
 interface Props {
   isLoggedIn: boolean;
   partnerName: string | null;
+  activationTypes: ActivationType[];
+  isAdmin: boolean;
 }
 
-export function PartnerTierSelector({ isLoggedIn, partnerName }: Props) {
+export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, isAdmin }: Props) {
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
+  // Featured placement add-on (for Standard and Pipeline tiers; Featured is always true)
+  const [addFeatured, setAddFeatured] = useState(false);
+  const [pipelineConfigActive, setPipelineConfigActive] = useState(false);
+  const [pipelineExternalConfig, setPipelineExternalConfig] = useState<PipelineExternalConfig | null>(null);
+
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   const pipelineSelected = selectedTier === "pipeline";
 
+  // The effective featured value: Featured tier is always featured; others use addFeatured checkbox
+  const isFeaturedEffective = selectedTier === "featured" ? true : addFeatured;
+
+  function handleTierSelect(tier: Tier) {
+    setSelectedTier(tier);
+    // Reset add-on when switching tiers (Featured tier is always featured, no add-on needed)
+    setAddFeatured(false);
+    if (tier !== "pipeline") {
+      setPipelineConfigActive(false);
+      setPipelineExternalConfig(null);
+    }
+  }
+
+  function handleConfigurePipeline(config: PipelineExternalConfig) {
+    setPipelineExternalConfig(config);
+    setPipelineConfigActive(true);
+    setTimeout(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
+
+  function handlePipelineConfigChange(updated: Partial<PipelineExternalConfig>) {
+    setPipelineExternalConfig(prev => prev ? { ...prev, ...updated } : null);
+  }
+
+  // ── Right column header content — switches based on state ──────────────────
+  const rightHeader = pipelineSelected && pipelineConfigActive
+    ? { title: "Application setup", desc: "Configure how artists apply. Defaults for your opportunity type are pre-filled — customise as needed." }
+    : pipelineSelected
+    ? { title: "Pipeline", desc: "Manage the full application lifecycle through Patronage. Artists apply with their profile — no emails, no spreadsheets." }
+    : { title: "Activations", desc: "Partner with us to commission artists for surfaces you already own — hoardings, vehicles, packaging, screens — and turn existing budgets into public art with full impact reporting." };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20">
+    <div ref={sectionRef}>
+      {/*
+        4-item grid so both column headers share the same auto-row height.
+        On desktop: items 1+2 are the headers (same row), items 3+4 are the content.
+        On mobile: single column, all stack.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-[auto_1fr] gap-x-16 lg:gap-x-20">
 
-      {/* ── Left column — List an opportunity ─────────────────────────────── */}
-      <div className="space-y-8">
-        <div className="space-y-2 border-b border-black pb-6">
+        {/* ── Left header ───────────────────────────────────────────────── */}
+        <div className="space-y-2 border-b border-black pb-6 mb-8">
           <h2 className="text-xl font-semibold tracking-tight">List an opportunity</h2>
-          <p className="text-sm text-muted-foreground">
-            Select a listing type to get started.
-          </p>
+          <p className="text-sm text-muted-foreground">Select a listing type to get started.</p>
         </div>
 
-        {/* Pricing cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {TIERS.map(tier => (
-            <button
-              key={tier.id}
-              type="button"
-              onClick={() => setSelectedTier(tier.id)}
-              className={`relative text-left border-2 p-4 space-y-2 transition-colors hover:border-black ${
-                selectedTier === tier.id ? "border-black" : "border-border"
-              }`}
-            >
-              {tier.popular && (
-                <span className="absolute -top-2.5 left-3 bg-black text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wider">
-                  Most popular
-                </span>
-              )}
-              <div className="space-y-0.5">
-                <p className="text-sm font-semibold">{tier.label}</p>
-                <div className="flex items-baseline gap-1.5 flex-wrap">
-                  {"strikePrice" in tier && tier.strikePrice && (
-                    <s className="text-[11px] text-muted-foreground font-mono">{tier.strikePrice}</s>
-                  )}
-                  <span className="text-xs font-medium font-mono">{tier.price}</span>
+        {/* ── Right header ──────────────────────────────────────────────── */}
+        <div className="hidden lg:block space-y-2 border-b border-black pb-6 mb-8">
+          <h2 className="text-xl font-semibold tracking-tight">{rightHeader.title}</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">{rightHeader.desc}</p>
+        </div>
+
+        {/* ── Left content ──────────────────────────────────────────────── */}
+        <div className="space-y-8 lg:row-start-2">
+
+          {/* Pricing cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {TIERS.map(tier => (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => handleTierSelect(tier.id)}
+                className={`relative text-left border-2 p-4 space-y-2 transition-colors hover:border-black ${
+                  selectedTier === tier.id ? "border-black" : "border-border"
+                }`}
+              >
+                {tier.popular && (
+                  <span className="absolute -top-2.5 left-3 bg-black text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wider">
+                    Most popular
+                  </span>
+                )}
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">{tier.label}</p>
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    {"strikePrice" in tier && tier.strikePrice && (
+                      <s className="text-[11px] text-muted-foreground font-mono">{tier.strikePrice}</s>
+                    )}
+                    <span className="text-xs font-medium font-mono">{tier.price}</span>
+                  </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{tier.body}</p>
+              </button>
+            ))}
+          </div>
+
+          {/* Featured placement add-on — shown for Standard and Pipeline (not Featured, which is already featured) */}
+          {selectedTier && selectedTier !== "featured" && (
+            <label className="flex items-start gap-3 cursor-pointer border border-border px-4 py-3">
+              <input
+                type="checkbox"
+                checked={addFeatured}
+                onChange={e => setAddFeatured(e.target.checked)}
+                className="mt-0.5 shrink-0"
+              />
+              <div className="space-y-0.5">
+                <p className="text-xs">
+                  <span className="font-medium text-foreground">Add featured placement</span>
+                  {" — "}
+                  <s className="text-muted-foreground opacity-60">$150</s>
+                  {" "}
+                  <span className="font-medium text-foreground">$75 NZD</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Pinned to top of feed and weekly digest for the duration of your listing.
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{tier.body}</p>
-            </button>
-          ))}
-        </div>
+            </label>
+          )}
 
-        {/* Featured add-on for Pipeline */}
-        {pipelineSelected && (
-          <div className="border border-border px-4 py-3 text-sm text-muted-foreground">
-            <p className="text-xs">
-              <span className="font-medium text-foreground">Add featured placement</span>
-              {" — "}
-              <s className="opacity-60">$150</s>
-              {" "}
-              <span className="font-medium text-foreground">$75 NZD</span>
+          {/* Small print */}
+          {selectedTier === "pipeline" && (
+            <p className="text-xs text-muted-foreground">
+              Your first Pipeline round is free. No commitment, no card required.
+              Featured rate is introductory and subject to change.
             </p>
-            <p className="text-[11px] mt-0.5 opacity-70">
-              Pinned to top of feed and weekly digest for the duration of your listing.
-            </p>
-          </div>
-        )}
+          )}
 
-        {/* Small print */}
-        <p className="text-xs text-muted-foreground">
-          Your first Pipeline round is free. No commitment, no card required.
-          Featured rate is introductory and subject to change.
-        </p>
-
-        {/* Submission form — expands below pricing on selection */}
-        {selectedTier && (
-          <div className="border-t border-black pt-8 space-y-2">
-            <div className="space-y-0.5">
-              <h3 className="text-base font-semibold">
-                {selectedTier === "standard" && "Standard listing"}
-                {selectedTier === "featured" && "Featured listing"}
-                {selectedTier === "pipeline" && "Pipeline opportunity"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {selectedTier === "pipeline"
-                  ? "Fill in the details below, then configure your application pipeline."
-                  : "Fill in the details below. We review every submission within two business days."}
-              </p>
+          {/* Submission form — expands below pricing on selection */}
+          {selectedTier && (
+            <div className="border-t border-black pt-8 space-y-2">
+              <div className="space-y-0.5">
+                <h3 className="text-base font-semibold">
+                  {selectedTier === "standard" && "Standard listing"}
+                  {selectedTier === "featured" && "Featured listing"}
+                  {selectedTier === "pipeline" && "Pipeline opportunity"}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {selectedTier === "pipeline"
+                    ? "Fill in the details below, then configure your application pipeline."
+                    : "Fill in the details below. We review every submission within two business days."}
+                </p>
+              </div>
+              <OpportunitySubmissionForm
+                isLoggedIn={isLoggedIn}
+                partnerName={partnerName}
+                initialTier={selectedTier}
+                isFeaturedOverride={isFeaturedEffective}
+                onConfigurePipeline={selectedTier === "pipeline" ? handleConfigurePipeline : undefined}
+                pipelineConfigOverride={pipelineExternalConfig}
+              />
             </div>
-            <OpportunitySubmissionForm
-              isLoggedIn={isLoggedIn}
-              partnerName={partnerName}
-              initialTier={selectedTier}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* ── Right column — cross-fades between Activations and Pipeline config ─ */}
-      <div className="relative min-h-[400px]">
-        {/* Activations — shown when pipeline not selected */}
-        <div
-          className="transition-opacity duration-300"
-          style={{ opacity: pipelineSelected ? 0 : 1, pointerEvents: pipelineSelected ? "none" : "auto" }}
-        >
-          <ActivationsColumn />
+          )}
         </div>
 
-        {/* Pipeline config panel — shown on desktop when pipeline selected */}
-        {pipelineSelected && (
-          <div
-            className="hidden lg:block absolute inset-0 transition-opacity duration-300"
-            style={{ opacity: pipelineSelected ? 1 : 0 }}
-          >
-            <PipelineInfoPanel />
-          </div>
-        )}
-      </div>
+        {/* ── Right content ─────────────────────────────────────────────── */}
+        <div className="hidden lg:block lg:row-start-2 relative">
 
+          {/* Activations — visible when no pipeline selected */}
+          <div
+            className="transition-opacity duration-300"
+            style={{
+              opacity: pipelineSelected ? 0 : 1,
+              pointerEvents: pipelineSelected ? "none" : "auto",
+            }}
+          >
+            {/* Header already rendered above; pass hideHeader so ActivationsColumn skips it */}
+            <ActivationsColumn activationTypes={activationTypes} isAdmin={isAdmin} hideHeader />
+          </div>
+
+          {/* Pipeline info panel — visible when pipeline selected but config not yet active */}
+          {pipelineSelected && !pipelineConfigActive && (
+            <div className="absolute inset-0">
+              <PipelineInfoPanel />
+            </div>
+          )}
+
+          {/* Pipeline config panel — visible after "Configure pipeline →" click */}
+          {pipelineSelected && pipelineConfigActive && pipelineExternalConfig && (
+            <div className="absolute inset-0">
+              <PipelineConfigPanel
+                config={pipelineExternalConfig}
+                onChange={handlePipelineConfigChange}
+              />
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
 
-/** Shown in the right column on desktop when Pipeline tier is selected. */
+/** Shown in the right column when Pipeline tier is selected but not yet configured. */
 function PipelineInfoPanel() {
   return (
-    <div className="space-y-8">
-      <div className="space-y-2 border-b border-black pb-6">
-        <h2 className="text-xl font-semibold tracking-tight">Pipeline</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Manage the full application lifecycle through Patronage. Artists apply with their
-          profile — no emails, no spreadsheets.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <div className="space-y-0">
         {[
           { step: "01", heading: "Custom application questions", body: "Add short-answer, file upload, or URL fields. We provide smart defaults based on your opportunity type." },

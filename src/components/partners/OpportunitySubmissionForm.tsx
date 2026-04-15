@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { OpportunityForm, defaultFormData, getDefaultPipelineSetup, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
 import { submitOpportunityAction, type SubmissionState } from "@/app/partners/actions";
 import { getFundingFieldMeta } from "@/lib/opportunity-constants";
+import type { PipelineExternalConfig } from "@/components/partners/PipelineConfigPanel";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
 
@@ -62,10 +63,19 @@ export function OpportunitySubmissionForm({
   isLoggedIn = false,
   partnerName = null,
   initialTier,
+  onConfigurePipeline,
+  pipelineConfigOverride,
+  isFeaturedOverride,
 }: {
   isLoggedIn?: boolean;
   partnerName?: string | null;
   initialTier?: "standard" | "featured" | "pipeline";
+  /** Called when "Configure pipeline →" is clicked on desktop — signals parent to show config in right column */
+  onConfigurePipeline?: (config: PipelineExternalConfig) => void;
+  /** When set, pipeline hidden inputs use these values instead of internal formData */
+  pipelineConfigOverride?: PipelineExternalConfig | null;
+  /** Overrides formData.isFeatured — controlled by the featured placement checkbox in PartnerTierSelector */
+  isFeaturedOverride?: boolean;
 }) {
   const [state, action, isPending] = useActionState<SubmissionState, FormData>(
     submitOpportunityAction, {}
@@ -82,6 +92,19 @@ export function OpportunitySubmissionForm({
   const [hasPreviewed, setHasPreviewed] = useState(false);
   // Track which type was used to seed step 2 defaults
   const lastDefaultTypeRef = useRef<string | null>(null);
+
+  // When pipelineConfigOverride changes, sync it into formData so the preview card reflects it
+  useEffect(() => {
+    if (pipelineConfigOverride) {
+      setFormData(prev => ({
+        ...prev,
+        questions: pipelineConfigOverride.questions,
+        artistDocs: pipelineConfigOverride.artistDocs,
+        termsPdfUrl: pipelineConfigOverride.termsPdfUrl,
+        showBadges: pipelineConfigOverride.showBadges,
+      }));
+    }
+  }, [pipelineConfigOverride]);
 
   const supabase = createClient();
 
@@ -176,6 +199,12 @@ export function OpportunitySubmissionForm({
     claim_token: null,
     claim_email: null,
     claim_token_expires_at: null,
+    claim_invite_sent_at: null,
+    claim_invite_email: null,
+    claim_invite_scheduled_for: null,
+    claim_invite_template: null,
+    claim_link_opened_at: null,
+    claim_link_open_count: 0,
   };
 
   // ── Success screen ──────────────────────────────────────────────────────────
@@ -241,14 +270,14 @@ export function OpportunitySubmissionForm({
         <input type="hidden" name="custom_fields"              value="[]" />
         <input type="hidden" name="show_badges_in_submission"  value={formData.showBadges ? "true" : "false"} />
         <input type="hidden" name="pipeline_config"            value={pipelineConfigValue ? JSON.stringify(pipelineConfigValue) : "null"} />
-        <input type="hidden" name="is_featured"                value={formData.isFeatured ? "true" : "false"} />
+        <input type="hidden" name="is_featured"                value={(isFeaturedOverride ?? formData.isFeatured) ? "true" : "false"} />
         <input type="hidden" name="submitter_email"            value={formData.submitterEmail} />
         <input type="hidden" name="is_recurring"               value={formData.isRecurring ? "true" : "false"} />
         <input type="hidden" name="recurrence_pattern"         value={formData.recurrencePattern} />
         <input type="hidden" name="recurrence_end_date"        value={formData.recurrenceEndDate} />
 
-        {/* Step indicator (pipeline only) */}
-        {formData.routingType === "pipeline" && (
+        {/* Step indicator (pipeline only, inline step 2 mode) */}
+        {formData.routingType === "pipeline" && !onConfigurePipeline && (
           <div className="text-xs text-muted-foreground font-mono mb-6 flex items-center gap-2">
             <span className={step === 1 ? "text-foreground font-semibold" : ""}>Step 1: Opportunity details</span>
             <span>→</span>
@@ -270,6 +299,36 @@ export function OpportunitySubmissionForm({
         {step === 1 && (
           <div className="pt-6 border-t-2 border-black space-y-3">
             {formData.routingType === "pipeline" ? (
+              pipelineConfigOverride ? (
+                /* Pipeline config is active in the right column — show submit */
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => { setShowFullPreview(true); setHasPreviewed(true); }}
+                    className="border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
+                  >
+                    Preview listing →
+                  </button>
+                  {isLoggedIn ? (
+                    <Button type="submit" disabled={isPending}>
+                      {isPending ? "Publishing…" : "Publish opportunity →"}
+                    </Button>
+                  ) : (
+                    <div className="space-y-1">
+                      <a
+                        href="/auth/login?next=/partners"
+                        className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+                      >
+                        Sign in to submit →
+                      </a>
+                      <p className="text-xs text-muted-foreground">
+                        Don&apos;t have an account?{" "}
+                        <a href="/auth/signup?next=/partners" className="underline underline-offset-2">Sign up free</a>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
               <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
@@ -281,22 +340,37 @@ export function OpportunitySubmissionForm({
                 <button
                   type="button"
                   onClick={() => {
-                    // Apply smart defaults if first entry or type changed
-                    if (
-                      formData.questions.length === 0 ||
-                      lastDefaultTypeRef.current !== formData.type
-                    ) {
+                    // Build config with smart defaults
+                    let qs = formData.questions;
+                    let docs = formData.artistDocs;
+                    if (qs.length === 0 || lastDefaultTypeRef.current !== formData.type) {
                       const defaults = getDefaultPipelineSetup(formData.type);
-                      update({ questions: defaults.questions, artistDocs: defaults.artistDocs });
+                      qs = defaults.questions;
+                      docs = defaults.artistDocs;
                       lastDefaultTypeRef.current = formData.type;
                     }
-                    setStep(2);
+                    const config: PipelineExternalConfig = {
+                      type: formData.type,
+                      questions: qs,
+                      artistDocs: docs,
+                      termsPdfUrl: formData.termsPdfUrl,
+                      showBadges: formData.showBadges,
+                    };
+                    if (onConfigurePipeline) {
+                      // Desktop: lift to parent, show in right column
+                      onConfigurePipeline(config);
+                    } else {
+                      // Mobile: advance inline to step 2
+                      update({ questions: qs, artistDocs: docs });
+                      setStep(2);
+                    }
                   }}
                   className="border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
                 >
                   Configure pipeline →
                 </button>
               </div>
+              )
             ) : (
               <>
                 <button

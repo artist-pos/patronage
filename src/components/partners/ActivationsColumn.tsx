@@ -1,34 +1,11 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { Pencil, X, Check, ChevronUp, ChevronDown, EyeOff, Eye } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { submitActivationEnquiry } from "@/app/partners/actions";
-
-const ACTIVATION_TYPES = [
-  {
-    title: "Construction hoardings",
-    description: "Commission artists for construction sites. 12–24 month visibility with QR-linked artist profiles.",
-  },
-  {
-    title: "Billboards",
-    description: "Rotate emerging artists through high-visibility billboard networks with full impact reporting.",
-  },
-  {
-    title: "Truck curtains",
-    description: "Turn fleet vehicles into moving galleries. Nationwide reach, artist commissions, impact tracked.",
-  },
-  {
-    title: "Packaging",
-    description: "Artist work on cups, bags, receipts, and branded products. High-frequency activations.",
-  },
-  {
-    title: "Public art",
-    description: "Permanent and temporary installations in civic spaces. Full pipeline from open call to reporting.",
-  },
-  {
-    title: "Digital surfaces",
-    description: "Screens, projections, and digital displays in retail, transit, and public spaces.",
-  },
-] as const;
+import { updateActivationType } from "@/app/partners/actions";
+import type { ActivationType } from "@/app/partners/page";
 
 const HOW_IT_WORKS = [
   "You brief us on the surface, timeline, and budget",
@@ -43,8 +20,16 @@ const INTEREST_OPTIONS = [
   "Hoardings", "Billboards", "Truck curtains", "Packaging", "Public art", "Other",
 ] as const;
 
-export function ActivationsColumn() {
+interface Props {
+  activationTypes: ActivationType[];
+  isAdmin: boolean;
+  /** When true, the section header (h2 + description) is suppressed — rendered by the parent grid instead */
+  hideHeader?: boolean;
+}
+
+export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeader = false }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [cards, setCards] = useState<ActivationType[]>(initial);
 
   // Enquiry form
   const [, startTransition] = useTransition();
@@ -56,6 +41,14 @@ export function ActivationsColumn() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  // Admin editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<ActivationType>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
 
   function toggleInterest(v: string) {
     setInterests(prev => {
@@ -83,17 +76,87 @@ export function ActivationsColumn() {
     setSent(true);
   }
 
+  // ── Admin helpers ─────────────────────────────────────────────────────────
+
+  function startEdit(card: ActivationType) {
+    setEditingId(card.id);
+    setEditDraft({ title: card.title, description: card.description, image_url: card.image_url });
+    setSaveError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft({});
+    setSaveError(null);
+  }
+
+  async function saveEdit(id: string) {
+    setSaving(true);
+    const result = await updateActivationType(id, {
+      title: editDraft.title,
+      description: editDraft.description,
+      image_url: editDraft.image_url ?? null,
+    });
+    setSaving(false);
+    if (result.error) { setSaveError(result.error); return; }
+    setCards(prev =>
+      prev.map(c => c.id === id ? { ...c, ...editDraft } as ActivationType : c)
+    );
+    setEditingId(null);
+    setEditDraft({});
+  }
+
+  async function toggleVisible(card: ActivationType) {
+    const newVal = !card.is_active;
+    setCards(prev => prev.map(c => c.id === card.id ? { ...c, is_active: newVal } : c));
+    await updateActivationType(card.id, { is_active: newVal });
+  }
+
+  async function moveCard(id: string, dir: "up" | "down") {
+    const idx = cards.findIndex(c => c.id === id);
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= cards.length) return;
+
+    const newCards = [...cards];
+    [newCards[idx], newCards[swapIdx]] = [newCards[swapIdx], newCards[idx]];
+
+    // Update sort_order values
+    const updated = newCards.map((c, i) => ({ ...c, sort_order: i + 1 }));
+    setCards(updated);
+
+    // Persist both affected rows
+    await Promise.all([
+      updateActivationType(updated[idx].id, { sort_order: updated[idx].sort_order }),
+      updateActivationType(updated[swapIdx].id, { sort_order: updated[swapIdx].sort_order }),
+    ]);
+  }
+
+  async function handleImgUpload(file: File, id: string) {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${Date.now()}-${id}.${ext}`;
+    const { error } = await supabase.storage
+      .from("activation-images")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return;
+    const { data } = supabase.storage.from("activation-images").getPublicUrl(path);
+    setEditDraft(prev => ({ ...prev, image_url: data.publicUrl }));
+  }
+
+  const visibleCards = isAdmin ? cards : cards.filter(c => c.is_active);
+
   return (
     <div className="space-y-12">
-      {/* Section header */}
-      <div className="space-y-2 border-b border-black pb-6">
-        <h2 className="text-xl font-semibold tracking-tight">Activations</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Partner with us to commission artists for surfaces you already own — hoardings,
-          vehicles, packaging, screens — and turn existing budgets into public art with full
-          impact reporting.
-        </p>
-      </div>
+      {/* Section header — hidden when parent renders it at the grid level for alignment */}
+      {!hideHeader && (
+        <div className="space-y-2 border-b border-black pb-6">
+          <h2 className="text-xl font-semibold tracking-tight">Activations</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Partner with us to commission artists for surfaces you already own — hoardings,
+            vehicles, packaging, screens — and turn existing budgets into public art with full
+            impact reporting.
+          </p>
+        </div>
+      )}
 
       {/* Carousel */}
       <div className="space-y-3">
@@ -123,19 +186,137 @@ export function ActivationsColumn() {
 
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto scroll-snap-x pb-2 scrollbar-none"
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
           style={{ scrollSnapType: "x mandatory" }}
         >
-          {ACTIVATION_TYPES.map(({ title, description }) => (
+          {visibleCards.map((card, idx) => (
             <div
-              key={title}
-              className="shrink-0 w-56 border border-border p-4 space-y-2"
+              key={card.id}
+              className={`relative shrink-0 w-56 border p-4 space-y-2 group ${
+                card.is_active ? "border-border" : "border-dashed border-border opacity-50"
+              }`}
               style={{ scrollSnapAlign: "start" }}
             >
-              {/* Placeholder image area */}
-              <div className="w-full h-32 bg-stone-100" />
-              <p className="text-sm font-semibold">{title}</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{description}</p>
+              {editingId === card.id ? (
+                /* ── Inline edit mode ── */
+                <div className="space-y-2">
+                  {/* Image */}
+                  <div
+                    className="w-full h-32 bg-stone-100 cursor-pointer relative overflow-hidden"
+                    onClick={() => imgInputRef.current?.click()}
+                  >
+                    {editDraft.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={editDraft.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-[10px] text-muted-foreground">
+                        Click to upload image
+                      </div>
+                    )}
+                    <input
+                      ref={imgInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImgUpload(f, card.id);
+                      }}
+                    />
+                  </div>
+
+                  <input
+                    type="text"
+                    value={editDraft.title ?? ""}
+                    onChange={e => setEditDraft(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Title"
+                    className="w-full border border-border px-2 py-1 text-xs font-semibold focus:outline-none focus:border-black"
+                  />
+                  <textarea
+                    value={editDraft.description ?? ""}
+                    onChange={e => setEditDraft(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Description"
+                    rows={3}
+                    className="w-full border border-border px-2 py-1 text-[11px] leading-relaxed focus:outline-none focus:border-black resize-none"
+                  />
+
+                  {saveError && <p className="text-[10px] text-destructive">{saveError}</p>}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => saveEdit(card.id)}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-1 text-[10px] bg-black text-white py-1 hover:bg-black/80 transition-colors disabled:opacity-50"
+                    >
+                      <Check className="w-3 h-3" />
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="flex-1 flex items-center justify-center gap-1 text-[10px] border border-border py-1 hover:border-black transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Display mode ── */
+                <>
+                  {/* Image */}
+                  {card.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={card.image_url} alt={card.title} className="w-full h-32 object-cover" />
+                  ) : (
+                    <div className="w-full h-32 bg-stone-100" />
+                  )}
+
+                  <p className="text-sm font-semibold">{card.title}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{card.description}</p>
+
+                  {/* Admin controls — appear on hover */}
+                  {isAdmin && (
+                    <div className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 bg-white border border-border shadow-sm p-1">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(card)}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveCard(card.id, "up")}
+                        disabled={idx === 0}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                        title="Move left"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveCard(card.id, "down")}
+                        disabled={idx === visibleCards.length - 1}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                        title="Move right"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleVisible(card)}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        title={card.is_active ? "Hide" : "Show"}
+                      >
+                        {card.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>

@@ -1413,66 +1413,18 @@ export function OpportunityForm({
         </Field>
       </Section>
 
-      {/* ── Section 6: Application Method (create mode only) ──────────── */}
-      {mode === "create" && (
-        <Section label="Application Method">
-          <div className="space-y-4">
-            <div className="flex gap-6">
-              {[
-                { val: "external" as const, label: "External Website", desc: "Artists apply via your website or form" },
-                { val: "pipeline" as const, label: "Patronage Pipeline", desc: "Artists apply with their Patronage profile — work samples, CV, and artist statement already included" },
-              ].map(({ val, label, desc }) => (
-                <label key={val} className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={value.routingType === val}
-                    onChange={() => set({ routingType: val })}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium">{label}</p>
-                      {val === "pipeline" && (
-                        <span className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-[10px] font-medium">
-                          First round free
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={value.isFeatured}
-                onChange={(e) => set({ isFeatured: e.target.checked })}
-                className="mt-0.5"
-              />
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium">Request featured placement</p>
-                  <span className="font-mono text-xs text-muted-foreground"><s>$150 NZD</s></span>
-                  <span className="font-mono text-xs font-medium">$75 NZD</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Pinned at top of the opportunities page, homepage, and weekly digest.</p>
-              </div>
-            </label>
-
-            {value.routingType === "external" && (
-              <Field label="Application URL">
-                <input
-                  type="url"
-                  value={value.url}
-                  onChange={(e) => set({ url: e.target.value })}
-                  placeholder="https://…"
-                  className={FIELD}
-                />
-              </Field>
-            )}
-          </div>
+      {/* ── Section 6: Application URL (create mode, external routing only) ── */}
+      {mode === "create" && value.routingType === "external" && (
+        <Section label="Application">
+          <Field label="Application URL">
+            <input
+              type="url"
+              value={value.url}
+              onChange={(e) => set({ url: e.target.value })}
+              placeholder="https://…"
+              className={FIELD}
+            />
+          </Field>
         </Section>
       )}
 

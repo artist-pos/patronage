@@ -16,6 +16,18 @@ export interface ProfileStats {
   worksAdded30: number;
 }
 
+/*
+  TODO: Date range parameter — add a `since` argument (default: 30 days ago) so
+  callers can pass 7d / 30d / 90d / all-time. Thread it through every .gte()
+  filter below. The page would re-fetch via a client-side state change or a
+  search-param-based server re-render.
+
+  TODO: Per-work engagement — add a separate export `getArtworkViewBreakdown(profileId)`
+  that queries analytics_events WHERE event_type='artwork_view' AND
+  payload->>'profile_id'=profileId, groups by payload->>'portfolio_image_id',
+  and joins against portfolio_images for title/url. Returns a ranked array of
+  { imageId, title, url, views } for display as a table or bar chart.
+*/
 export async function getProfileStats(profileId: string): Promise<ProfileStats> {
   const supabase = await createClient();
 
@@ -64,11 +76,11 @@ export async function getProfileStats(profileId: string): Promise<ProfileStats> 
       .select("id", { count: "exact", head: true })
       .eq("user_id", profileId),
 
-    // New artworks added to portfolio in last 30 days
+    // New portfolio images uploaded in last 30 days
     supabase
-      .from("artworks")
+      .from("portfolio_images")
       .select("id", { count: "exact", head: true })
-      .eq("creator_id", profileId)
+      .eq("profile_id", profileId)
       .gte("created_at", since30),
   ]);
 

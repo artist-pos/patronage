@@ -8,18 +8,37 @@ export const metadata: Metadata = {
     "List opportunities for artists across Aotearoa and Australia, or work with us on activations — hoardings, billboards, and surfaces that turn existing budgets into commissioned public art.",
 };
 
+export type ActivationType = {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
 export default async function PartnersPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: { user } }, { data: activationTypes }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("activation_types")
+      .select("id, title, description, image_url, sort_order, is_active")
+      .order("sort_order"),
+  ]);
 
   let partnerName: string | null = null;
+  let isAdmin = false;
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, username")
+      .select("full_name, username, role")
       .eq("id", user.id)
       .single();
     partnerName = profile?.full_name ?? profile?.username ?? null;
+    isAdmin = ["admin", "owner"].includes(profile?.role ?? "");
   }
 
   return (
@@ -41,7 +60,12 @@ export default async function PartnersPage() {
 
       {/* ── Two-column body ──────────────────────────────────────────────── */}
       <div className="px-6 py-16">
-        <PartnerTierSelector isLoggedIn={!!user} partnerName={partnerName} />
+        <PartnerTierSelector
+          isLoggedIn={!!user}
+          partnerName={partnerName}
+          activationTypes={(activationTypes ?? []) as ActivationType[]}
+          isAdmin={isAdmin}
+        />
       </div>
 
     </div>
