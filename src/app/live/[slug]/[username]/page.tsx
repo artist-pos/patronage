@@ -54,6 +54,8 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
   const cfg = (campaign.landing_page_config ?? {}) as {
     hero_work_id?: string;
     selected_work_ids?: string[];
+    layout_mode?: "shopfront" | "showcase";
+    work_pricing?: Record<string, { available?: boolean; price?: number | null; is_poa?: boolean }>;
     original_available?: boolean;
     original_price?: number | null;
     is_poa?: boolean;

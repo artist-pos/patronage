@@ -20,9 +20,17 @@ interface PrintSize {
   price: string;
 }
 
+interface WorkPricing {
+  available?: boolean;
+  price?: number | null;
+  is_poa?: boolean;
+}
+
 interface StorefrontConfig extends Record<string, unknown> {
   hero_work_id?: string;
   selected_work_ids?: string[];
+  layout_mode?: "shopfront" | "showcase";
+  work_pricing?: Record<string, WorkPricing>;
   original_available?: boolean;
   original_price?: number | null;
   is_poa?: boolean;
@@ -218,6 +226,31 @@ export function CampaignConfigPanel({
   const [paperStock, setPaperStock] = useState(cfg.paper_stock ?? "");
   const [artistStatement, setArtistStatement] = useState(cfg.artist_statement ?? bio ?? "");
 
+  // Layout mode
+  const [layoutMode, setLayoutMode] = useState<"shopfront" | "showcase">(cfg.layout_mode ?? "shopfront");
+
+  // Per-work pricing: { [workId]: { available, price, is_poa } }
+  const [workPricing, setWorkPricing] = useState<Record<string, { available: boolean; price: string; is_poa: boolean }>>(() => {
+    const result: Record<string, { available: boolean; price: string; is_poa: boolean }> = {};
+    if (cfg.work_pricing) {
+      for (const [id, wp] of Object.entries(cfg.work_pricing)) {
+        result[id] = {
+          available: wp.available ?? true,
+          price: wp.price != null ? String(wp.price) : "",
+          is_poa: wp.is_poa ?? false,
+        };
+      }
+    }
+    return result;
+  });
+
+  function setWorkPrice(workId: string, field: "available" | "price" | "is_poa", value: boolean | string) {
+    setWorkPricing(prev => ({
+      ...prev,
+      [workId]: { available: true, price: "", is_poa: false, ...prev[workId], [field]: value },
+    }));
+  }
+
   // Hero picker
   const [showHeroPicker, setShowHeroPicker] = useState(!heroWorkId);
 
@@ -283,6 +316,16 @@ export function CampaignConfigPanel({
       edition_size: editionSize.trim() || undefined,
       paper_stock: paperStock.trim() || undefined,
       artist_statement: artistStatement.trim() || undefined,
+      layout_mode: layoutMode,
+      work_pricing: Object.fromEntries(
+        [...selectedWorkIds]
+          .filter(id => workPricing[id])
+          .map(id => [id, {
+            available: workPricing[id].available,
+            price: workPricing[id].is_poa ? null : (workPricing[id].price ? parseFloat(workPricing[id].price) : null),
+            is_poa: workPricing[id].is_poa,
+          }])
+      ),
     };
   }
 
@@ -552,6 +595,53 @@ export function CampaignConfigPanel({
         </div>
       </section>
 
+      {/* ── Layout mode ─────────────────────────────────────────────────── */}
+      <section className="space-y-4 border-t border-border pt-8">
+        <div className="space-y-1">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Layout</h2>
+          <p className="text-[11px] text-muted-foreground">
+            How your storefront looks when visitors scan the campaign QR.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setLayoutMode("shopfront")}
+            className={`text-left border p-4 space-y-2 transition-colors ${layoutMode === "shopfront" ? "border-black" : "border-border hover:border-stone-300"}`}
+          >
+            <div className="flex flex-col gap-0.5">
+              <div className="w-full h-1.5 bg-current opacity-20 rounded-sm" />
+              <div className="grid grid-cols-3 gap-0.5 mt-1">
+                {[0,1,2,3,4,5].map(i => <div key={i} className="h-6 bg-current opacity-10 rounded-sm" />)}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium">Shopfront</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Grid of all works. Good for art fairs and markets.</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLayoutMode("showcase")}
+            className={`text-left border p-4 space-y-2 transition-colors ${layoutMode === "showcase" ? "border-black" : "border-border hover:border-stone-300"}`}
+          >
+            <div className="flex flex-col gap-0.5">
+              <div className="w-full h-8 bg-current opacity-10 rounded-sm" />
+              <div className="grid grid-cols-3 gap-0.5 mt-1">
+                {[0,1,2].map(i => <div key={i} className="h-3 bg-current opacity-10 rounded-sm" />)}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium">Showcase</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Hero work prominent, others below. Good for exhibitions and hoardings.</p>
+            </div>
+          </button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Each individual work also gets its own QR — when scanned, it always spotlights that specific work.
+        </p>
+      </section>
+
       {/* ── Storefront builder: hero ─────────────────────────────────────── */}
       <section className="space-y-5 border-t border-border pt-8">
         <div className="flex items-start justify-between gap-4">
@@ -749,6 +839,86 @@ export function CampaignConfigPanel({
           </div>
         )}
       </section>
+
+      {/* ── Per-work pricing ────────────────────────────────────────────── */}
+      {selectedWorkIds.size > 0 && (
+        <section className="space-y-4 border-t border-border pt-8">
+          <div className="space-y-1">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Artwork Pricing</h2>
+            <p className="text-[11px] text-muted-foreground">
+              Set a price for each work. Visitors see this when they tap a work on your storefront.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {[...selectedWorkIds].map(workId => {
+              const work = works.find(w => w.id === workId);
+              if (!work) return null;
+              const isImage = !work.content_type || work.content_type === "image";
+              const label = work.caption ?? work.title ?? "Untitled";
+              const wp = workPricing[workId] ?? { available: false, price: "", is_poa: false };
+              return (
+                <div key={workId} className="border border-border p-3 space-y-3">
+                  <div className="flex items-center gap-3">
+                    {isImage && work.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={work.url} alt={label} className="w-10 h-10 object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted shrink-0 flex items-center justify-center">
+                        <span className="text-[9px] text-muted-foreground uppercase">{work.content_type ?? "work"}</span>
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{label}</p>
+                      {workId === heroWorkId && (
+                        <p className="text-[10px] text-muted-foreground">Hero</p>
+                      )}
+                    </div>
+                    {/* Available toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setWorkPrice(workId, "available", !wp.available)}
+                      className={`text-[10px] px-2.5 py-1 border transition-colors shrink-0 ${wp.available ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
+                    >
+                      {wp.available ? "For sale" : "Not for sale"}
+                    </button>
+                  </div>
+
+                  {wp.available && (
+                    <div className="pl-[52px] space-y-2">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setWorkPrice(workId, "is_poa", !wp.is_poa)}
+                          className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${wp.is_poa ? "bg-black" : "bg-stone-200"}`}
+                          role="switch"
+                          aria-checked={wp.is_poa}
+                        >
+                          <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${wp.is_poa ? "left-[18px]" : "left-0.5"}`} />
+                        </button>
+                        <span className="text-xs">Price on application (POA)</span>
+                      </div>
+                      {!wp.is_poa && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={wp.price}
+                            onChange={e => setWorkPrice(workId, "price", e.target.value)}
+                            placeholder="Price (NZD)"
+                            className="w-36 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Commerce ────────────────────────────────────────────────────── */}
       <section className="space-y-6 border-t border-border pt-8">
