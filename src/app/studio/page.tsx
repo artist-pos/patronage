@@ -9,6 +9,7 @@ import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
 import { AddPortfolioWorkButton } from "@/components/dashboard/AddPortfolioWorkButton";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
 import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
+import { CampaignDeleteButton } from "@/components/campaigns/CampaignDeleteButton";
 import type { Metadata } from "next";
 import type { SupportTier } from "@/types/database";
 
@@ -344,7 +345,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
                       {c.campaign_start_date && ` · ${c.campaign_start_date}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${
                       c.status === "live" ? "bg-green-100 text-green-700"
                         : c.status === "completed" ? "bg-stone-100 text-stone-500"
@@ -356,8 +357,9 @@ export default async function StudioPage({ searchParams }: PageProps) {
                       href={`/studio/campaigns/${c.id}`}
                       className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {c.status === "live" ? "View analytics →" : "Configure →"}
+                      {c.status === "live" ? "View →" : "Configure →"}
                     </Link>
+                    <CampaignDeleteButton campaignId={c.id} />
                   </div>
                 </div>
               ))}

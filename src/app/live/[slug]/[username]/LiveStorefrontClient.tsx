@@ -15,6 +15,8 @@ interface WorkPricing {
   available?: boolean;
   price?: number | null;
   is_poa?: boolean;
+  prints_available?: boolean;
+  print_sizes?: Array<{ size: string; price: string }>;
 }
 
 interface Props {
@@ -124,11 +126,17 @@ export function LiveStorefrontClient({
   const displayLabel = displayWork?.caption ?? displayWork?.title ?? campaign.title;
 
   // Global pricing fallback
-  const globalPricing = { available: cfg.original_available, price: cfg.original_price, is_poa: cfg.is_poa };
-  const hasPrints = cfg.prints_available && cfg.print_sizes?.some(r => r.size);
+  const globalPricing = { available: cfg.original_available, price: cfg.original_price, is_poa: cfg.is_poa, prints_available: cfg.prints_available, print_sizes: cfg.print_sizes };
+  const globalHasPrints = cfg.prints_available && cfg.print_sizes?.some(r => r.size);
 
-  // Per-work pricing for the active work
+  // Per-work pricing for the active/display work
+  const displayWorkPricing = cfg.work_pricing?.[displayWork?.id ?? ""] ?? null;
   const activePricing = activeWork ? (cfg.work_pricing?.[activeWork.id] ?? null) : null;
+
+  // Resolved pricing for the current display context
+  const resolvedPricing = displayWorkPricing ?? globalPricing;
+  const hasPrints = (displayWorkPricing?.prints_available && displayWorkPricing.print_sizes?.some(r => r.size))
+    || (!displayWorkPricing && globalHasPrints);
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 80);
@@ -249,24 +257,26 @@ export function LiveStorefrontClient({
         </p>
       </div>
 
-      {/* Commerce — show hero work pricing by default, active work pricing when selected */}
+      {/* Commerce — resolves per-work pricing, falls back to global */}
       {(() => {
-        const wp = activeWork ? (cfg.work_pricing?.[activeWork.id] ?? null) : null;
-        const pricing = wp ?? globalPricing;
-        const hasOriginal = pricing?.available;
+        const hasOriginal = resolvedPricing?.available;
+        const printSizes = displayWorkPricing?.prints_available
+          ? (displayWorkPricing.print_sizes ?? [])
+          : (cfg.print_sizes ?? []);
+        const lowestPrint = printSizes.find(r => r.size && r.price);
         return (hasOriginal || hasPrints) ? (
           <div className={`px-6 pb-6 space-y-3 ${fade("delay-150")}`}>
             <div className="flex gap-3">
               {hasOriginal && (
                 <button onClick={toggleOriginalPanel}
                   className={`flex-1 py-3 px-4 text-sm font-medium border transition-colors ${showOriginalPanel ? "bg-black text-white border-black" : "border-border hover:border-black"}`}>
-                  {pricing.is_poa ? "Original · POA" : pricing.price != null ? `Original · $${pricing.price.toLocaleString()}` : "Original"}
+                  {resolvedPricing.is_poa ? "Original · POA" : resolvedPricing.price != null ? `Original · $${resolvedPricing.price.toLocaleString()}` : "Original"}
                 </button>
               )}
               {hasPrints && (
                 <button onClick={togglePrintsPanel}
                   className={`flex-1 py-3 px-4 text-sm font-medium border transition-colors ${showPrintsPanel ? "bg-black text-white border-black" : "border-border hover:border-black"}`}>
-                  Prints{cfg.print_sizes?.find(r => r.size && r.price) ? ` from ${cfg.print_sizes.find(r => r.size && r.price)!.price}` : ""}
+                  Prints{lowestPrint ? ` from ${lowestPrint.price}` : ""}
                 </button>
               )}
             </div>
@@ -278,13 +288,13 @@ export function LiveStorefrontClient({
                 </p>
                 <button onClick={() => openEnquiry(`Enquiry about original: ${displayLabel}`)}
                   className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
-                  {pricing.is_poa ? "Enquire about price →" : `Express interest — $${pricing.price?.toLocaleString() ?? "POA"}`}
+                  {resolvedPricing.is_poa ? "Enquire about price →" : `Express interest — $${resolvedPricing.price?.toLocaleString() ?? "POA"}`}
                 </button>
                 <p className="text-[10px] text-muted-foreground text-center">Artist responds directly · No obligation</p>
               </div>
             )}
 
-            {showPrintsPanel && cfg.print_sizes && (
+            {showPrintsPanel && printSizes.length > 0 && (
               <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
                 {(cfg.paper_stock || cfg.edition_size) && (
                   <p className="text-xs text-muted-foreground">
@@ -292,7 +302,7 @@ export function LiveStorefrontClient({
                   </p>
                 )}
                 <div className="divide-y divide-border">
-                  {cfg.print_sizes.filter(r => r.size).map((row, i) => (
+                  {printSizes.filter(r => r.size).map((row, i) => (
                     <div key={i} className="flex items-center justify-between py-2.5">
                       <span className="text-sm">{row.size}</span>
                       <button onClick={() => openEnquiry(`Print enquiry: ${row.size}${row.price ? ` — ${row.price}` : ""}`)}
@@ -433,7 +443,7 @@ export function LiveStorefrontClient({
   );
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
+    <div className="min-h-screen bg-[#FAFAF9] max-w-[1600px] mx-auto">
 
       {/* ── Context bar — full width, sticky ────────────────────────────── */}
       <div className={`sticky top-0 z-50 bg-[#FAFAF9]/90 backdrop-blur-sm border-b border-border px-5 py-2.5 flex items-center justify-between ${fade("delay-0")}`}>
@@ -465,14 +475,14 @@ export function LiveStorefrontClient({
       {/* ── Desktop layout (lg+) ─────────────────────────────────────────── */}
       <div className="hidden lg:flex" style={{ height: "calc(100vh - 44px)" }}>
 
-        {/* Left: sticky image panel */}
-        <div className="flex-1 relative overflow-hidden bg-stone-100">
+        {/* Left: sticky image panel — contain so natural aspect ratio is preserved */}
+        <div className="flex-1 relative overflow-hidden bg-stone-50">
           {displayImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayImageUrl}
               alt={displayLabel}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+              className="absolute inset-0 w-full h-full object-contain transition-opacity duration-500"
               key={displayImageUrl}
             />
           ) : (

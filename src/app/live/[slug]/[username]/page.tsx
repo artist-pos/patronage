@@ -55,7 +55,7 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
     hero_work_id?: string;
     selected_work_ids?: string[];
     layout_mode?: "shopfront" | "showcase";
-    work_pricing?: Record<string, { available?: boolean; price?: number | null; is_poa?: boolean }>;
+    work_pricing?: Record<string, { available?: boolean; price?: number | null; is_poa?: boolean; prints_available?: boolean; print_sizes?: Array<{ size: string; price: string }> }>;
     original_available?: boolean;
     original_price?: number | null;
     is_poa?: boolean;

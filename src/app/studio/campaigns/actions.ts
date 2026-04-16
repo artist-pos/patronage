@@ -300,3 +300,40 @@ export async function publishStorefront(campaignId: string): Promise<{ error?: s
 export async function submitForApproval(campaignId: string): Promise<{ error?: string }> {
   return updateCampaignConfig(campaignId, { status: "awaiting_approval" });
 }
+
+export async function deleteCampaign(campaignId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("artist_profile_id")
+    .eq("id", campaignId)
+    .single();
+
+  if (!campaign) return { error: "Campaign not found" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = profile?.role === "admin" || profile?.role === "owner";
+  if ((campaign as { artist_profile_id: string }).artist_profile_id !== user.id && !isAdmin) {
+    return { error: "Not authorised" };
+  }
+
+  const admin = createAdminClient();
+
+  // Remove QR code from storage (best-effort)
+  await admin.storage.from("qr-codes").remove([`${user.id}/${campaignId}.png`]).catch(() => {});
+
+  // Delete campaign (DB cascade handles campaign_files)
+  const { error } = await admin.from("campaigns").delete().eq("id", campaignId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/studio?tab=campaigns");
+  return {};
+}

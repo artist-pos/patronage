@@ -24,6 +24,8 @@ interface WorkPricing {
   available?: boolean;
   price?: number | null;
   is_poa?: boolean;
+  prints_available?: boolean;
+  print_sizes?: PrintSize[];
 }
 
 interface StorefrontConfig extends Record<string, unknown> {
@@ -229,25 +231,51 @@ export function CampaignConfigPanel({
   // Layout mode
   const [layoutMode, setLayoutMode] = useState<"shopfront" | "showcase">(cfg.layout_mode ?? "shopfront");
 
-  // Per-work pricing: { [workId]: { available, price, is_poa } }
-  const [workPricing, setWorkPricing] = useState<Record<string, { available: boolean; price: string; is_poa: boolean }>>(() => {
-    const result: Record<string, { available: boolean; price: string; is_poa: boolean }> = {};
+  // Per-work pricing
+  type WP = { available: boolean; price: string; is_poa: boolean; prints_available: boolean; print_sizes: PrintSize[] };
+  const [workPricing, setWorkPricing] = useState<Record<string, WP>>(() => {
+    const result: Record<string, WP> = {};
     if (cfg.work_pricing) {
       for (const [id, wp] of Object.entries(cfg.work_pricing)) {
         result[id] = {
           available: wp.available ?? true,
           price: wp.price != null ? String(wp.price) : "",
           is_poa: wp.is_poa ?? false,
+          prints_available: wp.prints_available ?? false,
+          print_sizes: (wp.print_sizes && wp.print_sizes.length > 0) ? wp.print_sizes : [{ size: "", price: "" }],
         };
       }
     }
     return result;
   });
 
-  function setWorkPrice(workId: string, field: "available" | "price" | "is_poa", value: boolean | string) {
+  const defaultWP = (): WP => ({ available: false, price: "", is_poa: false, prints_available: false, print_sizes: [{ size: "", price: "" }] });
+
+  function setWorkField(workId: string, field: keyof WP, value: boolean | string | PrintSize[]) {
+    setWorkPricing(prev => ({
+      ...prev,
+      [workId]: { ...(prev[workId] ?? defaultWP()), [field]: value },
+    }));
+  }
+
+  function addWorkPrintRow(workId: string) {
     setWorkPricing(prev => {
-      const existing = prev[workId] ?? { available: true, price: "", is_poa: false };
-      return { ...prev, [workId]: { ...existing, [field]: value } };
+      const wp = prev[workId] ?? defaultWP();
+      return { ...prev, [workId]: { ...wp, print_sizes: [...wp.print_sizes, { size: "", price: "" }] } };
+    });
+  }
+
+  function removeWorkPrintRow(workId: string, i: number) {
+    setWorkPricing(prev => {
+      const wp = prev[workId] ?? defaultWP();
+      return { ...prev, [workId]: { ...wp, print_sizes: wp.print_sizes.filter((_, idx) => idx !== i) } };
+    });
+  }
+
+  function updateWorkPrintRow(workId: string, i: number, field: "size" | "price", value: string) {
+    setWorkPricing(prev => {
+      const wp = prev[workId] ?? defaultWP();
+      return { ...prev, [workId]: { ...wp, print_sizes: wp.print_sizes.map((row, idx) => idx === i ? { ...row, [field]: value } : row) } };
     });
   }
 
@@ -320,11 +348,16 @@ export function CampaignConfigPanel({
       work_pricing: Object.fromEntries(
         [...selectedWorkIds]
           .filter(id => workPricing[id])
-          .map(id => [id, {
-            available: workPricing[id].available,
-            price: workPricing[id].is_poa ? null : (workPricing[id].price ? parseFloat(workPricing[id].price) : null),
-            is_poa: workPricing[id].is_poa,
-          }])
+          .map(id => {
+            const wp = workPricing[id];
+            return [id, {
+              available: wp.available,
+              price: wp.is_poa ? null : (wp.price ? parseFloat(wp.price) : null),
+              is_poa: wp.is_poa,
+              prints_available: wp.prints_available,
+              print_sizes: wp.prints_available ? wp.print_sizes.filter(r => r.size.trim()) : [],
+            }];
+          })
       ),
     };
   }
@@ -855,9 +888,10 @@ export function CampaignConfigPanel({
               if (!work) return null;
               const isImage = !work.content_type || work.content_type === "image";
               const label = work.caption ?? work.title ?? "Untitled";
-              const wp = workPricing[workId] ?? { available: false, price: "", is_poa: false };
+              const wp = workPricing[workId] ?? defaultWP();
               return (
                 <div key={workId} className="border border-border p-3 space-y-3">
+                  {/* Work header + for-sale toggle */}
                   <div className="flex items-center gap-3">
                     {isImage && work.url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -869,14 +903,11 @@ export function CampaignConfigPanel({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{label}</p>
-                      {workId === heroWorkId && (
-                        <p className="text-[10px] text-muted-foreground">Hero</p>
-                      )}
+                      {workId === heroWorkId && <p className="text-[10px] text-muted-foreground">Hero</p>}
                     </div>
-                    {/* Available toggle */}
                     <button
                       type="button"
-                      onClick={() => setWorkPrice(workId, "available", !wp.available)}
+                      onClick={() => setWorkField(workId, "available", !wp.available)}
                       className={`text-[10px] px-2.5 py-1 border transition-colors shrink-0 ${wp.available ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
                     >
                       {wp.available ? "For sale" : "Not for sale"}
@@ -884,33 +915,75 @@ export function CampaignConfigPanel({
                   </div>
 
                   {wp.available && (
-                    <div className="pl-[52px] space-y-2">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setWorkPrice(workId, "is_poa", !wp.is_poa)}
-                          className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${wp.is_poa ? "bg-black" : "bg-stone-200"}`}
-                          role="switch"
-                          aria-checked={wp.is_poa}
-                        >
-                          <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${wp.is_poa ? "left-[18px]" : "left-0.5"}`} />
-                        </button>
-                        <span className="text-xs">Price on application (POA)</span>
-                      </div>
-                      {!wp.is_poa && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={wp.price}
-                            onChange={e => setWorkPrice(workId, "price", e.target.value)}
-                            placeholder="Price (NZD)"
-                            className="w-36 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                          />
+                    <div className="pl-[52px] space-y-4">
+                      {/* Original */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Original</p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setWorkField(workId, "is_poa", !wp.is_poa)}
+                            className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${wp.is_poa ? "bg-black" : "bg-stone-200"}`}
+                            role="switch" aria-checked={wp.is_poa}
+                          >
+                            <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${wp.is_poa ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                          <span className="text-xs">Price on application (POA)</span>
                         </div>
-                      )}
+                        {!wp.is_poa && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-4">$</span>
+                            <input
+                              type="number" min="0" step="any"
+                              value={wp.price}
+                              onChange={e => setWorkField(workId, "price", e.target.value)}
+                              placeholder="Price (NZD)"
+                              className="w-36 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Prints */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setWorkField(workId, "prints_available", !wp.prints_available)}
+                            className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${wp.prints_available ? "bg-black" : "bg-stone-200"}`}
+                            role="switch" aria-checked={wp.prints_available}
+                          >
+                            <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${wp.prints_available ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                          <span className="text-xs font-medium">Prints available</span>
+                        </div>
+                        {wp.prints_available && (
+                          <div className="space-y-1.5 pl-11">
+                            {wp.print_sizes.map((row, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <input
+                                  type="text" value={row.size}
+                                  onChange={e => updateWorkPrintRow(workId, i, "size", e.target.value)}
+                                  placeholder="e.g. A3"
+                                  className="flex-1 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+                                />
+                                <input
+                                  type="text" value={row.price}
+                                  onChange={e => updateWorkPrintRow(workId, i, "price", e.target.value)}
+                                  placeholder="e.g. $150"
+                                  className="w-24 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+                                />
+                                <button type="button" onClick={() => removeWorkPrintRow(workId, i)}
+                                  className="text-[11px] text-muted-foreground hover:text-foreground">✕</button>
+                              </div>
+                            ))}
+                            <button type="button" onClick={() => addWorkPrintRow(workId)}
+                              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
+                              + Add size
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
