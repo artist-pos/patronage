@@ -245,10 +245,10 @@ export function CampaignConfigPanel({
   });
 
   function setWorkPrice(workId: string, field: "available" | "price" | "is_poa", value: boolean | string) {
-    setWorkPricing(prev => ({
-      ...prev,
-      [workId]: { available: true, price: "", is_poa: false, ...prev[workId], [field]: value },
-    }));
+    setWorkPricing(prev => {
+      const existing = prev[workId] ?? { available: true, price: "", is_poa: false };
+      return { ...prev, [workId]: { ...existing, [field]: value } };
+    });
   }
 
   // Hero picker
