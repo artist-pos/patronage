@@ -533,6 +533,147 @@ function buildMessageNotificationHtml({
 </html>`;
 }
 
+// ── Campaign notifications ────────────────────────────────────────────────────
+
+/**
+ * Notify an artist that they've been selected for a partner campaign.
+ * Fired when createCampaignForSelection creates a new campaign row.
+ */
+export async function sendCampaignSelectedNotification(params: {
+  artistEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+  studioUrl: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { artistEmail, artistName, opportunityTitle, studioUrl } = params;
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `You've been selected for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Campaign selected</p>
+      <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${esc(artistName)}</strong>!</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">You've been selected for:</p>
+      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">${esc(opportunityTitle)}</blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">Set up your storefront in Studio — choose your hero artwork, add works, and configure pricing. Your QR code is already generated and ready.</p>
+      <a href="${studioUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Set up your storefront →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Notify the admin (hello@patronage.nz) when an artist submits or publishes a campaign.
+ */
+export async function sendCampaignSubmittedToAdmin(params: {
+  artistName: string;
+  campaignTitle: string;
+  reviewUrl: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { artistName, campaignTitle, reviewUrl } = params;
+  await getResend().emails.send({
+    from: FROM,
+    to: "hello@patronage.nz",
+    subject: `${artistName} has submitted for ${campaignTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Campaign submission</p>
+      <p style="margin:0 0 16px;font-size:15px;"><strong>${esc(artistName)}</strong> has submitted for <strong>${esc(campaignTitle)}</strong>.</p>
+      <a href="${reviewUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Review in admin →</a>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Notify an artist that their campaign storefront is now live.
+ */
+export async function sendCampaignLiveNotification(params: {
+  artistEmail: string;
+  artistName: string;
+  campaignTitle: string;
+  landingUrl: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { artistEmail, artistName, campaignTitle, landingUrl } = params;
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Your storefront for ${campaignTitle} is now live`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Storefront live</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your storefront for <strong>${esc(campaignTitle)}</strong> is now live. Share your QR code or landing page link with visitors.</p>
+      <p style="margin:0 0 24px;font-size:13px;font-family:monospace;background:#f5f5f5;padding:10px 14px;word-break:break-all;">${landingUrl}</p>
+      <a href="${landingUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View live storefront →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Notify an artist of a new enquiry from their QR landing page.
+ */
+export async function sendCampaignEnquiryNotification(params: {
+  artistEmail: string;
+  artistName: string;
+  workTitle: string;
+  visitorName: string;
+  visitorEmail: string;
+  message: string;
+  campaignTitle: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { artistEmail, artistName, workTitle, visitorName, visitorEmail, message, campaignTitle } = params;
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    replyTo: visitorEmail,
+    subject: `New enquiry about ${workTitle} from ${visitorName}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New enquiry via ${esc(campaignTitle)}</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#555;"><strong>${esc(visitorName)}</strong> (${esc(visitorEmail)}) enquired about <strong>${esc(workTitle)}</strong>:</p>
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;white-space:pre-wrap;">${esc(message)}</blockquote>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">Reply directly to this email to respond.</p>
+      <a href="${SITE_URL}/studio?tab=commerce" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in Studio Commerce →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendCollectiveInvitation({
   email,
   collectiveName,

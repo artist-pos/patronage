@@ -3,229 +3,96 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSelfManagedCampaign } from "@/app/studio/campaigns/actions";
+import { submitCustomCampaignEnquiry } from "@/app/studio/campaigns/enquiry-action";
 
-const CAMPAIGN_TYPES = [
-  { value: "art_fair",      label: "Art Fair", description: "Booth signage and catalogue labels for fairs and markets." },
-  { value: "exhibition",    label: "Exhibition", description: "Gallery or institutional exhibition — solo or group show." },
-  { value: "hoarding",      label: "Hoarding", description: "Construction hoarding or temporary public installation." },
-  { value: "billboard",     label: "Billboard", description: "Outdoor advertising — billboard or large-format poster." },
-  { value: "truck_curtain", label: "Truck curtain", description: "Side-curtain vehicle wrap or transport activation." },
-  { value: "packaging",     label: "Packaging", description: "Product packaging, merchandise, or print edition." },
-  { value: "other",         label: "Other", description: "Any other campaign type." },
+// These are the artist self-serve types only.
+// Partner activation types (hoarding, billboard, truck_curtain, packaging) are
+// created automatically from the pipeline and never shown here.
+const ARTIST_CAMPAIGN_TYPES = [
+  { value: "art_fair",    label: "Art Fair",    description: "Booth signage and QR labels for fairs and markets." },
+  { value: "exhibition",  label: "Exhibition",  description: "Gallery or institutional exhibition — solo or group show." },
+  { value: "market_stall", label: "Market Stall", description: "Artist market, weekend market, or pop-up stall." },
+  { value: "pop_up",      label: "Pop-up",       description: "Temporary pop-up space or short-run installation." },
+  { value: "custom_live", label: "Custom / Live Experience", description: "Something else? Tell us what you're planning and we'll help set it up." },
 ] as const;
 
-type CampaignTypeValue = typeof CAMPAIGN_TYPES[number]["value"];
+type ArtistTypeValue = typeof ARTIST_CAMPAIGN_TYPES[number]["value"];
+type CreateableType = Exclude<ArtistTypeValue, "custom_live">;
 
-interface Work {
-  id: string;
-  url: string;
-  caption: string | null;
-  title: string | null;
-}
-
-interface Props {
-  works: Work[];
-  username: string;
-}
-
-function WorkThumb({ work, selected, onToggle }: { work: Work; selected: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative border-2 transition-colors text-left ${
-        selected ? "border-black" : "border-transparent hover:border-border"
-      }`}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={work.url}
-        alt={work.caption ?? work.title ?? ""}
-        className="w-full aspect-square object-cover"
-      />
-      {selected && (
-        <div className="absolute top-1 right-1 w-5 h-5 bg-black flex items-center justify-center">
-          <span className="text-white text-[10px] font-bold">✓</span>
-        </div>
-      )}
-      <p className="text-[10px] text-muted-foreground truncate px-1 py-0.5">
-        {work.caption ?? work.title ?? "Untitled"}
-      </p>
-    </button>
-  );
-}
-
-export function NewCampaignForm({ works, username }: Props) {
+export function NewCampaignForm({ username }: { username: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  void startTransition;
 
-  const [step, setStep] = useState<"type" | "details" | "works">("type");
-  const [campaignType, setCampaignType] = useState<CampaignTypeValue | null>(null);
+  const [step, setStep] = useState<"type" | "details" | "enquiry">("type");
+  const [campaignType, setCampaignType] = useState<ArtistTypeValue | null>(null);
+
+  // Details step
   const [title, setTitle] = useState("");
   const [partnerName, setPartnerName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
-  const [specs, setSpecs] = useState("");
-  const [selectedWorkIds, setSelectedWorkIds] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function toggleWork(id: string) {
-    setSelectedWorkIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  // Enquiry step
+  const [enquiryName, setEnquiryName] = useState("");
+  const [enquiryEmail, setEnquiryEmail] = useState("");
+  const [enquiryMessage, setEnquiryMessage] = useState("");
+  const [enquirySending, setEnquirySending] = useState(false);
+  const [enquirySent, setEnquirySent] = useState(false);
 
-  const selectedType = CAMPAIGN_TYPES.find(t => t.value === campaignType);
+  const selectedType = ARTIST_CAMPAIGN_TYPES.find(t => t.value === campaignType);
 
   async function handleCreate() {
-    if (!campaignType || !title.trim()) return;
+    if (!campaignType || campaignType === "custom_live" || !title.trim()) return;
     setCreating(true);
     setError(null);
     const result = await createSelfManagedCampaign({
       title: title.trim(),
-      campaign_type: campaignType,
+      campaign_type: campaignType as CreateableType,
       partner_name: partnerName.trim() || undefined,
       campaign_start_date: startDate || undefined,
       campaign_end_date: endDate || undefined,
       location_address: location.trim() || undefined,
-      production_specs: specs.trim() || undefined,
+      production_specs: notes.trim() || undefined,
     });
     setCreating(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    if (result.campaignId) {
-      router.push(`/studio/campaigns/${result.campaignId}`);
-    }
+    if (result.error) { setError(result.error); return; }
+    if (result.campaignId) router.push(`/studio/campaigns/${result.campaignId}`);
   }
 
-  async function handleDownloadPdf() {
-    if (!campaignType || !title.trim()) return;
-
-    // Lazy-load jspdf for the art fair PDF export
-    const { jsPDF } = await import("jspdf");
-
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentW = pageW - margin * 2;
-
-    // Header
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(title.trim(), margin, margin + 8);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(120, 120, 120);
-    const headerLines: string[] = [
-      selectedType?.label ?? campaignType ?? "",
-      partnerName ? `Partner: ${partnerName}` : "",
-      startDate && endDate ? `${startDate} – ${endDate}` : startDate || endDate || "",
-      location || "",
-      `patronage.nz/${username}`,
-    ].filter(Boolean);
-    doc.text(headerLines.join("   ·   "), margin, margin + 16);
-    doc.setTextColor(0, 0, 0);
-
-    let y = margin + 28;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, y, pageW - margin, y);
-    y += 8;
-
-    // One label block per selected work (or a generic block if no works selected)
-    const worksToLabel = works.filter(w => selectedWorkIds.has(w.id));
-    if (worksToLabel.length === 0) {
-      // Generic collection QR label
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("View the full collection", margin, y + 6);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(`patronage.nz/${username}`, margin, y + 12);
-      doc.setTextColor(0, 0, 0);
-
-      // QR placeholder box
-      doc.setDrawColor(180, 180, 180);
-      doc.rect(pageW - margin - 40, y, 40, 40);
-      doc.setFontSize(7);
-      doc.setTextColor(160, 160, 160);
-      doc.text("QR code", pageW - margin - 40 + 8, y + 22);
-      doc.setTextColor(0, 0, 0);
-    } else {
-      const labelH = 55;
-      for (const work of worksToLabel) {
-        if (y + labelH > pageH - margin) {
-          doc.addPage();
-          y = margin;
-        }
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.text(work.caption ?? work.title ?? "Untitled", margin, y + 6, { maxWidth: contentW - 50 });
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 100, 100);
-        doc.text(`${username} · patronage.nz`, margin, y + 13);
-        doc.setTextColor(0, 0, 0);
-
-        // QR placeholder box
-        doc.setDrawColor(180, 180, 180);
-        doc.rect(pageW - margin - 40, y, 40, 40);
-        doc.setFontSize(7);
-        doc.setTextColor(160, 160, 160);
-        doc.text("QR code", pageW - margin - 40 + 8, y + 22);
-        doc.setTextColor(0, 0, 0);
-
-        doc.setDrawColor(230, 230, 230);
-        doc.line(margin, y + labelH - 4, pageW - margin, y + labelH - 4);
-        y += labelH;
-      }
-
-      // Append a collection label at the end
-      if (y + 50 > pageH - margin) {
-        doc.addPage();
-        y = margin;
-      }
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("Explore all works", margin, y + 6);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(`patronage.nz/${username}`, margin, y + 12);
-      doc.setTextColor(0, 0, 0);
-      doc.setDrawColor(180, 180, 180);
-      doc.rect(pageW - margin - 40, y, 40, 40);
-      doc.setFontSize(7);
-      doc.setTextColor(160, 160, 160);
-      doc.text("QR code", pageW - margin - 40 + 8, y + 22);
-      doc.setTextColor(0, 0, 0);
-    }
-
-    doc.save(`${title.trim().toLowerCase().replace(/\s+/g, "-")}-labels.pdf`);
+  async function handleEnquirySubmit() {
+    if (!enquiryName.trim() || !enquiryEmail.trim() || !enquiryMessage.trim()) return;
+    setEnquirySending(true);
+    const result = await submitCustomCampaignEnquiry({
+      name: enquiryName.trim(),
+      email: enquiryEmail.trim(),
+      message: enquiryMessage.trim(),
+    });
+    setEnquirySending(false);
+    if (result.error) { setError(result.error); return; }
+    setEnquirySent(true);
   }
 
-  // ── Step: Type ───────────────────────────────────────────────────────────────
+  // ── Step: Type ─────────────────────────────────────────────────────────────
   if (step === "type") {
     return (
       <div className="space-y-6">
-        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Select campaign type</p>
+        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Select campaign type
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {CAMPAIGN_TYPES.map(t => (
+          {ARTIST_CAMPAIGN_TYPES.map(t => (
             <button
               key={t.value}
               type="button"
-              onClick={() => { setCampaignType(t.value); setStep("details"); }}
+              onClick={() => {
+                setCampaignType(t.value);
+                setStep(t.value === "custom_live" ? "enquiry" : "details");
+              }}
               className="text-left border border-border p-4 space-y-1 hover:border-black transition-colors"
             >
               <p className="text-sm font-medium">{t.label}</p>
@@ -237,171 +104,189 @@ export function NewCampaignForm({ works, username }: Props) {
     );
   }
 
-  // ── Step: Details ────────────────────────────────────────────────────────────
-  if (step === "details") {
+  // ── Step: Custom / Live Experience enquiry ─────────────────────────────────
+  if (step === "enquiry") {
+    if (enquirySent) {
+      return (
+        <div className="space-y-4 max-w-md">
+          <p className="text-sm font-medium">We'll be in touch within 48 hours.</p>
+          <p className="text-sm text-muted-foreground">
+            Thanks for reaching out. We'll review your idea and follow up at the email you provided.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/studio?tab=campaigns")}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Back to Studio →
+          </button>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-md">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setStep("type")}
+            onClick={() => { setCampaignType(null); setStep("type"); }}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             ← Back
           </button>
           <span className="text-sm text-muted-foreground">·</span>
-          <span className="text-sm font-medium">{selectedType?.label}</span>
+          <span className="text-sm font-medium">Custom / Live Experience</span>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Tell us what you're planning</p>
+          <p className="text-[11px] text-muted-foreground">
+            We'll help you set it up. This won't create a campaign — it's a direct enquiry to the Patronage team.
+          </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Campaign title *</label>
+            <label className="text-xs font-medium">Your name *</label>
             <input
               type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={`e.g. ${selectedType?.label === "Art Fair" ? "Wellington Art Fair 2025" : selectedType?.label === "Exhibition" ? "Solo exhibition — City Gallery" : "Campaign name"}`}
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+              value={enquiryName}
+              onChange={e => setEnquiryName(e.target.value)}
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
             />
           </div>
-
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Partner / Organisation</label>
+            <label className="text-xs font-medium">Your email *</label>
             <input
-              type="text"
-              value={partnerName}
-              onChange={e => setPartnerName(e.target.value)}
-              placeholder="Leave blank if self-managed"
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+              type="email"
+              value={enquiryEmail}
+              onChange={e => setEnquiryEmail(e.target.value)}
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Start date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">End date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
-              />
-            </div>
-          </div>
-
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Location / Venue</label>
-            <input
-              type="text"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              placeholder="Address or venue name"
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">Notes</label>
+            <label className="text-xs font-medium">What are you planning? *</label>
             <textarea
-              value={specs}
-              onChange={e => setSpecs(e.target.value)}
-              rows={2}
-              placeholder="Print specs, context, or anything else useful"
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+              value={enquiryMessage}
+              onChange={e => setEnquiryMessage(e.target.value)}
+              rows={5}
+              placeholder="Describe your live experience, performance, activation, or event idea…"
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none placeholder:text-muted-foreground"
             />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => setStep("works")}
-            disabled={!title.trim()}
-            className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Select works →
-          </button>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={!title.trim() || creating}
-            className="text-sm border border-border px-4 py-2 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-muted-foreground"
-          >
-            {creating ? "Creating…" : "Skip — create campaign"}
-          </button>
-        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <button
+          type="button"
+          onClick={handleEnquirySubmit}
+          disabled={enquirySending || !enquiryName.trim() || !enquiryEmail.trim() || !enquiryMessage.trim()}
+          className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {enquirySending ? "Sending…" : "Send enquiry →"}
+        </button>
       </div>
     );
   }
 
-  // ── Step: Works ──────────────────────────────────────────────────────────────
+  // ── Step: Details ──────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-lg">
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setStep("details")}
+          onClick={() => setStep("type")}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Back
         </button>
         <span className="text-sm text-muted-foreground">·</span>
-        <span className="text-sm font-medium">{title}</span>
+        <span className="text-sm font-medium">{selectedType?.label}</span>
       </div>
 
-      <div className="space-y-1">
-        <p className="text-sm font-medium">Select works to feature</p>
-        <p className="text-[11px] text-muted-foreground">
-          Selected works get individual QR labels in your art fair PDF. A collection QR is always included.
-        </p>
-      </div>
-
-      {works.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No portfolio works yet.{" "}
-          <a href="/studio" className="underline underline-offset-2">Add works in Studio →</a>
-        </p>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {works.map(w => (
-            <WorkThumb
-              key={w.id}
-              work={w}
-              selected={selectedWorkIds.has(w.id)}
-              onToggle={() => toggleWork(w.id)}
-            />
-          ))}
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">Campaign title *</label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder={
+              campaignType === "art_fair" ? "e.g. Wellington Art Fair 2025"
+                : campaignType === "exhibition" ? "e.g. Solo exhibition — City Gallery"
+                : campaignType === "market_stall" ? "e.g. Sunday Artisan Market"
+                : "Campaign name"
+            }
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+          />
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={creating}
-          className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          {creating ? "Creating…" : "Create campaign →"}
-        </button>
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={!title.trim()}
-          className="text-sm border border-border px-4 py-2 hover:bg-muted transition-colors disabled:opacity-40 text-muted-foreground"
-        >
-          Download label PDF
-        </button>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">Partner / Organisation</label>
+          <input
+            type="text"
+            value={partnerName}
+            onChange={e => setPartnerName(e.target.value)}
+            placeholder="Leave blank if self-managed"
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Start date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">End date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">Location / Venue</label>
+          <input
+            type="text"
+            value={location}
+            onChange={e => setLocation(e.target.value)}
+            placeholder="Address or venue name"
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">Notes</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Anything else useful"
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+          />
+        </div>
       </div>
+
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <button
+        type="button"
+        onClick={handleCreate}
+        disabled={!title.trim() || creating}
+        className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {creating ? "Creating…" : "Create campaign →"}
+      </button>
     </div>
   );
 }

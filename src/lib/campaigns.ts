@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slugify";
 import QRCode from "qrcode";
+import { sendCampaignSelectedNotification } from "@/lib/email";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
@@ -120,6 +121,22 @@ export async function createCampaignForSelection(opts: {
       .from("campaigns")
       .update({ qr_code_url: qrCodeUrl })
       .eq("id", campaign.id);
+  }
+
+  // Notify the artist they've been selected
+  try {
+    const { data: { user: artistUser } } = await admin.auth.admin.getUserById(opts.artistProfileId);
+    if (artistUser?.email) {
+      const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+      sendCampaignSelectedNotification({
+        artistEmail: artistUser.email,
+        artistName: opts.artistUsername,
+        opportunityTitle: opts.opportunityTitle,
+        studioUrl: `${SITE_URL}/studio?tab=campaigns`,
+      }).catch(console.error);
+    }
+  } catch {
+    // email failure must not block campaign creation
   }
 
   return { campaignId: campaign.id };

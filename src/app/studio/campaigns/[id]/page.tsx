@@ -18,7 +18,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, username")
+    .select("role, username, bio, featured_image_url")
     .eq("id", user.id)
     .single();
 
@@ -26,34 +26,46 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     redirect("/dashboard");
   }
 
-  const { data: campaign } = await supabase
-    .from("campaigns")
-    .select(`
-      id, title, slug, campaign_type, status, production_status,
-      partner_name, partner_profile_id,
-      campaign_start_date, campaign_end_date,
-      location_address, location_lat, location_lng,
-      surface_type, production_specs, fee_amount,
-      qr_code_url, landing_page_slug, landing_page_config,
-      created_at, updated_at,
-      opportunity_id, application_id
-    `)
-    .eq("id", id)
-    .eq("artist_profile_id", user.id)
-    .single();
+  const [{ data: campaign }, { data: filesData }, { data: worksData }] = await Promise.all([
+    supabase
+      .from("campaigns")
+      .select(`
+        id, title, slug, campaign_type, status, production_status,
+        partner_name, partner_profile_id,
+        campaign_start_date, campaign_end_date,
+        location_address, location_lat, location_lng,
+        surface_type, production_specs, fee_amount,
+        qr_code_url, landing_page_slug, landing_page_config,
+        created_at, updated_at,
+        opportunity_id, application_id
+      `)
+      .eq("id", id)
+      .eq("artist_profile_id", user.id)
+      .single(),
+    supabase
+      .from("campaign_files")
+      .select("id, file_url, file_name, file_type, file_size_bytes, notes, created_at")
+      .eq("campaign_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("portfolio_images")
+      .select("id, url, caption, title, content_type")
+      .eq("profile_id", user.id)
+      .order("position", { ascending: true })
+      .limit(100),
+  ]);
 
   if (!campaign) redirect("/studio?tab=campaigns");
-
-  const { data: filesData } = await supabase
-    .from("campaign_files")
-    .select("id, file_url, file_name, file_type, file_size_bytes, notes, created_at")
-    .eq("campaign_id", id)
-    .order("created_at", { ascending: false });
 
   const files = (filesData ?? []) as Array<{
     id: string; file_url: string; file_name: string;
     file_type: string | null; file_size_bytes: number | null;
     notes: string | null; created_at: string;
+  }>;
+
+  const works = (worksData ?? []) as Array<{
+    id: string; url: string | null; caption: string | null;
+    title: string | null; content_type?: string;
   }>;
 
   const c = campaign as {
@@ -69,29 +81,8 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     opportunity_id: string | null; application_id: string | null;
   };
 
-  const landingUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/live/${c.slug}/${profile.username}`;
-
-  /*
-    TODO: Campaign analytics — QR scans are tracked in engagement_logs with
-    event_type="qr_scan" and a campaign_id in the payload. To build the timeline
-    chart:
-
-    1. Query engagement_logs WHERE payload->>'campaign_id' = campaign.id,
-       grouped by date (date_trunc('day', created_at)) to get scans_per_day[].
-
-    2. Render a recharts <AreaChart> or <BarChart> with:
-       - X axis: date range from campaign_start_date to campaign_end_date
-       - Y axis: scan count
-       - A reference area shading the active campaign window
-       - Zero-filled days so gaps don't produce misleading slopes
-
-    3. Show aggregate totals alongside: total scans, unique days with activity,
-       peak day. These can be computed client-side from the scans_per_day array.
-
-    4. The engagement_logs table (migration 086) already has the right schema;
-       no new migration needed. Just add the query to this server component
-       and pass the data to a new <CampaignScanChart> client component.
-  */
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const landingUrl = `${SITE_URL}/live/${c.slug}/${profile.username}`;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
@@ -109,32 +100,21 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{c.title}</h1>
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${
-              c.status === "live" ? "bg-green-100 text-green-700"
-                : c.status === "completed" ? "bg-stone-100 text-stone-500"
-                : "bg-stone-100 text-stone-600"
-            }`}>
-              {c.status}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{c.title}</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground capitalize">
+            {c.campaign_type.replace(/_/g, " ")}
+          </span>
+          {c.partner_name && (
+            <span className="text-xs text-muted-foreground">· {c.partner_name}</span>
+          )}
+          {c.opportunity_id && (
+            <span className="text-[10px] border border-stone-300 text-stone-500 px-1.5 py-0.5 leading-none">
+              Partner campaign
             </span>
-            <span className="text-xs text-muted-foreground">{c.campaign_type.replace("_", " ")}</span>
-            {c.partner_name && (
-              <span className="text-xs text-muted-foreground">· {c.partner_name}</span>
-            )}
-          </div>
+          )}
         </div>
-        {c.qr_code_url && (
-          <a
-            href={c.qr_code_url}
-            download={`${c.slug}-qr.png`}
-            className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap shrink-0"
-          >
-            Download QR →
-          </a>
-        )}
       </div>
 
       <CampaignConfigPanel
@@ -143,6 +123,10 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         landingUrl={landingUrl}
         artistId={user.id}
         username={profile.username ?? ""}
+        works={works}
+        profileId={user.id}
+        bio={(profile as { bio?: string | null }).bio ?? null}
+        featuredImageUrl={(profile as { featured_image_url?: string | null }).featured_image_url ?? null}
       />
     </div>
   );

@@ -21,19 +21,6 @@ export default async function NewCampaignPage() {
     redirect("/dashboard");
   }
 
-  // Fetch portfolio works to let artist associate works with the campaign
-  const { data: worksData } = await supabase
-    .from("portfolio_images")
-    .select("id, url, caption, title")
-    .eq("profile_id", user.id)
-    .eq("is_available", false)
-    .order("position", { ascending: true })
-    .limit(50);
-
-  const works = (worksData ?? []) as Array<{
-    id: string; url: string; caption: string | null; title: string | null;
-  }>;
-
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-8">
       {/* Breadcrumb */}
@@ -52,11 +39,11 @@ export default async function NewCampaignPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Create a campaign</h1>
         <p className="text-sm text-muted-foreground">
-          Generate a QR code and landing page for your next show, fair, or public artwork.
+          Generate a QR code and storefront for your next show, fair, or pop-up.
         </p>
       </div>
 
-      <NewCampaignForm works={works} username={profile.username ?? ""} />
+      <NewCampaignForm username={profile.username ?? ""} />
     </div>
   );
 }
