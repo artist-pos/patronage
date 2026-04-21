@@ -2,7 +2,9 @@ import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { ProjectsSection } from "@/components/profile/ProjectsSection";
-import type { PortfolioImage, Artwork, Project, ProjectUpdateWithArtist } from "@/types/database";
+import { CreativeWorksPanel } from "@/components/profile/CreativeWorksPanel";
+import { StudioCarousel } from "@/components/profile/StudioCarousel";
+import type { PortfolioImage, Artwork, Project, ProjectUpdateWithArtist, CreativeWork } from "@/types/database";
 
 interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
@@ -21,6 +23,7 @@ interface Props {
   soldWorks: SoldWork[];
   projects: Project[];
   studioUpdates: ProjectUpdateWithArtist[];
+  creativeWorks: CreativeWork[];
   profileId: string;
   username: string;
   artistName: string;
@@ -37,6 +40,7 @@ export function WorkTab({
   soldWorks,
   projects,
   studioUpdates,
+  creativeWorks,
   profileId,
   username,
   artistName,
@@ -46,6 +50,9 @@ export function WorkTab({
   displayName,
   collaboratedWorks = [],
 }: Props) {
+  const hasUpdates      = studioUpdates.length > 0;
+  const hasCreativeWork = creativeWorks.length > 0;
+
   return (
     <div className="space-y-12 py-8">
       {/* Available works — top */}
@@ -87,6 +94,38 @@ export function WorkTab({
             ) : (
               <p className="text-sm text-muted-foreground">{displayName} hasn&apos;t added work yet.</p>
             )
+          )}
+        </section>
+      )}
+
+      {/* Studio: creative works + updates (merged from old Studio tab) */}
+      {(isOwner || hasUpdates || hasCreativeWork) && (
+        <section className="space-y-6 border-t border-border pt-12">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+            Studio
+          </h2>
+
+          <CreativeWorksPanel
+            initialWorks={creativeWorks}
+            isOwner={isOwner}
+            profileId={profileId}
+          />
+
+          {(isOwner || hasUpdates) && (
+            <div className={hasCreativeWork ? "border-t border-border pt-8" : ""}>
+              {hasCreativeWork && (
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-6">
+                  Studio Updates
+                </p>
+              )}
+              <StudioCarousel
+                updates={studioUpdates}
+                artistUsername={username}
+                isOwner={isOwner}
+                projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+                profileId={profileId}
+              />
+            </div>
           )}
         </section>
       )}

@@ -55,7 +55,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       .limit(100),
   ]);
 
-  if (!campaign) redirect("/studio?tab=campaigns");
+  if (!campaign) redirect("/studio?section=campaigns");
 
   const files = (filesData ?? []) as Array<{
     id: string; file_url: string; file_name: string;
@@ -88,11 +88,11 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/studio?tab=campaigns" className="hover:text-foreground transition-colors">
+        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
           Studio
         </Link>
         <span>/</span>
-        <Link href="/studio?tab=campaigns" className="hover:text-foreground transition-colors">
+        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
           Campaigns
         </Link>
         <span>/</span>

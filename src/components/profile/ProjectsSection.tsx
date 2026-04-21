@@ -19,7 +19,7 @@ export function ProjectsSection({ projects, updates, isOwner }: Props) {
           <p className="text-sm text-muted-foreground">
             No projects yet.{" "}
             <Link
-              href="/profile/edit"
+              href="/studio"
               className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
               Create your first project →

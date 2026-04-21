@@ -96,7 +96,7 @@ export async function createSelfManagedCampaign(formData: {
     // QR generation failed — campaign still created
   }
 
-  revalidatePath("/studio?tab=campaigns");
+  revalidatePath("/studio?section=campaigns");
   return { campaignId: campaign.id };
 }
 
@@ -184,7 +184,7 @@ export async function updateCampaignConfig(
   }
 
   revalidatePath(`/studio/campaigns/${campaignId}`);
-  revalidatePath("/studio?tab=campaigns");
+  revalidatePath("/studio?section=campaigns");
   return {};
 }
 
@@ -334,6 +334,6 @@ export async function deleteCampaign(campaignId: string): Promise<{ error?: stri
   const { error } = await admin.from("campaigns").delete().eq("id", campaignId);
   if (error) return { error: error.message };
 
-  revalidatePath("/studio?tab=campaigns");
+  revalidatePath("/studio?section=campaigns");
   return {};
 }

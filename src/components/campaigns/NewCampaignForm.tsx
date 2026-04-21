@@ -115,7 +115,7 @@ export function NewCampaignForm({ username }: { username: string }) {
           </p>
           <button
             type="button"
-            onClick={() => router.push("/studio?tab=campaigns")}
+            onClick={() => router.push("/studio?section=campaigns")}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
             Back to Studio →

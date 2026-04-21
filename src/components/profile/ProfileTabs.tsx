@@ -2,13 +2,12 @@
 
 import { useRouter } from "next/navigation";
 
-const TABS = ["overview", "work", "studio", "cv", "support"] as const;
+const TABS = ["overview", "work", "cv", "support"] as const;
 type Tab = typeof TABS[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: "Overview",
   work: "Work",
-  studio: "Studio",
   cv: "CV & Press",
   support: "Support this artist",
 };

@@ -107,7 +107,7 @@ export async function addCollectiveMember(collectiveId: string, memberId: string
     });
   }
 
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -168,7 +168,7 @@ export async function acceptCollectiveInvitation(collectiveId: string): Promise<
     .eq("status", "pending");
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -186,7 +186,7 @@ export async function declineCollectiveInvitation(collectiveId: string): Promise
     .eq("status", "pending");
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -238,7 +238,7 @@ export async function claimEmailInvitation(token: string): Promise<{
 
   if (insertErr) return { error: insertErr.message };
 
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {
     collectiveId: invite.collective_id,
     collectiveName: (invite.collectives as unknown as { name: string } | null)?.name,
@@ -267,7 +267,7 @@ export async function removeCollectiveMember(collectiveId: string, memberId: str
     .eq("user_id", memberId);
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 

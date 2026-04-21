@@ -56,7 +56,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
       {isOwner && (
         <div className="flex justify-end items-center gap-4">
           <a
-            href="/studio?tab=support"
+            href="/studio?section=support"
             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             Manage tiers →
@@ -75,7 +75,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
           {isOwner ? (
             <p className="text-sm text-muted-foreground">
               No support tiers yet.{" "}
-              <a href="/studio?tab=support" className="underline underline-offset-2 hover:text-foreground">
+              <a href="/studio?section=support" className="underline underline-offset-2 hover:text-foreground">
                 Add tiers in your profile settings →
               </a>
             </p>

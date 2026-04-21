@@ -14,5 +14,5 @@ export async function updateGrantsAction(grants: string[]): Promise<void> {
     .eq("id", user.id);
 
   if (error) throw new Error(error.message);
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
 }

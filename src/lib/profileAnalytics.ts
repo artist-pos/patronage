@@ -32,6 +32,9 @@ export async function getProfileStats(
   const sinceMain = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
   const sincePrev = new Date(now - days * 2 * 24 * 60 * 60 * 1000).toISOString();
 
+  console.log(`[Analytics] profileId=${profileId} days=${days}`);
+  console.log(`[Analytics] sinceMain=${sinceMain}  sincePrev=${sincePrev}`);
+
   const [
     { data: eventsAll },
     { count: followersTotal },
@@ -79,6 +82,14 @@ export async function getProfileStats(
   const all = eventsAll ?? [];
   const current = all.filter((e) => e.created_at >= sinceMain);
   const prev = all.filter((e) => e.created_at < sinceMain);
+
+  console.log(`[Analytics] events fetched: total=${all.length} current=${current.length} prev=${prev.length}`);
+  const byType = (arr: typeof all) =>
+    ["profile_view", "cv_click", "website_click", "artwork_view"].map(
+      (t) => `${t}=${arr.filter((e) => e.event_type === t).length}`
+    ).join(" ");
+  console.log(`[Analytics] current: ${byType(current)}`);
+  console.log(`[Analytics] prev:    ${byType(prev)}`);
 
   function count(arr: typeof all, type: string) {
     return arr.filter((e) => e.event_type === type).length;

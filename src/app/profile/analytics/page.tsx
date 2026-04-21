@@ -231,7 +231,7 @@ export default async function ProfileAnalyticsPage({ searchParams }: PageProps) 
           View public profile →
         </Link>
         <Link
-          href="/profile/edit"
+          href="/studio"
           className="underline underline-offset-2 hover:text-foreground transition-colors"
         >
           Edit profile →

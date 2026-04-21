@@ -1,1 +1,5 @@
-export { default, metadata } from "@/app/onboarding/page";
+import { redirect } from "next/navigation";
+
+export default function ProfileEditRedirect() {
+  redirect("/studio");
+}

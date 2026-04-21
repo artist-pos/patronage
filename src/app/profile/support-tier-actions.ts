@@ -36,7 +36,7 @@ export async function createSupportTier(data: {
   });
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -63,7 +63,7 @@ export async function updateSupportTier(
     .eq("profile_id", user.id);
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -79,7 +79,7 @@ export async function deleteSupportTier(tierId: string): Promise<{ error?: strin
     .eq("profile_id", user.id);
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 
@@ -95,7 +95,7 @@ export async function toggleSupportTierActive(tierId: string, isActive: boolean)
     .eq("profile_id", user.id);
 
   if (error) return { error: error.message };
-  revalidatePath("/profile/edit");
+  revalidatePath("/studio");
   return {};
 }
 

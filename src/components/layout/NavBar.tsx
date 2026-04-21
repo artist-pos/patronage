@@ -62,9 +62,6 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                   )}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/profile/edit">Edit Profile</Link>
-              </DropdownMenuItem>
               {isPartner && (
                 <DropdownMenuItem asChild>
                   <Link href="/partner/dashboard">Partner Dashboard</Link>
@@ -133,9 +130,6 @@ export function NavBar({ isLoggedIn, username, unreadCount, signOut, role }: Nav
                 >
                   Messages
                   {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
-                </Link>
-                <Link href="/profile/edit" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  Edit Profile
                 </Link>
                 {isPartner && (
                   <Link href="/partner/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">

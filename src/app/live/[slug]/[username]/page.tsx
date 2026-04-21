@@ -75,7 +75,7 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
   const works = allWorkIds.length > 0
     ? await admin
         .from("portfolio_images")
-        .select("id, url, caption, title, content_type")
+        .select("id, url, caption, title, content_type, slug")
         .in("id", allWorkIds)
         .then(({ data }) => data ?? [])
     : [];

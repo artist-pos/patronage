@@ -6,7 +6,7 @@ import { getProfile } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { isFollowing } from "@/lib/follows";
 import { getArtistProjects } from "@/lib/projects";
-import { Badge } from "@/components/ui/badge";
+import { Globe, Instagram } from "lucide-react";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
@@ -21,9 +21,6 @@ import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
 const WorkTab = dynamic(() =>
   import("@/components/profile/tabs/WorkTab").then((m) => ({ default: m.WorkTab }))
 );
-const StudioTab = dynamic(() =>
-  import("@/components/profile/tabs/StudioTab").then((m) => ({ default: m.StudioTab }))
-);
 const CvTab = dynamic(() =>
   import("@/components/profile/tabs/CvTab").then((m) => ({ default: m.CvTab }))
 );
@@ -34,7 +31,7 @@ import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork,
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
-const VALID_TABS = ["overview", "work", "studio", "cv", "support"] as const;
+const VALID_TABS = ["overview", "work", "cv", "support"] as const;
 type TabType = typeof VALID_TABS[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
@@ -113,8 +110,8 @@ export async function generateMetadata({ params }: Props) {
 export default async function ArtistProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const { tab: rawTab } = await searchParams;
-  // Redirect legacy ?tab=press to cv
-  const normalised = rawTab === "press" ? "cv" : rawTab;
+  // Redirect legacy ?tab=press → cv, ?tab=studio → work
+  const normalised = rawTab === "press" ? "cv" : rawTab === "studio" ? "work" : rawTab;
   const tab: TabType = (VALID_TABS as readonly string[]).includes(normalised ?? "")
     ? (normalised as TabType)
     : "overview";
@@ -224,10 +221,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
   const needsPortfolio        = isArtistProfile && (tab === "overview" || tab === "work");
-  const needsUpdates          = isArtistProfile && (tab === "overview" || tab === "studio" || tab === "work");
-  const needsProjects         = isArtistProfile && (tab === "work" || tab === "studio") && !isOwner;
+  const needsUpdates          = isArtistProfile && (tab === "overview" || tab === "work");
+  const needsProjects         = isArtistProfile && tab === "work" && !isOwner;
   const needsSold             = isArtistProfile && tab === "work";
-  const needsCreative         = isArtistProfile && (tab === "work" || tab === "studio");
+  const needsCreative         = isArtistProfile && tab === "work";
   const needsAchievements     = isArtistProfile && (tab === "overview" || tab === "cv");
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
@@ -402,62 +399,51 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
 
-            {/* Left: name, tags, bio, actions */}
+            {/* Left: name, meta line, bio, action row */}
             <div className="space-y-3 max-w-3xl">
               <div className="space-y-1">
                 <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
                 {profile.is_patronage_supported && (
-                  <p className="text-xs text-muted-foreground tracking-wide">With Patronage</p>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="text-xs font-normal bg-foreground text-background">
-                    {profile.role === "owner" ? "Artist" : profile.role === "admin" ? "Admin" : profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
-                  </Badge>
-                </div>
-                {profileBadges && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {profileBadges.verified && (
-                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Verified</span>
-                    )}
-                    {profileBadges.exhibited && (
-                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Exhibited</span>
-                    )}
-                    {profileBadges.grantRecipient && (
-                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Grant Recipient</span>
-                    )}
-                    {profileBadges.collected && (
-                      <span className="text-xs border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none">Collected</span>
-                    )}
-                  </div>
+                  <p className="text-[10px] text-muted-foreground tracking-wide opacity-70">With Patronage</p>
                 )}
                 <p className="text-sm text-muted-foreground">@{profile.username}</p>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                {(profile.country || (profile as Profile & { city?: string | null }).city) && (
-                  <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                    {[
-                      (profile as Profile & { city?: string | null }).city,
-                      profile.country,
-                    ].filter(Boolean).join(", ")}
-                  </span>
-                )}
-                {profile.career_stage && (
-                  <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                    {profile.career_stage}
-                  </span>
-                )}
-                {isArtistProfile && (() => {
-                  const chips = profile.disciplines?.length
-                    ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
-                    : (profile.medium ?? []);
-                  return chips.map((label) => (
-                    <span key={label} className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                      {label}
-                    </span>
-                  ));
-                })()}
-              </div>
+              {/* Single meta line: disciplines · career stage · location */}
+              {isArtistProfile && (() => {
+                const parts: string[] = [];
+                const disciplineLabels = profile.disciplines?.length
+                  ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
+                  : (profile.medium ?? []);
+                if (disciplineLabels.length) parts.push(disciplineLabels.join(", "));
+                if (profile.career_stage) parts.push(profile.career_stage);
+                const loc = [
+                  (profile as Profile & { city?: string | null }).city,
+                  profile.country,
+                ].filter(Boolean).join(", ");
+                if (loc) parts.push(loc);
+                return parts.length > 0
+                  ? <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>
+                  : null;
+              })()}
+
+              {/* Credential badges (quiet row below meta line) */}
+              {profileBadges && (profileBadges.verified || profileBadges.exhibited || profileBadges.grantRecipient || profileBadges.collected) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {profileBadges.verified && (
+                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Verified</span>
+                  )}
+                  {profileBadges.exhibited && (
+                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Exhibited</span>
+                  )}
+                  {profileBadges.grantRecipient && (
+                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Grant Recipient</span>
+                  )}
+                  {profileBadges.collected && (
+                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Collected</span>
+                  )}
+                </div>
+              )}
 
               {/* Taste chips — patron/partner only */}
               {!isArtistProfile && (profile.medium ?? []).length > 0 && (
@@ -487,15 +473,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   </Link>
                 </p>
               )}
-            </div>
 
-            {/* Right sidecar: action buttons + links */}
-            {(isOwner || canMessage || profile.website_url || profile.instagram_handle || profile.cv_url) && (
-              <div className="flex flex-col gap-2 lg:text-right lg:items-end shrink-0 pt-1">
+              {/* Action row: owner edit / follow + message + icon links */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 {isOwner && (
                   <Link
-                    href="/profile/edit"
-                    className="text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors self-start lg:self-end"
+                    href="/studio"
+                    className="text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors"
                   >
                     Edit Profile
                   </Link>
@@ -508,52 +492,46 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   />
                 )}
                 {canMessage && (
-                  <div className="flex items-center gap-2">
+                  <>
                     <FollowButton followingId={profile.id} initialIsFollowing={alreadyFollowing} />
                     <MessageButton otherUserId={profile.id} />
-                  </div>
+                  </>
                 )}
-                {(profile.website_url || profile.instagram_handle || profile.cv_url) && (
-                  <div className="flex flex-col gap-2 lg:items-end mt-2 lg:border-l lg:border-gray-100 lg:pl-6">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-                      Links
-                    </p>
-                    {profile.website_url && (
-                      <TrackedLink
-                        href={profile.website_url}
-                        profileId={profile.id}
-                        username={profile.username}
-                        eventType="website_click"
-                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                      >
-                        {profile.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                      </TrackedLink>
-                    )}
-                    {profile.instagram_handle && (
-                      <a
-                        href={`https://instagram.com/${profile.instagram_handle}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                      >
-                        @{profile.instagram_handle}
-                      </a>
-                    )}
-                    {profile.cv_url && (
-                      <TrackedLink
-                        href={profile.cv_url}
-                        profileId={profile.id}
-                        username={profile.username}
-                        eventType="cv_click"
-                        className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                      >
-                        Download CV →
-                      </TrackedLink>
-                    )}
-                  </div>
+                {profile.website_url && (
+                  <TrackedLink
+                    href={profile.website_url}
+                    profileId={profile.id}
+                    username={profile.username}
+                    eventType="website_click"
+                    className="p-2 border border-border hover:bg-muted transition-colors"
+                  >
+                    <Globe className="w-4 h-4" />
+                  </TrackedLink>
+                )}
+                {profile.instagram_handle && (
+                  <a
+                    href={`https://instagram.com/${profile.instagram_handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 border border-border hover:bg-muted transition-colors"
+                    title={`@${profile.instagram_handle}`}
+                  >
+                    <Instagram className="w-4 h-4" />
+                  </a>
+                )}
+                {profile.cv_url && (
+                  <TrackedLink
+                    href={profile.cv_url}
+                    profileId={profile.id}
+                    username={profile.username}
+                    eventType="cv_click"
+                    className="p-2 border border-border hover:bg-muted transition-colors text-xs font-medium"
+                  >
+                    CV
+                  </TrackedLink>
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -585,6 +563,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
                   projects={artistProjects}
                   studioUpdates={studioUpdates}
+                  creativeWorks={creativeWorks}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}
@@ -593,17 +572,6 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   hideSoldSection={profile.hide_sold_section}
                   displayName={displayName}
                   collaboratedWorks={collaboratedWorks}
-                />
-              )}
-
-              {tab === "studio" && (
-                <StudioTab
-                  updates={studioUpdates}
-                  artistUsername={profile.username}
-                  isOwner={isOwner}
-                  projects={artistProjects}
-                  profileId={profile.id}
-                  creativeWorks={creativeWorks}
                 />
               )}
 

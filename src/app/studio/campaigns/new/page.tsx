@@ -25,11 +25,11 @@ export default async function NewCampaignPage() {
     <div className="max-w-2xl mx-auto px-6 py-12 space-y-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/studio?tab=campaigns" className="hover:text-foreground transition-colors">
+        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
           Studio
         </Link>
         <span>/</span>
-        <Link href="/studio?tab=campaigns" className="hover:text-foreground transition-colors">
+        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
           Campaigns
         </Link>
         <span>/</span>

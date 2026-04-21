@@ -9,6 +9,7 @@ interface Work {
   caption: string | null;
   title: string | null;
   content_type?: string | null;
+  slug?: string | null;
 }
 
 interface WorkPricing {
@@ -270,7 +271,11 @@ export function LiveStorefrontClient({
               {hasOriginal && (
                 <button onClick={toggleOriginalPanel}
                   className={`flex-1 py-3 px-4 text-sm font-medium border transition-colors ${showOriginalPanel ? "bg-black text-white border-black" : "border-border hover:border-black"}`}>
-                  {resolvedPricing.is_poa ? "Original · POA" : resolvedPricing.price != null ? `Original · $${resolvedPricing.price.toLocaleString()}` : "Original"}
+                  {resolvedPricing.is_poa
+                    ? "Original · POA"
+                    : resolvedPricing.price != null && resolvedPricing.price > 0
+                      ? `Original · $${resolvedPricing.price.toLocaleString()}`
+                      : "Enquire"}
                 </button>
               )}
               {hasPrints && (
@@ -331,11 +336,11 @@ export function LiveStorefrontClient({
       {/* Artist statement */}
       {statement && (
         <div className={`px-6 pb-6 ${fade("delay-200")}`}>
-          <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-border pl-4 italic">{statement}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{statement}</p>
         </div>
       )}
 
-      <div className="mx-6 border-t border-border" />
+      <div className={`border-t border-border ${statement ? "mx-0" : "mx-6"}`} />
 
       {/* Artist section */}
       <div className={`px-6 py-6 ${fade("delay-300")}`}>
@@ -368,7 +373,7 @@ export function LiveStorefrontClient({
       {works.length > 0 && (
         <>
           <div className="mx-6 border-t border-border" />
-          <div className={`px-6 py-6 space-y-4 ${fade("delay-400")}`}>
+          <div className={`px-6 pt-8 pb-6 space-y-4 ${fade("delay-400")}`}>
             {layoutMode === "shopfront" ? (
               // Shopfront: grid of all works up front
               <>
@@ -408,11 +413,19 @@ export function LiveStorefrontClient({
                     Close
                   </button>
                 </div>
-                <button
-                  onClick={() => openEnquiry(`Enquiry about: ${activeWork.caption ?? activeWork.title ?? "work"}`)}
-                  className="w-full py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
-                  Enquire →
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEnquiry(`Enquiry about: ${activeWork.caption ?? activeWork.title ?? "work"}`)}
+                    className="flex-1 py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
+                    Enquire →
+                  </button>
+                  <a
+                    href={`/${profile.username}/works/${activeWork.slug ?? activeWork.id}`}
+                    className="px-4 py-2.5 border border-border text-xs text-muted-foreground hover:border-black hover:text-foreground transition-colors flex items-center"
+                  >
+                    View →
+                  </a>
+                </div>
               </div>
             )}
           </div>
@@ -512,9 +525,11 @@ export function LiveStorefrontClient({
           </div>
         </div>
 
-        {/* Right: scrollable content panel */}
-        <div className="w-[480px] xl:w-[520px] shrink-0 overflow-y-auto border-l border-border">
-          {ContentColumn}
+        {/* Right: scrollable content panel — max 420px, 40px left padding */}
+        <div className="w-[420px] shrink-0 overflow-y-auto border-l border-border">
+          <div className="pl-4">
+            {ContentColumn}
+          </div>
         </div>
       </div>
 

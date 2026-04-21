@@ -132,7 +132,7 @@ export async function createCampaignForSelection(opts: {
         artistEmail: artistUser.email,
         artistName: opts.artistUsername,
         opportunityTitle: opts.opportunityTitle,
-        studioUrl: `${SITE_URL}/studio?tab=campaigns`,
+        studioUrl: `${SITE_URL}/studio?section=campaigns`,
       }).catch(console.error);
     }
   } catch {
