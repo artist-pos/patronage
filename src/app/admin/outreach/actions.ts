@@ -115,7 +115,7 @@ export async function getOutreachHistory() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("outreach_emails")
-    .select("id, to_name, to_email, subject, status, sent_at, scheduled_at")
+    .select("id, to_name, to_email, subject, body, status, sent_at, scheduled_at")
     .order("created_at", { ascending: false })
     .limit(100);
   return data ?? [];

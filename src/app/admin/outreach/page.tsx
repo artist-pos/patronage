@@ -1,16 +1,7 @@
 import { getOutreachHistory } from "./actions";
-import { OutreachCompose, CancelButton } from "./OutreachCompose";
+import { OutreachCompose, CancelButton, SentHistory } from "./OutreachCompose";
 
 export const metadata = { title: "Outreach — Admin — Patronage" };
-
-function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
-  return d.toLocaleDateString("en-NZ", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-NZ", {
@@ -67,21 +58,7 @@ export default async function OutreachPage() {
           <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
             Sent ({sent.length})
           </p>
-          <div className="divide-y divide-border">
-            {sent.map((email) => (
-              <div key={email.id} className="py-3 flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-medium leading-snug truncate">{email.subject}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {email.to_name} &lt;{email.to_email}&gt;
-                  </p>
-                </div>
-                <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {email.sent_at ? formatDate(email.sent_at) : "—"}
-                </p>
-              </div>
-            ))}
-          </div>
+          <SentHistory emails={sent} />
         </div>
       )}
     </div>

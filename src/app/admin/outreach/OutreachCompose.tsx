@@ -376,6 +376,60 @@ export function OutreachCompose() {
   );
 }
 
+type SentEmail = {
+  id: string;
+  to_name: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  sent_at: string | null;
+};
+
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
+  return d.toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+}
+
+export function SentHistory({ emails }: { emails: SentEmail[] }) {
+  const [selected, setSelected] = useState<SentEmail | null>(null);
+
+  return (
+    <>
+      {selected && (
+        <PreviewModal
+          toName={selected.to_name}
+          toEmail={selected.to_email}
+          subject={selected.subject}
+          body={selected.body}
+          onClose={() => setSelected(null)}
+        />
+      )}
+      <div className="divide-y divide-border">
+        {emails.map((email) => (
+          <button
+            key={email.id}
+            type="button"
+            onClick={() => setSelected(email)}
+            className="w-full py-3 flex items-start justify-between gap-4 text-left hover:bg-stone-50 transition-colors -mx-1 px-1"
+          >
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium leading-snug truncate">{email.subject}</p>
+              <p className="text-xs text-muted-foreground">
+                {email.to_name} &lt;{email.to_email}&gt;
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0 pt-0.5">
+              {formatDate(email.sent_at)}
+            </p>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function CancelButton({ id }: { id: string }) {
   const [isPending, startTransition] = useTransition();
 
