@@ -206,28 +206,17 @@ export function OutreachCompose() {
           </p>
         </div>
 
-        {/* Scheduler */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer w-fit">
-            <input
-              type="checkbox"
-              checked={scheduling}
-              onChange={(e) => setScheduling(e.target.checked)}
-              className="accent-black"
-            />
-            <span className="text-xs font-medium uppercase tracking-widest text-stone-400">
-              Schedule send (NZ time)
-            </span>
-          </label>
-          {scheduling && (
+        {scheduling && (
+          <div className="space-y-1.5">
+            <label className={labelCls}>Send at (NZ time)</label>
             <input
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
               className={inputCls}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -245,6 +234,17 @@ export function OutreachCompose() {
               className="text-sm font-medium px-5 py-2.5 border border-border hover:bg-stone-50 transition-colors disabled:opacity-40"
             >
               Preview
+            </button>
+            <button
+              type="button"
+              onClick={() => { setScheduling((s) => !s); setScheduledAt(""); }}
+              className={`text-sm font-medium px-5 py-2.5 border transition-colors ${
+                scheduling
+                  ? "border-black bg-stone-100 text-black"
+                  : "border-border hover:bg-stone-50"
+              }`}
+            >
+              Schedule
             </button>
             <button
               type="button"
