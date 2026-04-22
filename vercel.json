@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/cron/send-outreach",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
