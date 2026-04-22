@@ -3,8 +3,11 @@ import { OutreachCompose, CancelButton } from "./OutreachCompose";
 
 export const metadata = { title: "Outreach — Admin — Patronage" };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-NZ", {
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
+  return d.toLocaleDateString("en-NZ", {
     day: "numeric", month: "short", year: "numeric",
   });
 }

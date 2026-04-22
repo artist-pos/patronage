@@ -84,7 +84,7 @@ export async function sendOutreachEmail(data: {
 
   if (sendError) return { error: sendError.message };
 
-  await admin.from("outreach_emails").insert({
+  const { error: insertError } = await admin.from("outreach_emails").insert({
     sent_by: user.id,
     to_name: toName.trim(),
     to_email: toEmail.trim(),
@@ -93,6 +93,8 @@ export async function sendOutreachEmail(data: {
     status: "sent",
     sent_at: new Date().toISOString(),
   });
+
+  if (insertError) console.error("outreach insert error:", insertError.message);
 
   return {};
 }
