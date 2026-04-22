@@ -15,18 +15,30 @@ function getResend() {
 function buildHtmlEmail(body: string): string {
   const htmlBody = body
     .split(/\n\n+/)
-    .map((p) => `<p style="margin:0 0 1em 0;line-height:1.6">${p.replace(/\n/g, "<br/>")}</p>`)
+    .map((p) => `<p style="margin:0 0 1.4em 0;font-size:15px;line-height:1.75;color:#1a1a1a">${p.replace(/\n/g, "<br/>")}</p>`)
     .join("");
 
-  return `
-    <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a1a;font-size:15px">
-      ${htmlBody}
-      <hr style="border:none;border-top:1px solid #e5e5e5;margin:2em 0"/>
-      <p style="font-size:12px;color:#888;margin:0">
-        Patronage · <a href="https://patronage.nz" style="color:#888">patronage.nz</a>
-      </p>
-    </div>
-  `;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#ffffff;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:48px 24px 64px;">
+    <tr><td>
+      <p style="margin:0 0 4px;font-family:system-ui,sans-serif;font-size:20px;font-weight:600;color:#000;letter-spacing:-0.3px;">Patronage</p>
+      <p style="margin:0 0 36px;font-family:system-ui,sans-serif;font-size:13px;color:#999;">hello@patronage.nz &middot; patronage.nz</p>
+      <div style="border-top:1px solid #e8e8e8;margin-bottom:32px;"></div>
+      <div style="font-family:Georgia,serif;">
+        ${htmlBody}
+      </div>
+      <div style="border-top:1px solid #e8e8e8;margin-top:40px;padding-top:20px;">
+        <p style="margin:0;font-family:system-ui,sans-serif;font-size:11px;color:#aaa;">
+          Patronage &middot; <a href="https://patronage.nz" style="color:#aaa;text-decoration:none;">patronage.nz</a> &middot; Auckland, New Zealand
+        </p>
+      </div>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
 
 // NZ-local datetime string → UTC ISO string (same logic as blog scheduler)

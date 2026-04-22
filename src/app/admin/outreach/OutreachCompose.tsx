@@ -4,33 +4,31 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { sendOutreachEmail, cancelScheduledEmail } from "./actions";
 
-function buildHtml(toName: string, subject: string, body: string): string {
+function buildHtml(_toName: string, _subject: string, body: string): string {
   const htmlBody = body
     .split(/\n\n+/)
-    .map((p) => `<p style="margin:0 0 1em 0;line-height:1.6">${p.replace(/\n/g, "<br/>")}</p>`)
+    .map((p) => `<p style="margin:0 0 1.4em 0;font-size:15px;line-height:1.75;color:#1a1a1a">${p.replace(/\n/g, "<br/>")}</p>`)
     .join("");
 
   return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/><title>${subject}</title></head>
-<body style="margin:0;padding:0;background:#f4f4f0">
-  <div style="max-width:620px;margin:40px auto;background:#ffffff;border:1px solid #e5e5e5">
-    <!-- Header -->
-    <div style="padding:24px 32px;border-bottom:1px solid #e5e5e5">
-      <p style="margin:0;font-family:Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-0.3px;color:#1a1a1a">Patronage</p>
-    </div>
-    <!-- Body -->
-    <div style="padding:32px;font-family:Georgia,serif;font-size:15px;color:#1a1a1a">
-      ${htmlBody}
-    </div>
-    <!-- Footer -->
-    <div style="padding:20px 32px;border-top:1px solid #e5e5e5;background:#fafaf9">
-      <p style="margin:0;font-family:sans-serif;font-size:11px;color:#999">
-        Patronage · <a href="https://patronage.nz" style="color:#999">patronage.nz</a>
-        &nbsp;·&nbsp; hello@patronage.nz
-      </p>
-    </div>
-  </div>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#ffffff;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:48px 24px 64px;">
+    <tr><td>
+      <p style="margin:0 0 4px;font-family:system-ui,sans-serif;font-size:20px;font-weight:600;color:#000;letter-spacing:-0.3px;">Patronage</p>
+      <p style="margin:0 0 36px;font-family:system-ui,sans-serif;font-size:13px;color:#999;">hello@patronage.nz &middot; patronage.nz</p>
+      <div style="border-top:1px solid #e8e8e8;margin-bottom:32px;"></div>
+      <div style="font-family:Georgia,serif;">
+        ${htmlBody}
+      </div>
+      <div style="border-top:1px solid #e8e8e8;margin-top:40px;padding-top:20px;">
+        <p style="margin:0;font-family:system-ui,sans-serif;font-size:11px;color:#aaa;">
+          Patronage &middot; <a href="https://patronage.nz" style="color:#aaa;text-decoration:none;">patronage.nz</a> &middot; Auckland, New Zealand
+        </p>
+      </div>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
