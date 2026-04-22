@@ -23,7 +23,8 @@ Return ONLY a valid JSON array. No markdown fences, no explanation, no trailing 
 RELEVANCE FILTER — apply BEFORE extracting:
 - YES: grants, prizes, residencies, open calls, commissions, exhibitions, public art opportunities, studio/space access, fellowships for individual artists or small collectives
 - NO: commercial job listings (marketing manager, gallery director, production coordinator), internships, volunteer roles, institutional funding for organisations/councils/universities, calls restricted to a specific institution's own students/staff/members, film/TV production crew calls, corporate sponsorship opportunities
-- If unsure, include it but set "confidence" to "low"
+- GEOGRAPHY SKIP — do NOT extract an opportunity if it is clearly restricted to a single country other than NZ or Australia AND there is no indication of international eligibility anywhere on the page. Eligibility signals to look for: tags like "International", "Open to all", "Worldwide"; filter labels; phrases like "artists from outside [country] are welcome"; or no explicit residency/citizenship restriction at all. When in doubt, include it with confidence "medium" — many prizes accept international entrants even if the organiser is based overseas.
+- If unsure about anything other than geography, include it but set "confidence" to "low"
 - If a page has NO relevant opportunities, return []
 
 Each item in the array:

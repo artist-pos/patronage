@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 
 interface Props {
@@ -12,11 +13,12 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
+  const metaNow = new Date().toISOString();
   const { data: post } = await supabase
     .from("blog_posts")
     .select("title, image_url, body, published_at, created_at")
     .eq("slug", slug)
-    .eq("status", "published")
+    .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${metaNow})`)
     .single();
 
   if (!post) return { title: "Post not found — Patronage" };
@@ -66,17 +68,19 @@ export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
 
+  const now = new Date().toISOString();
+
   const [{ data: post }, { data: otherPosts }] = await Promise.all([
     supabase
       .from("blog_posts")
-      .select("*")
+      .select("*, featured_profile:profiles(id, username, full_name, bio, avatar_url)")
       .eq("slug", slug)
-      .eq("status", "published")
+      .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
       .single(),
     supabase
       .from("blog_posts")
       .select("slug, title, image_url, published_at, created_at")
-      .eq("status", "published")
+      .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
       .neq("slug", slug)
       .order("published_at", { ascending: false })
       .limit(20),
@@ -122,6 +126,39 @@ export default async function BlogPostPage({ params }: Props) {
             </p>
           </div>
 
+          {/* Featured artist card */}
+          {post.featured_profile && (
+            <Link
+              href={`/${post.featured_profile.username}`}
+              className="flex items-center gap-4 max-w-[720px] p-4 border border-border rounded-xl hover:bg-muted/30 transition-colors"
+            >
+              {post.featured_profile.avatar_url ? (
+                <Image
+                  src={post.featured_profile.avatar_url}
+                  alt={post.featured_profile.full_name ?? post.featured_profile.username}
+                  width={56}
+                  height={56}
+                  className="rounded-full object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-stone-200 shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                  Featured Artist
+                </p>
+                <p className="text-sm font-semibold leading-snug">
+                  {post.featured_profile.full_name ?? post.featured_profile.username}
+                </p>
+                {post.featured_profile.bio && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    {post.featured_profile.bio}
+                  </p>
+                )}
+              </div>
+            </Link>
+          )}
+
           {/* Body — capped at comfortable reading width */}
           {post.body && (
             <div
@@ -158,7 +195,7 @@ export default async function BlogPostPage({ params }: Props) {
                   href={`/blog/${p.slug}`}
                   className="group flex flex-col gap-2"
                 >
-                  <div className="aspect-video overflow-hidden rounded-lg bg-black flex items-center justify-center">
+                  <div className="aspect-video overflow-hidden rounded-lg bg-stone-100 flex items-center justify-center">
                     {p.image_url && (
                       <img
                         src={p.image_url}

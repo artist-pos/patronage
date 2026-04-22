@@ -14,7 +14,11 @@ export default async function EditBlogPostPage({ params }: Props) {
 
   const [{ data: { user } }, { data: post }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("blog_posts").select("*").eq("id", id).single(),
+    supabase
+      .from("blog_posts")
+      .select("*, featured_profile:profiles(id, username, full_name, avatar_url)")
+      .eq("id", id)
+      .single(),
   ]);
 
   if (!user) redirect("/auth/login");

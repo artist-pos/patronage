@@ -263,5 +263,6 @@ function buildRecord(
         disciplines,
         is_recurring: sourceMeta?.is_recurring ?? false,
         recurrence_pattern: sourceMeta?.recurrence_pattern ?? null,
+        confidence: (opp as any).confidence ?? null,
     };
 }

@@ -237,6 +237,17 @@ export function QueueControls({ opps, tab }: Props) {
                 <div className="flex flex-wrap gap-2 mt-1">
                   <span className="text-[10px] border border-border px-1.5 py-0.5 leading-none">{opp.type}</span>
                   <span className="text-[10px] border border-border px-1.5 py-0.5 leading-none">{opp.country}</span>
+                  {opp.confidence && (
+                    <span className={`text-[10px] px-1.5 py-0.5 leading-none font-medium ${
+                      opp.confidence === "high"
+                        ? "bg-green-100 text-green-700"
+                        : opp.confidence === "medium"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {opp.confidence}
+                    </span>
+                  )}
                   {opp.deadline && (
                     <span className="text-[10px] text-muted-foreground font-mono">
                       Closes {opp.deadline}

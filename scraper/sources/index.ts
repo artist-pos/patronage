@@ -152,6 +152,7 @@ export const sources: Source[] = [
 
   // ── NZ Specialist ─────────────────────────────────────────────────────────
 
+  { name: "Prazzle Arts", url: "https://www.prazzlearts.com/opportunities", country: "NZ", isListPage: true, needsBrowser: true },
   { name: "Sargeson Fellowship", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding/sargeson-residency", country: "NZ" },
   { name: "Australian Art Network", url: "https://www.artnetwork.com.au/opportunities", country: "AUS", isListPage: true, followLinks: true },
 

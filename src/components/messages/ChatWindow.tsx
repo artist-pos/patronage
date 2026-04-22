@@ -105,6 +105,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
       offer_currency: null,
       is_system_message: false,
       source_action: null,
+      metadata: null,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -341,6 +342,45 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               </span>
             </div>
           </div>
+        </div>
+      );
+    }
+
+    if (msg.message_type === "tag_notification" && msg.metadata) {
+      const meta = msg.metadata as { type: string; title: string; url: string; image_url: string | null };
+      return (
+        <div key={msg.id} className="flex justify-center">
+          <a
+            href={meta.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block border border-black bg-background w-full max-w-sm hover:bg-muted/30 transition-colors"
+          >
+            {meta.image_url && (
+              <Image
+                src={meta.image_url}
+                alt={meta.title}
+                width={320}
+                height={160}
+                unoptimized
+                className="w-full h-36 object-cover border-b border-black"
+              />
+            )}
+            <div className="p-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                {meta.type === "blog_post" ? "Patronage Blog" : "Patronage"}
+              </p>
+              <p className="text-sm font-medium leading-snug">{meta.title}</p>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                You were featured in this post →
+              </p>
+            </div>
+            <div className="border-t border-black px-3 py-2">
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {formatTime(msg.created_at)}
+              </span>
+            </div>
+          </a>
         </div>
       );
     }

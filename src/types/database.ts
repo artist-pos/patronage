@@ -133,6 +133,8 @@ export interface Opportunity {
   claim_invite_template: 'claim_only' | 'claim_pipeline' | null;
   claim_link_opened_at: string | null;
   claim_link_open_count: number;
+  // Scraper confidence (migration 091)
+  confidence?: 'high' | 'medium' | 'low' | null;
 }
 
 export type RecurrencePattern =
@@ -443,12 +445,13 @@ export interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
-  message_type: 'text' | 'transfer_request' | 'transfer_accepted' | 'deletion_request' | 'deletion_accepted' | 'work_offer';
+  message_type: 'text' | 'transfer_request' | 'transfer_accepted' | 'deletion_request' | 'deletion_accepted' | 'work_offer' | 'tag_notification';
   work_id: string | null;
   offer_amount: number | null;
   offer_currency: string | null;
   is_system_message: boolean;
   source_action: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 

@@ -127,7 +127,7 @@ export async function sendMessage(
     conversation_id: conversationId,
     sender_id: user.id,
     content: trimmed,
-  }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, is_system_message, source_action, created_at").single();
+  }).select("id, conversation_id, sender_id, content, is_read, message_type, work_id, is_system_message, source_action, metadata, created_at").single();
 
   if (error || !msg) return { error: error?.message ?? "Failed to send" };
 

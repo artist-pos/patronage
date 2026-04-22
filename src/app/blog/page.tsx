@@ -44,7 +44,7 @@ export default async function BlogPage() {
               href={`/blog/${post.slug}`}
               className="group space-y-3"
             >
-              <div className="aspect-video overflow-hidden rounded-xl bg-black flex items-center justify-center">
+              <div className="aspect-video overflow-hidden rounded-xl bg-stone-100 flex items-center justify-center">
                 {post.image_url && (
                   <img
                     src={post.image_url}
