@@ -298,6 +298,91 @@ export function getHeadersForUrl(url: string): Record<string, string> {
 }
 
 // ============================================================
+// PLAYWRIGHT AUTO-LOGIN (for CI / headless environments)
+// ============================================================
+
+/**
+ * Checks whether a cookie array contains a valid WordPress session token.
+ */
+function hasWordPressSession(cookies: CookieEntry[]): boolean {
+  return cookies.some((c) => c.name.startsWith("wordpress_logged_in_"));
+}
+
+/**
+ * Logs into a WordPress site via Playwright using credentials from env vars.
+ * Saves resulting cookies to the cookie file for the current scrape run.
+ *
+ * Env vars required:
+ *   ARTINFOLAND_EMAIL    — WordPress username or email
+ *   ARTINFOLAND_PASSWORD — WordPress password
+ */
+export async function autoLoginWordPress(domain: string): Promise<CookieEntry[] | null> {
+  const email = process.env.ARTINFOLAND_EMAIL;
+  const password = process.env.ARTINFOLAND_PASSWORD;
+
+  if (!email || !password) {
+    console.log(`  ⚠ Auto-login skipped for ${domain} — ARTINFOLAND_EMAIL / ARTINFOLAND_PASSWORD not set`);
+    return null;
+  }
+
+  console.log(`  🔐 Auto-logging into ${domain} via Playwright…`);
+
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent: REALISTIC_HEADERS["User-Agent"],
+    locale: "en-NZ",
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(`https://${domain}/wp-login.php`, { waitUntil: "networkidle", timeout: 20000 });
+
+    await page.fill("#user_login", email);
+    await page.fill("#user_pass", password);
+    await page.click("#wp-submit");
+    await page.waitForURL((url) => !url.toString().includes("wp-login.php"), { timeout: 15000 });
+
+    const raw = await context.cookies();
+    const cookies: CookieEntry[] = raw.map((c) => ({
+      name: c.name,
+      value: c.value,
+      domain: c.domain,
+      path: c.path,
+      expires: c.expires === -1 ? undefined : c.expires,
+      httpOnly: c.httpOnly,
+      secure: c.secure,
+      sameSite: c.sameSite as "Strict" | "Lax" | "None" | undefined,
+    }));
+
+    if (!hasWordPressSession(cookies)) {
+      console.log(`  ⚠ Auto-login for ${domain} completed but no session cookie found — credentials may be wrong`);
+      return null;
+    }
+
+    saveCookies(domain, cookies);
+    console.log(`  ✓ Auto-login for ${domain} succeeded — session saved`);
+    return cookies;
+  } catch (err) {
+    console.error(`  ✗ Auto-login for ${domain} failed:`, err instanceof Error ? err.message : err);
+    return null;
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Load cookies for a site, auto-logging in via Playwright if the session is missing
+ * and credentials are available in env vars.
+ */
+export async function loadCookiesWithAutoLogin(domain: string): Promise<CookieEntry[] | null> {
+  const cookies = loadCookies(domain);
+  if (cookies && hasWordPressSession(cookies)) return cookies;
+  // Session missing or expired — try auto-login
+  return autoLoginWordPress(domain);
+}
+
+// ============================================================
 // INTERACTIVE COOKIE EXTRACTOR
 // ============================================================
 

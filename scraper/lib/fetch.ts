@@ -9,8 +9,7 @@ import {
     RSS_HEADERS,
     needsRealisticHeaders,
     needsCookieAuth,
-    getCookieHeader,
-    loadCookies,
+    loadCookiesWithAutoLogin,
 } from "./auth.js";
 
 const rssParser = new Parser();
@@ -61,9 +60,9 @@ export async function fetchPageContent(url: string): Promise<{ text: string; ogI
     const headers: Record<string, string> = { ...REALISTIC_HEADERS };
     const authSite = needsCookieAuth(url);
     if (authSite?.needsCookies) {
-        const cookieHeader = getCookieHeader(authSite.domain);
-        if (cookieHeader) {
-            headers["Cookie"] = cookieHeader;
+        const cookies = await loadCookiesWithAutoLogin(authSite.domain);
+        if (cookies) {
+            headers["Cookie"] = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
         }
     }
 
@@ -118,7 +117,7 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
     // Inject cookies for authenticated sites
     const authSite = needsCookieAuth(url);
     if (authSite?.needsCookies) {
-        const cookies = loadCookies(authSite.domain);
+        const cookies = await loadCookiesWithAutoLogin(authSite.domain);
         if (cookies) {
             const playwrightCookies = cookies.map((c) => ({
                 name: c.name,

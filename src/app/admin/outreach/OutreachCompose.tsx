@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { sendOutreachEmail } from "./actions";
+import { sendOutreachEmail, cancelScheduledEmail } from "./actions";
 
 function buildHtml(toName: string, subject: string, body: string): string {
   const htmlBody = body
@@ -71,14 +71,12 @@ function PreviewModal({ toName, toEmail, subject, body, onClose }: {
         className="w-full max-w-2xl space-y-3 mt-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Email client chrome */}
         <div className="bg-stone-100 border border-border text-xs text-muted-foreground px-4 py-3 space-y-1 font-mono">
           <p><span className="text-stone-400">From:</span> Patronage &lt;hello@patronage.nz&gt;</p>
           <p><span className="text-stone-400">To:</span> {toName} &lt;{toEmail}&gt;</p>
           <p><span className="text-stone-400">Subject:</span> {subject}</p>
         </div>
 
-        {/* Rendered email */}
         <div className="border border-border overflow-hidden">
           <iframe
             ref={iframeRef}
@@ -108,14 +106,23 @@ export function OutreachCompose() {
   const [toEmail, setToEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
 
   function handleSend() {
     setError(null);
+    if (scheduling && !scheduledAt) {
+      setError("Please select a send date and time.");
+      return;
+    }
     startTransition(async () => {
-      const result = await sendOutreachEmail({ toName, toEmail, subject, body });
+      const result = await sendOutreachEmail({
+        toName, toEmail, subject, body,
+        scheduledAt: scheduling ? scheduledAt : undefined,
+      });
       if (result.error) {
         setError(result.error);
         return;
@@ -124,19 +131,21 @@ export function OutreachCompose() {
       setToEmail("");
       setSubject("");
       setBody("");
-      setToast("Email sent.");
+      setScheduledAt("");
+      setScheduling(false);
+      setToast(scheduling ? "Email scheduled." : "Email sent.");
       setTimeout(() => setToast(null), 3000);
     });
   }
 
-  const canPreview = !!(toName && toEmail && subject && body);
+  const canSend = !!(toName && toEmail && subject && body);
 
   const labelCls = "text-xs font-medium uppercase tracking-widest text-stone-400";
   const inputCls = "w-full text-sm border border-border bg-transparent px-3 py-2 focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300";
 
   return (
     <>
-      {previewing && canPreview && (
+      {previewing && canSend && (
         <PreviewModal
           toName={toName}
           toEmail={toEmail}
@@ -197,6 +206,29 @@ export function OutreachCompose() {
           </p>
         </div>
 
+        {/* Scheduler */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={scheduling}
+              onChange={(e) => setScheduling(e.target.checked)}
+              className="accent-black"
+            />
+            <span className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              Schedule send (NZ time)
+            </span>
+          </label>
+          {scheduling && (
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className={inputCls}
+            />
+          )}
+        </div>
+
         {error && <p className="text-xs text-red-600">{error}</p>}
 
         <div className="flex items-center justify-between pt-1">
@@ -209,7 +241,7 @@ export function OutreachCompose() {
             <button
               type="button"
               onClick={() => setPreviewing(true)}
-              disabled={!canPreview}
+              disabled={!canSend}
               className="text-sm font-medium px-5 py-2.5 border border-border hover:bg-stone-50 transition-colors disabled:opacity-40"
             >
               Preview
@@ -217,14 +249,37 @@ export function OutreachCompose() {
             <button
               type="button"
               onClick={handleSend}
-              disabled={isPending || !canPreview}
+              disabled={isPending || !canSend}
               className="text-sm font-medium px-5 py-2.5 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
             >
-              {isPending ? "Sending…" : "Send Email"}
+              {isPending
+                ? scheduling ? "Scheduling…" : "Sending…"
+                : scheduling ? "Schedule Email" : "Send Email"}
             </button>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+export function CancelButton({ id }: { id: string }) {
+  const [isPending, startTransition] = useTransition();
+
+  function handleCancel() {
+    startTransition(async () => {
+      await cancelScheduledEmail(id);
+      window.location.reload();
+    });
+  }
+
+  return (
+    <button
+      onClick={handleCancel}
+      disabled={isPending}
+      className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+    >
+      {isPending ? "Cancelling…" : "Cancel"}
+    </button>
   );
 }
