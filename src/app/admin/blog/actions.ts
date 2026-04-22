@@ -101,12 +101,13 @@ export async function upsertPost(data: {
     revalidatePath("/admin/blog");
     // AutoDM: notify featured artist on publish
     if (effectiveStatus === "published" && data.featured_profile_id) {
-      await sendTagNotificationDM(user.id, data.featured_profile_id, {
+      const dmResult = await sendTagNotificationDM(user.id, data.featured_profile_id, {
         type: "blog_post",
         title: data.title,
         url: `${BASE_URL}/blog/${row.slug}`,
         image_url: data.image_url,
       });
+      if (dmResult.error) return { error: dmResult.error };
     }
     return { id: row.id, slug: row.slug };
   }
@@ -125,12 +126,13 @@ export async function upsertPost(data: {
   revalidatePath("/admin/blog");
   // AutoDM: notify featured artist on publish
   if (effectiveStatus === "published" && data.featured_profile_id) {
-    await sendTagNotificationDM(user.id, data.featured_profile_id, {
+    const dmResult = await sendTagNotificationDM(user.id, data.featured_profile_id, {
       type: "blog_post",
       title: data.title,
       url: `${BASE_URL}/blog/${slug}`,
       image_url: data.image_url,
     });
+    if (dmResult.error) return { error: dmResult.error };
   }
   return { id: row.id, slug: row.slug };
 }
