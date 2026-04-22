@@ -22,6 +22,7 @@ interface Post {
   slug: string;
   body: string | null;
   image_url: string | null;
+  image_url_2: string | null;
   status: "draft" | "published" | "scheduled";
   published_at: string | null;
   featured_profile_id: string | null;
@@ -50,6 +51,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(post?.title ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(post?.image_url ?? null);
+  const [imageUrl2, setImageUrl2] = useState<string | null>(post?.image_url_2 ?? null);
   const [status, setStatus] = useState<"draft" | "published" | "scheduled">(
     post?.status ?? "draft"
   );
@@ -66,6 +68,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInput2Ref = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
@@ -107,22 +110,31 @@ export function BlogEditor({ post, userId }: Props) {
     };
   }, [artistQuery]);
 
-  async function handleImageUpload(file: File) {
-    setUploading(true);
-    setError(null);
+  async function uploadImage(file: File): Promise<string | null> {
     const supabase = createClient();
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const path = `${userId}/blog/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from("portfolio")
       .upload(path, file, { contentType: file.type });
-    if (upErr) {
-      setError(upErr.message);
-      setUploading(false);
-      return;
-    }
+    if (upErr) { setError(upErr.message); return null; }
     const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-    setImageUrl(urlData.publicUrl);
+    return urlData.publicUrl;
+  }
+
+  async function handleImageUpload(file: File) {
+    setUploading(true);
+    setError(null);
+    const url = await uploadImage(file);
+    if (url) setImageUrl(url);
+    setUploading(false);
+  }
+
+  async function handleImage2Upload(file: File) {
+    setUploading(true);
+    setError(null);
+    const url = await uploadImage(file);
+    if (url) setImageUrl2(url);
     setUploading(false);
   }
 
@@ -143,6 +155,7 @@ export function BlogEditor({ post, userId }: Props) {
         title: title.trim(),
         body: editor?.getHTML() ?? "",
         image_url: imageUrl,
+        image_url_2: imageUrl2,
         status: targetStatus,
         existingPublishedAt: post?.published_at,
         featured_profile_id: featuredProfile?.id ?? null,
@@ -257,43 +270,69 @@ export function BlogEditor({ post, userId }: Props) {
         />
       </div>
 
-      {/* Featured Image */}
+      {/* Featured Images */}
       <div className="space-y-2">
         <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
-          Featured Image
+          Featured Image{imageUrl2 || (!imageUrl && "s")}
         </label>
-        {imageUrl ? (
-          <div className="relative group">
-            <img src={imageUrl} alt="" className="w-full max-h-64 object-cover rounded-xl" />
-            <button
-              type="button"
-              onClick={() => setImageUrl(null)}
-              className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              Remove
-            </button>
+        <div className="flex gap-2">
+          {/* Slot 1 */}
+          <div className="flex-1">
+            {imageUrl ? (
+              <div className="relative group h-48">
+                <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                <button
+                  type="button"
+                  onClick={() => setImageUrl(null)}
+                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full h-48 border-2 border-dashed border-stone-200 rounded-xl text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-colors disabled:opacity-60"
+              >
+                {uploading ? "Uploading…" : "+ Image 1"}
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="w-full border-2 border-dashed border-stone-200 rounded-xl py-10 text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-colors disabled:opacity-60"
-          >
-            {uploading ? "Uploading…" : "Click to upload featured image"}
-          </button>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleImageUpload(f);
-            e.target.value = "";
-          }}
-        />
+
+          {/* Slot 2 — only shown once image 1 is set */}
+          {(imageUrl || imageUrl2) && (
+            <div className="flex-1">
+              {imageUrl2 ? (
+                <div className="relative group h-48">
+                  <img src={imageUrl2} alt="" className="w-full h-full object-cover rounded-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl2(null)}
+                    className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInput2Ref.current?.click()}
+                  disabled={uploading}
+                  className="w-full h-48 border-2 border-dashed border-stone-200 rounded-xl text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-colors disabled:opacity-60"
+                >
+                  {uploading ? "Uploading…" : "+ Image 2"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+        <input ref={fileInput2Ref} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImage2Upload(f); e.target.value = ""; }} />
       </div>
 
       {/* Featured Artist */}

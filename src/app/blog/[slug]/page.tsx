@@ -105,14 +105,23 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* ── Left: article ── */}
         <article className="space-y-8 min-w-0">
-          {/* Featured image */}
+          {/* Featured image(s) */}
           {post.image_url && (
-            <div className="overflow-hidden rounded-xl">
+            <div className={`flex gap-2 overflow-hidden rounded-xl`}>
               <img
                 src={post.image_url}
                 alt=""
-                className="w-full h-auto"
+                className="flex-1 min-w-0 object-cover rounded-xl"
+                style={post.image_url_2 ? { maxHeight: "480px" } : undefined}
               />
+              {post.image_url_2 && (
+                <img
+                  src={post.image_url_2}
+                  alt=""
+                  className="flex-1 min-w-0 object-cover rounded-xl"
+                  style={{ maxHeight: "480px" }}
+                />
+              )}
             </div>
           )}
 

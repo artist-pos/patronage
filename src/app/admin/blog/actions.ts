@@ -44,6 +44,7 @@ export async function upsertPost(data: {
   existingSlug?: string;
   body: string;
   image_url: string | null;
+  image_url_2: string | null;
   status: "draft" | "published" | "scheduled";
   existingPublishedAt?: string | null;
   featured_profile_id: string | null;
@@ -73,6 +74,7 @@ export async function upsertPost(data: {
     title: data.title,
     body: data.body,
     image_url: data.image_url,
+    image_url_2: data.image_url_2,
     status: effectiveStatus,
     published_at,
     scheduled_at: effectiveStatus === "published" ? null : scheduled_at,
