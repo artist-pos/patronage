@@ -125,7 +125,7 @@ export default async function BlogPostPage({ params }: Props) {
           {post.featured_profile && (
             <Link
               href={`/${post.featured_profile.username}`}
-              className="flex items-center gap-4 max-w-[720px] p-4 border border-border rounded-xl hover:bg-muted/30 transition-colors"
+              className="flex items-center gap-4 max-w-[720px] p-4 border-[3px] border-black rounded-xl hover:bg-muted/30 transition-colors"
             >
               {post.featured_profile.avatar_url ? (
                 <Image
