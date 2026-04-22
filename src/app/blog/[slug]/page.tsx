@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { BlogImages } from "@/components/blog/BlogImages";
 import type { Metadata } from "next";
 
 interface Props {
@@ -107,22 +108,7 @@ export default async function BlogPostPage({ params }: Props) {
         <article className="space-y-8 min-w-0">
           {/* Featured image(s) */}
           {post.image_url && (
-            <div className={`flex gap-2 overflow-hidden rounded-xl`}>
-              <img
-                src={post.image_url}
-                alt=""
-                className="flex-1 min-w-0 object-cover rounded-xl"
-                style={post.image_url_2 ? { maxHeight: "480px" } : undefined}
-              />
-              {post.image_url_2 && (
-                <img
-                  src={post.image_url_2}
-                  alt=""
-                  className="flex-1 min-w-0 object-cover rounded-xl"
-                  style={{ maxHeight: "480px" }}
-                />
-              )}
-            </div>
+            <BlogImages imageUrl={post.image_url} imageUrl2={post.image_url_2} />
           )}
 
           {/* Header */}
