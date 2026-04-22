@@ -73,17 +73,30 @@ export function loadCookies(site: string): CookieEntry[] | null {
   }
 
   try {
-    const data: SiteAuth = JSON.parse(readFileSync(path, "utf-8"));
-    
-    // Check if cookies are older than 14 days
-    const exportedAt = new Date(data.exportedAt).getTime();
-    const daysSinceExport = (Date.now() - exportedAt) / (1000 * 60 * 60 * 24);
-    
-    if (daysSinceExport > 14) {
-      console.log(`  ⚠ Cookies for ${site} are ${Math.round(daysSinceExport)} days old — may need refresh`);
+    const raw = JSON.parse(readFileSync(path, "utf-8"));
+
+    // Handle both formats:
+    //   - Raw browser export: JSON array of cookie objects
+    //   - SiteAuth wrapper: { cookies: [...], exportedAt, site }
+    let cookies: CookieEntry[];
+    let exportedAt: number | null = null;
+
+    if (Array.isArray(raw)) {
+      cookies = raw as CookieEntry[];
+    } else {
+      const data = raw as SiteAuth;
+      cookies = data.cookies;
+      exportedAt = new Date(data.exportedAt).getTime();
     }
 
-    return data.cookies;
+    if (exportedAt !== null) {
+      const daysSinceExport = (Date.now() - exportedAt) / (1000 * 60 * 60 * 24);
+      if (daysSinceExport > 14) {
+        console.log(`  ⚠ Cookies for ${site} are ${Math.round(daysSinceExport)} days old — may need refresh`);
+      }
+    }
+
+    return cookies;
   } catch {
     console.log(`  ⚠ Failed to parse cookies for ${site}`);
     return null;
