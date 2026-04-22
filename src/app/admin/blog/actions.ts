@@ -83,16 +83,21 @@ export async function upsertPost(data: {
   };
 
   if (data.id) {
+    const newSlug = data.existingSlug && generateSlug(data.title) === data.existingSlug
+      ? data.existingSlug
+      : generateSlug(data.title) || data.existingSlug || `post-${Date.now()}`;
+
     const { data: row, error } = await supabase
       .from("blog_posts")
-      .update(payload)
+      .update({ ...payload, slug: newSlug })
       .eq("id", data.id)
       .select("id, slug")
       .single();
 
     if (error) return { error: error.message };
     revalidatePath("/blog");
-    revalidatePath(`/blog/${row.slug}`);
+    revalidatePath(`/blog/${data.existingSlug}`); // old slug
+    revalidatePath(`/blog/${row.slug}`);           // new slug
     revalidatePath("/admin/blog");
     // AutoDM: notify featured artist on publish
     if (effectiveStatus === "published" && data.featured_profile_id) {
