@@ -1,0 +1,186 @@
+{
+  "cookies": [
+    {
+      "name": "wordpress_sec_35036738852d90c46504c7600fd762f9",
+      "value": "blakeaitkenwork%7C1777039661%7C9MDCO4z3wEuMIsTX00iU4mJBBUTBtOo989VKfFaGMOV%7C27cf79005f756ccfec67671ff9d2e36addf80992447b77fac971ed8b19dd7121",
+      "domain": "artinfoland.com",
+      "path": "/wp-content/plugins",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "YSC",
+      "value": "M5vPEJsUzMk",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "__Secure-ROLLOUT_TOKEN",
+      "value": "CIepsaP0kKPwKBDKnrnq0IGUAxjKnrnq0IGUAw%3D%3D",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1792418847.866918,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "VISITOR_INFO1_LIVE",
+      "value": "mbhmtzzNOZQ",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1792418847.86698,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "VISITOR_PRIVACY_METADATA",
+      "value": "CgJOWhIEGgAgWA%3D%3D",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1792418847.867013,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "sbjs_migrations",
+      "value": "1418474375998%3D1",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_current_add",
+      "value": "fd%3D2026-04-22%2014%3A07%3A27%7C%7C%7Cep%3Dhttps%3A%2F%2Fartinfoland.com%2F%7C%7C%7Crf%3D%28none%29",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_first_add",
+      "value": "fd%3D2026-04-22%2014%3A07%3A27%7C%7C%7Cep%3Dhttps%3A%2F%2Fartinfoland.com%2F%7C%7C%7Crf%3D%28none%29",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_current",
+      "value": "typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_first",
+      "value": "typ%3Dtypein%7C%7C%7Csrc%3D%28direct%29%7C%7C%7Cmdm%3D%28none%29%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_udata",
+      "value": "vst%3D1%7C%7C%7Cuip%3D%28none%29%7C%7C%7Cuag%3DMozilla%2F5.0%20%28Windows%20NT%2010.0%3B%20Win64%3B%20x64%29%20AppleWebKit%2F537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome%2F145.0.0.0%20Safari%2F537.36",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "mailchimp.cart.current_email",
+      "value": "blakeaitkenwork@gmail.com",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "mailchimp_user_email",
+      "value": "blakeaitkenwork%40gmail.com",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": 1779286055.881852,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "wordpress_sec_35036738852d90c46504c7600fd762f9",
+      "value": "blakeaitkenwork%7C1777039661%7C9MDCO4z3wEuMIsTX00iU4mJBBUTBtOo989VKfFaGMOV%7C27cf79005f756ccfec67671ff9d2e36addf80992447b77fac971ed8b19dd7121",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "wordpress_logged_in_35036738852d90c46504c7600fd762f9",
+      "value": "blakeaitkenwork%7C1777039661%7C9MDCO4z3wEuMIsTX00iU4mJBBUTBtOo989VKfFaGMOV%7C0a2c8e15550f9d8f6f1e5dc7b9c2e9970550a17a4dc202f46f5f57c04e05a023",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "mailpoet_subscriber",
+      "value": "%7B%22subscriber_id%22%3A18972%7D",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": 1811426860.759393,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "mailpoet_page_view",
+      "value": "%7B%22timestamp%22%3A1776866861%7D",
+      "domain": "artinfoland.com",
+      "path": "/",
+      "expires": 1811426861.161875,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "sbjs_session",
+      "value": "pgs%3D3%7C%7C%7Ccpg%3Dhttps%3A%2F%2Fartinfoland.com%2Fmy-account%2F",
+      "domain": ".artinfoland.com",
+      "path": "/",
+      "expires": 1776868661,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "exportedAt": "2026-04-22T14:07:50.793Z",
+  "site": "artinfoland.com"
+}
