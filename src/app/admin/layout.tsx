@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/followups", label: "Follow-ups" },
   { href: "/admin/pipeline-report", label: "Pipeline Report" },
   { href: "/admin/blog", label: "Blog" },
+  { href: "/admin/outreach", label: "Outreach" },
   { href: "/admin/social", label: "Social" },
   { href: "/partner/dashboard", label: "Pipelines" },
 ];
