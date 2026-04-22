@@ -43,12 +43,12 @@ export function BlogImages({ imageUrl, imageUrl2 }: Props) {
 
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setLightbox(null)}
         >
           <button
             onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            className="absolute top-4 right-4 text-foreground/50 hover:text-foreground transition-colors"
             aria-label="Close"
           >
             <X className="w-6 h-6" />
