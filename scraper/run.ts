@@ -10,12 +10,13 @@ import {
   sleep,
 } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
-import { upsertOpportunity } from "./lib/upsert.js";
+import { upsertOpportunity, loadDedupeCache, normalizeUrl, type DedupeCache } from "./lib/upsert.js";
 import { filterLinks } from "./lib/filter-links.js";
 import type { Source, ScrapedOpportunity } from "./types.js";
 
 const RATE_LIMIT_MS = 2_000;
-const SOURCE_TIMEOUT_MS = 120_000; // increased from 30s — sources with many links need more time
+const PAGINATION_RATE_LIMIT_MS = 1_000; // lighter delay between list pages vs detail pages
+const SOURCE_TIMEOUT_MS = 360_000;      // 6 min — deep sources (40 pages) need more headroom
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ interface SourceResult {
   errors: number;
 }
 
-async function processSource(source: Source): Promise<SourceResult> {
+async function processSource(source: Source, cache: DedupeCache): Promise<SourceResult> {
   let inserted = 0, updated = 0, skipped = 0, errors = 0;
 
   async function upsert(opp: ScrapedOpportunity, image: string | null) {
@@ -59,7 +60,7 @@ async function processSource(source: Source): Promise<SourceResult> {
       disciplines: source.disciplines,
       is_recurring: source.is_recurring,
       recurrence_pattern: source.recurrence_pattern,
-    });
+    }, cache);
     if (result === "inserted") inserted++;
     else if (result === "updated") updated++;
     else skipped++;
@@ -78,9 +79,35 @@ async function processSource(source: Source): Promise<SourceResult> {
       }
     }
   } else {
-    const { text, ogImage, links } = source.needsBrowser
+    const { text, ogImage: mainOgImage, links: page1Links } = source.needsBrowser
       ? await fetchWithBrowser(source.url)
       : await fetchPageContent(source.url);
+
+    // Collect links from additional pages when pagination is configured
+    let allLinks = [...page1Links];
+    if (source.pages && source.pages > 1 && source.paginationUrl) {
+      for (let p = 2; p <= source.pages; p++) {
+        const pageUrl = source.paginationUrl.replace("{page}", String(p));
+        try {
+          const { links: pageLinks } = source.needsBrowser
+            ? await fetchWithBrowser(pageUrl)
+            : await fetchPageContent(pageUrl);
+          // Stop paginating early if this page returned no new links
+          if (pageLinks.length === 0) {
+            console.log(`  ↳ pagination stopped at page ${p} (no links found)`);
+            break;
+          }
+          allLinks = [...allLinks, ...pageLinks];
+          await sleep(PAGINATION_RATE_LIMIT_MS);
+        } catch (err) {
+          console.warn(`  ⚠ Page ${p} failed: ${err instanceof Error ? err.message : String(err)}`);
+          break; // don't keep paginating if a page errors
+        }
+      }
+    }
+
+    const ogImage = mainOgImage;
+    const links = allLinks;
 
     if (source.followLinks && links.length > 0) {
       const detailLinks = filterLinks(links, {
@@ -88,9 +115,15 @@ async function processSource(source: Source): Promise<SourceResult> {
         linkPattern: source.linkPattern,
         maxLinks: source.maxLinks ?? 10,
       });
-      console.log(`  ↳ following ${detailLinks.length} links (filtered from ${links.length})`);
 
-      for (const link of detailLinks) {
+      // Pre-filter: skip links whose URLs are already in the dedup cache
+      const newLinks = detailLinks.filter(link => !cache.urls.has(normalizeUrl(link)));
+      const cachedCount = detailLinks.length - newLinks.length;
+
+      const pageNote = source.pages && source.pages > 1 ? `, across ${source.pages} pages` : "";
+      console.log(`  ↳ ${detailLinks.length} links found${pageNote}; ${newLinks.length} new, ${cachedCount} already known`);
+
+      for (const link of newLinks) {
         try {
           const { text: dText, ogImage: dOg } = await fetchPageContent(link);
           const opps = await extractFromPage(dText, link, source.country);
@@ -136,6 +169,10 @@ async function main() {
   console.log(`\n🎨 Patronage Scraper — ${label}`);
   console.log(`📋 ${activeSources.length} / ${sources.length} sources queued\n`);
 
+  // Load dedup cache once — shared across all sources in this run
+  console.log("Loading dedup cache from database...");
+  const cache = await loadDedupeCache();
+
   let inserted = 0, updated = 0, skipped = 0, errors = 0, timedOut = 0;
 
   for (const [i, source] of activeSources.entries()) {
@@ -143,7 +180,7 @@ async function main() {
     console.log(`${prefix} ${source.name}${source.needsBrowser ? " 🌐" : ""}`);
 
     try {
-      const result = await withTimeout(processSource(source), SOURCE_TIMEOUT_MS);
+      const result = await withTimeout(processSource(source, cache), SOURCE_TIMEOUT_MS);
       inserted += result.inserted;
       updated  += result.updated;
       skipped  += result.skipped;

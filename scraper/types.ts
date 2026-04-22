@@ -11,6 +11,8 @@ export interface Source {
   followLinks?: boolean;    // follow individual opportunity links from the list page for full detail
   maxLinks?: number;        // cap on how many detail links to follow (default 10)
   linkPattern?: string | RegExp; // only follow links whose path/URL matches this pattern
+  pages?: number;           // number of paginated list pages to scrape (default 1)
+  paginationUrl?: string;   // URL template for pages 2+, with {page} placeholder e.g. "https://example.com/page/{page}/"
 }
 
 export interface ScrapedOpportunity {
