@@ -51,8 +51,8 @@ export async function sendTagNotificationDM(
 
   const content =
     payload.type === "blog_post"
-      ? `You've been featured in a Patronage blog post: "${payload.title}"`
-      : `You've been tagged in content on Patronage.`;
+      ? `Blog post: "${payload.title}"`
+      : `Tagged in content on Patronage.`;
 
   const { error: msgError } = await admin.from("messages").insert({
     conversation_id: conversationId,
