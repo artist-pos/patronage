@@ -48,7 +48,7 @@ interface SiteAuth {
 // COOKIE STORAGE
 // ============================================================
 
-const COOKIE_DIR = join(process.cwd(), "scraper", "cookies");
+const COOKIE_DIR = join(process.cwd(), "cookies");
 
 function ensureCookieDir() {
   if (!existsSync(COOKIE_DIR)) {
