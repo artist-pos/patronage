@@ -108,7 +108,9 @@ export default async function BlogPostPage({ params }: Props) {
         <article className="space-y-8 min-w-0">
           {/* Featured image(s) */}
           {post.image_url && (
-            <BlogImages imageUrl={post.image_url} imageUrl2={post.image_url_2} />
+            <div className="overflow-hidden">
+              <BlogImages imageUrl={post.image_url} imageUrl2={post.image_url_2} />
+            </div>
           )}
 
           {/* Header */}

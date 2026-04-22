@@ -21,7 +21,7 @@ export default async function BlogPage() {
   const supabase = await createClient();
   const { data: posts } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, image_url, published_at, created_at")
+    .select("id, title, slug, image_url, published_at, created_at, featured_profile_id")
     .eq("status", "published")
     .order("published_at", { ascending: false, nullsFirst: false });
 
@@ -44,7 +44,7 @@ export default async function BlogPage() {
               href={`/blog/${post.slug}`}
               className="group space-y-3"
             >
-              <div className="aspect-video overflow-hidden rounded-xl bg-stone-100 flex items-center justify-center">
+              <div className={`aspect-video overflow-hidden bg-stone-100 flex items-center justify-center ${post.featured_profile_id ? "border-[3px] border-black" : ""}`}>
                 {post.image_url && (
                   <img
                     src={post.image_url}

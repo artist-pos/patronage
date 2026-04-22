@@ -27,7 +27,7 @@ export function BlogImages({ imageUrl, imageUrl2 }: Props) {
           src={imageUrl}
           alt=""
           onClick={() => setLightbox(imageUrl)}
-          className="flex-1 min-w-0 object-cover rounded-xl cursor-zoom-in"
+          className="flex-1 min-w-0 object-cover cursor-zoom-in"
           style={imageUrl2 ? { maxHeight: "480px" } : undefined}
         />
         {imageUrl2 && (
@@ -35,7 +35,7 @@ export function BlogImages({ imageUrl, imageUrl2 }: Props) {
             src={imageUrl2}
             alt=""
             onClick={() => setLightbox(imageUrl2)}
-            className="flex-1 min-w-0 object-cover rounded-xl cursor-zoom-in"
+            className="flex-1 min-w-0 object-cover cursor-zoom-in"
             style={{ maxHeight: "480px" }}
           />
         )}
