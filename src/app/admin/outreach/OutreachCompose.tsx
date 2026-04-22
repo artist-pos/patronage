@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { X, Bold, Italic, Underline, Link } from "lucide-react";
 import { sendOutreachEmail, cancelScheduledEmail } from "./actions";
 
 function buildHtml(_toName: string, _subject: string, body: string): string {
@@ -98,6 +98,118 @@ function PreviewModal({ toName, toEmail, subject, body, onClose }: {
   );
 }
 
+function FormatToolbar({ textareaRef, onBodyChange }: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  onBodyChange: (val: string) => void;
+}) {
+  const [linkMode, setLinkMode] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const linkInputRef = useRef<HTMLInputElement>(null);
+
+  function applyTag(open: string, close: string) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.slice(start, end);
+    const replacement = `${open}${selected}${close}`;
+    const newVal = ta.value.slice(0, start) + replacement + ta.value.slice(end);
+    onBodyChange(newVal);
+    setTimeout(() => {
+      ta.focus();
+      // Place cursor after closing tag if nothing was selected
+      const pos = selected.length ? start + replacement.length : start + open.length;
+      ta.setSelectionRange(pos, pos);
+    }, 0);
+  }
+
+  function applyLink() {
+    const ta = textareaRef.current;
+    const url = linkUrl.trim();
+    if (!ta || !url) { setLinkMode(false); return; }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.slice(start, end) || "link text";
+    const replacement = `<a href="${url}">${selected}</a>`;
+    const newVal = ta.value.slice(0, start) + replacement + ta.value.slice(end);
+    onBodyChange(newVal);
+    setLinkUrl("");
+    setLinkMode(false);
+    setTimeout(() => ta.focus(), 0);
+  }
+
+  useEffect(() => {
+    if (linkMode) linkInputRef.current?.focus();
+  }, [linkMode]);
+
+  const btnCls = "p-1.5 text-stone-400 hover:text-foreground hover:bg-stone-100 transition-colors";
+
+  return (
+    <div className="border border-border border-b-0 bg-stone-50 flex items-center gap-0.5 px-2 py-1">
+      <button
+        type="button"
+        title="Bold"
+        onMouseDown={(e) => { e.preventDefault(); applyTag("<strong>", "</strong>"); }}
+        className={btnCls}
+      >
+        <Bold className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        title="Italic"
+        onMouseDown={(e) => { e.preventDefault(); applyTag("<em>", "</em>"); }}
+        className={btnCls}
+      >
+        <Italic className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        title="Underline"
+        onMouseDown={(e) => { e.preventDefault(); applyTag("<u>", "</u>"); }}
+        className={btnCls}
+      >
+        <Underline className="w-3.5 h-3.5" />
+      </button>
+      <div className="w-px h-4 bg-border mx-1" />
+      <button
+        type="button"
+        title="Link"
+        onMouseDown={(e) => { e.preventDefault(); setLinkMode((v) => !v); setLinkUrl(""); }}
+        className={`${btnCls} ${linkMode ? "text-foreground bg-stone-100" : ""}`}
+      >
+        <Link className="w-3.5 h-3.5" />
+      </button>
+      {linkMode && (
+        <div className="flex items-center gap-1.5 ml-1">
+          <input
+            ref={linkInputRef}
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(); } if (e.key === "Escape") setLinkMode(false); }}
+            placeholder="https://…"
+            className="text-xs border border-border bg-white px-2 py-1 w-48 focus:outline-none focus:border-foreground"
+          />
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
+            className="text-xs font-medium px-2 py-1 bg-black text-white hover:opacity-80 transition-opacity"
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); setLinkMode(false); }}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OutreachCompose() {
   const [isPending, startTransition] = useTransition();
   const [toName, setToName] = useState("");
@@ -109,6 +221,7 @@ export function OutreachCompose() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function handleSend() {
     setError(null);
@@ -192,7 +305,9 @@ export function OutreachCompose() {
 
         <div className="space-y-1.5">
           <label className={labelCls}>Message</label>
+          <FormatToolbar textareaRef={textareaRef} onBodyChange={setBody} />
           <textarea
+            ref={textareaRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={"Hi Jane,\n\nI'm reaching out about…"}
@@ -200,7 +315,7 @@ export function OutreachCompose() {
             className={`${inputCls} resize-y min-h-[200px]`}
           />
           <p className="text-[11px] text-muted-foreground">
-            Plain text — double line breaks become paragraphs. Sent from hello@patronage.nz.
+            Double line breaks become paragraphs. Sent from hello@patronage.nz.
           </p>
         </div>
 
