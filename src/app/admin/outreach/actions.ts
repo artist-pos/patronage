@@ -27,7 +27,7 @@ function buildHtmlEmail(body: string): string {
       <p style="margin:0 0 4px;font-family:system-ui,sans-serif;font-size:20px;font-weight:600;color:#000;letter-spacing:-0.3px;">Patronage</p>
       <p style="margin:0 0 36px;font-family:system-ui,sans-serif;font-size:13px;color:#999;">hello@patronage.nz &middot; patronage.nz</p>
       <div style="border-top:1px solid #e8e8e8;margin-bottom:32px;"></div>
-      <div style="font-family:Georgia,serif;">
+      <div style="font-family:system-ui,sans-serif;">
         ${htmlBody}
       </div>
       <div style="border-top:1px solid #e8e8e8;margin-top:40px;padding-top:20px;">
