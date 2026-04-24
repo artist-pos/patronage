@@ -15,7 +15,7 @@ function buildHtmlEmail(body: string): string {
       ${htmlBody}
       <hr style="border:none;border-top:1px solid #e5e5e5;margin:2em 0"/>
       <p style="font-size:12px;color:#888;margin:0">
-        Patronage · <a href="https://patronage.nz" style="color:#888">patronage.nz</a>
+        Patronage · <a href="mailto:hello@patronage.nz" style="color:#888">hello@patronage.nz</a> · <a href="https://patronage.nz" style="color:#888">patronage.nz</a> · Auckland, New Zealand
       </p>
     </div>
   `;
