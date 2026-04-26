@@ -13,7 +13,9 @@ export async function submitOpportunityTip(
 
   const supabase = createAdminClient();
 
-  const { error } = await supabase.from("opportunity_submissions").insert({
+  // Migration 064 merged opportunity_submissions into opportunities. Submissions
+  // are now opportunities rows with status='pending' and is_active=false.
+  const { error } = await supabase.from("opportunities").insert({
     title: name.trim(),
     organiser: "Community Tip",
     url: sourceLink.trim(),
@@ -23,6 +25,8 @@ export async function submitOpportunityTip(
     routing_type: "external",
     custom_fields: [],
     show_badges_in_submission: false,
+    status: "pending",
+    is_active: false,
   });
 
   if (error) return { error: error.message };
