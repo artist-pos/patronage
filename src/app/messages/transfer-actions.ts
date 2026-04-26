@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted } from "@/lib/email";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
+import { ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 
 export async function initiateTransfer(
   workId: string,
@@ -90,7 +91,7 @@ export async function acceptTransfer(
   // Verify work is still available (guard against double-accept)
   const { data: work } = await supabase
     .from("artworks")
-    .select("id, title, caption, is_available, creator_id, image_url, year_created, medium_detail")
+    .select("id, title, caption, url, is_available, creator_id, year, medium, dimensions, edition, certificate_note, ledger_id")
     .eq("id", message.work_id)
     .maybeSingle();
 
@@ -144,23 +145,53 @@ export async function acceptTransfer(
   const artistName = artistData?.full_name ?? artistData?.username ?? "The artist";
   const artistUsername = artistData?.username ?? null;
   const workTitle = work.title ?? work.caption ?? "Untitled";
-  const transferId = acceptedMsg.id;
-  const w = work as { image_url?: string | null; year_created?: number | null; medium_detail?: string | null };
+  const w = work as {
+    url?: string | null;
+    year?: number | null;
+    medium?: string | null;
+    dimensions?: string | null;
+    edition?: string | null;
+    certificate_note?: string | null;
+  };
 
-  // Fire-and-forget: transfer accepted notification + provenance certificate
-  notifyTransferAccepted(work.creator_id, buyerName, workTitle).catch(console.error);
-  sendTransferCertificate({
-    artistId: work.creator_id,
-    buyerId: user.id,
-    transferId,
-    workTitle,
-    workImageUrl: w.image_url ?? null,
-    artistName,
-    artistUsername,
-    patronName: buyerName,
-    yearCreated: w.year_created ?? null,
-    medium: w.medium_detail ?? null,
-  }).catch(console.error);
+  // Ledger entry must complete before returning — chain of custody depends on it
+  const ledgerId = await ensureLedgerId(message.work_id!);
+  await createLedgerEntry({
+    artworkId: message.work_id!,
+    ledgerId,
+    entryType: "transferred",
+    fromOwnerId: work.creator_id,
+    toOwnerId: user.id,
+    transferMethod: "direct",
+  });
+
+  // Fire-and-forget: notifications + certificate (non-critical)
+  ;(async () => {
+    const { data: branding } = await admin.from("profiles")
+      .select("provenance_logo_url, provenance_signature_url")
+      .eq("id", work.creator_id)
+      .maybeSingle();
+    await Promise.all([
+      notifyTransferAccepted(work.creator_id, buyerName, workTitle),
+      sendTransferCertificate({
+        artistId: work.creator_id,
+        buyerId: user.id,
+        ledgerId,
+        workTitle,
+        workImageUrl: w.url ?? null,
+        artistName,
+        artistUsername,
+        patronName: buyerName,
+        yearCreated: w.year ?? null,
+        medium: w.medium ?? null,
+        dimensions: w.dimensions ?? null,
+        edition: w.edition ?? null,
+        certificateNote: w.certificate_note ?? null,
+        logoUrl: branding?.provenance_logo_url ?? null,
+        signatureUrl: branding?.provenance_signature_url ?? null,
+      }),
+    ]);
+  })().catch(console.error);
 
   return {};
 }

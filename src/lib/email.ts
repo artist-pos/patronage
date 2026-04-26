@@ -674,6 +674,97 @@ export async function sendCampaignEnquiryNotification(params: {
   });
 }
 
+export async function sendOwnershipClaimNotification({
+  artistEmail,
+  artistName,
+  claimerName,
+  claimerEmail,
+  artworkTitle,
+  dashboardUrl,
+}: {
+  artistEmail: string;
+  artistName: string;
+  claimerName: string;
+  claimerEmail: string;
+  artworkTitle: string;
+  dashboardUrl: string;
+}): Promise<void> {
+  const resend = getResend();
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  await resend.emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `${claimerName} is claiming ownership of "${artworkTitle}"`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px 64px;">
+    <tr><td>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;">
+        Kia ora ${esc(artistName)},<br><br>
+        <strong>${esc(claimerName)}</strong> (${esc(claimerEmail)}) has submitted an ownership claim for
+        <strong>${esc(artworkTitle)}</strong>.<br><br>
+        Visit your provenance dashboard to approve or decline this claim.
+      </p>
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Review claim →
+      </a>
+      <div style="border-top:1px solid #e8e8e8;margin-top:40px;padding-top:20px;">
+        <p style="margin:0;font-size:11px;color:#aaa;">
+          Patronage &middot; <a href="mailto:hello@patronage.nz" style="color:#aaa;text-decoration:none;">hello@patronage.nz</a> &middot; <a href="${SITE_URL}" style="color:#aaa;text-decoration:none;">patronage.nz</a>
+        </p>
+      </div>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+export async function sendClaimDeclinedNotification({
+  claimerEmail,
+  claimerName,
+  artworkTitle,
+  artistName,
+}: {
+  claimerEmail: string;
+  claimerName: string;
+  artworkTitle: string;
+  artistName: string;
+}): Promise<void> {
+  const resend = getResend();
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  await resend.emails.send({
+    from: FROM,
+    to: claimerEmail,
+    subject: `Ownership claim update — ${artworkTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px 64px;">
+    <tr><td>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;">
+        Kia ora ${esc(claimerName)},<br><br>
+        ${esc(artistName)} was unable to verify your ownership claim for
+        <strong>${esc(artworkTitle)}</strong>.<br><br>
+        If you believe this is an error, please contact the artist directly.
+      </p>
+      <div style="border-top:1px solid #e8e8e8;margin-top:40px;padding-top:20px;">
+        <p style="margin:0;font-size:11px;color:#aaa;">
+          Patronage &middot; <a href="mailto:hello@patronage.nz" style="color:#aaa;text-decoration:none;">hello@patronage.nz</a> &middot; <a href="${SITE_URL}" style="color:#aaa;text-decoration:none;">patronage.nz</a>
+        </p>
+      </div>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendCollectiveInvitation({
   email,
   collectiveName,

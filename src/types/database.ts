@@ -250,6 +250,11 @@ export interface Profile {
   // Demographic fields — internal only, never shown on public profile
   year_of_birth: number | null;
   identity_tags: string[];
+  // Provenance branding (migration 098)
+  provenance_logo_url: string | null;
+  provenance_signature_url: string | null;
+  provenance_template_theme: 'minimal' | 'editorial' | 'gallery';
+  account_status: 'active' | 'shadow';
   created_at: string;
 }
 
@@ -376,7 +381,37 @@ export interface Artwork {
   medium: string | null;
   dimensions: string | null;
   edition: string | null;
+  // Provenance (migration 098)
+  ledger_id: string | null;
+  certificate_note: string | null;
   created_at: string;
+}
+
+export interface ArtworkProvenanceLedger {
+  id: string;
+  artwork_id: string;
+  ledger_id: string;
+  entry_type: 'created' | 'transferred' | 'resold';
+  from_owner_id: string | null;
+  to_owner_id: string;
+  transfer_method: 'listing' | 'stripe' | 'claim' | 'direct';
+  transaction_ref: string | null;
+  price: number | null;
+  transferred_at: string;
+  certificate_url: string | null;
+  notes: string | null;
+  campaign_id: string | null;
+}
+
+export interface PendingOwnershipClaim {
+  id: string;
+  artwork_id: string;
+  claimer_name: string;
+  claimer_email: string;
+  status: 'pending' | 'approved' | 'declined';
+  claimed_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
 }
 
 export interface WorkImage {

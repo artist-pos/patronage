@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { StudioPageShell } from "./StudioPageShell";
+import { Section, VALID_SECTIONS, TAB_TO_SECTION } from "./sidebar-config";
 import { getProfileById } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
@@ -26,32 +28,6 @@ import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember,
 
 export const metadata: Metadata = {
   title: "Studio — Patronage",
-};
-
-// ── Sidebar sections ─────────────────────────────────────────────────────────
-const SIDEBAR_SECTIONS = [
-  { id: "profile",   label: "Profile",          group: "Identity"  },
-  { id: "cv",        label: "CV & History",      group: "Identity"  },
-  { id: "portfolio", label: "Portfolio",          group: "Work"      },
-  { id: "available", label: "Available",          group: "Work"      },
-  { id: "sold",      label: "Sold",               group: "Work"      },
-  { id: "updates",   label: "Studio Updates",     group: "Creative"  },
-  { id: "projects",  label: "Projects",           group: "Creative"  },
-  { id: "campaigns", label: "Campaigns",          group: "Creative"  },
-  { id: "support",   label: "Support Tiers",      group: "Commerce"  },
-] as const;
-type Section = typeof SIDEBAR_SECTIONS[number]["id"];
-
-const VALID_SECTIONS = SIDEBAR_SECTIONS.map((s) => s.id) as string[];
-const SIDEBAR_GROUPS = ["Identity", "Work", "Creative", "Commerce"] as const;
-
-// Backward compat: old ?tab= param → new section
-const TAB_TO_SECTION: Record<string, Section> = {
-  works:     "portfolio",
-  campaigns: "campaigns",
-  commerce:  "support",
-  support:   "support",
-  analytics: "profile",
 };
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -82,6 +58,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const activeSection: Section = VALID_SECTIONS.includes(rawSection)
     ? (rawSection as Section)
     : "profile";
+
+  if (activeSection === "provenance") redirect("/studio/provenance");
 
   // ── Conditional data fetching ─────────────────────────────────────────────
   const needsIdentity  = activeSection === "profile" || activeSection === "cv";
@@ -126,7 +104,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
-            .select("id, url, caption, price, price_currency, created_at, current_owner_id, hidden_from_artist")
+            .select("id, url, caption, price, price_currency, created_at, current_owner_id, hidden_from_artist, ledger_id")
             .eq("creator_id", user.id)
             .neq("current_owner_id", user.id)
             .order("created_at", { ascending: false }),
@@ -208,69 +186,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Studio</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your profile and creative practice.
-          </p>
-        </div>
-        <Link
-          href={`/${profileRow.username}`}
-          className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
-        >
-          View profile →
-        </Link>
-      </div>
-
-      {/* ── Mobile: horizontal section tabs ── */}
-      <div className="flex lg:hidden gap-0 border-b border-black overflow-x-auto mb-8">
-        {SIDEBAR_SECTIONS.map(({ id, label }) => (
-          <Link
-            key={id}
-            href={`/studio?section=${id}`}
-            className={`px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
-              activeSection === id
-                ? "font-semibold border-b-2 border-black -mb-px"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-
-      {/* ── Desktop: sidebar + content ── */}
-      <div className="flex flex-col lg:flex-row gap-12 items-start">
-
-        {/* Sidebar */}
-        <nav className="hidden lg:block w-[200px] shrink-0 sticky top-8 space-y-6">
-          {SIDEBAR_GROUPS.map((group) => (
-            <div key={group} className="space-y-0.5">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
-                {group}
-              </p>
-              {SIDEBAR_SECTIONS.filter((s) => s.group === group).map(({ id, label }) => (
-                <Link
-                  key={id}
-                  href={`/studio?section=${id}`}
-                  className={`block px-3 py-2 text-sm rounded-sm transition-colors ${
-                    activeSection === id
-                      ? "bg-muted font-medium text-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-10">
+    <StudioPageShell username={profileRow.username} activeSection={activeSection}>
+      <div className="space-y-10">
 
           {/* ── Profile section ── */}
           {activeSection === "profile" && fullProfile && (
@@ -582,8 +499,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             </div>
           )}
 
-        </div>
       </div>
-    </div>
+    </StudioPageShell>
   );
 }

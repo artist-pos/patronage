@@ -135,7 +135,7 @@ export default async function VerifyPage({ params }: Props) {
         <div className="mb-10">
           <Link href="/" className="text-sm font-semibold tracking-tight">Patronage</Link>
           <p className="text-xs text-muted-foreground mt-1 tracking-widest uppercase">
-            Verified Provenance Record
+            Provenance Record
           </p>
         </div>
 

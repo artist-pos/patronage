@@ -60,6 +60,7 @@ interface SoldRow {
   created_at: string;
   current_owner_id: string;
   hidden_from_artist: boolean;
+  ledger_id?: string | null;
 }
 
 interface Props {
@@ -542,6 +543,13 @@ export function WorksTable({
                     Remove from profile
                   </ActionBtn>
                   {divider}
+                  <a
+                    href={`/studio/artworks/${work.id}`}
+                    className="text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                  >
+                    Provenance →
+                  </a>
+                  {divider}
                   <ActionBtn
                     onClick={() => handleDeleteAvailable(work.id)}
                     disabled={busy === work.id}
@@ -578,6 +586,14 @@ export function WorksTable({
                     })}
                     {work.price ? ` · ${formatPrice(work.price, work.price_currency)}` : ""}
                   </p>
+                  {work.ledger_id && (
+                    <a
+                      href={`/provenance/${work.ledger_id}`}
+                      className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {work.ledger_id}
+                    </a>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
