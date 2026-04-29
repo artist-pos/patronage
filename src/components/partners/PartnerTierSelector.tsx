@@ -137,8 +137,8 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
             ))}
           </div>
 
-          {/* Featured placement add-on — shown for Standard and Pipeline (not Featured, which is already featured) */}
-          {selectedTier && selectedTier !== "featured" && (
+          {/* Featured placement add-on — only relevant for Pipeline (Standard can upgrade to Featured tier; Featured already includes it) */}
+          {selectedTier === "pipeline" && (
             <label className="flex items-start gap-3 cursor-pointer border border-border px-4 py-3">
               <input
                 type="checkbox"
@@ -168,6 +168,25 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
               Featured rate is introductory and subject to change.
             </p>
           )}
+
+          {/* Mobile-only: render the right column content below the cards */}
+          <div className="lg:hidden border-t border-black pt-8 space-y-2">
+            <h2 className="text-xl font-semibold tracking-tight">{rightHeader.title}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{rightHeader.desc}</p>
+            <div className="pt-4">
+              {pipelineSelected && pipelineConfigActive && pipelineExternalConfig ? (
+                <PipelineConfigPanel
+                  config={pipelineExternalConfig}
+                  onChange={handlePipelineConfigChange}
+                />
+              ) : pipelineSelected ? (
+                <PipelineInfoPanel />
+              ) : (
+                <ActivationsColumn activationTypes={activationTypes} isAdmin={isAdmin} hideHeader />
+              )}
+            </div>
+          </div>
+
 
           {/* Submission form — expands below pricing on selection */}
           {selectedTier && (

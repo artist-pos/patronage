@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Pencil, X, Check, ChevronUp, ChevronDown, EyeOff, Eye } from "lucide-react";
+import { Pencil, X, Check, ChevronUp, ChevronDown, EyeOff, Eye, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { updateActivationType } from "@/app/partners/actions";
@@ -41,6 +41,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
 
   // Admin editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -340,14 +341,34 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
       </div>
 
       {/* Enquiry form */}
-      <div className="border border-border p-6 space-y-5">
-        <div className="space-y-1">
+      <div className="border border-border">
+        {/* Mobile-only collapse toggle */}
+        <button
+          type="button"
+          onClick={() => setEnquiryOpen(v => !v)}
+          className="lg:hidden w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-stone-50 transition-colors"
+          aria-expanded={enquiryOpen}
+        >
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Get in touch</p>
+            <p className="text-xs text-muted-foreground">
+              Tell us about your project. We&apos;ll be in touch within 48 hours.
+            </p>
+          </div>
+          <ChevronRight
+            className={`w-4 h-4 shrink-0 transition-transform ${enquiryOpen ? "rotate-90" : ""}`}
+          />
+        </button>
+
+        {/* Desktop: header always visible at top of form */}
+        <div className="hidden lg:block px-6 pt-6 pb-2 space-y-1">
           <p className="text-sm font-semibold">Get in touch</p>
           <p className="text-xs text-muted-foreground">
             Tell us about your project. We&apos;ll be in touch within 48 hours.
           </p>
         </div>
 
+        <div className={`${enquiryOpen ? "block" : "hidden"} lg:block px-6 pb-6 pt-3 lg:pt-3 space-y-5`}>
         {sent ? (
           <p className="text-sm text-muted-foreground">
             Thanks — we&apos;ll be in touch. Usually within 48 hours.
@@ -429,6 +450,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
             </button>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

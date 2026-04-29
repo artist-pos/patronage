@@ -19,10 +19,11 @@ function formatDate(dateStr: string | null): string {
 
 export default async function BlogPage() {
   const supabase = await createClient();
+  const now = new Date().toISOString();
   const { data: posts } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, image_url, published_at, created_at, featured_profile_id")
-    .eq("status", "published")
+    .select("id, title, slug, image_url, published_at, scheduled_at, created_at, featured_profile_id")
+    .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
     .order("published_at", { ascending: false, nullsFirst: false });
 
   return (
@@ -55,7 +56,7 @@ export default async function BlogPage() {
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
-                  {formatDate(post.published_at ?? post.created_at)}
+                  {formatDate(post.published_at ?? post.scheduled_at ?? post.created_at)}
                 </p>
                 <h2 className="font-semibold text-base leading-snug group-hover:opacity-70 transition-opacity">
                   {post.title}
