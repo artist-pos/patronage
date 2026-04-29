@@ -14,10 +14,6 @@
     {
       "path": "/api/cron/send-outreach",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/publish-scheduled-blogs",
-      "schedule": "0 * * * *"
     }
   ]
 }
