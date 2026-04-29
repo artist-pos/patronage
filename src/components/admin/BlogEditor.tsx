@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { upsertPost, searchArtistProfiles } from "@/app/admin/blog/actions";
 import Image from "next/image";
+import { BlogPreviewModal } from "@/components/admin/BlogPreviewModal";
 
 interface FeaturedProfile {
   id: string;
@@ -67,6 +68,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -498,6 +500,13 @@ export function BlogEditor({ post, userId }: Props) {
       <div className="flex gap-3 pt-2 border-t border-border">
         <button
           type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="text-sm font-medium px-5 py-2.5 rounded-lg border border-border hover:bg-stone-50 transition-colors"
+        >
+          Preview
+        </button>
+        <button
+          type="button"
           onClick={() => save("draft")}
           disabled={isPending}
           className="text-sm font-medium px-5 py-2.5 rounded-lg border border-border hover:bg-stone-50 transition-colors disabled:opacity-50"
@@ -524,6 +533,18 @@ export function BlogEditor({ post, userId }: Props) {
           </button>
         )}
       </div>
+
+      <BlogPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={title}
+        body={editor?.getHTML() ?? ""}
+        imageUrl={imageUrl}
+        imageUrl2={imageUrl2}
+        featuredProfile={featuredProfile}
+        scheduledAt={status === "scheduled" ? scheduledAt || null : null}
+        publishedAt={post?.published_at ?? null}
+      />
     </div>
   );
 }
