@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+scraper/node_modules
+scraper/package-lock.json
 /.pnp
 .pnp.*
 .yarn/*
@@ -44,6 +46,9 @@ yarn-error.log*
 
 # Claude Code
 .claude/
+
+# Kiro (editor/agent tool config)
+.kiro/
 
 # typescript
 *.tsbuildinfo
