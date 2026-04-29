@@ -1,6 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -68,7 +69,7 @@ export async function sendOutreachEmail(data: {
   // Schedule for later — just persist, don't send now
   if (scheduledAt) {
     const scheduledUtc = nzLocalToUtc(scheduledAt);
-    await admin.from("outreach_emails").insert({
+    const { error: scheduleError } = await admin.from("outreach_emails").insert({
       sent_by: user.id,
       to_name: toName.trim(),
       to_email: toEmail.trim(),
@@ -78,6 +79,11 @@ export async function sendOutreachEmail(data: {
       scheduled_at: scheduledUtc,
       sent_at: null,
     });
+    if (scheduleError) {
+      console.error("outreach schedule error:", scheduleError.message);
+      return { error: scheduleError.message };
+    }
+    revalidatePath("/admin/outreach");
     return {};
   }
 
@@ -105,6 +111,7 @@ export async function sendOutreachEmail(data: {
 
   if (insertError) console.error("outreach insert error:", insertError.message);
 
+  revalidatePath("/admin/outreach");
   return {};
 }
 
@@ -130,5 +137,7 @@ export async function cancelScheduledEmail(id: string): Promise<{ error?: string
     .eq("id", id)
     .eq("status", "scheduled");
 
-  return error ? { error: error.message } : {};
+  if (error) return { error: error.message };
+  revalidatePath("/admin/outreach");
+  return {};
 }
