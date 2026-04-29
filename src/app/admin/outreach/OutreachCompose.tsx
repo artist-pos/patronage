@@ -430,6 +430,85 @@ export function SentHistory({ emails }: { emails: SentEmail[] }) {
   );
 }
 
+type ScheduledEmail = {
+  id: string;
+  to_name: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  scheduled_at: string | null;
+};
+
+function formatNzDateTime(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
+  return d.toLocaleString("en-NZ", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "Pacific/Auckland",
+  }) + " NZT";
+}
+
+export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
+  const [selected, setSelected] = useState<ScheduledEmail | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleCancel(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    startTransition(async () => {
+      await cancelScheduledEmail(id);
+      window.location.reload();
+    });
+  }
+
+  return (
+    <>
+      {selected && (
+        <PreviewModal
+          toName={selected.to_name}
+          toEmail={selected.to_email}
+          subject={selected.subject}
+          body={selected.body}
+          onClose={() => setSelected(null)}
+        />
+      )}
+      <div className="divide-y divide-border">
+        {emails.map((email) => (
+          <div
+            key={email.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelected(email)}
+            onKeyDown={(e) => { if (e.key === "Enter") setSelected(email); }}
+            className="w-full py-3 flex items-start justify-between gap-4 text-left hover:bg-stone-50 transition-colors -mx-1 px-1 cursor-pointer"
+          >
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium leading-snug truncate">{email.subject}</p>
+              <p className="text-xs text-muted-foreground">
+                {email.to_name} &lt;{email.to_email}&gt;
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 pt-0.5">
+              <p className="text-xs text-amber-600 whitespace-nowrap">
+                {formatNzDateTime(email.scheduled_at)}
+              </p>
+              <button
+                type="button"
+                onClick={(e) => handleCancel(email.id, e)}
+                disabled={isPending}
+                className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+              >
+                {isPending ? "Cancelling…" : "Cancel"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function CancelButton({ id }: { id: string }) {
   const [isPending, startTransition] = useTransition();
 
