@@ -125,6 +125,52 @@ export async function getOutreachHistory() {
   return data ?? [];
 }
 
+export async function sendScheduledNow(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createAdminClient();
+
+  const { data: email, error: fetchError } = await admin
+    .from("outreach_emails")
+    .select("id, to_name, to_email, subject, body, status")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!email) return { error: "Email not found." };
+  if (email.status !== "scheduled") return { error: "Email is not scheduled." };
+
+  const resend = getResend();
+  const { error: sendError } = await resend.emails.send({
+    from: FROM_OUTREACH,
+    to: [`${email.to_name} <${email.to_email}>`],
+    replyTo: FROM_OUTREACH,
+    subject: email.subject,
+    html: buildHtmlEmail(email.body),
+  });
+
+  if (sendError) return { error: sendError.message };
+
+  const { error: updateError } = await admin
+    .from("outreach_emails")
+    .update({
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      scheduled_at: null,
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    console.error("outreach send-now update error:", updateError.message);
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/admin/outreach");
+  return {};
+}
+
 export async function cancelScheduledEmail(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import { X, Bold, Italic, Underline, Link } from "lucide-react";
-import { sendOutreachEmail, cancelScheduledEmail } from "./actions";
+import { sendOutreachEmail, cancelScheduledEmail, sendScheduledNow } from "./actions";
 
 function buildHtml(_toName: string, _subject: string, body: string): string {
   const htmlBody = body
@@ -453,11 +453,31 @@ function formatNzDateTime(iso: string | null) {
 export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
   const [selected, setSelected] = useState<ScheduledEmail | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function handleCancel(id: string, e: React.MouseEvent) {
     e.stopPropagation();
+    if (!confirm("Permanently delete this scheduled email? The contents cannot be recovered.")) return;
+    setActionError(null);
+    setBusyId(id);
     startTransition(async () => {
-      await cancelScheduledEmail(id);
+      const result = await cancelScheduledEmail(id);
+      setBusyId(null);
+      if (result.error) { setActionError(result.error); return; }
+      window.location.reload();
+    });
+  }
+
+  function handleSendNow(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Send this email now? It will go out immediately.")) return;
+    setActionError(null);
+    setBusyId(id);
+    startTransition(async () => {
+      const result = await sendScheduledNow(id);
+      setBusyId(null);
+      if (result.error) { setActionError(result.error); return; }
       window.location.reload();
     });
   }
@@ -495,15 +515,28 @@ export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
               </p>
               <button
                 type="button"
+                onClick={(e) => handleSendNow(email.id, e)}
+                disabled={isPending}
+                className="text-xs font-medium text-foreground hover:opacity-70 transition-opacity disabled:opacity-40"
+                title="Send this email immediately"
+              >
+                {busyId === email.id && isPending ? "Sending…" : "Send now"}
+              </button>
+              <button
+                type="button"
                 onClick={(e) => handleCancel(email.id, e)}
                 disabled={isPending}
                 className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+                title="Permanently delete this scheduled email"
               >
-                {isPending ? "Cancelling…" : "Cancel"}
+                {busyId === email.id && isPending ? "…" : "Delete"}
               </button>
             </div>
           </div>
         ))}
+        {actionError && (
+          <p className="text-xs text-red-600 pt-2">{actionError}</p>
+        )}
       </div>
     </>
   );
