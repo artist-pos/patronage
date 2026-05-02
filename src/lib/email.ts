@@ -174,6 +174,51 @@ export async function notifyTransferAccepted(
   });
 }
 
+export interface ShippingAddress {
+  recipientName: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  postcode: string;
+  country: string;
+}
+
+/**
+ * Notify an artist that a buyer has submitted their shipping address.
+ */
+export async function notifyShippingAddress(
+  artistId: string,
+  buyerName: string,
+  workTitle: string,
+  address: ShippingAddress,
+  conversationId: string,
+): Promise<void> {
+  const admin = createAdminClient();
+  const { data: { user: artistUser } } = await admin.auth.admin.getUserById(artistId);
+  if (!artistUser?.email) return;
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const addrLines = [
+    address.line1,
+    address.line2,
+    `${address.city} ${address.postcode}`.trim(),
+    address.country,
+  ].filter((s): s is string => !!s).map(esc).join("<br>");
+
+  await getResend().emails.send({
+    from: FROM,
+    to: artistUser.email,
+    subject: `Shipping address from ${buyerName} — ${workTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(buyerName)}</strong> has provided their shipping address for <strong>${esc(workTitle)}</strong>:</p>
+      <p style="font-family:monospace;background:#f5f5f5;padding:12px;border-radius:4px;line-height:1.7">${addrLines}</p>
+      <p><a href="${SITE_URL}/messages/${conversationId}">View conversation →</a></p>
+      <p style="color:#888;font-size:12px">Patronage</p>
+    `,
+  });
+}
+
 /**
  * Invite a non-account patron to join Patronage and claim an artwork.
  */

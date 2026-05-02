@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyTransferRequest, notifyTransferAccepted } from "@/lib/email";
+import { notifyTransferRequest, notifyTransferAccepted, notifyShippingAddress, type ShippingAddress } from "@/lib/email";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 import { ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { calculateFees } from "@/lib/commerce-fee";
@@ -306,6 +306,83 @@ export async function acceptTransfer(
       }),
     ]);
   })().catch(console.error);
+
+  return {};
+}
+
+export async function submitShippingAddress(
+  messageId: string,
+  conversationId: string,
+  address: ShippingAddress,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify the message exists and the caller is the sender (buyer)
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("id, sender_id, work_id, message_type, metadata")
+    .eq("id", messageId)
+    .maybeSingle();
+
+  if (!msg) return { error: "Message not found" };
+  if (msg.message_type !== "transfer_accepted") return { error: "Invalid message type" };
+  if (msg.sender_id !== user.id) return { error: "Not authorised" };
+  if ((msg.metadata as Record<string, unknown> | null)?.shipping_address) {
+    return { error: "Address already submitted" };
+  }
+
+  const admin = createAdminClient();
+
+  // Persist address on the transfer_accepted message metadata
+  const { error: updateErr } = await admin
+    .from("messages")
+    .update({ metadata: { ...(msg.metadata ?? {}), shipping_address: address } })
+    .eq("id", messageId);
+
+  if (updateErr) return { error: updateErr.message };
+
+  // Insert a system message so the artist sees the address via realtime
+  const addrText = [
+    address.recipientName,
+    address.line1,
+    address.line2,
+    `${address.city} ${address.postcode}`.trim(),
+    address.country,
+  ].filter(Boolean).join(", ");
+
+  await admin.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    content: `Shipping address: ${addrText}`,
+    message_type: "text",
+    is_system_message: true,
+    metadata: { shipping_address: address },
+  });
+
+  // Resolve artist id from the work
+  if (msg.work_id) {
+    const { data: work } = await admin
+      .from("artworks")
+      .select("creator_id, caption, title")
+      .eq("id", msg.work_id)
+      .maybeSingle();
+
+    if (work) {
+      const { data: buyerProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const buyerName = buyerProfile?.full_name ?? buyerProfile?.username ?? "The buyer";
+      const workTitle = work.title ?? work.caption ?? "Untitled";
+
+      notifyShippingAddress(work.creator_id, buyerName, workTitle, address, conversationId)
+        .catch(console.error);
+    }
+  }
 
   return {};
 }

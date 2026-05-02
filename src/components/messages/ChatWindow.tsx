@@ -5,7 +5,8 @@ import Image from "next/image";
 import { Info } from "lucide-react";
 import { createRealtimeClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead } from "@/app/messages/actions";
-import { acceptTransfer } from "@/app/messages/transfer-actions";
+import { acceptTransfer, submitShippingAddress } from "@/app/messages/transfer-actions";
+import type { ShippingAddress } from "@/lib/email";
 import { approveDeletionRequest } from "@/app/profile/artwork-delete-actions";
 import { Button } from "@/components/ui/button";
 import { MakeOfferModal } from "@/components/profile/MakeOfferModal";
@@ -37,6 +38,9 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const [approvingDeletionId, setApprovingDeletionId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [offerModal, setOfferModal] = useState(false);
+  const [addressSubmittedIds, setAddressSubmittedIds] = useState<Set<string>>(new Set());
+  const [addressSubmitting, setAddressSubmitting] = useState<string | null>(null);
+  const [addressForms, setAddressForms] = useState<Record<string, Partial<ShippingAddress>>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Stable ref — prevents the realtime subscription tearing down on every render
@@ -251,11 +255,77 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
     if (msg.message_type === "transfer_accepted") {
       const work = msg.work_id ? workMap[msg.work_id] : null;
       const who = isMe ? "You" : otherName;
+      const existingAddr = (msg.metadata as Record<string, unknown> | null)?.shipping_address as ShippingAddress | undefined;
+      const alreadySubmitted = addressSubmittedIds.has(msg.id) || !!existingAddr;
+      const form = addressForms[msg.id] ?? {};
+
+      async function handleAddressSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!form.recipientName || !form.line1 || !form.city || !form.postcode || !form.country) return;
+        setAddressSubmitting(msg.id);
+        const result = await submitShippingAddress(msg.id, conversationId, form as ShippingAddress);
+        setAddressSubmitting(null);
+        if (result.error) {
+          showToast(`Error: ${result.error}`);
+        } else {
+          setAddressSubmittedIds(prev => new Set([...prev, msg.id]));
+        }
+      }
+
       return (
-        <div key={msg.id} className="flex justify-center">
-          <p className="text-xs text-muted-foreground font-mono py-1">
-            {who} accepted the transfer{work?.caption ? ` of "${work.caption}"` : ""}
-          </p>
+        <div key={msg.id} className="flex justify-center w-full">
+          <div className="w-full max-w-sm space-y-3">
+            <p className="text-xs text-muted-foreground font-mono text-center py-1">
+              {who} accepted the transfer{work?.caption ? ` of "${work.caption}"` : ""}
+            </p>
+
+            {/* Buyer: show address form or confirmation */}
+            {isMe && (
+              alreadySubmitted ? (
+                <p className="text-xs text-center text-muted-foreground">Shipping address sent ✓</p>
+              ) : (
+                <form onSubmit={handleAddressSubmit} className="border border-black bg-background p-4 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Shipping Address</p>
+                  {(["recipientName", "line1", "line2", "city", "postcode", "country"] as const).map((field) => (
+                    <input
+                      key={field}
+                      required={field !== "line2"}
+                      placeholder={
+                        field === "recipientName" ? "Full name" :
+                        field === "line1" ? "Street address" :
+                        field === "line2" ? "Apartment, suite, etc. (optional)" :
+                        field === "city" ? "City" :
+                        field === "postcode" ? "Postcode" :
+                        "Country"
+                      }
+                      value={form[field] ?? ""}
+                      onChange={e => setAddressForms(prev => ({ ...prev, [msg.id]: { ...prev[msg.id], [field]: e.target.value } }))}
+                      className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
+                    />
+                  ))}
+                  <button
+                    type="submit"
+                    disabled={addressSubmitting === msg.id}
+                    className="w-full text-xs bg-black text-white px-3 py-2 hover:opacity-80 transition-opacity disabled:opacity-50"
+                  >
+                    {addressSubmitting === msg.id ? "Sending…" : "Send address to artist"}
+                  </button>
+                </form>
+              )
+            )}
+
+            {/* Artist: show address if submitted */}
+            {!isMe && existingAddr && (
+              <div className="border border-border p-3 text-xs space-y-0.5">
+                <p className="font-semibold uppercase tracking-widest text-muted-foreground mb-2">Shipping Address</p>
+                <p>{existingAddr.recipientName}</p>
+                <p>{existingAddr.line1}</p>
+                {existingAddr.line2 && <p>{existingAddr.line2}</p>}
+                <p>{existingAddr.city} {existingAddr.postcode}</p>
+                <p>{existingAddr.country}</p>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
