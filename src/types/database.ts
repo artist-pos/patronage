@@ -272,6 +272,9 @@ export interface Profile {
   provenance_template_theme: 'minimal' | 'editorial' | 'gallery';
   account_status: 'active' | 'shadow';
   created_at: string;
+  // Gallery layout preferences (migration 115)
+  gallery_row_height: number;
+  gallery_gutter: number;
 }
 
 export interface ArtistFollowup {

@@ -230,6 +230,7 @@ export async function publishPortfolioWorkAsAvailable(
 export async function setPrimaryWorkImageUrl(
   portfolioImageId: string,
   newPrimaryUrl: string,
+  dimensions?: { naturalWidth: number; naturalHeight: number },
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -253,7 +254,13 @@ export async function setPrimaryWorkImageUrl(
   await Promise.all([
     supabase
       .from("portfolio_images")
-      .update({ url: newPrimaryUrl })
+      .update({
+        url: newPrimaryUrl,
+        ...(dimensions && {
+          natural_width: dimensions.naturalWidth,
+          natural_height: dimensions.naturalHeight,
+        }),
+      })
       .eq("id", portfolioImageId)
       .eq("creator_id", user.id),
     workResult.data?.linked_artwork_id

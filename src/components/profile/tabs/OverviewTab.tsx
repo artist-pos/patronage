@@ -16,6 +16,8 @@ interface Props {
   username: string;
   profileId?: string;
   isOwner?: boolean;
+  galleryRowHeight?: number;
+  galleryGutter?: number;
 }
 
 export function OverviewTab({
@@ -30,6 +32,8 @@ export function OverviewTab({
   username,
   profileId,
   isOwner,
+  galleryRowHeight,
+  galleryGutter,
 }: Props) {
   const selectedExhibitions = [...exhibitions]
     .sort((a, b) => b.year - a.year)
@@ -174,6 +178,8 @@ export function OverviewTab({
               profileId={profileId}
               limit={isFiltered ? undefined : 9}
               isOwner={isOwner}
+              savedRowHeight={galleryRowHeight}
+              savedGutter={galleryGutter}
             />
           </div>
         );

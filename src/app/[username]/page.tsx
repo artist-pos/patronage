@@ -569,6 +569,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   username={profile.username}
                   profileId={isOwner ? undefined : profile.id}
                   isOwner={isOwner}
+                  galleryRowHeight={profile.gallery_row_height}
+                  galleryGutter={profile.gallery_gutter}
                 />
               )}
 

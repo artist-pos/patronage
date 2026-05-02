@@ -40,6 +40,7 @@ interface Props {
   profileId: string;
   onCancel: () => void;
   onSaved: (updated: Partial<EditableWork>) => void;
+  onThumbnailChange?: (url: string) => void;
 }
 
 // ── Sortable gallery thumbnail ───────────────────────────────────────────────
@@ -111,7 +112,16 @@ function GalleryItem({
 
 // ── Main editor ──────────────────────────────────────────────────────────────
 
-export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
+function detectImageDimensions(url: string): Promise<{ naturalWidth: number; naturalHeight: number }> {
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => resolve({ naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+    img.onerror = () => resolve({ naturalWidth: 0, naturalHeight: 0 });
+    img.src = url;
+  });
+}
+
+export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailChange }: Props) {
   // Metadata form
   const [title, setTitle] = useState(work.title ?? "");
   const [year, setYear] = useState(work.year ? String(work.year) : "");
@@ -185,11 +195,12 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     const reordered = reorderWithPrimary(arrayMove(images, oldIndex, newIndex));
     setImages(reordered);
     persistOrder(reordered);
-    // If the primary image changed (position 0 changed), cascade URL update
     if (reordered[0] && reordered[0].url !== images[0]?.url) {
-      setPrimaryWorkImageUrl(work.id, reordered[0].url);
-      // Update parent WorksTable so the thumbnail re-renders without a hard refresh
-      onSaved({ url: `${reordered[0].url}?t=${Date.now()}` });
+      const newUrl = reordered[0].url;
+      detectImageDimensions(newUrl).then(dims => {
+        setPrimaryWorkImageUrl(work.id, newUrl, dims.naturalWidth > 0 ? dims : undefined);
+      });
+      onThumbnailChange?.(`${newUrl}?t=${Date.now()}`);
     }
   }
 
@@ -199,11 +210,10 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
     const reordered = reorderWithPrimary([target, ...images.filter(i => i.id !== id)]);
     setImages(reordered);
     persistOrder(reordered);
-    // Cascade new primary URL to portfolio_images.url (and artworks.url if linked)
-    setPrimaryWorkImageUrl(work.id, target.url);
-    // Update parent WorksTable so the thumbnail re-renders without a hard refresh
-    // ?t= busts the browser cache in case the element key hasn't changed
-    onSaved({ url: `${target.url}?t=${Date.now()}` });
+    detectImageDimensions(target.url).then(dims => {
+      setPrimaryWorkImageUrl(work.id, target.url, dims.naturalWidth > 0 ? dims : undefined);
+    });
+    onThumbnailChange?.(`${target.url}?t=${Date.now()}`);
   }
 
   async function handleSaveCaption(id: string, value: string) {
@@ -248,13 +258,14 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
 
       const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
 
+      const isPrimary = images.length === 0;
       const { data: newRow, error: insertError } = await supabase
         .from("work_images")
         .insert({
           portfolio_image_id: work.id,
           url: urlData.publicUrl,
           position: images.length,
-          is_primary: images.length === 0,
+          is_primary: isPrimary,
         })
         .select()
         .single();
@@ -264,6 +275,12 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved }: Props) {
       setImages(prev => [...prev, inserted]);
       setCaptionDrafts(prev => ({ ...prev, [inserted.id]: "" }));
       setSelectedImageId(inserted.id);
+
+      if (isPrimary) {
+        const dims = await detectImageDimensions(urlData.publicUrl);
+        setPrimaryWorkImageUrl(work.id, urlData.publicUrl, dims.naturalWidth > 0 ? dims : undefined);
+        onThumbnailChange?.(`${urlData.publicUrl}?t=${Date.now()}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {

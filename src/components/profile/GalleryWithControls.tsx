@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
+import { saveGalleryLayout } from "@/app/profile/gallery-actions";
 import type { PortfolioImage } from "@/types/database";
 
 interface Props {
@@ -11,14 +12,26 @@ interface Props {
   profileId?: string;
   limit?: number;
   isOwner?: boolean;
+  savedRowHeight?: number;
+  savedGutter?: number;
 }
 
 const DEFAULT_ROW_H  = 280;
 const DEFAULT_GUTTER = 6;
 
-export function GalleryWithControls({ images, username, viewerRole, profileId, limit, isOwner }: Props) {
-  const [rowH, setRowH]     = useState(DEFAULT_ROW_H);
-  const [gutter, setGutter] = useState(DEFAULT_GUTTER);
+export function GalleryWithControls({ images, username, viewerRole, profileId, limit, isOwner, savedRowHeight, savedGutter }: Props) {
+  const [rowH, setRowH]     = useState(savedRowHeight ?? DEFAULT_ROW_H);
+  const [gutter, setGutter] = useState(savedGutter ?? DEFAULT_GUTTER);
+  const [saved, setSaved]   = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleSave() {
+    startTransition(async () => {
+      await saveGalleryLayout(rowH, gutter);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    });
+  }
 
   return (
     <>
@@ -54,10 +67,11 @@ export function GalleryWithControls({ images, username, viewerRole, profileId, l
           </div>
           <button
             type="button"
-            onClick={() => console.log("Gallery layout:", { rowHeight: rowH, gutter })}
-            className="text-xs px-3 py-1.5 border border-black hover:bg-muted/40 transition-colors"
+            onClick={handleSave}
+            disabled={pending}
+            className="text-xs px-3 py-1.5 border border-black hover:bg-muted/40 transition-colors disabled:opacity-50"
           >
-            Save layout
+            {saved ? "Saved" : pending ? "Saving…" : "Save layout"}
           </button>
         </div>
       )}

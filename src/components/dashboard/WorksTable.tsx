@@ -382,6 +382,11 @@ export function WorksTable({
                           );
                           setExpandedEditorId(null);
                         }}
+                        onThumbnailChange={url => {
+                          setPortfolio(prev =>
+                            prev.map(w => (w.id === work.id ? { ...w, url } : w))
+                          );
+                        }}
                       />
                     </div>
                   )}
