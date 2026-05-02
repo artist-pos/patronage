@@ -125,6 +125,7 @@ export function PortfolioGrid({
             gap: gutter,
             marginBottom: ri < rows.length - 1 ? gutter : 0,
             justifyContent: row.isLast ? "center" : "flex-start",
+            alignItems: "flex-start",
           }}
         >
           {row.tiles.map(({ img, w, h }) => {
@@ -132,16 +133,16 @@ export function PortfolioGrid({
             const label = img.title
               ? `${img.title}${img.year ? ` (${img.year})` : ""}`
               : img.caption ?? undefined;
+            const hasCaption = !!(img.title || img.year);
 
             return (
+              <div key={img.id} style={{ width: w, flexShrink: 0, minWidth: 0 }}>
               <a
-                key={img.id}
                 href={`/${username}/works/${img.slug ?? img.id}`}
                 aria-label={label ?? "View artwork"}
                 style={{
                   width: w,
                   height: h,
-                  flexShrink: 0,
                   position: "relative",
                   overflow: "hidden",
                   display: "block",
@@ -204,6 +205,21 @@ export function PortfolioGrid({
                   </div>
                 )}
               </a>
+              {hasCaption && (
+                <div style={{ paddingTop: 5, overflow: "hidden", width: "100%" }}>
+                  {img.title && (
+                    <p style={{ fontSize:12,fontWeight:500,color:"#1c1c1c",lineHeight:1.4,margin:0,wordBreak:"break-word" }}>
+                      {img.title}
+                    </p>
+                  )}
+                  {img.year && (
+                    <p style={{ fontSize:11,color:"#78716c",lineHeight:1.4,margin:0 }}>
+                      {img.year}
+                    </p>
+                  )}
+                </div>
+              )}
+              </div>
             );
           })}
         </div>
