@@ -63,6 +63,79 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
 
   const ct = img.content_type ?? "image";
 
+  // Lightbox mode: pure image with no sidebar content to show
+  const isLightbox =
+    (ct === "image" || ct === "document") &&
+    !img.description &&
+    !img.price &&
+    !img.audio_url &&
+    !img.video_url &&
+    !img.embed_url &&
+    !img.text_content &&
+    !isOwner; // owners always get the sidebar (featured toggle)
+
+  const label = img.title
+    ? `${img.title}${img.year ? ` (${img.year})` : ""}`
+    : img.caption ?? null;
+
+  if (isLightbox) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-background border border-black hover:bg-muted transition-colors z-10"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Prev */}
+        {hasPrev && (
+          <button
+            onClick={onPrev}
+            aria-label="Previous artwork"
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-background border border-black hover:bg-muted transition-colors z-10"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Next */}
+        {hasNext && (
+          <button
+            onClick={onNext}
+            aria-label="Next artwork"
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-background border border-black hover:bg-muted transition-colors z-10"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Image */}
+        <div className="relative max-w-5xl max-h-[88vh] w-full h-full flex items-center justify-center">
+          {img.url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={img.url}
+              alt={label ?? "Artwork"}
+              className="max-w-full max-h-[88vh] object-contain shadow-xl"
+            />
+          )}
+          {/* Title overlay */}
+          {label && (
+            <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-black/40 to-transparent">
+              <p className="text-white text-sm font-medium text-center drop-shadow">{label}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md p-4"

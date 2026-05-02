@@ -2,7 +2,6 @@ import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { ProjectsSection } from "@/components/profile/ProjectsSection";
-import { CreativeWorksPanel } from "@/components/profile/CreativeWorksPanel";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import type { PortfolioImage, Artwork, Project, ProjectUpdateWithArtist, CreativeWork } from "@/types/database";
 
@@ -50,8 +49,7 @@ export function WorkTab({
   displayName,
   collaboratedWorks = [],
 }: Props) {
-  const hasUpdates      = studioUpdates.length > 0;
-  const hasCreativeWork = creativeWorks.length > 0;
+  const hasUpdates = studioUpdates.length > 0;
 
   return (
     <div className="space-y-12 py-8">
@@ -98,35 +96,19 @@ export function WorkTab({
         </section>
       )}
 
-      {/* Studio: creative works + updates (merged from old Studio tab) */}
-      {(isOwner || hasUpdates || hasCreativeWork) && (
+      {/* Studio updates */}
+      {(isOwner || hasUpdates) && (
         <section className="space-y-6 border-t border-border pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Studio
+            Studio Updates
           </h2>
-
-          <CreativeWorksPanel
-            initialWorks={creativeWorks}
+          <StudioCarousel
+            updates={studioUpdates}
+            artistUsername={username}
             isOwner={isOwner}
+            projects={projects.map((p) => ({ id: p.id, title: p.title }))}
             profileId={profileId}
           />
-
-          {(isOwner || hasUpdates) && (
-            <div className={hasCreativeWork ? "border-t border-border pt-8" : ""}>
-              {hasCreativeWork && (
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-6">
-                  Studio Updates
-                </p>
-              )}
-              <StudioCarousel
-                updates={studioUpdates}
-                artistUsername={username}
-                isOwner={isOwner}
-                projects={projects.map((p) => ({ id: p.id, title: p.title }))}
-                profileId={profileId}
-              />
-            </div>
-          )}
         </section>
       )}
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
+import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist, ProfileAchievement } from "@/types/database";
 
@@ -15,6 +15,7 @@ interface Props {
   viewerRole: string | null;
   username: string;
   profileId?: string;
+  isOwner?: boolean;
 }
 
 export function OverviewTab({
@@ -28,6 +29,7 @@ export function OverviewTab({
   viewerRole,
   username,
   profileId,
+  isOwner,
 }: Props) {
   const selectedExhibitions = [...exhibitions]
     .sort((a, b) => b.year - a.year)
@@ -165,12 +167,13 @@ export function OverviewTab({
                     : null}
               </Link>
             </div>
-            <PortfolioGrid
+            <GalleryWithControls
               images={displayImages}
               username={username}
               viewerRole={viewerRole}
               profileId={profileId}
               limit={isFiltered ? undefined : 9}
+              isOwner={isOwner}
             />
           </div>
         );

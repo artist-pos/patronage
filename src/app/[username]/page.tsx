@@ -568,6 +568,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   viewerRole={viewerRole}
                   username={profile.username}
                   profileId={isOwner ? undefined : profile.id}
+                  isOwner={isOwner}
                 />
               )}
 
