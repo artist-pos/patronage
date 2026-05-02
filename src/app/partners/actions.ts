@@ -1,6 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createCheckoutSession } from "@/lib/stripe";
+import {
+  FEATURED_LISTING_PLANS,
+  PIPELINE_ACTIVATION_PRICE_CENTS,
+  PRICING_CURRENCY,
+  grossUpForStripe,
+} from "@/lib/commerce-pricing";
 import { notifyOpportunitySubmission } from "@/lib/email";
 import { Resend } from "resend";
 
@@ -90,6 +98,9 @@ export async function submitActivationEnquiry(data: {
 export interface SubmissionState {
   success?: boolean;
   error?: string;
+  /** Set when the submission requires payment (featured and/or pipeline
+   *  beyond the partner's first free round). The form should redirect. */
+  checkoutUrl?: string;
 }
 
 export async function submitOpportunityAction(
@@ -157,7 +168,16 @@ export async function submitOpportunityAction(
     }
   }
 
-  const { error } = await supabase.from("opportunities").insert({
+  const isFeatured = isFeaturedRaw === "true";
+  const isPipeline = routingType === "pipeline";
+
+  // Defence-in-depth: the form gates submission behind sign-in, but a direct
+  // POST could otherwise publish a Featured/Pipeline listing without paying.
+  if (!user && (isFeatured || isPipeline)) {
+    return { error: "Sign in to submit a Featured or Pipeline listing." };
+  }
+
+  const { data: inserted, error } = await supabase.from("opportunities").insert({
     status: "pending",
     is_active: false,
     title,
@@ -188,23 +208,147 @@ export async function submitOpportunityAction(
     custom_fields: customFields,
     show_badges_in_submission: showBadgesRaw === "true",
     pipeline_config: pipelineConfig,
-    is_featured: isFeaturedRaw === "true",
+    is_featured: isFeatured,
     is_recurring: isRecurringRaw === "true",
     recurrence_pattern: recurrencePattern,
     recurrence_end_date: recurrenceEndDate,
-  });
+  }).select("id").single();
 
-  if (error) return { error: error.message };
+  if (error || !inserted) return { error: error?.message ?? "Couldn't create listing." };
 
   notifyOpportunitySubmission({
     title,
     organiser,
     type: (formData.get("type") as string) || "Grant",
     submitterEmail: (formData.get("submitter_email") as string)?.trim() || null,
-    isFeatured: isFeaturedRaw === "true",
-    isPipeline: routingType === "pipeline",
+    isFeatured,
+    isPipeline,
     adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/admin`,
   }).catch(console.error);
 
-  return { success: true };
+  // Paid add-ons trigger a single combined Stripe checkout. Anonymous
+  // submissions skip checkout — their flagged tier is downgraded to free
+  // until they sign in and pay from the listing edit page.
+  if (!user) return { success: true };
+
+  const featuredPlan = isFeatured ? FEATURED_LISTING_PLANS[0] : null;
+
+  // First pipeline round per partner is free. Detect prior paid pipeline
+  // payments by this partner; if none, this round is on the house.
+  let pipelineFeeApplies = false;
+  if (isPipeline) {
+    const admin = createAdminClient();
+    const { count } = await admin
+      .from("pipeline_entry_payments")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_id", user.id)
+      .eq("status", "paid");
+    pipelineFeeApplies = (count ?? 0) > 0;
+  }
+
+  if (!featuredPlan && !pipelineFeeApplies) return { success: true };
+
+  const admin = createAdminClient();
+  const lineItems: Array<{
+    amountCents: number;
+    currency: string;
+    productName: string;
+    productDescription?: string;
+  }> = [];
+  const metadata: Record<string, string> = { opportunity_id: inserted.id };
+
+  if (featuredPlan) {
+    const { data: payment, error: payErr } = await admin
+      .from("featured_listing_payments")
+      .insert({
+        opportunity_id: inserted.id,
+        partner_id: user.id,
+        amount_cents: featuredPlan.amountCents,
+        currency: PRICING_CURRENCY,
+        feature_days: featuredPlan.days,
+      })
+      .select("id")
+      .single();
+    if (payErr || !payment) {
+      return { error: payErr?.message ?? "Couldn't create featured payment." };
+    }
+    metadata.featured_payment_id = payment.id;
+    metadata.feature_days = String(featuredPlan.days);
+    lineItems.push({
+      amountCents: featuredPlan.amountCents,
+      currency: PRICING_CURRENCY,
+      productName: `Featured placement — ${title}`,
+      productDescription: `Promotes this opportunity in featured slots for ${featuredPlan.days} days.`,
+    });
+  }
+
+  if (pipelineFeeApplies) {
+    const { data: payment, error: payErr } = await admin
+      .from("pipeline_entry_payments")
+      .insert({
+        opportunity_id: inserted.id,
+        partner_id: user.id,
+        amount_cents: PIPELINE_ACTIVATION_PRICE_CENTS,
+        currency: PRICING_CURRENCY,
+      })
+      .select("id")
+      .single();
+    if (payErr || !payment) {
+      return { error: payErr?.message ?? "Couldn't create pipeline payment." };
+    }
+    metadata.pipeline_payment_id = payment.id;
+    lineItems.push({
+      amountCents: PIPELINE_ACTIVATION_PRICE_CENTS,
+      currency: PRICING_CURRENCY,
+      productName: `Pipeline activation — ${title}`,
+      productDescription:
+        "Activates Patronage's pipeline submission flow for this opportunity.",
+    });
+  }
+
+  // Stripe processing-fee passthrough — gross-up over the combined base.
+  const baseTotal = lineItems.reduce((sum, l) => sum + l.amountCents, 0);
+  const { stripeFeeCents } = grossUpForStripe(baseTotal);
+  lineItems.push({
+    amountCents: stripeFeeCents,
+    currency: PRICING_CURRENCY,
+    productName: "Processing fee",
+    productDescription:
+      "Covers third-party card processing (Stripe). Reflects Stripe's actual cost (NZ Commerce Commission requirement).",
+  });
+
+  try {
+    const session = await createCheckoutSession({
+      purpose: "partner_submission",
+      mode: "payment",
+      buyerEmail: user.email ?? "",
+      lineItems,
+      metadata,
+      successPath: `/partner/opportunities/${inserted.id}/edit?submission=success`,
+      cancelPath: `/partner/opportunities/${inserted.id}/edit?submission=cancelled`,
+    });
+    if (metadata.featured_payment_id) {
+      await admin
+        .from("featured_listing_payments")
+        .update({ stripe_session_id: session.sessionId })
+        .eq("id", metadata.featured_payment_id);
+    }
+    if (metadata.pipeline_payment_id) {
+      await admin
+        .from("pipeline_entry_payments")
+        .update({ stripe_session_id: session.sessionId })
+        .eq("id", metadata.pipeline_payment_id);
+    }
+    return { success: true, checkoutUrl: session.url };
+  } catch (err) {
+    // Roll back the unfunded payment rows so the partner can retry from the
+    // edit page without dangling 'pending' records.
+    if (metadata.featured_payment_id) {
+      await admin.from("featured_listing_payments").delete().eq("id", metadata.featured_payment_id);
+    }
+    if (metadata.pipeline_payment_id) {
+      await admin.from("pipeline_entry_payments").delete().eq("id", metadata.pipeline_payment_id);
+    }
+    return { error: err instanceof Error ? err.message : "Stripe error." };
+  }
 }

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { PartnerOrgFields } from "@/components/profile/PartnerOrgFields";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
@@ -40,6 +41,7 @@ export default async function OnboardingPage({
   if (!profile?.role) redirect("/onboarding/role");
 
   const isArtist = profile.role === "artist" || profile.role === "owner";
+  const isPartner = profile.role === "partner";
 
   const { data: membershipsRaw } = isArtist
     ? await supabase
@@ -133,6 +135,16 @@ export default async function OnboardingPage({
             <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
               <h2 className="text-base font-semibold">Profile details</h2>
               <ProfileForm profile={profile} role={profile.role} />
+              {isPartner && (
+                <PartnerOrgFields
+                  profile={{
+                    organisation_type: profile.organisation_type,
+                    charitable_registration: profile.charitable_registration,
+                    donation_url: profile.donation_url,
+                    donation_enabled: profile.donation_enabled,
+                  }}
+                />
+              )}
             </section>
           </div>
 

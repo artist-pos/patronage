@@ -155,7 +155,7 @@ export async function updateWorkMetadata(
 
 export async function publishPortfolioWorkAsAvailable(
   workId: string,
-  data: { price: string; currency: "NZD" | "AUD"; poa: boolean; edition: string }
+  data: { price: string; currency: "NZD" | "AUD"; poa: boolean; edition: string; listingMode?: "direct_sale" | "enquire_first" }
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -173,9 +173,11 @@ export async function publishPortfolioWorkAsAvailable(
   const price = data.poa ? "POA" : data.price;
 
   if (portfolio.linked_artwork_id) {
+    const updatePayload: Record<string, unknown> = { price, price_currency: data.currency, edition: data.edition || null, is_available: true };
+    if (data.listingMode) updatePayload.listing_mode = data.listingMode;
     const { error: updateError } = await supabase
       .from("artworks")
-      .update({ price, price_currency: data.currency, edition: data.edition || null, is_available: true })
+      .update(updatePayload)
       .eq("id", portfolio.linked_artwork_id)
       .eq("creator_id", user.id);
     if (updateError) return { error: updateError.message };
@@ -196,6 +198,7 @@ export async function publishPortfolioWorkAsAvailable(
         edition: data.edition || null,
         price,
         price_currency: data.currency,
+        listing_mode: data.listingMode ?? "direct_sale",
         is_available: true,
         hide_available: false,
         hide_from_archive: false,

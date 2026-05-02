@@ -5,11 +5,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted } from "@/lib/email";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 import { ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
+import { calculateFees } from "@/lib/commerce-fee";
+import { grossUpForStripe, PRICING_CURRENCY } from "@/lib/commerce-pricing";
+import { createCheckoutSession } from "@/lib/stripe";
 
 export async function initiateTransfer(
   workId: string,
-  conversationId: string
-): Promise<{ error?: string }> {
+  conversationId: string,
+  /** Sale price in major units (e.g. 150.00). Pass 0 or omit for a gift. */
+  salePriceMajor?: number,
+  currency?: string,
+): Promise<{ error?: string; checkoutUrl?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
@@ -17,12 +23,12 @@ export async function initiateTransfer(
   // Verify caller is creator_id of the work
   const { data: work } = await supabase
     .from("artworks")
-    .select("id, creator_id, caption, is_available")
+    .select("id, creator_id, current_owner_id, caption, url, is_available")
     .eq("id", workId)
     .maybeSingle();
 
   if (!work) return { error: "Work not found" };
-  if (work.creator_id !== user.id) return { error: "You are not the creator of this work" };
+  if (work.current_owner_id !== user.id) return { error: "You are not the current owner of this work" };
   if (!work.is_available) return { error: "This work is no longer available" };
 
   // Verify caller is participant in the conversation
@@ -40,7 +46,87 @@ export async function initiateTransfer(
   // Resolve buyer (the other participant)
   const buyerId = conv.participant_a === user.id ? conv.participant_b : conv.participant_a;
 
-  // Insert transfer_request message
+  const isGift = !salePriceMajor || salePriceMajor <= 0;
+  const salePriceCents = isGift ? 0 : Math.round(salePriceMajor * 100);
+  const txCurrency = currency ?? PRICING_CURRENCY;
+
+  let negotiatedSaleId: string | null = null;
+  let checkoutUrl: string | undefined;
+
+  if (!isGift) {
+    // Create the transaction record before the Stripe session so the webhook
+    // has something to match against.
+    const admin = createAdminClient();
+    const fees = calculateFees("negotiated_sale", salePriceCents);
+    const { data: buyerAuthUser } = await admin.auth.admin.getUserById(buyerId);
+    const buyerEmail = buyerAuthUser?.user?.email ?? "";
+
+    const { data: txRow, error: txError } = await admin
+      .from("negotiated_sale_transactions")
+      .insert({
+        artwork_id: workId,
+        artist_id: user.id,
+        buyer_id: buyerId,
+        buyer_email: buyerEmail,
+        conversation_id: conversationId,
+        sale_price_cents: salePriceCents,
+        currency: txCurrency,
+        patronage_commission_cents: fees.patronageRevenueCents,
+        buyer_paid_total_cents: fees.buyerPaidTotalCents,
+      })
+      .select("id")
+      .single();
+
+    if (txError || !txRow) return { error: txError?.message ?? "Couldn't create sale record." };
+    negotiatedSaleId = txRow.id;
+
+    const { stripeFeeCents } = grossUpForStripe(salePriceCents);
+    const { data: artistProfile2 } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    try {
+      const session = await createCheckoutSession({
+        purpose: "negotiated_sale",
+        mode: "payment",
+        buyerEmail: "",  // Stripe will collect it at checkout
+        lineItems: [
+          {
+            amountCents: salePriceCents,
+            currency: txCurrency,
+            productName: work.caption ?? "Artwork",
+            productDescription: `Sold by ${artistProfile2?.full_name ?? artistProfile2?.username ?? "the artist"} via Patronage.`,
+            productImageUrl: work.url ?? null,
+          },
+          {
+            amountCents: stripeFeeCents,
+            currency: txCurrency,
+            productName: "Processing fee",
+            productDescription: "Covers third-party card processing (Stripe). Reflects Stripe's actual cost.",
+          },
+        ],
+        metadata: {
+          negotiated_sale_id: negotiatedSaleId!,
+          artwork_id: workId,
+        },
+        successPath: `/messages/${conversationId}?transferred=1`,
+        cancelPath: `/messages/${conversationId}`,
+      });
+      await admin
+        .from("negotiated_sale_transactions")
+        .update({ stripe_session_id: session.sessionId })
+        .eq("id", negotiatedSaleId);
+      checkoutUrl = session.url;
+    } catch (err) {
+      await admin.from("negotiated_sale_transactions").delete().eq("id", negotiatedSaleId);
+      return { error: err instanceof Error ? err.message : "Stripe error." };
+    }
+  }
+
+  // Insert the transfer_request message. For paid transfers, metadata stores
+  // the sale price so the patron's chat UI can show it.
   const { error: insertError } = await supabase
     .from("messages")
     .insert({
@@ -49,6 +135,15 @@ export async function initiateTransfer(
       content: "",
       message_type: "transfer_request",
       work_id: workId,
+      metadata: isGift
+        ? { transfer_type: "gift" }
+        : {
+            transfer_type: "sale",
+            sale_price_cents: salePriceCents,
+            currency: txCurrency,
+            negotiated_sale_id: negotiatedSaleId,
+            checkout_url: checkoutUrl,
+          },
     });
 
   if (insertError) return { error: insertError.message };
@@ -63,10 +158,9 @@ export async function initiateTransfer(
   const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
   const workTitle = work.caption ?? "Untitled";
 
-  // Fire-and-forget email
   notifyTransferRequest(buyerId, artistName, workTitle, conversationId).catch(console.error);
 
-  return {};
+  return { checkoutUrl };
 }
 
 export async function acceptTransfer(
@@ -91,7 +185,7 @@ export async function acceptTransfer(
   // Verify work is still available (guard against double-accept)
   const { data: work } = await supabase
     .from("artworks")
-    .select("id, title, caption, url, is_available, creator_id, year, medium, dimensions, edition, certificate_note, ledger_id")
+    .select("id, title, caption, url, is_available, creator_id, current_owner_id, year, medium, dimensions, edition, certificate_note, ledger_id")
     .eq("id", message.work_id)
     .maybeSingle();
 
@@ -154,15 +248,35 @@ export async function acceptTransfer(
     certificate_note?: string | null;
   };
 
-  // Ledger entry must complete before returning — chain of custody depends on it
+  // Upsert collection_membership so the work appears in the buyer's dashboard.
+  const { data: lastPos } = await admin
+    .from("collection_membership")
+    .select("position")
+    .eq("holder_id", user.id)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await admin.from("collection_membership").upsert(
+    {
+      holder_id: user.id,
+      artwork_id: message.work_id!,
+      position: (lastPos?.position ?? -1) + 1,
+      source_type: "directly_from_artist",
+    },
+    { onConflict: "holder_id,artwork_id", ignoreDuplicates: true },
+  );
+
+  // Ledger entry must complete before returning — chain of custody depends on it.
+  // Gift transfers (no payment) use the "gift" transfer method; paid DM transfers
+  // are handled by the negotiated_sale webhook and never reach acceptTransfer.
   const ledgerId = await ensureLedgerId(message.work_id!);
   await createLedgerEntry({
     artworkId: message.work_id!,
     ledgerId,
     entryType: "transferred",
-    fromOwnerId: work.creator_id,
+    fromOwnerId: work.current_owner_id,
     toOwnerId: user.id,
-    transferMethod: "direct",
+    transferMethod: "gift",
   });
 
   // Fire-and-forget: notifications + certificate (non-critical)

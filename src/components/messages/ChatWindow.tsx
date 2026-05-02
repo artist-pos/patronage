@@ -8,6 +8,7 @@ import { sendMessage, markConversationRead } from "@/app/messages/actions";
 import { acceptTransfer } from "@/app/messages/transfer-actions";
 import { approveDeletionRequest } from "@/app/profile/artwork-delete-actions";
 import { Button } from "@/components/ui/button";
+import { MakeOfferModal } from "@/components/profile/MakeOfferModal";
 import type { Message, Artwork } from "@/types/database";
 
 interface Props {
@@ -16,7 +17,8 @@ interface Props {
   initialMessages: Message[];
   otherName: string;
   workMap?: Record<string, Artwork>;
-  sourceWork?: { url: string; caption: string | null } | null;
+  sourceWork?: { id: string; url: string; caption: string | null; price: string | null; price_currency: string | null } | null;
+  otherUserId?: string;
 }
 
 function formatTime(iso: string): string {
@@ -26,7 +28,7 @@ function formatTime(iso: string): string {
   });
 }
 
-export function ChatWindow({ conversationId, currentUserId, initialMessages, otherName, workMap = {}, sourceWork }: Props) {
+export function ChatWindow({ conversationId, currentUserId, initialMessages, otherName, workMap = {}, sourceWork, otherUserId }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,6 +36,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [approvingDeletionId, setApprovingDeletionId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [offerModal, setOfferModal] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Stable ref — prevents the realtime subscription tearing down on every render
@@ -178,6 +181,16 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
     if (msg.message_type === "transfer_request") {
       const work = msg.work_id ? workMap[msg.work_id] : null;
       const isAccepted = msg.work_id ? acceptedWorkIds.has(msg.work_id) : false;
+      const meta = msg.metadata as {
+        transfer_type?: "gift" | "sale";
+        sale_price_cents?: number;
+        currency?: string;
+        checkout_url?: string;
+      } | null;
+      const isSale = meta?.transfer_type === "sale" && (meta?.sale_price_cents ?? 0) > 0;
+      const saleLabel = isSale
+        ? `${meta!.currency ?? "NZD"} ${((meta!.sale_price_cents ?? 0) / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2 })}`
+        : null;
 
       return (
         <div key={msg.id} className="flex justify-center">
@@ -196,11 +209,11 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               )}
               <div className="p-3 flex-1 min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-                  Transfer Offer
+                  {isSale ? "Sale Offer" : "Gift Transfer"}
                 </p>
                 <p className="text-sm font-medium truncate">{work?.caption ?? "Untitled"}</p>
-                {work?.price && !work.hide_price && (
-                  <p className="text-xs text-muted-foreground">{work.price}</p>
+                {saleLabel && (
+                  <p className="text-xs text-muted-foreground">{saleLabel}</p>
                 )}
               </div>
             </div>
@@ -211,7 +224,14 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               {isAccepted ? (
                 <span className="text-xs font-semibold">Transferred ✓</span>
               ) : isMe ? (
-                <span className="text-xs text-muted-foreground italic">Pending acceptance…</span>
+                <span className="text-xs text-muted-foreground italic">Pending…</span>
+              ) : isSale && meta?.checkout_url ? (
+                <a
+                  href={meta.checkout_url}
+                  className="inline-flex items-center px-3 py-1.5 bg-black text-white text-xs hover:opacity-80 transition-opacity"
+                >
+                  Pay {saleLabel} →
+                </a>
               ) : (
                 <Button
                   size="sm"
@@ -219,7 +239,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
                   disabled={acceptingId === msg.id}
                   onClick={() => handleAcceptTransfer(msg.id)}
                 >
-                  {acceptingId === msg.id ? "Accepting…" : "Accept Transfer"}
+                  {acceptingId === msg.id ? "Accepting…" : "Accept Gift"}
                 </Button>
               )}
             </div>
@@ -395,7 +415,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               : "border border-black bg-background"
           }`}
         >
-          <p className="break-words">{msg.content}</p>
+          <p className="break-words whitespace-pre-wrap">{msg.content}</p>
           <p className={`text-[10px] font-mono mt-1 ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
             {formatTime(msg.created_at)}
           </p>
@@ -413,39 +433,57 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
         </div>
       )}
 
+      {/* Offer modal for the source artwork */}
+      {sourceWork && otherUserId && (
+        <MakeOfferModal
+          open={offerModal}
+          onClose={() => setOfferModal(false)}
+          artistId={otherUserId}
+          workId={sourceWork.id}
+          workTitle={sourceWork.caption}
+          listingPrice={sourceWork.price}
+          listingCurrency={(sourceWork.price_currency as "NZD" | "AUD") ?? "NZD"}
+        />
+      )}
+
       {/* ── Pinned system notice(s) — always at top, outside the scroll area ── */}
       {systemMessages.length > 0 && (
-        <div className="shrink-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30">
+        <div className="shrink-0 border-b border-border bg-muted/30">
           {/* Source artwork context */}
           {sourceWork && (
-            <div className="flex items-center gap-3 px-4 pt-3 pb-2 border-b border-amber-200/60 dark:border-amber-800/60">
+            <div className="flex items-center gap-3 px-4 pt-3 pb-2 border-b border-border">
               <Image
                 src={sourceWork.url}
                 alt={sourceWork.caption ?? "Work"}
                 width={40}
                 height={40}
-                className="object-cover border border-amber-300 dark:border-amber-700 shrink-0"
+                className="object-cover border border-border shrink-0"
                 style={{ width: 40, height: 40 }}
               />
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Enquiry re:
                 </p>
-                <p className="text-xs font-medium text-amber-900 dark:text-amber-200 truncate">
+                <p className="text-xs font-medium truncate">
                   {sourceWork.caption ?? "Untitled"}
                 </p>
               </div>
+              {otherUserId && (
+                <button
+                  onClick={() => setOfferModal(true)}
+                  className="text-[11px] border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-colors shrink-0"
+                >
+                  Make an Offer
+                </button>
+              )}
             </div>
           )}
           {/* Disclaimer */}
           {systemMessages.map((msg) => (
             <div key={msg.id} className="flex items-start gap-2.5 px-4 py-3">
-              <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-0.5">
-                  Notice
-                </p>
-                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {msg.content}
                 </p>
               </div>

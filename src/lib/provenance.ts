@@ -22,7 +22,7 @@ export interface LedgerEntry {
   entry_type: "created" | "transferred" | "resold";
   from_owner_id: string | null;
   to_owner_id: string;
-  transfer_method: "listing" | "stripe" | "claim" | "direct";
+  transfer_method: "listing" | "stripe" | "claim" | "direct" | "negotiated_sale" | "gift";
   transaction_ref: string | null;
   price: number | null;
   transferred_at: string;
@@ -96,7 +96,7 @@ export async function createLedgerEntry(data: {
   entryType: "created" | "transferred" | "resold";
   fromOwnerId: string | null;
   toOwnerId: string;
-  transferMethod: "listing" | "stripe" | "claim" | "direct";
+  transferMethod: "listing" | "stripe" | "claim" | "direct" | "negotiated_sale" | "gift";
   price?: number | null;
   notes?: string | null;
   campaignId?: string | null;

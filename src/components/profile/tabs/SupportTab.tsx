@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toggleSupportEnabled } from "@/app/profile/support-actions";
-import { SupportIntentModal } from "@/components/profile/SupportIntentModal";
+import { SupportCheckoutModal } from "@/components/profile/SupportCheckoutModal";
 import type { SupportTier } from "@/types/database";
 
 interface Props {
@@ -107,7 +107,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
       )}
 
       {selectedTier && (
-        <SupportIntentModal
+        <SupportCheckoutModal
           tier={selectedTier}
           artistName={artistName}
           onClose={() => setSelectedTier(null)}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
 import { StudioNav } from "./StudioNav";
 
 interface Props {
@@ -32,9 +33,17 @@ async function getPendingProvenanceCount(): Promise<number> {
 }
 
 export async function StudioPageShell({ username, activeSection, children }: Props) {
-  const pendingProvenanceCount = await getPendingProvenanceCount();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Independent counts — fetch in parallel so the shell doesn't wait twice.
+  const [pendingProvenanceCount, pendingConfirmationCount] = await Promise.all([
+    getPendingProvenanceCount(),
+    user ? getPendingConfirmationCount(user.id) : Promise.resolve(0),
+  ]);
+
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
       <div className="flex items-center justify-between mb-8">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Studio</h1>
@@ -51,7 +60,10 @@ export async function StudioPageShell({ username, activeSection, children }: Pro
       </div>
       <StudioNav
         activeSection={activeSection}
-        sectionDots={{ provenance: pendingProvenanceCount > 0 }}
+        sectionDots={{
+          provenance: pendingProvenanceCount > 0,
+          confirmations: pendingConfirmationCount > 0,
+        }}
       >
         {children}
       </StudioNav>

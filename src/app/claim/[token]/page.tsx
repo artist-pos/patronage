@@ -48,13 +48,34 @@ export default async function ClaimPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
-    // Process the claim automatically — update the provenance link
+    // Process the claim — update the provenance link and ensure the work is
+    // visible in the buyer's collection dashboard.
     await admin
       .from("provenance_links")
       .update({ patron_id: user.id, patron_email: null, status: "pending" })
       .eq("id", link.id);
 
-    redirect("/dashboard");
+    // Upsert collection_membership so the work shows up immediately. Uses
+    // ignoreDuplicates so re-claiming (e.g. signing in on a second device)
+    // is a no-op rather than an error.
+    const { data: lastPosition } = await admin
+      .from("collection_membership")
+      .select("position")
+      .eq("holder_id", user.id)
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    await admin.from("collection_membership").upsert(
+      {
+        holder_id: user.id,
+        artwork_id: link.artwork_id,
+        position: (lastPosition?.position ?? -1) + 1,
+        source_type: "directly_from_artist",
+      },
+      { onConflict: "holder_id,artwork_id", ignoreDuplicates: true },
+    );
+
+    redirect("/dashboard/collection");
   }
 
   // Not logged in — show claim landing page

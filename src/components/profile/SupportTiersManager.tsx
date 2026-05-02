@@ -140,6 +140,9 @@ export function SupportTiersManager({ initialTiers }: Props) {
         tier_type: (form.tier_type as SupportTierType) || null,
         sort_order: prev.length,
         is_active: true,
+        // Stripe ids minted on first checkout (Phase 7.5d).
+        stripe_product_id: null,
+        stripe_price_id: null,
         created_at: new Date().toISOString(),
       } satisfies SupportTier,
     ]);
@@ -534,6 +537,42 @@ function TierForm({
           className={inputCls}
         />
       </div>
+      {form.price && parseFloat(form.price) > 0 && (
+        <PayoutBreakdown priceMajor={parseFloat(form.price)} isRecurring={form.tier_type === "recurring"} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Up-front payout disclosure for the artist. Patronage takes 5% of the
+ * tier price; the Stripe processing fee is added on top of the buyer's
+ * total so the artist takes home the full intended cut. NZ Fair Trading
+ * Act requires this not be misleading.
+ */
+function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRecurring: boolean }) {
+  const commission = priceMajor * 0.05;
+  const takeHome = priceMajor - commission;
+  return (
+    <div className="col-span-2 border border-stone-200 px-3 py-2.5 space-y-1 text-[11px]">
+      <p className="font-medium uppercase tracking-widest text-[10px] text-stone-500">
+        Your take-home{isRecurring ? " / month" : ""}
+      </p>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Listing price</span>
+        <span className="font-mono">NZD {priceMajor.toFixed(2)}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Patronage commission (5%)</span>
+        <span className="font-mono">−NZD {commission.toFixed(2)}</span>
+      </div>
+      <div className="flex justify-between border-t border-stone-200 pt-1 mt-1">
+        <span className="font-medium">You receive</span>
+        <span className="font-mono font-medium">NZD {takeHome.toFixed(2)}</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground pt-1 leading-relaxed">
+        Card processing fee (2.9% + 30c) is added to the supporter&rsquo;s total at checkout — it doesn&rsquo;t come out of your share.
+      </p>
     </div>
   );
 }

@@ -135,6 +135,9 @@ export interface Opportunity {
   claim_link_open_count: number;
   // Scraper confidence (migration 091)
   confidence?: 'high' | 'medium' | 'low' | null;
+  // Phase 7.5c — partner-side commerce flags (migration 112)
+  pipeline_paid_at?: string | null;
+  featured_until?: string | null;
 }
 
 export type RecurrencePattern =
@@ -218,6 +221,8 @@ export interface OpportunityFilters {
 
 export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";
 
+export type OrganisationType = "charity" | "gallery" | "business";
+
 export interface Profile {
   id: string;
   username: string;
@@ -242,6 +247,17 @@ export interface Profile {
   acquired_works: string[];
   hide_sold_section: boolean;
   collection_public: boolean;
+  // Phase 4 — granular profile privacy toggles (migration 108)
+  show_taste: boolean;
+  show_follows: boolean;
+  show_location: boolean;
+  show_previously_collected: boolean;
+  show_supporting: boolean;
+  // Phase 6 — partner differentiation (migration 109)
+  organisation_type: OrganisationType | null;
+  charitable_registration: string | null;
+  donation_enabled: boolean;
+  donation_url: string | null;
   received_grants: string[];
   marketing_subscription: boolean | null;
   weekly_digest: boolean | null;
@@ -325,6 +341,9 @@ export interface SupportTier {
   tier_type: SupportTierType | null;
   sort_order: number;
   is_active: boolean;
+  // Phase 7.5d (migration 113) — Stripe IDs are minted lazily on first checkout
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
   created_at: string;
 }
 
@@ -358,6 +377,8 @@ export interface CollectiveEmailInvitation {
   collective?: Collective;
 }
 
+export type ArtworkSource = 'self_registered' | 'holder_uploaded';
+
 export interface Artwork {
   id: string;
   profile_id: string;
@@ -384,6 +405,52 @@ export interface Artwork {
   // Provenance (migration 098)
   ledger_id: string | null;
   certificate_note: string | null;
+  // Vault — collection vault (migration 105)
+  source: ArtworkSource;
+  attributed_artist_text: string | null;
+  attributed_artist_id: string | null;
+  // Phase 2: stub link when the attributed artist isn't on Patronage yet (migration 106)
+  attributed_pending_artist_id: string | null;
+  // Migration 114: controls whether a Buy button or Enquire button is shown
+  listing_mode: 'direct_sale' | 'enquire_first';
+  created_at: string;
+}
+
+export type CollectionSourceType =
+  | 'directly_from_artist'
+  | 'gallery'
+  | 'auction'
+  | 'gift'
+  | 'inheritance'
+  | 'other';
+
+export interface CollectionMembership {
+  id: string;
+  holder_id: string;
+  artwork_id: string;
+  is_public: boolean;
+  position: number;
+  date_acquired_text: string | null;
+  source_type: CollectionSourceType | null;
+  source_name: string | null;
+  price_paid_amount: number | null;
+  price_paid_currency: string | null;
+  location_text: string | null;
+  show_location_publicly: boolean;
+  certificate_statement: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ArtworkSourceDocumentType = 'certificate' | 'invoice' | 'receipt' | 'other';
+
+export interface ArtworkSourceDocument {
+  id: string;
+  artwork_id: string;
+  uploaded_by: string;
+  storage_path: string;
+  document_type: ArtworkSourceDocumentType;
+  description: string | null;
   created_at: string;
 }
 
@@ -394,7 +461,7 @@ export interface ArtworkProvenanceLedger {
   entry_type: 'created' | 'transferred' | 'resold';
   from_owner_id: string | null;
   to_owner_id: string;
-  transfer_method: 'listing' | 'stripe' | 'claim' | 'direct';
+  transfer_method: 'listing' | 'stripe' | 'claim' | 'direct' | 'negotiated_sale' | 'gift';
   transaction_ref: string | null;
   price: number | null;
   transferred_at: string;
@@ -412,6 +479,219 @@ export interface PendingOwnershipClaim {
   claimed_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
+}
+
+// ── Phase 2: holder-uploaded attribution + artist confirmation loop ──
+
+export type OutreachStatus = 'unattempted' | 'emailed' | 'phoned' | 'unreachable';
+
+export interface PendingArtist {
+  id: string;
+  name: string;
+  name_normalised: string;
+  email: string | null;
+  claim_token: string;
+  created_by_holder_id: string | null;
+  claim_invite_sent_at: string | null;
+  claim_invite_email: string | null;
+  claim_link_opened_at: string | null;
+  claim_link_open_count: number;
+  last_outreach_at: string | null;
+  outreach_status: OutreachStatus | null;
+  outreach_notes: string | null;
+  claimed_by_profile_id: string | null;
+  claimed_at: string | null;
+  created_at: string;
+}
+
+export type AttributionClaimStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'declined'
+  | 'unknown'
+  | 'resolved_by_patronage';
+
+export interface HolderAttributionClaim {
+  id: string;
+  artwork_id: string;
+  holder_id: string;
+  target_profile_id: string | null;
+  target_pending_artist_id: string | null;
+  status: AttributionClaimStatus;
+  decline_reason: string | null;
+  decline_appealed_at: string | null;
+  decline_appeal_evidence: string | null;
+  decline_appeal_message: string | null;
+  resolved_by_admin_id: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export type ResaleStatus = 'pending' | 'paid' | 'reverted';
+export type ResalePayoutStatus = 'owed' | 'paid' | 'cancelled';
+export type ResaleRoyaltyStatus = 'pending' | 'paid_to_artist' | 'held' | 'refunded_to_seller';
+
+export interface ResaleTransaction {
+  id: string;
+  artwork_id: string;
+  seller_id: string;
+  buyer_id: string | null;
+  buyer_email: string;
+  buyer_name: string | null;
+  sale_price_cents: number;
+  currency: string;
+  patronage_commission_cents: number;
+  artist_royalty_cents: number;
+  buyer_paid_total_cents: number;
+  status: ResaleStatus;
+  seller_payout_status: ResalePayoutStatus;
+  royalty_status: ResaleRoyaltyStatus;
+  stripe_session_id: string | null;
+  stripe_payment_intent: string | null;
+  paid_at: string | null;
+  reverted_at: string | null;
+  reverted_reason: string | null;
+  created_at: string;
+}
+
+export type RoyaltyHoldStatus = 'held' | 'paid' | 'refunded_to_seller';
+
+export interface RoyaltyHold {
+  id: string;
+  resale_transaction_id: string;
+  artwork_id: string;
+  artist_profile_id: string | null;
+  artist_pending_id: string | null;
+  artist_name_text: string | null;
+  amount_cents: number;
+  currency: string;
+  status: RoyaltyHoldStatus;
+  outreach_count: number;
+  last_outreach_at: string | null;
+  expires_at: string;
+  paid_at: string | null;
+  refunded_at: string | null;
+  paid_via_note: string | null;
+  created_at: string;
+}
+
+export interface NegotiatedSaleTransaction {
+  id: string;
+  artwork_id: string;
+  artist_id: string;
+  buyer_id: string | null;
+  buyer_email: string;
+  conversation_id: string;
+  sale_price_cents: number;
+  currency: string;
+  patronage_commission_cents: number;
+  buyer_paid_total_cents: number;
+  stripe_session_id: string | null;
+  stripe_payment_intent: string | null;
+  status: 'pending' | 'paid';
+  artist_payout_status: 'owed' | 'paid';
+  paid_at: string | null;
+  created_at: string;
+}
+
+export type SupportSubscriptionStatus =
+  | 'pending'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'one_off_paid'
+  | 'reverted';
+
+export interface SupportSubscription {
+  id: string;
+  tier_id: string;
+  recipient_id: string;
+  supporter_id: string | null;
+  supporter_email: string;
+  supporter_name: string | null;
+  amount_cents: number;
+  currency: string;
+  patronage_commission_cents: number;
+  buyer_paid_total_cents: number;
+  tier_type: 'one_off' | 'recurring';
+  status: SupportSubscriptionStatus;
+  stripe_session_id: string | null;
+  stripe_payment_intent: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  current_period_end: string | null;
+  started_at: string | null;
+  canceled_at: string | null;
+  created_at: string;
+}
+
+export interface PartnerPayment {
+  id: string;
+  opportunity_id: string;
+  partner_id: string;
+  amount_cents: number;
+  currency: string;
+  status: ResaleStatus;
+  stripe_session_id: string | null;
+  stripe_payment_intent: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
+export interface PipelineEntryPayment extends PartnerPayment {}
+
+export interface FeaturedListingPayment extends PartnerPayment {
+  feature_days: number;
+  feature_until: string | null;
+}
+
+export interface PrimarySaleTransaction {
+  id: string;
+  artwork_id: string;
+  artist_id: string;
+  buyer_id: string | null;
+  buyer_email: string;
+  buyer_name: string | null;
+  sale_price_cents: number;
+  currency: string;
+  patronage_commission_cents: number;
+  buyer_paid_total_cents: number;
+  status: ResaleStatus;
+  artist_payout_status: ResalePayoutStatus;
+  stripe_session_id: string | null;
+  stripe_payment_intent: string | null;
+  paid_at: string | null;
+  reverted_at: string | null;
+  reverted_reason: string | null;
+  created_at: string;
+}
+
+export type ArtworkEditionType = 'unique' | 'limited' | 'open' | 'AP' | 'proof';
+
+export type ArtworkTrustTier =
+  | 'recorded_by_artist'
+  | 'recorded_by_holder'
+  | 'confirmed_by_artist'
+  | 'resolved_by_patronage'
+  | 'disputed';
+
+export type ClaimTokenKind = 'opportunity' | 'provenance' | 'artist';
+
+export interface ClaimTokenRow {
+  token_kind: ClaimTokenKind;
+  source_id: string;
+  claim_token: string;
+  subject_label: string;
+  subject_detail: string | null;
+  contact_email: string | null;
+  invite_sent_at: string | null;
+  link_opened_at: string | null;
+  link_open_count: number;
+  last_outreach_at: string | null;
+  outreach_status: OutreachStatus | null;
+  outreach_notes: string | null;
+  is_claimed: boolean;
+  created_at: string;
 }
 
 export interface WorkImage {

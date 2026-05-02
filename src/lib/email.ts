@@ -219,6 +219,84 @@ export async function sendProvenanceInvite(
 }
 
 /**
+ * Sent to every buyer after a successful Stripe payment (primary sale or resale).
+ * For shadow/guest accounts includes a claim CTA; for logged-in buyers links
+ * straight to the provenance certificate.
+ */
+export async function sendPurchaseConfirmation({
+  toEmail,
+  buyerName,
+  workTitle,
+  artistName,
+  workImageUrl,
+  provenanceUrl,
+  claimToken,
+}: {
+  toEmail: string;
+  buyerName: string | null;
+  workTitle: string;
+  artistName: string;
+  workImageUrl: string | null;
+  provenanceUrl: string;
+  claimToken: string | null;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const greeting = buyerName ? `Kia ora ${esc(buyerName)},` : "Kia ora,";
+  const claimUrl = claimToken ? `${SITE_URL}/claim/${claimToken}` : null;
+
+  const guestSection = claimUrl ? `
+      <div style="margin:32px 0;border:1px solid #e5e5e5;padding:20px;">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;">Your work is already in your collection.</p>
+        <p style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.5;">
+          Create a free Patronage account and your collection dashboard will show this work — certificate attached, ready to go. Nothing to set up.
+        </p>
+        <a href="${claimUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+          Claim your account →
+        </a>
+      </div>` : "";
+
+  await getResend().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `You now own "${workTitle}" by ${artistName}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Certificate of provenance</p>
+
+      <p style="margin:0 0 24px;font-size:15px;">${greeting}</p>
+
+      ${workImageUrl ? `<img src="${workImageUrl}" alt="${esc(workTitle)}" style="width:100%;max-height:280px;object-fit:contain;background:#f9f9f9;display:block;margin:0 0 24px;" />` : ""}
+
+      <p style="margin:0 0 4px;font-size:15px;font-weight:600;">${esc(workTitle)}</p>
+      <p style="margin:0 0 24px;font-size:13px;color:#555;">by ${esc(artistName)}</p>
+
+      <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.5;">
+        Your certificate of provenance is ready. It records the full ownership history of this work on the Patronage ledger.
+      </p>
+
+      <a href="${provenanceUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;margin-bottom:24px;">
+        View provenance certificate →
+      </a>
+
+      ${guestSection}
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        Questions? <a href="mailto:hello@patronage.nz" style="color:#888;">hello@patronage.nz</a> ·
+        <a href="${SITE_URL}" style="color:#888;">patronage.nz</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
  * Notify an existing patron that an artist has linked an artwork to their collection.
  */
 export async function sendProvenanceNotification(

@@ -52,9 +52,8 @@ export async function getOrCreateConversation(
 }
 
 const INQUIRY_DISCLAIMER =
-  "Payments, shipping, and all off-platform arrangements are solely between the buyer and seller. " +
-  "Patronage does not facilitate, guarantee, or take responsibility for any transaction made outside of this platform. " +
-  "Please exercise caution and verify all details before proceeding.";
+  "Works can be purchased securely through Patronage — use the Buy button on the artist’s profile to pay via Stripe and receive a verified provenance certificate. " +
+  "If you arrange a sale outside the platform, that transaction is solely between you and the seller. Patronage does not guarantee or take responsibility for off-platform arrangements.";
 
 /**
  * Starts or opens an enquiry thread.

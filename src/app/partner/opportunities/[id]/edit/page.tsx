@@ -4,6 +4,7 @@ import { isAdmin } from "@/lib/admin";
 import type { Metadata } from "next";
 import { PartnerEditForm } from "./PartnerEditForm";
 import { CollaboratorsPanel } from "@/components/partner/CollaboratorsPanel";
+import { PartnerCommercePanel } from "@/components/partner/PartnerCommercePanel";
 import { getCollaborators } from "@/app/partner/opportunities/[id]/collaborators/actions";
 
 export const metadata: Metadata = {
@@ -63,6 +64,14 @@ export default async function PartnerEditPage({ params }: Props) {
       </div>
 
       <PartnerEditForm opp={opp} />
+
+      {isOwner && (
+        <PartnerCommercePanel
+          opportunityId={id}
+          pipelinePaidAt={opp.pipeline_paid_at ?? null}
+          featuredUntil={opp.featured_until ?? null}
+        />
+      )}
 
       {/* Collaborators — owners and admins can manage; collaborators can view */}
       <CollaboratorsPanel

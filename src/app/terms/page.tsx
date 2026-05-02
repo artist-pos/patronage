@@ -8,7 +8,7 @@ export default function TermsPage() {
     <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: April 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: May 2026</p>
       </header>
 
       <Section title="1. Who We Are">
@@ -23,16 +23,18 @@ export default function TermsPage() {
         <p>Access and permissions vary by role:</p>
         <ul className="mt-3 space-y-2">
           <Item label="Artists">
-            Control their own portfolio, bio, and available works. Artists can receive
-            enquiries from patrons and reply to messages, but cannot initiate conversations.
+            Control their own portfolio, bio, available works, and support tiers. Artists
+            can receive enquiries from patrons and reply to messages, but cannot initiate
+            conversations. Artists can apply to opportunities listed on the platform.
           </Item>
           <Item label="Patrons">
-            Can browse artist profiles, follow artists, send enquiries about available works,
-            and build a personal taste profile.
+            Can browse artist profiles, send enquiries about available works, purchase works
+            or support tiers through Patronage&rsquo;s payment system, and build a collection.
           </Item>
           <Item label="Partners">
             Can submit opportunities for review and browse the verified artist directory.
-            Partners may also send enquiries to artists.
+            Partners may list standard, featured, or pipeline-enabled opportunities and manage
+            applications through the partner dashboard.
           </Item>
         </ul>
         <p className="mt-4">
@@ -53,16 +55,59 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="4. Transactions">
+      <Section title="4. Commerce & Payments">
         <p>
-          Patronage is a discovery platform, not an escrow or payment service. Any sales,
-          commissions, or financial agreements negotiated through our messaging system are
-          private arrangements between the individuals involved. We are not a party to those
-          transactions and accept no liability for disputes arising from them.
+          Patronage facilitates the purchase of artworks, artist support tiers, and partner
+          services directly through the platform. All on-platform payments are processed by
+          Stripe. By completing a purchase you agree to Stripe&rsquo;s{" "}
+          <a
+            href="https://stripe.com/nz/legal/consumer"
+            className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            terms of service
+          </a>
+          .
         </p>
+
         <p className="mt-3">
-          We strongly encourage both parties to agree on terms in writing before exchanging
-          funds or artwork.
+          <strong>Artwork purchases.</strong> When you purchase an artwork through Patronage,
+          you pay the listed sticker price plus a card processing fee (2.9% + NZ$0.30, passed
+          through at cost). Patronage retains a 10% platform commission from the seller&rsquo;s
+          proceeds. On resales, a 5% royalty is collected and remitted to the original artist.
+          A verified provenance certificate is issued to the buyer on completion.
+        </p>
+
+        <p className="mt-3">
+          <strong>Artist support tiers.</strong> Patrons can support artists through one-off
+          or recurring monthly payments. Patronage retains a 5% commission; the artist
+          receives the remaining 95% of the tier price. The card processing fee is added on
+          top and disclosed in full before checkout.
+        </p>
+
+        <p className="mt-3">
+          <strong>Partner listings.</strong> Standard listings are free. Featured placements
+          and Pipeline activations carry published fees payable via Stripe, with card
+          processing costs disclosed at checkout.
+        </p>
+
+        <p className="mt-3">
+          <strong>Off-platform arrangements.</strong> Any financial agreement reached outside
+          of Patronage&rsquo;s payment system is solely between the parties involved. Patronage
+          does not guarantee, mediate, or accept liability for off-platform transactions.
+        </p>
+
+        <p className="mt-3">
+          <strong>Refunds.</strong> Refunds are handled case-by-case. Contact{" "}
+          <a
+            href="mailto:hello@patronage.nz"
+            className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
+          >
+            hello@patronage.nz
+          </a>{" "}
+          within 14 days of purchase. Refunds on completed artwork transfers may not be
+          possible where the provenance certificate has already been issued.
         </p>
       </Section>
 

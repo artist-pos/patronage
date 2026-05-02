@@ -12,6 +12,17 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
 ];
 
+// /embed/* routes are the embeddable iframe surface. Drop X-Frame-Options
+// (so any host can frame the page) and use CSP frame-ancestors as a modern
+// equivalent. Other security headers stay.
+const embedHeaders = [
+  { key: "X-Content-Type-Options",    value: "nosniff" },
+  { key: "Referrer-Policy",           value: "strict-origin-when-cross-origin" },
+  { key: "X-XSS-Protection",          value: "1; mode=block" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  { key: "Content-Security-Policy",   value: "frame-ancestors *" },
+];
+
 const nextConfig: NextConfig = {
   experimental: {
     // Transforms `import { X } from 'lucide-react'` to direct module paths at
@@ -27,9 +38,15 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Negative-lookahead matcher so /embed routes don't inherit
+      // X-Frame-Options: DENY from the catch-all.
       {
-        source: "/(.*)",
+        source: "/((?!embed/).*)",
         headers: securityHeaders,
+      },
+      {
+        source: "/embed/:path*",
+        headers: embedHeaders,
       },
     ];
   },

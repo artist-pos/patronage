@@ -277,6 +277,32 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 3,
   },
+  // Phase 3 — holder-upload variant
+  trustTierRow: {
+    marginBottom: 14,
+  },
+  trustTierChip: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 1.5,
+    color: "#666666",
+    backgroundColor: "#f4f4f3",
+    borderWidth: 1,
+    borderColor: "#dddddd",
+    borderStyle: "solid",
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingLeft: 8,
+    paddingRight: 8,
+    alignSelf: "flex-start",
+  },
+  royaltyText: {
+    fontSize: 7.5,
+    color: "#888888",
+    lineHeight: 1.5,
+    marginTop: 12,
+    marginBottom: 8,
+  },
   legalBlock: {
     marginBottom: 24,
   },
@@ -359,6 +385,9 @@ interface CertificateProps {
   signatureUrl: string | null;
   qrDataUrl: string;
   theme: ProvenanceTheme;
+  isHolderUploaded?: boolean;
+  trustTierLabel?: string | null;
+  royaltyStatement?: string | null;
 }
 
 function entryEventLabel(type: string): string {
@@ -400,6 +429,9 @@ function TransferCertificate({
   qrDataUrl,
   theme,
   referencePhotos,
+  isHolderUploaded,
+  trustTierLabel,
+  royaltyStatement,
 }: CertificateProps) {
   const artistProfileUrl = artistUsername ? `${SITE_URL}/${artistUsername}` : null;
   const detailParts = [yearCreated, medium, dimensions, edition].filter(Boolean);
@@ -479,9 +511,11 @@ function TransferCertificate({
           </View>
 
           <View style={styles.row}>
-            <Text style={[styles.label, t.heading, t.accentFill]}>TRANSFER</Text>
+            <Text style={[styles.label, t.heading, t.accentFill]}>
+              {isHolderUploaded ? "REGISTERED BY" : "TRANSFER"}
+            </Text>
             <Text style={[styles.value, t.body, t.primaryFill]}>
-              {artistDisplay}  →  {cleanPatron}
+              {isHolderUploaded ? cleanPatron : `${artistDisplay}  →  ${cleanPatron}`}
             </Text>
           </View>
 
@@ -491,11 +525,26 @@ function TransferCertificate({
           </View>
         </View>
 
+        {/* Trust tier + royalty statement (Phase 3 holder variant). The chip
+            sits between the details table and the artist statement so it's
+            unmissable when the cert is photocopied or printed. */}
+        {trustTierLabel && (
+          <View style={styles.trustTierRow}>
+            <Text style={[styles.trustTierChip, t.heading]}>{trustTierLabel}</Text>
+          </View>
+        )}
+
         {/* Artist statement (truncated to fit on page 1) */}
         {truncatedNote && (
           <View style={[styles.noteBox, t.primaryLeft]}>
             <Text style={[styles.noteText, t.body]}>{truncatedNote}</Text>
           </View>
+        )}
+
+        {/* Royalty notice — required on holder-uploaded certificates so the
+            5% RRA royalty obligation is visible on the artefact itself. */}
+        {royaltyStatement && (
+          <Text style={[styles.royaltyText, t.accentFill]}>{royaltyStatement}</Text>
         )}
 
         {/* Bottom: thin rule, then signature (left) + small QR (right) */}
@@ -695,6 +744,11 @@ export interface CertificateGenerationData {
   }>;
   referencePhotos?: ReferencePhoto[];
   theme?: ProvenanceTheme;
+  // Holder-uploaded variant (Phase 3). When set, the cert shows a trust-tier
+  // chip, a royalty statement, and rephrases TRANSFER → REGISTERED BY.
+  isHolderUploaded?: boolean;
+  trustTierLabel?: string | null;
+  royaltyStatement?: string | null;
 }
 
 export async function generateCertificatePdf(data: CertificateGenerationData): Promise<Buffer> {
@@ -737,6 +791,9 @@ export async function generateCertificatePdf(data: CertificateGenerationData): P
       qrDataUrl={qrDataUrl}
       theme={data.theme ?? DEFAULT_THEME}
       referencePhotos={data.referencePhotos ?? []}
+      isHolderUploaded={data.isHolderUploaded ?? false}
+      trustTierLabel={data.trustTierLabel ?? null}
+      royaltyStatement={data.royaltyStatement ?? null}
     /> as React.ReactElement<any>
   ) as Promise<Buffer>;
 }

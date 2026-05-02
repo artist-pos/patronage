@@ -5,6 +5,10 @@ import { generateCertificatePdf } from "@/lib/pdf/transfer-certificate";
 import { getLedgerByLedgerId } from "@/lib/provenance";
 import { resolveTheme } from "@/lib/provenance-theme";
 import { listDocPhotosWithUrls, DOC_PHOTO_TYPES } from "@/lib/artwork-documentation";
+import { getTrustTier, TRUST_TIER_LABELS } from "@/lib/trust-tier";
+
+const ROYALTY_STATEMENT =
+  "A 5% artist royalty applies to all resales of this work facilitated through Patronage, paid to RRA under the Resale Right for Visual Artists Act 2023.";
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -19,16 +23,22 @@ export async function GET(req: NextRequest) {
 
   const { data: artwork } = await admin
     .from("artworks")
-    .select("id, title, caption, url, year, medium, dimensions, edition, certificate_note, creator_id, current_owner_id, ledger_id")
+    .select(
+      "id, title, caption, url, year, medium, dimensions, edition, certificate_note, creator_id, current_owner_id, ledger_id, source, attributed_artist_id, attributed_artist_text, attributed_pending_artist_id",
+    )
     .eq("id", artworkId)
     .maybeSingle();
 
   if (!artwork) return new NextResponse("Artwork not found", { status: 404 });
 
-  // Only the artist or current owner may download
+  // Only the artist or current owner may download. For holder_uploaded works
+  // both fields point at the holder, so the holder downloads through this
+  // same path; no separate gate needed.
   if (artwork.creator_id !== user.id && artwork.current_owner_id !== user.id) {
     return new NextResponse("Forbidden", { status: 403 });
   }
+
+  const isHolderUploaded = artwork.source === "holder_uploaded";
 
   const ledgerId = artwork.ledger_id;
   if (!ledgerId) return new NextResponse("No provenance record for this artwork", { status: 404 });
@@ -52,11 +62,39 @@ export async function GET(req: NextRequest) {
     () => ({ data: null as Record<string, unknown> | null }),
   );
 
-  const [provenanceData, { data: artistProfile }, { data: baseBranding }] = await Promise.all([
+  // For holder_uploaded works, creator_id points at the holder until the
+  // artist confirms. The certificate's "ARTIST" should always show the
+  // attributed artist (real profile or stub or free text), so we resolve
+  // that here rather than relying on the creator_id lookup.
+  const artistLookupId =
+    isHolderUploaded && artwork.attributed_artist_id
+      ? artwork.attributed_artist_id
+      : artwork.creator_id;
+
+  const [provenanceData, { data: artistProfile }, { data: baseBranding }, pendingArtistRes, membershipRes] = await Promise.all([
     getLedgerByLedgerId(ledgerId),
-    admin.from("profiles").select("full_name, username").eq("id", artwork.creator_id).maybeSingle(),
+    admin.from("profiles").select("full_name, username").eq("id", artistLookupId).maybeSingle(),
     baseBrandingQ,
+    isHolderUploaded && artwork.attributed_pending_artist_id
+      ? admin
+          .from("pending_artists")
+          .select("name")
+          .eq("id", artwork.attributed_pending_artist_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    isHolderUploaded
+      ? admin
+          .from("collection_membership")
+          .select("certificate_statement")
+          .eq("artwork_id", artwork.id)
+          .eq("holder_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  // Trust tier is derived per Phase 2 — not stored. Compute alongside the
+  // other fetches; cheap (one count of holder_attribution_claims rows).
+  const trustTier = isHolderUploaded ? await getTrustTier(artwork.id) : null;
 
   const branding = { ...(baseBranding ?? {}), ...(themeRes.data ?? {}) };
 
@@ -110,25 +148,48 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Holder-uploaded works pull the artist name from the stub when no real
+  // profile is linked, falling back to the holder's free-text attribution.
+  const resolvedArtistName = isHolderUploaded
+    ? (
+        artistProfile?.full_name
+        ?? artistProfile?.username
+        ?? pendingArtistRes.data?.name
+        ?? artwork.attributed_artist_text
+        ?? "Unknown artist"
+      )
+    : (artistProfile?.full_name ?? artistProfile?.username ?? "The artist");
+
+  // Holder-uploaded certificates show the holder's certificate_statement
+  // from collection_membership in place of the artist's certificate_note.
+  const resolvedCertificateNote = isHolderUploaded
+    ? (membershipRes.data?.certificate_statement ?? null)
+    : (artwork.certificate_note ?? null);
+
+  const trustTierLabel = trustTier ? TRUST_TIER_LABELS[trustTier].label : null;
+
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await generateCertificatePdf({
     ledgerId,
     workTitle: artwork.title ?? artwork.caption ?? "Untitled",
     workImageUrl: artwork.url ?? null,
-    artistName: artistProfile?.full_name ?? artistProfile?.username ?? "The artist",
+    artistName: resolvedArtistName,
     artistUsername: artistProfile?.username ?? null,
     patronName: currentOwnerName,
     yearCreated: artwork.year ?? null,
     medium: artwork.medium ?? null,
     dimensions: artwork.dimensions ?? null,
     edition: artwork.edition ?? null,
-    certificateNote: artwork.certificate_note ?? null,
+    certificateNote: resolvedCertificateNote,
     logoUrl: branding?.provenance_logo_url ?? null,
     signatureUrl,
     chainOfCustody,
     referencePhotos,
     theme: resolveTheme(branding),
+    isHolderUploaded,
+    trustTierLabel,
+    royaltyStatement: isHolderUploaded ? ROYALTY_STATEMENT : null,
     });
   } catch (err) {
     console.error("[certificate] PDF generation failed", err);

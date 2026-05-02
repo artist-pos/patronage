@@ -30,15 +30,26 @@ export default async function PartnersPage() {
 
   let partnerName: string | null = null;
   let isAdmin = false;
+  // Has the partner already used (paid for) a pipeline round? Drives the
+  // "first round free" copy — returning partners owe $200 instead.
+  let pipelineFirstRoundUsed = false;
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, username, role")
-      .eq("id", user.id)
-      .single();
+    const [{ data: profile }, { count }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("full_name, username, role")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("pipeline_entry_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("partner_id", user.id)
+        .eq("status", "paid"),
+    ]);
     partnerName = profile?.full_name ?? profile?.username ?? null;
     isAdmin = ["admin", "owner"].includes(profile?.role ?? "");
+    pipelineFirstRoundUsed = (count ?? 0) > 0;
   }
 
   return (
@@ -65,6 +76,7 @@ export default async function PartnersPage() {
           partnerName={partnerName}
           activationTypes={(activationTypes ?? []) as ActivationType[]}
           isAdmin={isAdmin}
+          pipelineFirstRoundUsed={pipelineFirstRoundUsed}
         />
       </div>
 

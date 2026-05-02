@@ -8,6 +8,8 @@ import { priorHistoryLabel } from "@/lib/artwork-prior-history";
 import { DocumentationGallery } from "./DocumentationGallery";
 import { supabaseTransform } from "@/lib/image";
 import { ProvenanceClient } from "./ProvenanceClient";
+import { getTrustTier } from "@/lib/trust-tier";
+import { TrustTierChip } from "@/components/provenance/TrustTierChip";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -71,6 +73,11 @@ export default async function ProvenancePage({ params }: PageProps) {
     ? (supabaseTransform(artwork.url, { width: 900, quality: 85 }) ?? artwork.url)
     : null;
 
+  // Trust tier — derived from artworks.source + the most-advanced status of
+  // any holder_attribution_claims row. Phase 2 surfaces this as a chip; Phase
+  // 4's public collection page filters out 'disputed' rows entirely.
+  const trustTier = await getTrustTier(artwork.id);
+
   // Use the raw avatar URL — same as the /artists directory — and let
   // next/image pick the best size. supabaseTransform with a fixed width
   // was producing crops that looked off compared to the artist cards.
@@ -81,7 +88,7 @@ export default async function ProvenancePage({ params }: PageProps) {
       <div className="max-w-3xl mx-auto px-4 py-12 md:py-20">
 
         {/* Verified badge */}
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
             <svg className="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -90,6 +97,18 @@ export default async function ProvenancePage({ params }: PageProps) {
           </div>
           <span className="text-xs text-stone-400 font-mono">{ledger_id}</span>
         </div>
+
+        {/* Trust tier — non-removable per the spec. self_registered (Recorded
+            by artist) renders without the description; holder cases get the
+            longer caption so the viewer understands the provenance level. */}
+        {trustTier && (
+          <div className="mb-8">
+            <TrustTierChip
+              tier={trustTier}
+              showDescription={trustTier !== "recorded_by_artist"}
+            />
+          </div>
+        )}
 
         {/* Artwork image — natural aspect, capped at 500px tall, no cropping. */}
         {artworkImageUrl && (

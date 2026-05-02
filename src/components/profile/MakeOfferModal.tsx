@@ -18,6 +18,7 @@ interface Props {
   workTitle: string | null;
   listingPrice: string | null;
   listingCurrency: "NZD" | "AUD";
+  workImageUrl?: string | null;
 }
 
 export function MakeOfferModal({
@@ -28,6 +29,7 @@ export function MakeOfferModal({
   workTitle,
   listingPrice,
   listingCurrency,
+  workImageUrl,
 }: Props) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
@@ -81,13 +83,22 @@ export function MakeOfferModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Work context */}
-          <div className="border border-border px-3 py-2.5 space-y-0.5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Work</p>
-            <p className="text-sm font-medium">{workTitle ?? "Untitled"}</p>
-            {displayListingPrice && (
-              <p className="text-xs text-muted-foreground">Listed at {displayListingPrice}</p>
+          {/* Work context — thumbnail card matching DM artwork card style */}
+          <div className="flex border border-black overflow-hidden">
+            {workImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={workImageUrl}
+                alt={workTitle ?? "Work"}
+                className="w-16 h-16 object-cover shrink-0"
+              />
             )}
+            <div className="flex flex-col justify-center px-3 py-2 min-w-0">
+              <p className="text-sm font-medium truncate">{workTitle ?? "Untitled"}</p>
+              {displayListingPrice && (
+                <p className="text-xs text-muted-foreground">{displayListingPrice}</p>
+              )}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

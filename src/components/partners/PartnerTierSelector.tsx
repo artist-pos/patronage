@@ -8,39 +8,51 @@ import type { ActivationType } from "@/app/partners/page";
 
 type Tier = "standard" | "featured" | "pipeline";
 
-const TIERS = [
-  {
-    id: "standard" as const,
-    label: "Standard",
-    price: "Free",
-    popular: false,
-    body: "Listed in feed, search, and weekly digest. Reviewed within 2 business days.",
-  },
-  {
-    id: "featured" as const,
-    label: "Featured",
-    strikePrice: "$150",
-    price: "$75 NZD",
-    popular: false,
-    body: "Pinned to top of feed, homepage, and digest email. Shared on Patronage socials.",
-  },
-  {
-    id: "pipeline" as const,
-    label: "Pipeline",
-    price: "First round free",
-    popular: true,
-    body: "Artists apply with their Patronage profile — portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
-  },
-] as const;
+const STANDARD_TIER = {
+  id: "standard" as const,
+  label: "Standard",
+  price: "Free",
+  popular: false,
+  body: "Listed in feed, search, and weekly digest. Reviewed within 2 business days.",
+};
+
+const FEATURED_TIER = {
+  id: "featured" as const,
+  label: "Featured",
+  strikePrice: "$150",
+  price: "$75 NZD",
+  popular: false,
+  body: "Pinned to top of feed, homepage, and digest email. Shared on Patronage socials.",
+};
 
 interface Props {
   isLoggedIn: boolean;
   partnerName: string | null;
   activationTypes: ActivationType[];
   isAdmin: boolean;
+  /** When true, this partner has already used their free pipeline round —
+   *  show $200 pricing instead of "first round free" copy. */
+  pipelineFirstRoundUsed: boolean;
 }
 
-export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, isAdmin }: Props) {
+export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, isAdmin, pipelineFirstRoundUsed }: Props) {
+  const pipelineTier = pipelineFirstRoundUsed
+    ? {
+        id: "pipeline" as const,
+        label: "Pipeline",
+        price: "$200 NZD",
+        popular: true,
+        body: "Artists apply with their Patronage profile — portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
+      }
+    : {
+        id: "pipeline" as const,
+        label: "Pipeline",
+        price: "First round free",
+        popular: true,
+        body: "Artists apply with their Patronage profile — portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
+      };
+
+  const TIERS = [STANDARD_TIER, FEATURED_TIER, pipelineTier] as const;
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
   // Featured placement add-on (for Standard and Pipeline tiers; Featured is always true)
   const [addFeatured, setAddFeatured] = useState(false);
@@ -164,8 +176,14 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
           {/* Small print */}
           {selectedTier === "pipeline" && (
             <p className="text-xs text-muted-foreground">
-              Your first Pipeline round is free. No commitment, no card required.
-              Featured rate is introductory and subject to change.
+              {pipelineFirstRoundUsed
+                ? "Pipeline rounds are $200 NZD each. Featured rate is introductory and subject to change."
+                : "Your first Pipeline round is free. No commitment, no card required. Featured rate is introductory and subject to change."}
+            </p>
+          )}
+          {(selectedTier === "featured" || (selectedTier === "pipeline" && pipelineFirstRoundUsed)) && (
+            <p className="text-[11px] text-muted-foreground">
+              Paid tiers add a 2.9% + 30c card processing fee at checkout. Itemised on the Stripe payment page.
             </p>
           )}
 
@@ -180,7 +198,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                   onChange={handlePipelineConfigChange}
                 />
               ) : pipelineSelected ? (
-                <PipelineInfoPanel />
+                <PipelineInfoPanel pipelineFirstRoundUsed={pipelineFirstRoundUsed} />
               ) : (
                 <ActivationsColumn activationTypes={activationTypes} isAdmin={isAdmin} hideHeader />
               )}
@@ -233,7 +251,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
           {/* Pipeline info panel — visible when pipeline selected but config not yet active */}
           {pipelineSelected && !pipelineConfigActive && (
             <div className="absolute inset-0">
-              <PipelineInfoPanel />
+              <PipelineInfoPanel pipelineFirstRoundUsed={pipelineFirstRoundUsed} />
             </div>
           )}
 
@@ -254,7 +272,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
 }
 
 /** Shown in the right column when Pipeline tier is selected but not yet configured. */
-function PipelineInfoPanel() {
+function PipelineInfoPanel({ pipelineFirstRoundUsed }: { pipelineFirstRoundUsed: boolean }) {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
@@ -276,10 +294,13 @@ function PipelineInfoPanel() {
       </div>
 
       <div className="border border-border p-4 space-y-2">
-        <p className="text-xs font-medium">First round free</p>
+        <p className="text-xs font-medium">
+          {pipelineFirstRoundUsed ? "$200 NZD per round" : "First round free"}
+        </p>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Your first Pipeline round is free with no commitment. After that, pricing is based on
-          the number of opportunities you run per year. Get in touch to discuss.
+          {pipelineFirstRoundUsed
+            ? "Each Pipeline round is $200 NZD. Running multiple opportunities per year? Get in touch about volume pricing."
+            : "Your first Pipeline round is free with no commitment. After that, $200 NZD per round. Running multiple opportunities per year? Get in touch about volume pricing."}
         </p>
         <a
           href="mailto:hello@patronage.nz?subject=Pipeline%20enquiry"

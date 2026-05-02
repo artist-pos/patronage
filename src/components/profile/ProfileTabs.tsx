@@ -5,20 +5,21 @@ import { useRouter } from "next/navigation";
 const TABS = ["overview", "work", "cv", "support"] as const;
 type Tab = typeof TABS[number];
 
-const TAB_LABELS: Record<Tab, string> = {
-  overview: "Overview",
-  work: "Work",
-  cv: "CV & Press",
-  support: "Support this artist",
-};
-
 interface Props {
   username: string;
   tab: string;
+  artistName?: string | null;
 }
 
-export function ProfileTabs({ username, tab }: Props) {
+export function ProfileTabs({ username, tab, artistName }: Props) {
   const router = useRouter();
+
+  const TAB_LABELS: Record<Tab, string> = {
+    overview: "Overview",
+    work: "Work",
+    cv: "CV & Press",
+    support: artistName ? `Support ${artistName}` : "Support",
+  };
 
   return (
     <nav className="overflow-x-auto border-b border-border -mx-4 sm:-mx-6 px-4 sm:px-6 mt-8">

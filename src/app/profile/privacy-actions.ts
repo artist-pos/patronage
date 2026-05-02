@@ -41,7 +41,14 @@ export async function updateWorkPrivacy(
 }
 
 export async function updateProfilePrivacy(
-  field: "hide_sold_section" | "collection_public",
+  field:
+    | "hide_sold_section"
+    | "collection_public"
+    | "show_taste"
+    | "show_follows"
+    | "show_location"
+    | "show_previously_collected"
+    | "show_supporting",
   value: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient();

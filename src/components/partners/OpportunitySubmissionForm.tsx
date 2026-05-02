@@ -81,6 +81,15 @@ export function OpportunitySubmissionForm({
     submitOpportunityAction, {}
   );
 
+  // Paid tiers (featured, repeat-pipeline) come back with a Stripe URL —
+  // bounce the partner straight to checkout. Done in an effect so the
+  // server action result has already settled.
+  useEffect(() => {
+    if (state.checkoutUrl) {
+      window.location.href = state.checkoutUrl;
+    }
+  }, [state.checkoutUrl]);
+
   const [formData, setFormData] = useState<OpportunityFormData>(() => {
     const base = defaultFormData(partnerName ?? "");
     if (initialTier === "pipeline") base.routingType = "pipeline";
@@ -209,6 +218,19 @@ export function OpportunitySubmissionForm({
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (state.success) {
+    if (state.checkoutUrl) {
+      return (
+        <div className="border border-black p-8 space-y-2">
+          <p className="font-semibold">Redirecting to secure checkout…</p>
+          <p className="text-sm text-muted-foreground">
+            If you aren&apos;t redirected,{" "}
+            <a href={state.checkoutUrl} className="underline underline-offset-2">
+              click here
+            </a>.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="border border-black p-8 space-y-6">
         <div className="space-y-2">

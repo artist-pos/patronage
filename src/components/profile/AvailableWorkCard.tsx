@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { EnquireButton } from "./EnquireButton";
 import { MakeOfferModal } from "./MakeOfferModal";
 import { PlaceInCollectionModal } from "./PlaceInCollectionModal";
+import { BuyWorkButton } from "./BuyWorkButton";
 import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
 import type { Artwork } from "@/types/database";
 
@@ -75,6 +76,7 @@ export function AvailableWorkCard({ img, artistId, artistName, artistUsername, v
         workTitle={img.caption}
         listingPrice={img.price}
         listingCurrency={(img.price_currency as "NZD" | "AUD") ?? "NZD"}
+        workImageUrl={img.url}
       />
     )}
     <div
@@ -159,22 +161,45 @@ export function AvailableWorkCard({ img, artistId, artistName, artistUsername, v
             </div>
           )}
 
-          {/* Enquire / Offer buttons (non-owner authenticated) */}
-          {canEnquire && (
+          {/* Buy / Offer / Enquire buttons.
+              direct_sale: Buy button shown (no login needed); Enquire/Offer also available if logged in.
+              enquire_first: Buy button hidden; only Enquire/Offer shown (login required). */}
+          {!isOwner && (
             <div className="flex flex-col gap-1.5">
-              <button
-                onClick={() => setOfferModal(true)}
-                className="w-full bg-black text-white text-xs py-1.5 px-3 hover:opacity-80 transition-opacity"
-              >
-                Make an Offer
-              </button>
-              <EnquireButton
-                artistId={artistId}
-                artistName={artistName}
-                workId={img.id}
-                workTitle={img.caption}
-                workDescription={img.description}
-              />
+              {img.listing_mode !== "enquire_first" && img.price && img.price !== "POA" && (
+                <BuyWorkButton
+                  artworkId={img.id}
+                  workTitle={img.caption}
+                  priceText={img.price}
+                  currency={img.price_currency ?? "NZD"}
+                  workImageUrl={img.url}
+                  year={img.year}
+                  medium={img.medium}
+                  dimensions={img.dimensions}
+                  edition={img.edition}
+                  artistName={artistName}
+                />
+              )}
+              {canEnquire && (
+                <>
+                  <button
+                    onClick={() => setOfferModal(true)}
+                    className="w-full border border-black text-xs py-1.5 px-3 hover:bg-stone-50 transition-colors"
+                  >
+                    Make an Offer
+                  </button>
+                  <EnquireButton
+                    artistId={artistId}
+                    artistName={artistName}
+                    workId={img.id}
+                    workTitle={img.caption}
+                    workDescription={img.description}
+                    workImageUrl={img.url}
+                    listingPrice={img.price}
+                    listingCurrency={img.price_currency ?? "NZD"}
+                  />
+                </>
+              )}
             </div>
           )}
         </div>

@@ -530,6 +530,21 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                     CV
                   </TrackedLink>
                 )}
+                {/* Donation CTA — only renders for admin-approved charity
+                    partners. Off-site link, opens in a new tab. */}
+                {profile.role === "partner"
+                  && profile.organisation_type === "charity"
+                  && profile.donation_enabled
+                  && profile.donation_url && (
+                  <a
+                    href={profile.donation_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 bg-foreground text-background hover:opacity-90 transition-opacity text-xs font-medium"
+                  >
+                    Support
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -538,7 +553,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         {/* ── Artist profile: tabbed layout ── */}
         {isArtistProfile && (
           <>
-            <ProfileTabs username={profile.username} tab={tab} />
+            <ProfileTabs username={profile.username} tab={tab} artistName={profile.full_name ?? profile.username} />
 
             <div>
               {tab === "overview" && (

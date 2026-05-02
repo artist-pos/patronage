@@ -136,6 +136,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState<"NZD" | "AUD">("NZD");
   const [commerceFormat, setCommerceFormat] = useState("");
+  const [listingMode, setListingMode] = useState<"direct_sale" | "enquire_first">("direct_sale");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -302,6 +303,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           currency,
           poa: !price,
           edition: commerceFormat || "",
+          listingMode,
         });
       }
 
@@ -583,6 +585,25 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                     </select>
                   </div>
                 </div>
+                {price && parseFloat(price) > 0 && (
+                  <div className="border border-stone-200 px-3 py-2 space-y-0.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Listing price</span>
+                      <span className="font-mono">{currency} {parseFloat(price).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Patronage commission (10%)</span>
+                      <span className="font-mono">−{currency} {(parseFloat(price) * 0.10).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-stone-200 pt-1 mt-1">
+                      <span className="font-medium">Your take-home</span>
+                      <span className="font-mono font-medium">{currency} {(parseFloat(price) * 0.90).toFixed(2)}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground pt-1 leading-relaxed">
+                      Card processing fee (2.9% + 30c) is added to the buyer&rsquo;s total at checkout — separate from your commission.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <label className="text-[11px] text-muted-foreground">Format</label>
                   <select value={commerceFormat} onChange={e => setCommerceFormat(e.target.value)}
@@ -594,6 +615,23 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                     <option value="Commission">Commission</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">Listing mode</label>
+                  <select
+                    value={listingMode}
+                    onChange={e => setListingMode(e.target.value as "direct_sale" | "enquire_first")}
+                    className={inputCls}
+                  >
+                    <option value="direct_sale">Direct sale — show Buy button</option>
+                    <option value="enquire_first">Enquire first — hide Buy button, show Enquire only</option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    {listingMode === "enquire_first"
+                      ? "Collectors must message you before purchasing. Good for originals or works where you want to vet buyers."
+                      : "Collectors can purchase directly without contacting you. Good for prints, editions, and digital works."}
+                  </p>
                 </div>
               </div>
             )}
