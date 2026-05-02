@@ -49,7 +49,7 @@ export default async function CollectionPage() {
 
       {/* Collection groups */}
       {username && (
-        <CollectionGroupsManager groups={groups} username={username} />
+        <CollectionGroupsManager groups={groups} entries={entries} username={username} />
       )}
 
       {/* All works */}

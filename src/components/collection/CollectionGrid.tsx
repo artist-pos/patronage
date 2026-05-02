@@ -107,7 +107,7 @@ export function CollectionGrid({ entries }: Props) {
         <p className="text-xs text-red-600 bg-red-50 rounded-md px-3 py-2">{bulkError}</p>
       )}
 
-      <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <ul className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {entries.map((entry) => (
           <CollectionTile
             key={entry.membership.id}
@@ -207,19 +207,19 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
         </Link>
       )}
 
-      <div className="mt-2 space-y-0.5">
-        <p className="text-sm font-medium truncate">
+      <div className="mt-1.5 space-y-0.5">
+        <p className="text-xs font-medium truncate leading-tight">
           {entry.artwork.title ?? "Untitled"}
         </p>
-        <p className="text-xs text-muted-foreground truncate">{artistName}</p>
+        <p className="text-[11px] text-muted-foreground truncate">{artistName}</p>
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-xs gap-2">
+      <div className="mt-1.5 flex items-center justify-between text-[11px] gap-1">
         <button
           type="button"
           onClick={handleTogglePublic}
           disabled={isPending}
-          className={`px-2 py-1 rounded-full border transition-colors ${
+          className={`px-1.5 py-0.5 rounded-full border transition-colors ${
             isPublic
               ? "bg-stone-900 text-white border-stone-900"
               : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
@@ -229,21 +229,17 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
         </button>
 
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/provenance/certificate?artworkId=${entry.artwork.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href={`/dashboard/collection/${entry.membership.id}`}
             className="text-stone-500 hover:text-stone-900 transition-colors"
-            title="Download certificate"
           >
-            Certificate
-          </a>
+            Edit
+          </Link>
           <button
             type="button"
             onClick={handleRemove}
             disabled={isPending}
             className="text-stone-400 hover:text-red-600 transition-colors"
-            aria-label="Remove from collection"
           >
             Remove
           </button>
