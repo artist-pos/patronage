@@ -5,6 +5,7 @@ import { supabaseTransform } from "@/lib/image";
 import {
   togglePublic,
   updateMembership,
+  updateCollectionArtwork,
 } from "@/app/dashboard/collection/actions";
 import { SourceDocsUploader } from "./SourceDocsUploader";
 import type {
@@ -46,6 +47,18 @@ export function CollectionDetailEditor({ entry, sourceDocs }: Props) {
     showLocationPublicly: entry.membership.show_location_publicly,
     certificateStatement: entry.membership.certificate_statement ?? "",
   });
+  const [artworkDraft, setArtworkDraft] = useState({
+    title: entry.artwork.title ?? "",
+    year: entry.artwork.year ? String(entry.artwork.year) : "",
+    medium: entry.artwork.medium ?? "",
+    dimensions: entry.artwork.dimensions ?? "",
+    edition: entry.artwork.edition ?? "",
+    description: entry.artwork.description ?? "",
+  });
+  const [artworkSavedAt, setArtworkSavedAt] = useState<number | null>(null);
+  const [artworkError, setArtworkError] = useState<string | null>(null);
+  const [isArtworkPending, startArtworkTransition] = useTransition();
+
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -54,6 +67,24 @@ export function CollectionDetailEditor({ entry, sourceDocs }: Props) {
     supabaseTransform(entry.artwork.url, { width: 1200, quality: 85 }) ??
     entry.artwork.url;
   const artistName = entry.attributedArtist?.full_name ?? "Unknown artist";
+
+  function handleArtworkSave() {
+    setArtworkError(null);
+    const yearNum = artworkDraft.year ? parseInt(artworkDraft.year) : null;
+    startArtworkTransition(async () => {
+      const result = await updateCollectionArtwork(entry.artwork.id, {
+        title: artworkDraft.title,
+        year: Number.isFinite(yearNum) ? yearNum : null,
+        medium: artworkDraft.medium,
+        dimensions: artworkDraft.dimensions,
+        edition: artworkDraft.edition,
+        description: artworkDraft.description,
+      });
+      if (result.error) { setArtworkError(result.error); return; }
+      setArtworkSavedAt(Date.now());
+      setTimeout(() => setArtworkSavedAt(null), 2500);
+    });
+  }
 
   function handleTogglePublic() {
     const next = !isPublic;
@@ -136,16 +167,74 @@ export function CollectionDetailEditor({ entry, sourceDocs }: Props) {
           Transfer this work
         </a>
 
-        <div className="text-xs text-muted-foreground space-y-1">
-          {entry.artwork.medium && <p>{entry.artwork.medium}</p>}
-          {entry.artwork.year && <p>{entry.artwork.year}</p>}
-          {entry.artwork.dimensions && <p>{entry.artwork.dimensions}</p>}
-          {entry.artwork.edition && <p>Edition: {entry.artwork.edition}</p>}
-        </div>
       </div>
 
       {/* Right: editable acquisition + statement + docs */}
       <div className="space-y-8">
+        <Section title="Artwork details">
+          <Row>
+            <Field label="Title">
+              <Input
+                value={artworkDraft.title}
+                onChange={(v) => setArtworkDraft({ ...artworkDraft, title: v })}
+                placeholder="Untitled"
+              />
+            </Field>
+            <Field label="Year">
+              <Input
+                value={artworkDraft.year}
+                onChange={(v) => setArtworkDraft({ ...artworkDraft, year: v.replace(/\D/g, "") })}
+                placeholder={String(new Date().getFullYear())}
+                inputMode="numeric"
+              />
+            </Field>
+          </Row>
+          <Row>
+            <Field label="Medium">
+              <Input
+                value={artworkDraft.medium}
+                onChange={(v) => setArtworkDraft({ ...artworkDraft, medium: v })}
+                placeholder="Oil on canvas"
+              />
+            </Field>
+            <Field label="Dimensions">
+              <Input
+                value={artworkDraft.dimensions}
+                onChange={(v) => setArtworkDraft({ ...artworkDraft, dimensions: v })}
+                placeholder="60 × 90 cm"
+              />
+            </Field>
+          </Row>
+          <Field label="Edition">
+            <Input
+              value={artworkDraft.edition}
+              onChange={(v) => setArtworkDraft({ ...artworkDraft, edition: v })}
+              placeholder="1/10"
+            />
+          </Field>
+          <Field label="Description">
+            <Textarea
+              value={artworkDraft.description}
+              onChange={(v) => setArtworkDraft({ ...artworkDraft, description: v })}
+              rows={4}
+            />
+          </Field>
+          {artworkError && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{artworkError}</p>
+          )}
+          <div className="flex items-center gap-3 justify-end">
+            {artworkSavedAt && <span className="text-xs text-emerald-700">Saved.</span>}
+            <button
+              type="button"
+              onClick={handleArtworkSave}
+              disabled={isArtworkPending}
+              className="bg-foreground text-background text-sm rounded-lg px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {isArtworkPending ? "Saving…" : "Save artwork details"}
+            </button>
+          </div>
+        </Section>
+
         <Section
           title="Acquisition (private)"
           description="Stays private — never published. Useful for your own records."

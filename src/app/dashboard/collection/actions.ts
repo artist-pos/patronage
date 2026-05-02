@@ -313,6 +313,50 @@ export async function updateMembership(
   return {};
 }
 
+export async function updateCollectionArtwork(
+  artworkId: string,
+  fields: {
+    title?: string | null;
+    year?: number | null;
+    medium?: string | null;
+    dimensions?: string | null;
+    edition?: string | null;
+    description?: string | null;
+  },
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  // Verify caller owns this artwork via collection_membership
+  const { data: membership } = await supabase
+    .from("collection_membership")
+    .select("id")
+    .eq("artwork_id", artworkId)
+    .eq("holder_id", user.id)
+    .maybeSingle();
+  if (!membership) return { error: "Not authorised." };
+
+  const { error } = await supabase
+    .from("artworks")
+    .update({
+      title: fields.title?.trim() || null,
+      year: fields.year ?? null,
+      medium: fields.medium?.trim() || null,
+      dimensions: fields.dimensions?.trim() || null,
+      edition: fields.edition?.trim() || null,
+      description: fields.description?.trim() || null,
+    })
+    .eq("id", artworkId)
+    .eq("current_owner_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/collection");
+  await revalidateHolderPublicSurfaces(user.id);
+  return {};
+}
+
 export async function removeFromCollection(
   membershipId: string,
 ): Promise<{ error?: string }> {
