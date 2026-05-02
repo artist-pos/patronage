@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getProfile } from "@/lib/profiles";
 import { getPublicCollection } from "@/lib/collection";
 import { PublicCollectionGrid } from "@/components/collection/PublicCollectionGrid";
+import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
 import type { Metadata } from "next";
 
 interface Props {
@@ -48,11 +49,14 @@ export default async function PublicCollectionPage({ params }: Props) {
         {cityLine && (
           <p className="text-sm text-muted-foreground">Currently in {cityLine}</p>
         )}
-        <p className="text-sm text-muted-foreground">
-          <Link href={`/${profile.username}`} className="underline underline-offset-2">
-            View profile →
-          </Link>
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            <Link href={`/${profile.username}`} className="underline underline-offset-2">
+              View profile →
+            </Link>
+          </p>
+          <CopyEmbedButton username={profile.username} />
+        </div>
         {showDonationCta && (
           <a
             href={profile.donation_url ?? undefined}
