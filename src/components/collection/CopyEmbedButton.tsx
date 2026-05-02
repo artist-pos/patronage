@@ -4,11 +4,12 @@ import { useState } from "react";
 
 interface Props {
   username: string;
+  label?: string;
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
-export function CopyEmbedButton({ username }: Props) {
+export function CopyEmbedButton({ username, label }: Props) {
   const [copied, setCopied] = useState(false);
 
   const src = `${SITE_URL}/embed/${username}/collection`;
@@ -25,7 +26,7 @@ export function CopyEmbedButton({ username }: Props) {
       onClick={handleCopy}
       className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
     >
-      {copied ? "Copied!" : "Copy embed code"}
+      {copied ? "Copied!" : (label ?? "Copy embed code")}
     </button>
   );
 }

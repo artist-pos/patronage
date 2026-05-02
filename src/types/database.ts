@@ -433,6 +433,7 @@ export interface CollectionMembership {
   artwork_id: string;
   is_public: boolean;
   position: number;
+  group_id: string | null;
   date_acquired_text: string | null;
   source_type: CollectionSourceType | null;
   source_name: string | null;
@@ -443,6 +444,14 @@ export interface CollectionMembership {
   certificate_statement: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CollectionGroup {
+  id: string;
+  holder_id: string;
+  name: string;
+  position: number;
+  created_at: string;
 }
 
 export type ArtworkSourceDocumentType = 'certificate' | 'invoice' | 'receipt' | 'other';

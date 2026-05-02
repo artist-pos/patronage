@@ -891,3 +891,62 @@ export async function sendCollectiveInvitation({
 </html>`,
   });
 }
+
+export async function sendArtistAttributionEmail({
+  toEmail,
+  artistName,
+  holderName,
+  artworkTitle,
+  claimToken,
+}: {
+  toEmail: string;
+  artistName: string;
+  holderName: string;
+  artworkTitle: string;
+  claimToken: string;
+}): Promise<void> {
+  const resend = getResend();
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const claimUrl = `${SITE_URL}/claim/artist/${claimToken}`;
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${holderName} has attributed a work to you on Patronage`,
+    html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#fff;font-family:sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:40px 24px;max-width:560px;margin:0 auto;">
+
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Artist Attribution</p>
+
+      <p style="margin:0 0 16px;font-size:15px;">
+        Hi ${esc(artistName)},
+      </p>
+
+      <p style="margin:0 0 16px;font-size:15px;">
+        <strong>${esc(holderName)}</strong> has added <em>${esc(artworkTitle)}</em> to their collection
+        on Patronage and attributed it to you.
+      </p>
+
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">
+        You can claim this attribution and connect it to your Patronage profile — or simply ignore this
+        if you'd prefer not to participate.
+      </p>
+
+      <a href="${claimUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        View &amp; claim →
+      </a>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        Patronage connects NZ and Australian artists with collectors and opportunities.
+        If you weren't expecting this email you can safely ignore it.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+

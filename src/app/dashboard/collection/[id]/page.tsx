@@ -8,6 +8,7 @@ import {
 } from "@/lib/collection";
 import { CollectionDetailEditor } from "@/components/collection/CollectionDetailEditor";
 import { ClaimStatusBanner } from "@/components/collection/ClaimStatusBanner";
+import type { CollectionGroup } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,8 +20,16 @@ export default async function CollectionDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/auth/login?redirect=/dashboard/collection/${id}`);
 
-  const entry = await getCollectionEntry(id, user.id);
+  const supabaseClient = await createClient();
+  const [entryResult, groupsResult] = await Promise.all([
+    getCollectionEntry(id, user.id),
+    supabaseClient.from("collection_groups").select("*").eq("holder_id", user.id).order("position"),
+  ]);
+
+  const entry = entryResult;
   if (!entry) notFound();
+
+  const groups = (groupsResult.data ?? []) as CollectionGroup[];
 
   // Both depend on artwork id — fetch in parallel once we have the entry.
   const [sourceDocs, claim] = await Promise.all([
@@ -47,7 +56,7 @@ export default async function CollectionDetailPage({ params }: Props) {
 
       {claim && <ClaimStatusBanner claim={claim} />}
 
-      <CollectionDetailEditor entry={entry} sourceDocs={sourceDocs} />
+      <CollectionDetailEditor entry={entry} sourceDocs={sourceDocs} groups={groups} />
     </div>
   );
 }

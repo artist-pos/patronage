@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrCreatePendingArtist } from "@/lib/artist-stub";
 import { revalidateHolderPublicSurfaces } from "@/lib/collection";
 import { mintUniqueLedgerId } from "@/lib/ledger";
+import { sendArtistAttributionEmail } from "@/lib/email";
 import type {
   ArtworkSourceDocumentType,
   CollectionSourceType,
@@ -236,6 +237,32 @@ export async function createCollectionEntry(
   }
 
   revalidatePath("/dashboard/collection");
+
+  // Send attribution email if the artist has an email on their stub (fire-and-forget)
+  if (pendingArtistId && input.attributedArtistEmail?.trim()) {
+    (async () => {
+      const { data: stub } = await admin
+        .from("pending_artists")
+        .select("claim_token, email")
+        .eq("id", pendingArtistId)
+        .maybeSingle();
+      if (!stub?.email || !stub.claim_token) return;
+      const { data: holderProfile } = await admin
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", user.id)
+        .maybeSingle();
+      const holderName = holderProfile?.full_name ?? holderProfile?.username ?? "A collector";
+      await sendArtistAttributionEmail({
+        toEmail: stub.email,
+        artistName: input.attributedArtistText ?? "Artist",
+        holderName,
+        artworkTitle: title,
+        claimToken: stub.claim_token,
+      });
+    })().catch(console.error);
+  }
+
   return { membershipId: membership.id };
 }
 

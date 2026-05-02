@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCollection } from "@/lib/collection";
 import { CollectionGrid } from "@/components/collection/CollectionGrid";
+import { CollectionGroupsManager } from "@/components/collection/CollectionGroupsManager";
+import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
+import type { CollectionGroup } from "@/types/database";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -14,31 +17,50 @@ export default async function CollectionPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/dashboard/collection");
 
-  const entries = await getCollection(user.id);
+  const [entries, profileResult, groupsResult] = await Promise.all([
+    getCollection(user.id),
+    supabase.from("profiles").select("username").eq("id", user.id).single(),
+    supabase.from("collection_groups").select("*").eq("holder_id", user.id).order("position"),
+  ]);
+
+  const username = profileResult.data?.username ?? "";
+  const groups = (groupsResult.data ?? []) as CollectionGroup[];
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
-      <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-12">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Collection</h1>
           <p className="text-sm text-muted-foreground">
-            Works you own. Toggle individual works public to feature them on
-            your profile (coming soon).
+            Works you own. Assign them to collections and publish embeds for your website.
           </p>
         </div>
-        <Link
-          href="/dashboard/collection/upload"
-          className="bg-foreground text-background text-sm rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
-        >
-          Add to collection
-        </Link>
+        <div className="flex items-center gap-3">
+          {username && <CopyEmbedButton username={username} label="Copy full collection embed" />}
+          <Link
+            href="/dashboard/collection/upload"
+            className="bg-foreground text-background text-sm rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
+          >
+            Add to collection
+          </Link>
+        </div>
       </div>
 
-      {entries.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <CollectionGrid entries={entries} />
+      {/* Collection groups */}
+      {username && (
+        <CollectionGroupsManager groups={groups} username={username} />
       )}
+
+      {/* All works */}
+      <div className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">All works</h2>
+        {entries.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <CollectionGrid entries={entries} />
+        )}
+      </div>
     </div>
   );
 }

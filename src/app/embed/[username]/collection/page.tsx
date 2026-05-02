@@ -8,7 +8,7 @@ import type { CSSProperties } from "react";
 
 interface Props {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ cols?: string; theme?: string; size?: string }>;
+  searchParams: Promise<{ cols?: string; theme?: string; size?: string; group?: string }>;
 }
 
 export const metadata: Metadata = {
@@ -65,7 +65,10 @@ export default async function EmbedCollectionPage({ params, searchParams }: Prop
 
   const profile = await getProfile(username);
   if (!profile) notFound();
-  const entries = await getPublicCollection(profile.id);
+  const allEntries = await getPublicCollection(profile.id);
+  const entries = sp.group
+    ? allEntries.filter(e => e.membership.group_id === sp.group)
+    : allEntries;
 
   return (
     <div
