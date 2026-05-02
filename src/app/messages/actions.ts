@@ -76,12 +76,22 @@ export async function initializeInquiryThread(
 
   const { data: existing } = await supabase
     .from("conversations")
-    .select("id")
+    .select("id, source_work_id")
     .eq("participant_a", a)
     .eq("participant_b", b)
     .maybeSingle();
 
-  if (existing) return { id: existing.id };
+  if (existing) {
+    // Stamp source_work_id if this enquiry is about a specific work and
+    // the conversation doesn't already have one.
+    if (workId && !existing.source_work_id) {
+      await supabase
+        .from("conversations")
+        .update({ source_work_id: workId })
+        .eq("id", existing.id);
+    }
+    return { id: existing.id };
+  }
 
   // New thread — create with enquiry metadata
   const { data: created, error } = await supabase

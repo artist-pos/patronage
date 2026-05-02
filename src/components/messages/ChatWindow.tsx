@@ -446,10 +446,10 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
         />
       )}
 
-      {/* ── Pinned system notice(s) — always at top, outside the scroll area ── */}
-      {systemMessages.length > 0 && (
+      {/* ── Pinned header — source artwork + system notices ── */}
+      {(sourceWork || systemMessages.length > 0) && (
         <div className="shrink-0 border-b border-border bg-muted/30">
-          {/* Source artwork context */}
+          {/* Source artwork context — shown whenever a work is attached to this thread */}
           {sourceWork && (
             <div className="flex items-center gap-3 px-4 pt-3 pb-2 border-b border-border">
               <Image
@@ -478,7 +478,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               )}
             </div>
           )}
-          {/* Disclaimer */}
+          {/* Disclaimer notices */}
           {systemMessages.map((msg) => (
             <div key={msg.id} className="flex items-start gap-2.5 px-4 py-3">
               <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />

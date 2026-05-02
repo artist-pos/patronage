@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { initializeInquiryThread } from "@/app/messages/actions";
+import { initializeInquiryThread, sendMessage } from "@/app/messages/actions";
 
 interface Props {
   open: boolean;
@@ -32,35 +32,46 @@ export function EnquireModal({
   listingCurrency,
 }: Props) {
   const router = useRouter();
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   function handleClose() {
+    setMessage("");
     setError(null);
+    setNeedsLogin(false);
     onClose();
   }
 
   async function handleEnquire() {
     setLoading(true);
     setError(null);
-    try {
-      const result = await initializeInquiryThread(
-        artistId,
-        "artwork_enquiry",
-        workId ?? null
-      );
-      if ("error" in result) {
-        if (result.error === "not_authenticated") {
-          router.push("/auth/login");
-          return;
-        }
-        setError("Couldn't open a conversation. Please try again.");
+
+    const result = await initializeInquiryThread(
+      artistId,
+      "artwork_enquiry",
+      workId ?? null
+    );
+
+    if ("error" in result) {
+      if (result.error === "not_authenticated") {
+        setNeedsLogin(true);
+        setLoading(false);
         return;
       }
-      router.push(`/messages/${result.id}`);
-    } finally {
+      setError("Couldn't open a conversation. Please try again.");
       setLoading(false);
+      return;
     }
+
+    // Send initial message if the user typed one
+    const trimmed = message.trim();
+    if (trimmed) {
+      await sendMessage(result.id, trimmed);
+    }
+
+    router.push(`/messages/${result.id}`);
   }
 
   const displayPrice =
@@ -78,7 +89,7 @@ export function EnquireModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Work context — thumbnail card matching DM artwork card style */}
+          {/* Work context card */}
           <div className="flex border border-black overflow-hidden">
             {workImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -96,29 +107,59 @@ export function EnquireModal({
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            This will open a private conversation with the artist. You can discuss details, negotiate a price, or ask any questions about the work.
-          </p>
+          {needsLogin ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You need to be signed in to send an enquiry.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-sm px-4 py-2 border border-border hover:bg-muted/40 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth/login")}
+                  className="text-sm px-4 py-2 bg-black text-white hover:opacity-80 transition-opacity"
+                >
+                  Sign in
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Ask the artist a question or introduce yourself… (optional)"
+                rows={3}
+                className="w-full border border-border bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+              />
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+              {error && <p className="text-xs text-destructive">{error}</p>}
 
-          <div className="flex gap-2 justify-end pt-1">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="text-sm px-4 py-2 border border-border hover:bg-muted/40 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleEnquire}
-              disabled={loading}
-              className="text-sm px-4 py-2 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
-            >
-              {loading ? "Opening…" : "Start conversation"}
-            </button>
-          </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-sm px-4 py-2 border border-border hover:bg-muted/40 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEnquire}
+                  disabled={loading}
+                  className="text-sm px-4 py-2 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
+                >
+                  {loading ? "Opening…" : "Send enquiry"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
