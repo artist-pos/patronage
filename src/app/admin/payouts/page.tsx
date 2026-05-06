@@ -23,8 +23,13 @@ export interface SellerPayoutRow {
   workTitle: string;
   seller: Pick<Profile, "id" | "username" | "full_name">;
   amountCents: number;
+  /** Total the buyer paid — used in revert refund amount shown to admin. */
+  buyerPaidTotalCents: number;
   currency: string;
   paidAt: string | null;
+  /** Only populated for primary_sale rows — enables the "Revert sale" button. */
+  stripePaymentIntent: string | null;
+  artistPayoutStatus: string | null;
 }
 
 export interface RoyaltyHoldRow {
@@ -111,8 +116,11 @@ export default async function PayoutsPage() {
         workTitle: artworkLabelById.get(r.artwork_id) ?? "Untitled",
         seller,
         amountCents: r.sale_price_cents,
+        buyerPaidTotalCents: r.sale_price_cents,
         currency: r.currency,
         paidAt: r.paid_at,
+        stripePaymentIntent: null,
+        artistPayoutStatus: null,
       };
     }),
     ...primaryRows.map((r): SellerPayoutRow | null => {
@@ -124,8 +132,11 @@ export default async function PayoutsPage() {
         workTitle: artworkLabelById.get(r.artwork_id) ?? "Untitled",
         seller,
         amountCents: r.sale_price_cents,
+        buyerPaidTotalCents: r.buyer_paid_total_cents,
         currency: r.currency,
         paidAt: r.paid_at,
+        stripePaymentIntent: r.stripe_payment_intent,
+        artistPayoutStatus: r.artist_payout_status,
       };
     }),
   ].filter((r): r is SellerPayoutRow => r !== null);

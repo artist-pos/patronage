@@ -683,6 +683,7 @@ export interface PrimarySaleTransaction {
   paid_at: string | null;
   reverted_at: string | null;
   reverted_reason: string | null;
+  reverted_by: string | null;
   created_at: string;
 }
 

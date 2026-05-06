@@ -187,6 +187,15 @@ export async function createResaleCheckout(input: ResaleCheckoutInput): Promise<
 }
 
 /**
+ * Issue a full refund against a Stripe PaymentIntent. Throws on Stripe error
+ * so callers can abort their DB writes cleanly.
+ */
+export async function createRefund(paymentIntentId: string): Promise<Stripe.Refund> {
+  const stripe = getStripe();
+  return stripe.refunds.create({ payment_intent: paymentIntentId });
+}
+
+/**
  * Verify the webhook signature using the raw request body. Throws if the
  * signature is invalid or the secret is missing — never trust an unverified
  * webhook payload.

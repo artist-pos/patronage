@@ -6,6 +6,7 @@ import {
   markRoyaltyPaid,
   markSellerPayoutPaid,
   refundExpiredHold,
+  revertSale,
 } from "@/app/admin/payouts/actions";
 import { formatCents } from "@/lib/commerce-fee";
 import type {
@@ -56,6 +57,8 @@ export function PayoutsList({ sellerPayouts, royaltyHolds }: Props) {
 
 function SellerRow({ row }: { row: SellerPayoutRow }) {
   const [note, setNote] = useState("");
+  const [revertReason, setRevertReason] = useState("");
+  const [showRevert, setShowRevert] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -67,47 +70,107 @@ function SellerRow({ row }: { row: SellerPayoutRow }) {
     });
   }
 
+  function handleRevert() {
+    if (!confirm(
+      `Issue a Stripe refund of ${formatCents(row.buyerPaidTotalCents, row.currency)} to the buyer and return "${row.workTitle}" to the artist? This cannot be undone.`,
+    )) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await revertSale(row.transactionId, revertReason);
+      if (result.error) setError(result.error);
+      else setShowRevert(false);
+    });
+  }
+
   const sellerLabel = row.seller.full_name ?? row.seller.username;
   const kindLabel = row.kind === "resale" ? "Resale" : "Primary sale";
+  const canRevert =
+    row.kind === "primary_sale" &&
+    !!row.stripePaymentIntent &&
+    row.artistPayoutStatus !== "paid";
 
   return (
-    <li className="p-4 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
-      <div>
-        <p className="text-sm font-medium">
-          <span className="text-[10px] uppercase tracking-widest text-stone-400 mr-2">
-            {kindLabel}
-          </span>
-          {sellerLabel} — <span className="font-normal">{row.workTitle}</span>
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Owed {formatCents(row.amountCents, row.currency)} ·
-          paid {row.paidAt?.slice(0, 10) ?? "—"}
-        </p>
-        <Link
-          href={`/${row.seller.username}`}
-          className="text-xs underline text-stone-700"
-        >
-          @{row.seller.username}
-        </Link>
+    <li className="p-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
+        <div>
+          <p className="text-sm font-medium">
+            <span className="text-[10px] uppercase tracking-widest text-stone-400 mr-2">
+              {kindLabel}
+            </span>
+            {sellerLabel} — <span className="font-normal">{row.workTitle}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Owed {formatCents(row.amountCents, row.currency)} ·
+            paid {row.paidAt?.slice(0, 10) ?? "—"}
+          </p>
+          <Link
+            href={`/${row.seller.username}`}
+            className="text-xs underline text-stone-700"
+          >
+            @{row.seller.username}
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Reference / method"
+            className="border border-stone-200 rounded px-2 py-1 text-xs"
+          />
+          <button
+            type="button"
+            onClick={handleMarkPaid}
+            disabled={isPending}
+            className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+          >
+            Mark paid
+          </button>
+          {canRevert && (
+            <button
+              type="button"
+              onClick={() => setShowRevert((v) => !v)}
+              className="text-xs px-3 py-1.5 rounded-md border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+            >
+              Revert sale…
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Reference / method"
-          className="border border-stone-200 rounded px-2 py-1 text-xs"
-        />
-        <button
-          type="button"
-          onClick={handleMarkPaid}
-          disabled={isPending}
-          className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
-        >
-          Mark paid
-        </button>
-        {error && <p className="text-xs text-red-600 w-full">{error}</p>}
-      </div>
+
+      {showRevert && (
+        <div className="border border-red-100 bg-red-50/40 rounded-md p-3 space-y-2">
+          <p className="text-xs font-medium text-red-700">
+            Revert sale — issues a full Stripe refund of {formatCents(row.buyerPaidTotalCents, row.currency)} to the buyer and restores artwork to artist.
+          </p>
+          <textarea
+            value={revertReason}
+            onChange={(e) => setRevertReason(e.target.value)}
+            placeholder="Reason (required — appears in audit trail)"
+            rows={2}
+            className="w-full border border-red-200 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-red-400"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleRevert}
+              disabled={isPending || !revertReason.trim()}
+              className="text-xs px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {isPending ? "Reverting…" : "Confirm revert"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowRevert(false)}
+              className="text-xs px-3 py-1.5 rounded-md border border-stone-200 hover:bg-stone-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </li>
   );
 }

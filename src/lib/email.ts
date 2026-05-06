@@ -995,3 +995,89 @@ export async function sendArtistAttributionEmail({
   });
 }
 
+export async function sendSaleRevertedBuyer({
+  toEmail,
+  buyerName,
+  workTitle,
+  artistName,
+  amountFormatted,
+}: {
+  toEmail: string;
+  buyerName: string | null;
+  workTitle: string;
+  artistName: string;
+  amountFormatted: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const greeting = buyerName ? `Kia ora ${esc(buyerName)},` : "Kia ora,";
+  await getResend().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `Your purchase of "${workTitle}" has been cancelled`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 32px;">Patronage</h1>
+      <p style="margin:0 0 16px;font-size:15px;">${greeting}</p>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">
+        Your purchase of <strong>${esc(workTitle)}</strong> by ${esc(artistName)} has been cancelled by the Patronage team.
+        A full refund of <strong>${esc(amountFormatted)}</strong> has been issued to your original payment method.
+        Please allow 5–10 business days for it to appear on your statement.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">
+        If you have questions, please reply to this email or contact us at
+        <a href="mailto:hello@patronage.nz" style="color:#000;">hello@patronage.nz</a>.
+      </p>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        <a href="${SITE_URL}" style="color:#888;">patronage.nz</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+export async function sendSaleRevertedArtist({
+  toEmail,
+  artistName,
+  workTitle,
+}: {
+  toEmail: string;
+  artistName: string;
+  workTitle: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  await getResend().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `Sale of "${workTitle}" has been cancelled`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 32px;">Patronage</h1>
+      <p style="margin:0 0 16px;font-size:15px;">Kia ora ${esc(artistName)},</p>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">
+        The sale of <strong>${esc(workTitle)}</strong> has been cancelled by the Patronage team and the work has been returned to your available listings.
+        The buyer has been fully refunded.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">
+        If you have questions, please contact us at
+        <a href="mailto:hello@patronage.nz" style="color:#000;">hello@patronage.nz</a>.
+      </p>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        <a href="${SITE_URL}" style="color:#888;">patronage.nz</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
