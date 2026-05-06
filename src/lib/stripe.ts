@@ -57,6 +57,13 @@ export interface CreateCheckoutInput {
   /** Defaults derive from `purpose` if not supplied. */
   successPath?: string;
   cancelPath?: string;
+  /**
+   * Stripe Connect Express — when the artist has a connected account, pass
+   * their account ID and the platform's fee so Stripe transfers the remainder
+   * automatically. Omit for centralized (manual-payout) flow.
+   */
+  connectedAccountId?: string;
+  applicationFeeCents?: number;
 }
 
 const DEFAULT_SUCCESS_PATHS: Record<CheckoutPurpose, string> = {
@@ -125,7 +132,15 @@ export async function createCheckoutSession(input: CreateCheckoutInput): Promise
     metadata: { purpose: input.purpose, ...input.metadata },
     payment_intent_data:
       input.mode === "payment"
-        ? { metadata: { purpose: input.purpose, ...input.metadata } }
+        ? {
+            metadata: { purpose: input.purpose, ...input.metadata },
+            ...(input.connectedAccountId && input.applicationFeeCents != null
+              ? {
+                  application_fee_amount: input.applicationFeeCents,
+                  transfer_data: { destination: input.connectedAccountId },
+                }
+              : {}),
+          }
         : undefined,
     success_url: successUrl,
     cancel_url: cancelUrl,

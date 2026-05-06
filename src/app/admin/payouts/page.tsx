@@ -62,6 +62,7 @@ export default async function PayoutsPage() {
       .select("*")
       .eq("status", "paid")
       .eq("artist_payout_status", "owed")
+      .eq("payout_method", "manual")
       .order("paid_at", { ascending: true }),
     admin
       .from("royalty_holds")

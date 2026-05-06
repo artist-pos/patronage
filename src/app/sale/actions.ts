@@ -52,6 +52,19 @@ export async function initiatePrimarySale(
   // creation. Anonymous buyers are fine — webhook creates a shadow account.
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Check if artist has Stripe Connect enabled — if so, use automatic payout.
+  const { data: artistProfile } = await admin
+    .from("profiles")
+    .select("stripe_account_id, stripe_connect_status")
+    .eq("id", artwork.creator_id)
+    .maybeSingle();
+
+  const useConnect =
+    artistProfile?.stripe_connect_status === "enabled" &&
+    !!artistProfile?.stripe_account_id;
+
+  const payoutMethod = useConnect ? "stripe_connect" : "manual";
+
   const { data: row, error: insertError } = await admin
     .from("primary_sale_transactions")
     .insert({
@@ -64,6 +77,7 @@ export async function initiatePrimarySale(
       currency,
       patronage_commission_cents: fees.patronageRevenueCents,
       buyer_paid_total_cents: fees.buyerPaidTotalCents,
+      payout_method: payoutMethod,
     })
     .select("id")
     .single();
@@ -97,6 +111,12 @@ export async function initiatePrimarySale(
         primary_sale_id: row.id,
         artwork_id: artwork.id,
       },
+      ...(useConnect
+        ? {
+            connectedAccountId: artistProfile!.stripe_account_id!,
+            applicationFeeCents: fees.patronageRevenueCents,
+          }
+        : {}),
     });
     await admin
       .from("primary_sale_transactions")
