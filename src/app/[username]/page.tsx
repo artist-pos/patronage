@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles";
+import { isProfileComplete } from "@/lib/profile-completion";
 import { getArtistUpdates } from "@/lib/feed";
 import { isFollowing } from "@/lib/follows";
 import { getArtistProjects } from "@/lib/projects";
@@ -302,8 +303,11 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const portfolioCount = (portfolioCountResult as { count: number | null }).count ?? 0;
   const hasSoldWork = ((hasSoldWorkResult as { count: number | null }).count ?? 0) > 0;
   const isCollected = isArtistProfile && (hasSoldWork || soldWorks.length > 0);
+  // Incomplete profiles don't expose available works to the public.
+  const publicAvailableWorks = isOwner || isProfileComplete(profile) ? (availableWorks as Artwork[]) : [];
+
   const imagesCount = images.length > 0 ? images.length : portfolioCount;
-  const worksCount = isArtistProfile ? availableWorks.length + imagesCount : 0;
+  const worksCount = isArtistProfile ? publicAvailableWorks.length + imagesCount : 0;
   const profileBadges = isArtistProfile
     ? computeBadges(
         { ...profile, received_grants: profile.received_grants ?? [] },
@@ -463,13 +467,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
               )}
 
-              {isArtistProfile && availableWorks.length > 0 && (
+              {isArtistProfile && publicAvailableWorks.length > 0 && (
                 <p className="text-xs text-muted-foreground">
                   <Link
                     href={`/${profile.username}?tab=work`}
                     className="underline underline-offset-2 hover:text-foreground transition-colors"
                   >
-                    {availableWorks.length} work{availableWorks.length !== 1 ? "s" : ""} available
+                    {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available
                   </Link>
                 </p>
               )}
@@ -577,7 +581,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               {tab === "work" && (
                 <WorkTab
                   portfolioImages={images}
-                  availableWorks={availableWorks}
+                  availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
                   projects={artistProjects}
                   studioUpdates={studioUpdates}

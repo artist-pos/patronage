@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
+import { fetchCompletionProfile, getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
+import { ProfileCompletionBanner } from "@/components/profile/ProfileCompletionBanner";
 import { StudioNav } from "./StudioNav";
 
 interface Props {
@@ -10,10 +12,6 @@ interface Props {
   children: React.ReactNode;
 }
 
-// Lenient completeness signal: count transferred works that are still missing
-// the artist's certificate statement. That's the one thing the buyer is
-// actually waiting on. Other "polish" gaps (missing dimensions, no doc photos)
-// don't drive a sidebar dot.
 async function getPendingProvenanceCount(): Promise<number> {
   try {
     const supabase = await createClient();
@@ -36,11 +34,17 @@ export async function StudioPageShell({ username, activeSection, children }: Pro
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Independent counts — fetch in parallel so the shell doesn't wait twice.
-  const [pendingProvenanceCount, pendingConfirmationCount] = await Promise.all([
+  const [pendingProvenanceCount, pendingConfirmationCount, completionProfile] = await Promise.all([
     getPendingProvenanceCount(),
     user ? getPendingConfirmationCount(user.id) : Promise.resolve(0),
+    user ? fetchCompletionProfile(user.id) : Promise.resolve(null),
   ]);
+
+  const missingFields = completionProfile ? getMissingFields(completionProfile) : [];
+  const percent = completionProfile ? getCompletionPercent(completionProfile) : 0;
+  const complete = completionProfile ? isProfileComplete(completionProfile) : false;
+
+  const lockedSections = complete ? [] : ["provenance", "campaigns"];
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
@@ -58,12 +62,16 @@ export async function StudioPageShell({ username, activeSection, children }: Pro
           View profile →
         </Link>
       </div>
+
+      <ProfileCompletionBanner percent={percent} missingFields={missingFields} />
+
       <StudioNav
         activeSection={activeSection}
         sectionDots={{
           provenance: pendingProvenanceCount > 0,
           confirmations: pendingConfirmationCount > 0,
         }}
+        lockedSections={lockedSections}
       >
         {children}
       </StudioNav>

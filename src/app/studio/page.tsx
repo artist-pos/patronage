@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fetchCompletionProfile, getMissingFields, isProfileComplete } from "@/lib/profile-completion";
+import { SectionLockGate } from "@/components/studio/SectionLockGate";
 import { StudioPageShell } from "./StudioPageShell";
 import { Section, VALID_SECTIONS, TAB_TO_SECTION } from "./sidebar-config";
 import { getProfileById } from "@/lib/profiles";
@@ -49,6 +51,11 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
     redirect("/dashboard");
   }
+
+  // Always fetch completion fields — lightweight, cached across shell + page.
+  const completionProfile = await fetchCompletionProfile(user.id);
+  const missingFields = completionProfile ? getMissingFields(completionProfile) : [];
+  const profileComplete = completionProfile ? isProfileComplete(completionProfile) : false;
 
   const params = await searchParams;
   const rawSection =
@@ -358,6 +365,24 @@ export default async function StudioPage({ searchParams }: PageProps) {
           {/* ── Available section ── */}
           {activeSection === "available" && (
             <div className="space-y-6">
+              {!profileComplete && missingFields.length > 0 && (
+                <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 space-y-1">
+                  <p className="text-sm font-medium text-amber-900">
+                    Your listed works aren&apos;t publicly visible yet.
+                  </p>
+                  <p className="text-sm text-amber-800">
+                    Complete your profile to show works for sale on your public page. Add:{" "}
+                    {missingFields.map((f, i) => (
+                      <span key={f.key}>
+                        {i > 0 && ", "}
+                        <a href={f.href} className="underline underline-offset-2 hover:text-amber-950 transition-colors">
+                          {f.label}
+                        </a>
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   Works listed for sale. Patrons can make offers directly from your profile.
@@ -432,15 +457,19 @@ export default async function StudioPage({ searchParams }: PageProps) {
                     QR campaigns for public art, exhibitions, and activations.
                   </p>
                 </div>
-                <Link
-                  href="/studio/campaigns/new"
-                  className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
-                >
-                  + Create campaign
-                </Link>
+                {profileComplete && (
+                  <Link
+                    href="/studio/campaigns/new"
+                    className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
+                  >
+                    + Create campaign
+                  </Link>
+                )}
               </div>
 
-              {campaigns.length === 0 ? (
+              {!profileComplete ? (
+                <SectionLockGate featureName="Campaigns" missingFields={missingFields} />
+              ) : campaigns.length === 0 ? (
                 <div className="py-16 space-y-3 text-center border border-dashed border-border">
                   <p className="text-sm text-muted-foreground">
                     Campaigns appear here when you&apos;re selected for partner opportunities, or when you create one for your next show.

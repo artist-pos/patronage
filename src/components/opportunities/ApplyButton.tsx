@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
+import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
 import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum } from "@/types/database";
@@ -12,8 +15,6 @@ import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeE
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 import type { Artwork } from "@/types/database";
 
-// Only the fields ApplyButton + ApplyModal actually use — avoids serializing
-// full_description, organiser, slug, image URLs, and 20+ other unused fields.
 export interface OpportunityForApply {
   id: string;
   title: string;
@@ -32,9 +33,17 @@ interface ServerProfile {
   bio: string | null;
   avatar_url: string | null;
   medium: string[] | null;
+  disciplines: string[] | null;
+  city: string | null;
   exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>;
   received_grants: string[];
   is_patronage_supported: boolean;
+}
+
+interface MissingField {
+  key: string;
+  label: string;
+  href: string;
 }
 
 interface Props {
@@ -48,6 +57,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [lockedFields, setLockedFields] = useState<MissingField[] | null>(null);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
     artworks: Artwork[];
@@ -72,16 +82,31 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       opportunity.routing_type === "pipeline"
         ? getDraft(opportunity.id)
         : Promise.resolve(null),
-      // Use the server-prefetched profile if available — skips a DB round-trip
       serverProfile
         ? Promise.resolve({ data: serverProfile })
-        : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
+        : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
     ]);
 
     const artworks = (artworksResult.data ?? []) as Artwork[];
     const profile = profileResult.data;
 
     if (profile) {
+      // Gate pipeline applications behind profile completion.
+      if (opportunity.routing_type === "pipeline") {
+        const missing = getMissingFields({
+          avatar_url: profile.avatar_url,
+          full_name: profile.full_name,
+          bio: profile.bio,
+          disciplines: (profile.disciplines ?? []) as string[],
+          city: profile.city ?? null,
+        });
+        if (missing.length > 0) {
+          setLockedFields(missing);
+          setLoading(false);
+          return;
+        }
+      }
+
       const collectedSet = artworks.some((a: Artwork) => a.current_owner_id !== a.creator_id);
       const badges = computeBadges(
         { ...profile, received_grants: profile.received_grants ?? [] },
@@ -116,6 +141,34 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         </a>
         .
       </p>
+    );
+  }
+
+  // Locked state — shown after handleOpen() determines profile is incomplete.
+  if (lockedFields) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 border border-dashed border-stone-300 px-4 py-3 rounded-lg text-sm text-muted-foreground">
+          <Lock className="w-4 h-4 shrink-0" />
+          <span>
+            Partners review your profile alongside your application. Complete your profile to apply.
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Add:{" "}
+          {lockedFields.map((f, i) => (
+            <span key={f.key}>
+              {i > 0 && ", "}
+              <Link
+                href={f.href}
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                {f.label}
+              </Link>
+            </span>
+          ))}
+        </p>
+      </div>
     );
   }
 

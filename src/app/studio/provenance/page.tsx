@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchCompletionProfile, getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { ProvenanceList } from "./ProvenanceList";
+import { SectionLockGate } from "@/components/studio/SectionLockGate";
 import { StudioPageShell } from "../StudioPageShell";
 import type { TransferredWork } from "./ProvenanceList";
 import type { Metadata } from "next";
@@ -24,6 +26,26 @@ export default async function StudioProvenancePage() {
 
   if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
     redirect("/dashboard");
+  }
+
+  const completionProfile = await fetchCompletionProfile(user.id);
+  const profileComplete = completionProfile ? isProfileComplete(completionProfile) : false;
+
+  if (!profileComplete) {
+    const missingFields = completionProfile ? getMissingFields(completionProfile) : [];
+    return (
+      <StudioPageShell username={profileRow.username} activeSection="provenance">
+        <div className="space-y-8">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight">Provenance</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage certificates of ownership for works you have transferred to collectors.
+            </p>
+          </div>
+          <SectionLockGate featureName="Provenance" missingFields={missingFields} />
+        </div>
+      </StudioPageShell>
+    );
   }
 
   const admin = createAdminClient();

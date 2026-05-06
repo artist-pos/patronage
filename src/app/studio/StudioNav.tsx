@@ -1,14 +1,17 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { SIDEBAR_SECTIONS, SIDEBAR_GROUPS, getSectionHref } from "./sidebar-config";
 
 interface Props {
   activeSection: string;
-  /** Map of section id → whether to render a "needs attention" dot. */
   sectionDots?: Record<string, boolean>;
+  lockedSections?: string[];
   children: React.ReactNode;
 }
 
-export function StudioNav({ activeSection, sectionDots, children }: Props) {
+export function StudioNav({ activeSection, sectionDots, lockedSections, children }: Props) {
+  const locked = new Set(lockedSections ?? []);
+
   return (
     <>
       {/* Mobile: horizontal section tabs */}
@@ -17,13 +20,14 @@ export function StudioNav({ activeSection, sectionDots, children }: Props) {
           <Link
             key={id}
             href={getSectionHref(id)}
-            className={`px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1 px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
               activeSection === id
                 ? "font-semibold border-b-2 border-black -mb-px"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {label}
+            {locked.has(id) && <Lock className="w-3 h-3 shrink-0" />}
           </Link>
         ))}
       </div>
@@ -47,12 +51,17 @@ export function StudioNav({ activeSection, sectionDots, children }: Props) {
                   }`}
                 >
                   <span>{label}</span>
-                  {sectionDots?.[id] && (
-                    <span
-                      className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"
-                      aria-label="Needs attention"
-                    />
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {locked.has(id) && (
+                      <Lock className="w-3 h-3 text-muted-foreground" aria-label="Locked" />
+                    )}
+                    {sectionDots?.[id] && (
+                      <span
+                        className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"
+                        aria-label="Needs attention"
+                      />
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>

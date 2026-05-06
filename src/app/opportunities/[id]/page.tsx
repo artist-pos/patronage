@@ -205,7 +205,7 @@ async function UserCTA({
       .single(),
     supabase
       .from("profiles")
-      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, exhibition_history, received_grants, is_patronage_supported")
+      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported")
       .eq("id", user.id)
       .single(),
   ]);
@@ -240,6 +240,8 @@ async function UserCTA({
           bio: pd.bio as string | null,
           avatar_url: pd.avatar_url as string | null,
           medium: pd.medium as string[] | null,
+          disciplines: (pd.disciplines ?? []) as string[] | null,
+          city: pd.city as string | null,
           exhibition_history: (pd.exhibition_history ?? []) as Array<{
             type: "Solo" | "Group";
             title: string;

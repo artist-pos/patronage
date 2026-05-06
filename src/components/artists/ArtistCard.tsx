@@ -158,35 +158,6 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     );
   }
 
-  /* ── Gallery card (no image) — compact horizontal row ── */
-  if (!artist.primary_image_url) {
-    return (
-      <Link
-        href={`/${artist.username}`}
-        className="group flex items-center gap-3 py-3 px-4 border border-black hover:shadow-sm transition-shadow duration-150"
-      >
-        <div className="w-10 h-10 shrink-0 border border-black bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground rounded-full">
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate leading-snug">{displayName}</p>
-          {locationLabel(artist) && (
-            <span className="text-xs text-muted-foreground">{locationLabel(artist)}</span>
-          )}
-        </div>
-        {(artist.medium ?? []).length > 0 && (
-          <div className="hidden sm:flex flex-wrap gap-1 justify-end shrink-0 max-w-[45%]">
-            {(artist.medium ?? []).slice(0, 2).map((m) => (
-              <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none whitespace-nowrap">
-                {m}
-              </span>
-            ))}
-          </div>
-        )}
-      </Link>
-    );
-  }
-
   /* ── Gallery card — horizontal bar, avatar inside info block ── */
   return (
     <Link
@@ -194,7 +165,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
       className="group flex flex-row border border-black h-[154px] hover:shadow-sm transition-shadow duration-150"
     >
       {/* Left: image strip — 40% width */}
-      <div className="relative w-2/5 shrink-0 overflow-hidden bg-muted">
+      <div className="relative w-2/5 shrink-0 overflow-hidden bg-stone-100">
         {artist.primary_image_url ? (
           <Image
             src={artist.primary_image_url}
@@ -203,8 +174,20 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 1024px) 25vw, 17vw"
           />
+        ) : artist.avatar_url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={artist.avatar_url}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover scale-110"
+              style={{ filter: "blur(20px) brightness(0.7)" }}
+            />
+            <div className="absolute inset-0 bg-black/30" />
+          </>
         ) : (
-          <div className="absolute inset-0 bg-muted flex items-center justify-center text-2xl text-muted-foreground font-medium">
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-stone-400">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
