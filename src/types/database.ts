@@ -279,6 +279,9 @@ export interface Profile {
   works_row_height: number;
   works_h_gap: number;
   works_v_gap: number;
+  // Stripe Connect — added by migration 120 (Phase 1)
+  stripe_account_id: string | null;
+  stripe_connect_status: 'pending' | 'enabled' | 'restricted' | null;
 }
 
 export interface ArtistFollowup {

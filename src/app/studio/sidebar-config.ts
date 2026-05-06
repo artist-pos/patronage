@@ -9,6 +9,7 @@ export const SIDEBAR_SECTIONS = [
   { id: "projects",    label: "Projects",        group: "Creative"  },
   { id: "campaigns",   label: "Campaigns",       group: "Creative"  },
   { id: "support",     label: "Support Tiers",   group: "Commerce"  },
+  { id: "earnings",    label: "Earnings",         group: "Commerce"  },
   { id: "provenance",  label: "Provenance",      group: "Commerce"  },
   { id: "confirmations", label: "Confirmations", group: "Commerce" },
 ] as const;
@@ -32,5 +33,6 @@ export function getSectionHref(id: string): string {
   if (id === "provenance")   return "/studio/provenance";
   if (id === "collection")   return "/dashboard/collection";
   if (id === "confirmations") return "/studio/pending-confirmations";
+  if (id === "earnings")     return "/studio/earnings";
   return `/studio?section=${id}`;
 }
