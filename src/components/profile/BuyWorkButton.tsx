@@ -13,7 +13,7 @@ import { calculateFees, formatCents } from "@/lib/commerce-fee";
 interface Props {
   artworkId: string;
   workTitle: string | null;
-  priceText: string;
+  priceCents: number;
   currency: string;
   workImageUrl?: string | null;
   year?: number | null;
@@ -26,7 +26,7 @@ interface Props {
 export function BuyWorkButton({
   artworkId,
   workTitle,
-  priceText,
+  priceCents,
   currency,
   workImageUrl,
   year,
@@ -41,13 +41,10 @@ export function BuyWorkButton({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const fees = useMemo(() => {
-    const cleaned = priceText.replace(/[^\d.]/g, "");
-    const cents = Math.round(parseFloat(cleaned) * 100);
-    return Number.isFinite(cents) && cents > 0
-      ? calculateFees("primary_sale", cents)
-      : null;
-  }, [priceText]);
+  const fees = useMemo(
+    () => calculateFees("primary_sale", priceCents),
+    [priceCents],
+  );
 
   function handleClose() {
     setError(null);
@@ -153,10 +150,6 @@ export function BuyWorkButton({
                     <span className="font-mono">{formatCents(fees.subjectPriceCents, currency)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Patronage commission (10%)</span>
-                    <span className="font-mono">{formatCents(fees.patronageRevenueCents, currency)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
                     <span>Processing fee</span>
                     <span className="font-mono">{formatCents(fees.stripeFeeCents, currency)}</span>
                   </div>
@@ -184,7 +177,7 @@ export function BuyWorkButton({
                   disabled={isPending || !email}
                   className="text-sm px-5 py-2.5 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
                 >
-                  {isPending ? "Opening Stripe…" : `Pay ${fees ? formatCents(fees.buyerPaidTotalCents, currency) : currency + " " + priceText} →`}
+                  {isPending ? "Opening Stripe…" : `Pay ${formatCents(fees.buyerPaidTotalCents, currency)} →`}
                 </button>
               </div>
 

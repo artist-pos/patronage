@@ -56,7 +56,7 @@ async function getWorkData(username: string, slug: string) {
     supabase.from("work_images").select("*").eq("portfolio_image_id", work.id).order("position", { ascending: true }),
     work.linked_artwork_id
       ? supabase.from("artworks")
-          .select("id, price, price_currency, is_available, hide_available, hide_price, current_owner_id, creator_id, edition")
+          .select("id, url, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, hide_from_archive, current_owner_id, creator_id, year, medium, dimensions, edition, listing_mode")
           .eq("id", work.linked_artwork_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
@@ -102,6 +102,9 @@ export default async function WorkDetailPage({ params }: Props) {
   const isSold =
     !!artwork && !artwork.is_available &&
     !!artwork.current_owner_id && artwork.current_owner_id !== artwork.creator_id;
+
+  const artworkPriceCents = artwork?.price_cents ?? null;
+  const artworkIsPoa = artwork?.is_poa ?? false;
 
   const metaLine = [
     work.year ? String(work.year) : null,
@@ -182,19 +185,29 @@ export default async function WorkDetailPage({ params }: Props) {
               artworkId={artwork!.id}
               workTitle={work.title ?? work.caption}
               workDescription={work.description}
-              price={artwork!.price}
+              priceCents={artworkPriceCents}
+              isPoa={artworkIsPoa}
               priceCurrency={(artwork!.price_currency as "NZD" | "AUD") ?? "NZD"}
               hidePrice={artwork!.hide_price}
+              listingMode={(artwork!.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first"}
+              workImageUrl={artwork!.url ?? work.url}
+              year={work.year}
+              medium={work.medium}
+              dimensions={work.dimensions}
+              edition={artwork!.edition}
             />
           )}
 
           {isAvailable && isOwner && (
             <div className="py-3 border-t border-border border-b">
               <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                Listed for sale
-                {artwork?.price && artwork.price !== "POA" && !artwork.hide_price
-                  ? ` · ${artwork.price_currency} ${parseFloat(artwork.price).toLocaleString("en-NZ")}`
-                  : artwork?.price === "POA" ? " · POA" : ""}
+                {artwork?.hide_price
+                  ? "Listed for sale"
+                  : artworkIsPoa
+                    ? "Listed for sale · Price on application"
+                    : artworkPriceCents
+                      ? `Listed for sale · ${artwork!.price_currency} ${(artworkPriceCents / 100).toLocaleString("en-NZ")}`
+                      : "Listed for sale"}
               </p>
             </div>
           )}

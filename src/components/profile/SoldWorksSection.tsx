@@ -145,8 +145,10 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                         Collection of {ownerName}
                       </Link>
                     )}
-                    {!work.hide_price && work.price && (
-                      <p className="text-xs text-muted-foreground">{work.price}</p>
+                    {!work.hide_price && (work.is_poa || work.price_cents) && (
+                      <p className="text-xs text-muted-foreground">
+                        {work.is_poa ? "Price on application" : `${work.price_currency} ${((work.price_cents ?? 0) / 100).toLocaleString("en-NZ")}`}
+                      </p>
                     )}
                   </div>
 

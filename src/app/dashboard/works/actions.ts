@@ -155,7 +155,7 @@ export async function updateWorkMetadata(
 
 export async function publishPortfolioWorkAsAvailable(
   workId: string,
-  data: { price: string; currency: "NZD" | "AUD"; poa: boolean; edition: string; listingMode?: "direct_sale" | "enquire_first" }
+  data: { price_cents: number | null; currency: "NZD" | "AUD"; is_poa: boolean; edition: string; listingMode?: "direct_sale" | "enquire_first" }
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -170,10 +170,14 @@ export async function publishPortfolioWorkAsAvailable(
 
   if (fetchError || !portfolio) return { error: "Work not found" };
 
-  const price = data.poa ? "POA" : data.price;
-
   if (portfolio.linked_artwork_id) {
-    const updatePayload: Record<string, unknown> = { price, price_currency: data.currency, edition: data.edition || null, is_available: true };
+    const updatePayload: Record<string, unknown> = {
+      price_cents: data.is_poa ? null : data.price_cents,
+      is_poa: data.is_poa,
+      price_currency: data.currency,
+      edition: data.edition || null,
+      is_available: true,
+    };
     if (data.listingMode) updatePayload.listing_mode = data.listingMode;
     const { error: updateError } = await supabase
       .from("artworks")
@@ -196,7 +200,8 @@ export async function publishPortfolioWorkAsAvailable(
         medium: portfolio.medium,
         dimensions: portfolio.dimensions,
         edition: data.edition || null,
-        price,
+        price_cents: data.is_poa ? null : data.price_cents,
+        is_poa: data.is_poa,
         price_currency: data.currency,
         listing_mode: data.listingMode ?? "direct_sale",
         is_available: true,

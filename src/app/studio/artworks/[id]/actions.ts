@@ -104,6 +104,8 @@ export async function updateArtworkDetails(data: {
   artworkId: string;
   title?: string | null;
   medium?: string | null;
+  medium_category?: string[] | null;
+  surface_or_substrate?: string | null;
   dimensions?: string | null;
   year?: number | null;
   edition?: string | null;
@@ -113,10 +115,12 @@ export async function updateArtworkDetails(data: {
 
   const admin = createAdminClient();
   const patch: Record<string, unknown> = {};
-  if (data.title !== undefined)      patch.title      = data.title?.trim() || null;
-  if (data.medium !== undefined)     patch.medium     = data.medium?.trim() || null;
-  if (data.dimensions !== undefined) patch.dimensions = data.dimensions?.trim() || null;
-  if (data.edition !== undefined)    patch.edition    = data.edition?.trim() || null;
+  if (data.title !== undefined)             patch.title              = data.title?.trim() || null;
+  if (data.medium !== undefined)            patch.medium             = data.medium?.trim() || null;
+  if (data.medium_category !== undefined)   patch.medium_category    = data.medium_category?.length ? data.medium_category : null;
+  if (data.surface_or_substrate !== undefined) patch.surface_or_substrate = data.surface_or_substrate?.trim() || null;
+  if (data.dimensions !== undefined)        patch.dimensions         = data.dimensions?.trim() || null;
+  if (data.edition !== undefined)           patch.edition            = data.edition?.trim() || null;
   if (data.year !== undefined) {
     if (data.year === null || Number.isNaN(data.year)) {
       patch.year = null;

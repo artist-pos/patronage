@@ -108,10 +108,6 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
               <span className="font-mono">{formatCents(fees.subjectPriceCents)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Patronage commission (5%)</span>
-              <span className="font-mono">{formatCents(fees.patronageRevenueCents)}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Processing fee (2.9% + 30c)</span>
               <span className="font-mono">{formatCents(fees.stripeFeeCents)}</span>
             </div>

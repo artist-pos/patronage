@@ -38,8 +38,8 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
   function handleWorkSelect(work: Artwork) {
     setSelectedWork(work);
     // Pre-fill price from the work's listed price if present
-    if (work.price && work.price !== "POA") {
-      setPriceText(work.price.replace(/[^\d.]/g, ""));
+    if (work.price_cents && !work.is_poa) {
+      setPriceText(String(work.price_cents / 100));
       setCurrency((work.price_currency as "NZD" | "AUD") ?? "NZD");
     } else {
       setPriceText("");
@@ -134,11 +134,15 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{work.caption ?? "Untitled"}</p>
-                        {work.price && (
+                        {work.is_poa ? (
                           <p className={`text-xs ${selectedWork?.id === work.id ? "text-white/70" : "text-muted-foreground"}`}>
-                            {work.price_currency} {work.price}
+                            Price on application
                           </p>
-                        )}
+                        ) : work.price_cents ? (
+                          <p className={`text-xs ${selectedWork?.id === work.id ? "text-white/70" : "text-muted-foreground"}`}>
+                            {work.price_currency} {(work.price_cents / 100).toLocaleString("en-NZ")}
+                          </p>
+                        ) : null}
                       </div>
                     </button>
                   ))}

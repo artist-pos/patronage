@@ -275,6 +275,10 @@ export interface Profile {
   // Gallery layout preferences (migration 115)
   gallery_row_height: number;
   gallery_gutter: number;
+  // Works feed layout — admin-controlled global setting (migration 116)
+  works_row_height: number;
+  works_h_gap: number;
+  works_v_gap: number;
 }
 
 export interface ArtistFollowup {
@@ -389,7 +393,9 @@ export interface Artwork {
   current_owner_id: string;
   url: string;
   caption: string | null;
-  price: string | null;
+  price_cents: number | null;
+  is_poa: boolean;
+  price_parse_failed: boolean;
   price_currency: 'NZD' | 'AUD';
   description: string | null;
   is_available: boolean;
@@ -403,6 +409,8 @@ export interface Artwork {
   title: string | null;
   year: number | null;
   medium: string | null;
+  medium_category: string[] | null;
+  surface_or_substrate: string | null;
   dimensions: string | null;
   edition: string | null;
   // Provenance (migration 098)

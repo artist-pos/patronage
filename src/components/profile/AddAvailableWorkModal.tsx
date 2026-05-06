@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -16,6 +16,23 @@ import type { Artwork } from "@/types/database";
 const MAX_PX = 1600;
 const NAME_MAX = 140;
 const DESC_MAX = 280;
+
+const MEDIUM_CATEGORIES = [
+  "Painting", "Drawing", "Sculpture", "Photography", "Printmaking",
+  "Mixed Media", "Textile", "Ceramic", "Digital", "Installation", "Video", "Other",
+] as const;
+
+const SURFACE_OPTIONS = [
+  "Canvas", "Paper", "Board", "Wood", "Metal", "Glass",
+  "Fabric", "Found Object", "Wall", "Other", "N/A",
+] as const;
+
+function buildSuggestion(cats: string[], surface: string): string {
+  if (cats.length === 0) return "";
+  const catStr = cats.map((c) => c.toLowerCase()).join(", ");
+  if (surface && surface !== "N/A") return `${catStr} on ${surface.toLowerCase()}`;
+  return catStr;
+}
 
 async function resizeToJpeg(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -54,6 +71,9 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
+  const [mediumCategory, setMediumCategory] = useState<string[]>([]);
+  const [surfaceOrSubstrate, setSurfaceOrSubstrate] = useState("");
+  const [medium, setMedium] = useState("");
   const [price, setPrice] = useState("");
   const [priceCurrency, setPriceCurrency] = useState<"NZD" | "AUD">("NZD");
   const [poa, setPoa] = useState(false);
@@ -62,9 +82,25 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Auto-suggest free-text medium from structured selections when field is empty
+  useEffect(() => {
+    if (medium) return;
+    const suggestion = buildSuggestion(mediumCategory, surfaceOrSubstrate);
+    if (suggestion) setMedium(suggestion);
+  }, [mediumCategory, surfaceOrSubstrate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleCategory(cat: string) {
+    setMediumCategory((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
+
   function reset() {
     setFile(null);
     setName("");
+    setMediumCategory([]);
+    setSurfaceOrSubstrate("");
+    setMedium("");
     setPrice("");
     setPriceCurrency("NZD");
     setPoa(false);
@@ -90,7 +126,6 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
     try {
       const supabase = createClient();
 
-      // Resize + upload to storage
       const blob = await resizeToJpeg(file);
       const safeName = file.name.replace(/[^a-z0-9.]/gi, "_");
       const path = `${profileId}/${Date.now()}-${safeName}`;
@@ -101,10 +136,9 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
 
       const { data: { publicUrl } } = supabase.storage.from("portfolio").getPublicUrl(path);
 
-      // Store price as numeric string (or "POA" for price on application)
-      const priceValue = poa ? "POA" : price.trim();
+      const priceMajor = parseFloat(price.trim());
+      const priceCentsVal = !poa && Number.isFinite(priceMajor) ? Math.round(priceMajor * 100) : null;
 
-      // Insert artworks row
       const { data: row, error: dbErr } = await supabase
         .from("artworks")
         .insert({
@@ -113,8 +147,12 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
           current_owner_id: profileId,
           url: publicUrl,
           caption: name.trim(),
-          price: priceValue,
+          price_cents: priceCentsVal,
+          is_poa: poa,
           price_currency: priceCurrency,
+          medium: medium.trim() || null,
+          medium_category: mediumCategory.length ? mediumCategory : null,
+          surface_or_substrate: surfaceOrSubstrate.trim() || null,
           description: description.trim() || null,
           is_available: true,
           position: 9999,
@@ -199,7 +237,60 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
               placeholder="Use a concise, recognisable title."
               className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
             />
-            <p className="text-[11px] text-muted-foreground">Use a concise, recognisable title.</p>
+          </div>
+
+          {/* ── Medium Category ── */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Medium Category
+              <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional, select all that apply)</span>
+            </label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {MEDIUM_CATEGORIES.map((cat) => (
+                <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={mediumCategory.includes(cat)}
+                    onChange={() => toggleCategory(cat)}
+                    className="accent-black"
+                  />
+                  <span className="text-xs">{cat}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Surface + Medium free-text ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Surface / Substrate
+                <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <select
+                value={surfaceOrSubstrate}
+                onChange={(e) => setSurfaceOrSubstrate(e.target.value)}
+                className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+              >
+                <option value="">— none —</option>
+                {SURFACE_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Medium / Material
+                <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={medium}
+                onChange={(e) => setMedium(e.target.value)}
+                placeholder="e.g. Oil on canvas"
+                className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+              />
+            </div>
           </div>
 
           {/* ── Price ── */}
@@ -256,7 +347,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
               rows={4}
-              placeholder="Medium, dimensions, year, condition… This will be included in patron enquiry messages automatically."
+              placeholder="Dimensions, year, condition… This will be included in patron enquiry messages automatically."
               className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground resize-none"
             />
           </div>

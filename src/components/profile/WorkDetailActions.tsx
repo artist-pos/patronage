@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { EnquireButton } from "@/components/profile/EnquireButton";
 import { MakeOfferModal } from "@/components/profile/MakeOfferModal";
+import { BuyWorkButton } from "@/components/profile/BuyWorkButton";
+import { formatPrice } from "@/lib/format-price";
 
 interface Props {
   artistId: string;
@@ -10,16 +12,16 @@ interface Props {
   artworkId: string;
   workTitle: string | null;
   workDescription: string | null;
-  price: string | null;
+  priceCents: number | null;
+  isPoa: boolean;
   priceCurrency: "NZD" | "AUD";
   hidePrice: boolean;
-}
-
-function formatPrice(price: string, currency: string): string {
-  if (price === "POA") return "Price on application";
-  const num = parseFloat(price);
-  if (isNaN(num)) return price;
-  return `${currency} ${num.toLocaleString("en-NZ")}`;
+  listingMode: "direct_sale" | "enquire_first";
+  workImageUrl?: string | null;
+  year?: number | null;
+  medium?: string | null;
+  dimensions?: string | null;
+  edition?: string | null;
 }
 
 export function WorkDetailActions({
@@ -28,13 +30,21 @@ export function WorkDetailActions({
   artworkId,
   workTitle,
   workDescription,
-  price,
+  priceCents,
+  isPoa,
   priceCurrency,
   hidePrice,
+  listingMode,
+  workImageUrl,
+  year,
+  medium,
+  dimensions,
+  edition,
 }: Props) {
   const [offerOpen, setOfferOpen] = useState(false);
 
-  const displayPrice = !hidePrice && price ? formatPrice(price, priceCurrency) : null;
+  const displayPrice = !hidePrice ? formatPrice(priceCents, priceCurrency, isPoa) : null;
+  const canBuy = listingMode === "direct_sale" && !!priceCents && priceCents > 0 && !isPoa;
 
   return (
     <>
@@ -45,7 +55,7 @@ export function WorkDetailActions({
           artistId={artistId}
           workId={artworkId}
           workTitle={workTitle}
-          listingPrice={price}
+          listingPriceCents={priceCents}
           listingCurrency={priceCurrency}
         />
       )}
@@ -59,19 +69,49 @@ export function WorkDetailActions({
         )}
 
         <div className="flex flex-col gap-2">
+          {/* Primary action */}
+          {canBuy && listingMode === "direct_sale" ? (
+            <BuyWorkButton
+              artworkId={artworkId}
+              workTitle={workTitle}
+              priceCents={priceCents!}
+              currency={priceCurrency}
+              workImageUrl={workImageUrl}
+              year={year}
+              medium={medium}
+              dimensions={dimensions}
+              edition={edition}
+              artistName={artistName}
+            />
+          ) : (
+            <EnquireButton
+              artistId={artistId}
+              artistName={artistName}
+              workId={artworkId}
+              workTitle={workTitle}
+              workDescription={workDescription}
+              className="w-full bg-black text-white text-sm py-2 px-4 hover:opacity-80 transition-opacity"
+            />
+          )}
+
+          {/* Secondary actions */}
           <button
             onClick={() => setOfferOpen(true)}
-            className="w-full bg-black text-white text-sm py-2 px-4 hover:opacity-80 transition-opacity"
+            className="w-full border border-black text-sm py-2 px-4 hover:bg-stone-50 transition-colors"
           >
             Make an Offer
           </button>
-          <EnquireButton
-            artistId={artistId}
-            artistName={artistName}
-            workId={artworkId}
-            workTitle={workTitle}
-            workDescription={workDescription}
-          />
+
+          {/* Enquire shown as secondary when Buy is primary */}
+          {canBuy && listingMode === "direct_sale" && (
+            <EnquireButton
+              artistId={artistId}
+              artistName={artistName}
+              workId={artworkId}
+              workTitle={workTitle}
+              workDescription={workDescription}
+            />
+          )}
         </div>
       </div>
     </>

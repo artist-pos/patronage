@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateArtworkDetails } from "./actions";
+
+const MEDIUM_CATEGORIES = [
+  "Painting", "Drawing", "Sculpture", "Photography", "Printmaking",
+  "Mixed Media", "Textile", "Ceramic", "Digital", "Installation", "Video", "Other",
+] as const;
+
+const SURFACE_OPTIONS = [
+  "", "Canvas", "Paper", "Board", "Wood", "Metal", "Glass",
+  "Fabric", "Found Object", "Wall", "Other", "N/A",
+] as const;
+
+function buildSuggestion(cats: string[], surface: string): string {
+  if (cats.length === 0) return "";
+  const catStr = cats.map((c) => c.toLowerCase()).join(", ");
+  if (surface && surface !== "N/A") return `${catStr} on ${surface.toLowerCase()}`;
+  return catStr;
+}
 
 interface Props {
   artworkId: string;
   initial: {
     title: string | null;
     medium: string | null;
+    medium_category: string[] | null;
+    surface_or_substrate: string | null;
     dimensions: string | null;
     year: number | null;
     edition: string | null;
@@ -19,6 +38,8 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(initial.title ?? "");
+  const [mediumCategory, setMediumCategory] = useState<string[]>(initial.medium_category ?? []);
+  const [surfaceOrSubstrate, setSurfaceOrSubstrate] = useState(initial.surface_or_substrate ?? "");
   const [medium, setMedium] = useState(initial.medium ?? "");
   const [dimensions, setDimensions] = useState(initial.dimensions ?? "");
   const [year, setYear] = useState<string>(initial.year ? String(initial.year) : "");
@@ -27,9 +48,20 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Completeness count drives the collapsed-state hint, so the artist sees at
-  // a glance how many fields they've filled in without needing to expand.
-  const filled = [title, medium, dimensions, year, edition].filter(v => v.trim()).length;
+  // Auto-suggest free-text medium from structured selections when field is empty
+  useEffect(() => {
+    if (medium) return;
+    const suggestion = buildSuggestion(mediumCategory, surfaceOrSubstrate);
+    if (suggestion) setMedium(suggestion);
+  }, [mediumCategory, surfaceOrSubstrate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filled = [title, medium, mediumCategory.length > 0 ? "x" : "", surfaceOrSubstrate, dimensions, year, edition].filter((v) => String(v).trim()).length;
+
+  function toggleCategory(cat: string) {
+    setMediumCategory((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -40,6 +72,8 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
       artworkId,
       title: title.trim() || null,
       medium: medium.trim() || null,
+      medium_category: mediumCategory.length ? mediumCategory : null,
+      surface_or_substrate: surfaceOrSubstrate.trim() || null,
       dimensions: dimensions.trim() || null,
       edition: edition.trim() || null,
       year: year.trim() ? parseInt(year, 10) : null,
@@ -58,15 +92,15 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
     <section className="border border-stone-200 rounded-xl">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="flex items-center justify-between w-full px-5 py-4 text-left"
         aria-expanded={open}
       >
         <div>
           <p className="text-sm font-medium text-stone-900">Work details</p>
           <p className="text-xs text-stone-500 mt-0.5">
-            Title, medium, dimensions, year, edition — appear on the certificate and provenance page.{" "}
-            <span className="text-stone-700">{filled}/5 filled</span>
+            Title, medium, category, dimensions, year, edition — appear on the certificate and provenance page.{" "}
+            <span className="text-stone-700">{filled}/7 filled</span>
           </p>
         </div>
         <svg
@@ -80,61 +114,99 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
 
       {open && (
         <form onSubmit={handleSave} className="border-t border-stone-100 px-5 py-5 space-y-4">
+          {/* Title */}
           <div>
             <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Title</label>
             <input
               type="text"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Untitled"
               className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
             />
           </div>
+
+          {/* Medium Category (multi-select) */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-2">Medium Category</label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {MEDIUM_CATEGORIES.map((cat) => (
+                <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={mediumCategory.includes(cat)}
+                    onChange={() => toggleCategory(cat)}
+                    className="accent-black"
+                  />
+                  <span className="text-xs text-stone-700">{cat}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Surface / Substrate + Medium free-text */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Medium</label>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Surface / Substrate</label>
+              <select
+                value={surfaceOrSubstrate}
+                onChange={(e) => setSurfaceOrSubstrate(e.target.value)}
+                className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm bg-white"
+              >
+                <option value="">— optional —</option>
+                {SURFACE_OPTIONS.filter(Boolean).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Medium / Material</label>
               <input
                 type="text"
                 value={medium}
-                onChange={e => setMedium(e.target.value)}
+                onChange={(e) => setMedium(e.target.value)}
                 placeholder="e.g. Oil on canvas"
                 className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
               />
             </div>
+          </div>
+
+          {/* Year + Dimensions */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Year</label>
               <input
                 type="number"
                 value={year}
-                onChange={e => setYear(e.target.value)}
+                onChange={(e) => setYear(e.target.value)}
                 min={1500}
                 max={new Date().getFullYear() + 1}
                 placeholder={String(new Date().getFullYear())}
                 className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Dimensions</label>
               <input
                 type="text"
                 value={dimensions}
-                onChange={e => setDimensions(e.target.value)}
+                onChange={(e) => setDimensions(e.target.value)}
                 placeholder="e.g. 600 × 400 mm"
                 className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
               />
             </div>
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition</label>
-              <input
-                type="text"
-                value={edition}
-                onChange={e => setEdition(e.target.value)}
-                placeholder="e.g. 1/25 or Original"
-                className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
-              />
-            </div>
+          </div>
+
+          {/* Edition */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition</label>
+            <input
+              type="text"
+              value={edition}
+              onChange={(e) => setEdition(e.target.value)}
+              placeholder="e.g. 1/25 or Original"
+              className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
+            />
           </div>
 
           {error && <p className="text-xs text-red-600">{error}</p>}

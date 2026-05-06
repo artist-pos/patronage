@@ -116,9 +116,13 @@ export function CollectionSection({ initialWorks, isOwner, collectionPublic }: P
                     )}
 
                     {/* Price or "Private Collection" */}
-                    {work.price && (
+                    {(work.is_poa || work.price_cents) && (
                       <p className="text-xs text-muted-foreground">
-                        {work.hide_price ? "Private Collection" : work.price}
+                        {work.hide_price
+                          ? "Private Collection"
+                          : work.is_poa
+                            ? "Price on application"
+                            : `${work.price_currency} ${((work.price_cents ?? 0) / 100).toLocaleString("en-NZ")}`}
                       </p>
                     )}
                   </div>

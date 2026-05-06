@@ -18,7 +18,7 @@ interface Props {
   initialMessages: Message[];
   otherName: string;
   workMap?: Record<string, Artwork>;
-  sourceWork?: { id: string; url: string; caption: string | null; price: string | null; price_currency: string | null } | null;
+  sourceWork?: { id: string; url: string; caption: string | null; price_cents: number | null; is_poa: boolean; price_currency: string | null } | null;
   otherUserId?: string;
 }
 
@@ -511,7 +511,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           artistId={otherUserId}
           workId={sourceWork.id}
           workTitle={sourceWork.caption}
-          listingPrice={sourceWork.price}
+          listingPriceCents={sourceWork.price_cents}
           listingCurrency={(sourceWork.price_currency as "NZD" | "AUD") ?? "NZD"}
         />
       )}

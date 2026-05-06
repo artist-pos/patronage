@@ -18,6 +18,7 @@ import {
   publishPortfolioWorkAsAvailable,
   unpublishPortfolioWork,
 } from "@/app/dashboard/works/actions";
+import { formatPrice } from "@/lib/format-price";
 import { ArtworkEditor } from "@/components/dashboard/ArtworkEditor";
 
 interface PortfolioRow {
@@ -42,7 +43,8 @@ interface AvailableRow {
   url: string;
   caption: string | null;
   description: string | null;
-  price: string | null;
+  price_cents: number | null;
+  is_poa: boolean;
   price_currency: string;
   is_available: boolean;
   hide_available: boolean;
@@ -55,7 +57,8 @@ interface SoldRow {
   id: string;
   url: string;
   caption: string | null;
-  price: string | null;
+  price_cents: number | null;
+  is_poa: boolean;
   price_currency: string;
   created_at: string;
   current_owner_id: string;
@@ -73,13 +76,6 @@ interface Props {
   engagementMap?: Record<string, { view: number; play: number }>;
 }
 
-function formatPrice(price: string | null, currency: string): string {
-  if (!price) return "—";
-  if (price === "POA") return "Price on application";
-  const num = parseFloat(price);
-  if (isNaN(num)) return price;
-  return `${currency} ${num.toLocaleString("en-NZ")}`;
-}
 
 function ActionBtn({
   onClick,
@@ -132,7 +128,7 @@ export function WorksTable({
   // Sell form state per work (keyed by id)
   const [sellForms, setSellForms] = useState<
     Record<string, { price: string; currency: "NZD" | "AUD"; poa: boolean; edition: string }>
-  >({});
+  >({}); // price is kept as major-unit string in UI; converted to cents on submit
 
   function showError(msg: string) {
     setError(msg);
@@ -153,8 +149,14 @@ export function WorksTable({
 
   async function handlePublish(work: PortfolioRow) {
     const form = getSellForm(work.id);
+    const priceMajor = parseFloat(form.price);
     setBusy(work.id);
-    const result = await publishPortfolioWorkAsAvailable(work.id, form);
+    const result = await publishPortfolioWorkAsAvailable(work.id, {
+      price_cents: form.poa ? null : (Number.isFinite(priceMajor) ? Math.round(priceMajor * 100) : null),
+      is_poa: form.poa,
+      currency: form.currency,
+      edition: form.edition,
+    });
     if (result.error) showError(result.error);
     else {
       setPortfolio(prev =>
@@ -526,7 +528,7 @@ export function WorksTable({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{work.caption ?? "Untitled"}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {work.hide_price ? "Price hidden" : formatPrice(work.price, work.price_currency)}
+                    {work.hide_price ? "Price hidden" : (formatPrice(work.price_cents, work.price_currency, work.is_poa) ?? "—")}
                   </p>
                 </div>
 
@@ -589,7 +591,7 @@ export function WorksTable({
                       year: "numeric",
                       month: "short",
                     })}
-                    {work.price ? ` · ${formatPrice(work.price, work.price_currency)}` : ""}
+                    {formatPrice(work.price_cents, work.price_currency, work.is_poa) ? ` · ${formatPrice(work.price_cents, work.price_currency, work.is_poa)}` : ""}
                   </p>
                   {work.ledger_id && (
                     <a

@@ -96,22 +96,21 @@ export function calculateFees(
     };
   }
 
-  // marketplace: seller lists at sticker, buyer pays sticker + commission
-  // (+ royalty if applicable) + Stripe processing-fee gross-up. Seller
-  // receives sticker.
+  // marketplace: buyer pays the sticker price + Stripe processing-fee gross-up.
+  // Commission and royalty are deducted from the seller's payout internally —
+  // they are NOT added on top of what the buyer pays.
   const commission = Math.round(subjectPriceCents * model.commissionRate);
   const royalty = model.royaltyRate
     ? Math.round(subjectPriceCents * model.royaltyRate)
     : 0;
-  const baseBeforeStripe = subjectPriceCents + commission + royalty;
-  const { buyerTotalCents, stripeFeeCents } = grossUpForStripe(baseBeforeStripe);
+  const { buyerTotalCents, stripeFeeCents } = grossUpForStripe(subjectPriceCents);
   return {
     subjectPriceCents,
     patronageRevenueCents: commission,
     thirdPartyOwedCents: royalty,
     stripeFeeCents,
     buyerPaidTotalCents: buyerTotalCents,
-    sellerReceivesCents: subjectPriceCents,
+    sellerReceivesCents: subjectPriceCents - commission - royalty,
   };
 }
 

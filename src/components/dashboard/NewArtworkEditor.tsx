@@ -298,10 +298,11 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
       // If listing for sale, also publish as available work
       if (listForSale && result.id) {
+        const priceMajor = parseFloat(price);
         await publishPortfolioWorkAsAvailable(result.id, {
-          price: price || "0",
+          price_cents: price && Number.isFinite(priceMajor) ? Math.round(priceMajor * 100) : null,
+          is_poa: !price,
           currency,
-          poa: !price,
           edition: commerceFormat || "",
           listingMode,
         });

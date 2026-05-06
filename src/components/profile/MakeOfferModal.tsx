@@ -16,7 +16,7 @@ interface Props {
   artistId: string;
   workId: string;
   workTitle: string | null;
-  listingPrice: string | null;
+  listingPriceCents?: number | null;
   listingCurrency: "NZD" | "AUD";
   workImageUrl?: string | null;
 }
@@ -27,7 +27,7 @@ export function MakeOfferModal({
   artistId,
   workId,
   workTitle,
-  listingPrice,
+  listingPriceCents,
   listingCurrency,
   workImageUrl,
 }: Props) {
@@ -69,11 +69,9 @@ export function MakeOfferModal({
     router.push(`/messages/${result.conversationId}`);
   }
 
-  // Format the listing price for display
-  const displayListingPrice =
-    listingPrice && !isNaN(Number(listingPrice))
-      ? `${listingCurrency} ${Number(listingPrice).toLocaleString("en-NZ")}`
-      : listingPrice;
+  const displayListingPrice = listingPriceCents
+    ? `${listingCurrency} ${(listingPriceCents / 100).toLocaleString("en-NZ")}`
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>

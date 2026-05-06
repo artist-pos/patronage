@@ -66,11 +66,11 @@ export default async function ChatPage({ params }: Props) {
   }
 
   // Fetch source artwork if this thread was started via an enquiry
-  let sourceWork: { id: string; url: string; caption: string | null; price: string | null; price_currency: string | null } | null = null;
+  let sourceWork: { id: string; url: string; caption: string | null; price_cents: number | null; is_poa: boolean; price_currency: string | null } | null = null;
   if (conv.source_work_id) {
     const { data: sw } = await supabase
       .from("artworks")
-      .select("id, url, caption, price, price_currency")
+      .select("id, url, caption, price_cents, is_poa, price_currency")
       .eq("id", conv.source_work_id)
       .maybeSingle();
     sourceWork = sw ?? null;

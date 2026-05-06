@@ -37,7 +37,7 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   const [{ data: artwork }, { data: claims }, { data: entries }] = await Promise.all([
     admin
       .from("artworks")
-      .select("id, title, caption, url, year, medium, dimensions, edition, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at")
+      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at")
       .eq("id", id)
       .eq("creator_id", user.id)
       .maybeSingle(),
@@ -151,6 +151,8 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
           initial={{
             title: artwork.title ?? null,
             medium: artwork.medium ?? null,
+            medium_category: (artwork.medium_category as string[] | null) ?? null,
+            surface_or_substrate: (artwork.surface_or_substrate as string | null) ?? null,
             dimensions: artwork.dimensions ?? null,
             year: artwork.year ?? null,
             edition: artwork.edition ?? null,

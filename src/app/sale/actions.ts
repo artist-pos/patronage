@@ -31,24 +31,20 @@ export async function initiatePrimarySale(
   // (e.g. "1200" or "1,200") plus a currency code — parse defensively.
   const { data: artwork } = await admin
     .from("artworks")
-    .select("id, title, caption, url, price, price_currency, is_available, creator_id, current_owner_id")
+    .select("id, title, caption, url, price_cents, is_poa, price_currency, is_available, creator_id, current_owner_id")
     .eq("id", input.artworkId)
     .maybeSingle();
 
   if (!artwork) return { error: "Artwork not found." };
   if (!artwork.is_available) return { error: "This work isn't available for sale." };
   if (artwork.creator_id !== artwork.current_owner_id) {
-    // Defensive: a primary sale should only happen on works the creator
-    // still owns. Resale path handles the other case.
     return { error: "This work has already changed hands. Use the resale flow." };
   }
-
-  const priceMajor = parsePriceMajor(artwork.price);
-  if (priceMajor === null || priceMajor <= 0) {
+  if (artwork.is_poa || !artwork.price_cents || artwork.price_cents <= 0) {
     return { error: "This work has no listed price." };
   }
 
-  const subjectPriceCents = Math.round(priceMajor * 100);
+  const subjectPriceCents = artwork.price_cents;
   const currency = (artwork.price_currency ?? "NZD").toUpperCase();
   const fees = calculateFees("primary_sale", subjectPriceCents);
 
@@ -115,14 +111,3 @@ export async function initiatePrimarySale(
   return { checkoutUrl };
 }
 
-/**
- * Parse the artwork's free-text price into a number of major units. Strip
- * non-numeric except the decimal point. Returns null if nothing usable.
- */
-function parsePriceMajor(price: string | null): number | null {
-  if (!price) return null;
-  const cleaned = price.replace(/[^\d.]/g, "");
-  if (!cleaned) return null;
-  const value = parseFloat(cleaned);
-  return Number.isFinite(value) ? value : null;
-}

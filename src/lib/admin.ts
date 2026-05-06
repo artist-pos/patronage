@@ -937,7 +937,7 @@ export async function getAnalytics(): Promise<Analytics> {
   const [{ data: profiles }, { data: opps }, { data: artworks }] = await Promise.all([
     supabase.from("profiles").select("is_active, created_at, role"),
     supabase.from("opportunities").select("type, country, is_active, deadline"),
-    supabase.from("artworks").select("is_available, creator_id, current_owner_id, price"),
+    supabase.from("artworks").select("is_available, creator_id, current_owner_id, price_cents"),
   ]);
 
   const today = new Date().toISOString().split("T")[0];
@@ -967,9 +967,7 @@ export async function getAnalytics(): Promise<Analytics> {
     (a) => !a.is_available && a.current_owner_id !== a.creator_id
   );
   const transferValue = transferred.reduce((sum, a) => {
-    if (!a.price) return sum;
-    const n = parseFloat(a.price.replace(/[^0-9.]/g, ""));
-    return sum + (isNaN(n) ? 0 : n);
+    return sum + (a.price_cents ? a.price_cents / 100 : 0);
   }, 0);
 
   return {

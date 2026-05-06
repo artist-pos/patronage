@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { AvailableWorkCard } from "./AvailableWorkCard";
+import { AvailableWorkCard, CARD_W, CARD_IMG_H } from "./AvailableWorkCard";
 import { AddAvailableWorkModal } from "./AddAvailableWorkModal";
 import type { Artwork } from "@/types/database";
 
-const CARD_H = 225;
+// One-row height: image + text area + owner controls allowance
+const CARD_H = CARD_IMG_H + 70;
 
 interface Props {
   initialWorks: Artwork[];
@@ -27,6 +28,44 @@ export function AvailableWorksSection({
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const [contentH, setContentH] = useState(CARD_H);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Track actual content height for smooth expand animation
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const measure = () => {
+      setContentH(el.scrollHeight);
+      setOverflows(el.scrollHeight > CARD_H + 8);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Auto-expand and scroll when navigated from feed Works tab
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#artwork-")) return;
+
+    setExpanded(true);
+
+    // Wait for expand animation to complete before scrolling
+    const timer = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(hash);
+      if (!el) return;
+      const header = document.querySelector("header");
+      const headerH = header ? header.getBoundingClientRect().height : 64;
+      const top = el.getBoundingClientRect().top + window.scrollY - headerH - 24;
+      window.scrollTo({ top, behavior: "smooth" });
+    }, 420);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   function handleWorkAdded(newWork: Artwork) {
     setWorks((prev) => [...prev, newWork]);
@@ -37,7 +76,6 @@ export function AvailableWorksSection({
     setWorks((prev) => prev.filter((w) => w.id !== id));
   }
 
-  // Non-owners only see this section if there are works to display
   if (!isOwner && works.length === 0) return null;
 
   return (
@@ -47,42 +85,55 @@ export function AvailableWorksSection({
       </h2>
 
       {works.length === 0 && isOwner ? (
-        // Empty state: just show the add button inline
         <div className="flex items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            No works listed yet.
-          </p>
+          <p className="text-sm text-muted-foreground">No works listed yet.</p>
           <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
         </div>
       ) : (
-        // Carousel track
-        <div
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-          style={{ height: CARD_H }}
-        >
-          {works.map((img) => (
-            <AvailableWorkCard
-              key={img.id}
-              img={img}
-              artistId={profileId}
-              artistName={artistName}
-              artistUsername={artistUsername}
-              viewerRole={viewerRole}
-              isOwner={isOwner}
-              onRemove={handleWorkRemoved}
-            />
-          ))}
+        <>
+          <div
+            style={{
+              height: expanded ? contentH : CARD_H,
+              overflow: "hidden",
+              transition: "height 0.35s ease",
+            }}
+          >
+            <div ref={contentRef} className="flex flex-wrap gap-4">
+              {works.map((img) => (
+                <div key={img.id} id={`artwork-${img.id}`}>
+                  <AvailableWorkCard
+                    img={img}
+                    artistId={profileId}
+                    artistName={artistName}
+                    artistUsername={artistUsername}
+                    viewerRole={viewerRole}
+                    isOwner={isOwner}
+                    onRemove={handleWorkRemoved}
+                  />
+                </div>
+              ))}
 
-          {/* Add button as a card at the end of the track (owner only) */}
-          {isOwner && (
-            <div
-              className="flex-none flex items-center justify-center border border-dashed border-border snap-start"
-              style={{ height: CARD_H, width: CARD_H }}
-            >
-              <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
+              {isOwner && (
+                <div
+                  className="flex items-center justify-center border border-dashed border-border"
+                  style={{ height: CARD_IMG_H, width: CARD_W }}
+                >
+                  <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
+                </div>
+              )}
             </div>
+          </div>
+
+          {overflows && (
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {expanded ? "Show less" : `Show all works (${works.length})`}
+            </button>
           )}
-        </div>
+        </>
       )}
     </section>
   );
