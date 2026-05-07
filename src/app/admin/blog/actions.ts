@@ -47,6 +47,19 @@ export async function getArtistProjects(profileId: string) {
   return (data ?? []) as { id: string; title: string }[];
 }
 
+export async function getMyProjects() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("projects")
+    .select("id, title")
+    .eq("artist_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data ?? []) as { id: string; title: string }[];
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 export async function upsertPost(data: {
@@ -65,6 +78,7 @@ export async function upsertPost(data: {
   studioUpdate: {
     caption: string;
     project_id: string | null;
+    new_project_title: string | null;
   } | null;
 }): Promise<{ error?: string; id?: string; slug?: string }> {
   const supabase = await createClient();
@@ -135,13 +149,24 @@ export async function upsertPost(data: {
     data.image_url &&
     !linkedUpdateId
   ) {
+    let resolvedProjectId = data.studioUpdate.project_id ?? null;
+    if (!resolvedProjectId && data.studioUpdate.new_project_title?.trim()) {
+      const { data: newProject, error: projErr } = await admin
+        .from("projects")
+        .insert({ artist_id: user.id, title: data.studioUpdate.new_project_title.trim() })
+        .select("id")
+        .single();
+      if (projErr) return { error: `Failed to create thread: ${projErr.message}` };
+      resolvedProjectId = newProject.id;
+    }
+
     const blogUrl = `${BASE_URL}/blog/${row.slug}`;
     const { data: update, error: updateErr } = await admin
       .from("project_updates")
       .insert({
         artist_id: user.id,
         collaborator_ids: [data.featured_profile_id],
-        project_id: data.studioUpdate.project_id ?? null,
+        project_id: resolvedProjectId,
         content_type: "image",
         image_url: data.image_url,
         caption: data.studioUpdate.caption || null,

@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TiptapLink from "@tiptap/extension-link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { upsertPost, searchArtistProfiles, getArtistProjects } from "@/app/admin/blog/actions";
+import { upsertPost, searchArtistProfiles, getMyProjects } from "@/app/admin/blog/actions";
 import Image from "next/image";
 import { BlogPreviewModal } from "@/components/admin/BlogPreviewModal";
 
@@ -70,7 +70,8 @@ export function BlogEditor({ post, userId }: Props) {
   const [createStudioUpdate, setCreateStudioUpdate] = useState(false);
   const [studioCaption, setStudioCaption] = useState("");
   const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
-  const [artistProjects, setArtistProjects] = useState<{ id: string; title: string }[]>([]);
+  const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [myProjects, setMyProjects] = useState<{ id: string; title: string }[]>([]);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistResults, setArtistResults] = useState<FeaturedProfile[]>([]);
   const [searchingArtists, setSearchingArtists] = useState(false);
@@ -103,15 +104,10 @@ export function BlogEditor({ post, userId }: Props) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Fetch featured artist's projects when artist changes
+  // Load admin's own project threads once on mount
   useEffect(() => {
-    if (!featuredProfile) {
-      setArtistProjects([]);
-      setStudioProjectId(null);
-      return;
-    }
-    getArtistProjects(featuredProfile.id).then(setArtistProjects);
-  }, [featuredProfile]);
+    getMyProjects().then(setMyProjects);
+  }, []);
 
   // Debounced artist search
   useEffect(() => {
@@ -185,7 +181,11 @@ export function BlogEditor({ post, userId }: Props) {
         existingLinkedUpdateId: post?.linked_update_id ?? null,
         studioUpdate:
           createStudioUpdate && featuredProfile && imageUrl && targetStatus === "published"
-            ? { caption: studioCaption, project_id: studioProjectId }
+            ? {
+                caption: studioCaption,
+                project_id: studioProjectId === "__new__" ? null : studioProjectId,
+                new_project_title: studioProjectId === "__new__" ? newProjectTitle : null,
+              }
             : null,
       });
 
@@ -524,21 +524,29 @@ export function BlogEditor({ post, userId }: Props) {
                 />
               </div>
 
-              {artistProjects.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Add to project thread (optional)</label>
-                  <select
-                    value={studioProjectId ?? ""}
-                    onChange={(e) => setStudioProjectId(e.target.value || null)}
-                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
-                  >
-                    <option value="">— No project —</option>
-                    {artistProjects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Add to project thread (optional)</label>
+                <select
+                  value={studioProjectId ?? ""}
+                  onChange={(e) => { setStudioProjectId(e.target.value || null); setNewProjectTitle(""); }}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
+                >
+                  <option value="">— No thread —</option>
+                  {myProjects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                  <option value="__new__">+ Create new thread…</option>
+                </select>
+                {studioProjectId === "__new__" && (
+                  <input
+                    type="text"
+                    value={newProjectTitle}
+                    onChange={(e) => setNewProjectTitle(e.target.value)}
+                    placeholder="Thread name, e.g. Artist Features"
+                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300"
+                  />
+                )}
+              </div>
 
               <p className="text-[11px] text-muted-foreground">
                 The studio update will be created when you publish.
