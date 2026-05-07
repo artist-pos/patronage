@@ -81,11 +81,14 @@ export async function initiateTransfer(
     negotiatedSaleId = txRow.id;
 
     const { stripeFeeCents } = grossUpForStripe(salePriceCents);
-    const { data: artistProfile2 } = await supabase
-      .from("profiles")
-      .select("full_name, username")
-      .eq("id", user.id)
-      .maybeSingle();
+    const [{ data: artistProfile2 }, { data: artistConnectProfile }] = await Promise.all([
+      supabase.from("profiles").select("full_name, username").eq("id", user.id).maybeSingle(),
+      admin.from("profiles").select("stripe_account_id, stripe_connect_status").eq("id", user.id).maybeSingle(),
+    ]);
+
+    const useConnect =
+      artistConnectProfile?.stripe_connect_status === "enabled" &&
+      !!artistConnectProfile?.stripe_account_id;
 
     try {
       const session = await createCheckoutSession({
@@ -113,6 +116,10 @@ export async function initiateTransfer(
         },
         successPath: `/messages/${conversationId}?transferred=1`,
         cancelPath: `/messages/${conversationId}`,
+        ...(useConnect ? {
+          connectedAccountId: artistConnectProfile!.stripe_account_id!,
+          applicationFeeCents: fees.stripeFeeCents + fees.patronageRevenueCents,
+        } : {}),
       });
       await admin
         .from("negotiated_sale_transactions")

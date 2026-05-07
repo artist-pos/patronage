@@ -46,25 +46,39 @@ export async function initiateSupportCheckout(
   const fees = calculateFees(surface, subjectPriceCents);
   const currency = "NZD";
 
-  const { data: subscription, error: insertError } = await admin
-    .from("support_subscriptions")
-    .insert({
-      tier_id: tier.id,
-      recipient_id: tier.profile_id,
-      supporter_id: user?.id ?? null,
-      supporter_email: supporterEmail,
-      supporter_name: input.supporterName?.trim() || null,
-      amount_cents: fees.subjectPriceCents,
-      currency,
-      patronage_commission_cents: fees.patronageRevenueCents,
-      buyer_paid_total_cents: fees.buyerPaidTotalCents,
-      tier_type: tier.tier_type,
-    })
-    .select("id")
-    .single();
+  // Insert the pending subscription record and fetch the artist's Connect
+  // status in parallel — both depend only on tier data already in hand.
+  const [{ data: subscription, error: insertError }, { data: artistProfile }] = await Promise.all([
+    admin
+      .from("support_subscriptions")
+      .insert({
+        tier_id: tier.id,
+        recipient_id: tier.profile_id,
+        supporter_id: user?.id ?? null,
+        supporter_email: supporterEmail,
+        supporter_name: input.supporterName?.trim() || null,
+        amount_cents: fees.subjectPriceCents,
+        currency,
+        patronage_commission_cents: fees.patronageRevenueCents,
+        buyer_paid_total_cents: fees.buyerPaidTotalCents,
+        tier_type: tier.tier_type,
+      })
+      .select("id")
+      .single(),
+    admin
+      .from("profiles")
+      .select("stripe_account_id, stripe_connect_status")
+      .eq("id", tier.profile_id)
+      .maybeSingle(),
+  ]);
   if (insertError || !subscription) {
     return { error: insertError?.message ?? "Couldn't create support record." };
   }
+
+  const connectDestination =
+    artistProfile?.stripe_connect_status === "enabled" && artistProfile?.stripe_account_id
+      ? artistProfile.stripe_account_id
+      : null;
 
   // Mint the Stripe Price lazily and cache it on the tier. Recurring uses
   // a recurring price; one-off uses a one-time price. Re-mint when the
@@ -114,10 +128,29 @@ export async function initiateSupportCheckout(
         support_subscription_id: subscription.id,
       },
       payment_intent_data: !isRecurring
-        ? { metadata: { purpose: surface, support_subscription_id: subscription.id } }
+        ? {
+            metadata: { purpose: surface, support_subscription_id: subscription.id },
+            ...(connectDestination ? {
+              // application_fee covers Stripe's processing fee + Patronage commission,
+              // so the platform can pay Stripe and still net the 5% commission.
+              // Artist receives sellerReceivesCents = buyerPaidTotal - stripeFee - commission.
+              application_fee_amount: fees.stripeFeeCents + fees.patronageRevenueCents,
+              transfer_data: { destination: connectDestination },
+            } : {}),
+          }
         : undefined,
       subscription_data: isRecurring
-        ? { metadata: { purpose: surface, support_subscription_id: subscription.id } }
+        ? {
+            metadata: { purpose: surface, support_subscription_id: subscription.id },
+            ...(connectDestination ? {
+              // Same logic as one-off: percent must cover Stripe's fee + commission
+              // so the platform nets the 5% commission after paying Stripe.
+              application_fee_percent: parseFloat(
+                (((fees.stripeFeeCents + fees.patronageRevenueCents) / fees.buyerPaidTotalCents) * 100).toFixed(2)
+              ),
+              transfer_data: { destination: connectDestination },
+            } : {}),
+          }
         : undefined,
       success_url: `${siteUrl()}/support/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl()}/`,

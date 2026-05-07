@@ -11,6 +11,8 @@ import { ManageNotesList } from "@/components/profile/ManageNotesList";
 import { getMyWrittenNotes } from "@/lib/notes";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
 import { ProfileViewsChartWrapper } from "@/components/analytics/ProfileViewsChartWrapper";
+import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscriptionButton";
+import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,7 +23,7 @@ interface PageProps {
   searchParams: Promise<{ tab?: string; period?: string }>;
 }
 
-const TABS = ["overview", "closing", "saved", "applied", "applications", "expired", "analytics", "campaign-reports", "notes"] as const;
+const TABS = ["overview", "closing", "saved", "applied", "applications", "expired", "analytics", "campaign-reports", "notes", "subscriptions"] as const;
 type Tab = typeof TABS[number];
 
 // ── Sidebar structure ─────────────────────────────────────────────────────────
@@ -35,9 +37,10 @@ const SIDEBAR_SECTIONS = [
   { id: "analytics",        label: "Analytics",        group: "INSIGHTS"      },
   { id: "campaign-reports", label: "Campaign Reports", group: "INSIGHTS"      },
   { id: "notes",            label: "Notes",            group: "NOTES"         },
+  { id: "subscriptions",    label: "My Support",       group: "SUPPORT"       },
 ] as const;
 
-const SIDEBAR_GROUPS = ["OVERVIEW", "OPPORTUNITIES", "INSIGHTS", "NOTES"] as const;
+const SIDEBAR_GROUPS = ["OVERVIEW", "OPPORTUNITIES", "INSIGHTS", "NOTES", "SUPPORT"] as const;
 
 // ── Period options ────────────────────────────────────────────────────────────
 const PERIODS = [
@@ -163,6 +166,34 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // ── Notes ─────────────────────────────────────────────────────────────────
   const notes = activeTab === "notes" ? await getMyWrittenNotes(user.id) : null;
+
+  // ── Subscriptions (support payments made by this user) ────────────────────
+  type SubscriptionRow = {
+    id: string;
+    amount_cents: number;
+    currency: string;
+    tier_type: "one_off" | "recurring";
+    status: "pending" | "active" | "past_due" | "canceled" | "one_off_paid" | "reverted";
+    current_period_end: string | null;
+    started_at: string | null;
+    stripe_customer_id: string | null;
+    support_tiers: { title: string }[] | null;
+    profiles: { full_name: string | null; username: string | null }[] | null;
+  };
+  let subscriptions: SubscriptionRow[] = [];
+  if (activeTab === "subscriptions") {
+    const { data } = await supabase
+      .from("support_subscriptions")
+      .select(`
+        id, amount_cents, currency, tier_type, status,
+        current_period_end, started_at, stripe_customer_id,
+        support_tiers!tier_id(title),
+        profiles!recipient_id(full_name, username)
+      `)
+      .eq("supporter_id", user.id)
+      .order("created_at", { ascending: false });
+    subscriptions = (data ?? []) as unknown as SubscriptionRow[];
+  }
 
   // ── Overview: profile views ───────────────────────────────────────────────
   let profileViews30 = 0;
@@ -649,6 +680,80 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── My Support (subscriptions) ── */}
+          {activeTab === "subscriptions" && (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <p className="text-base font-semibold">My Support</p>
+                <p className="text-sm text-muted-foreground">Artists you&apos;re supporting through Patronage.</p>
+              </div>
+
+              {subscriptions.length === 0 ? (
+                <div className="py-16 text-center border border-dashed border-border space-y-3">
+                  <p className="text-sm text-muted-foreground">You haven&apos;t supported any artists yet.</p>
+                  <Link href="/feed" className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors">
+                    Browse artists →
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-border border border-border">
+                  {subscriptions.map((sub) => {
+                    const profile = Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles;
+                    const tier = Array.isArray(sub.support_tiers) ? sub.support_tiers[0] : sub.support_tiers;
+                    const artistName = profile?.full_name ?? profile?.username ?? "Unknown artist";
+                    const artistUsername = profile?.username;
+                    const tierTitle = tier?.title ?? "Support";
+                    const isActive = sub.status === "active";
+                    const isRecurring = sub.tier_type === "recurring";
+
+                    const statusLabel =
+                      sub.status === "active"       ? (isRecurring ? "Active" : "Paid")
+                      : sub.status === "one_off_paid" ? "Paid"
+                      : sub.status === "past_due"   ? "Past due"
+                      : sub.status === "canceled"   ? "Cancelled"
+                      : sub.status === "pending"    ? "Pending"
+                      : sub.status;
+
+                    const statusClass =
+                      isActive                      ? "bg-emerald-100 text-emerald-700"
+                      : sub.status === "one_off_paid" ? "bg-emerald-100 text-emerald-700"
+                      : sub.status === "past_due"   ? "bg-amber-100 text-amber-700"
+                      : "bg-stone-100 text-stone-500";
+
+                    return (
+                      <div key={sub.id} className="flex items-center justify-between gap-4 px-4 py-4">
+                        <div className="min-w-0 space-y-0.5">
+                          {artistUsername ? (
+                            <Link href={`/${artistUsername}`} className="text-sm font-medium hover:underline underline-offset-2">
+                              {artistName}
+                            </Link>
+                          ) : (
+                            <p className="text-sm font-medium">{artistName}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {tierTitle} · {formatCents(sub.amount_cents, sub.currency)}
+                            {isRecurring ? " / month" : ""}
+                          </p>
+                          {isActive && isRecurring && sub.current_period_end && (
+                            <p className="text-[11px] text-muted-foreground">
+                              Renews {new Date(sub.current_period_end).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide rounded-sm ${statusClass}`}>
+                            {statusLabel}
+                          </span>
+                          {isActive && isRecurring && <ManageSubscriptionButton />}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

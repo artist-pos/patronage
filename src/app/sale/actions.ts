@@ -114,7 +114,7 @@ export async function initiatePrimarySale(
       ...(useConnect
         ? {
             connectedAccountId: artistProfile!.stripe_account_id!,
-            applicationFeeCents: fees.patronageRevenueCents,
+            applicationFeeCents: fees.stripeFeeCents + fees.patronageRevenueCents,
           }
         : {}),
     });

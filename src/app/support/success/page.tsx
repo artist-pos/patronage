@@ -85,7 +85,7 @@ export default async function SupportSuccessPage({ searchParams }: Props) {
           )}
           {summary?.isRecurring && (
             <Link
-              href="/dashboard"
+              href="/dashboard?tab=subscriptions"
               className="text-sm border border-stone-200 rounded-lg px-4 py-2 hover:bg-stone-50 transition-colors"
             >
               Manage your subscriptions →
