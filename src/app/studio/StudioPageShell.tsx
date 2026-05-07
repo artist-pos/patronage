@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
-import { fetchCompletionProfile, getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
+import { getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
+import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { ProfileCompletionBanner } from "@/components/profile/ProfileCompletionBanner";
 import { StudioNav } from "./StudioNav";
 

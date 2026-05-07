@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCompletionProfile, getMissingFields, isProfileComplete } from "@/lib/profile-completion";
+import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
+import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { SectionLockGate } from "@/components/studio/SectionLockGate";
 import { StudioPageShell } from "./StudioPageShell";
 import { Section, VALID_SECTIONS, TAB_TO_SECTION } from "./sidebar-config";
