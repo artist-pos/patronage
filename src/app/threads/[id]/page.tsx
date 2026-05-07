@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
+import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -197,6 +198,39 @@ function ThreadPostItem({
         {/* Caption */}
         {post.caption && (
           <p className="text-base leading-relaxed">{post.caption}</p>
+        )}
+
+        {/* Collaborator credits */}
+        {post.collaborators && post.collaborators.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Featuring</span>
+            {post.collaborators.map(c => {
+              const cName = c.full_name ?? c.username;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/${c.username}`}
+                  className="flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-2"
+                >
+                  {c.avatar_url ? (
+                    <div className="relative w-5 h-5 shrink-0 border border-black overflow-hidden">
+                      <Image src={c.avatar_url} alt={cName} fill className="object-cover" sizes="20px" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
+                      {cName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  {cName}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Blog + Instagram card */}
+        {post.embed_provider === "Patronage" && post.embed_url && (
+          <PatronageArticleCard articleUrl={post.embed_url} />
         )}
 
         {/* Notes */}

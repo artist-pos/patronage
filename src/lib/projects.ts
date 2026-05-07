@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Project, ProjectUpdateWithArtist, NoteWithSender } from "@/types/database";
+import type { Project, ProjectUpdateWithArtist, CollaboratorProfile, NoteWithSender } from "@/types/database";
 
 export interface ThreadPost extends ProjectUpdateWithArtist {
   project_id: string | null;
@@ -125,6 +125,17 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
     return acc;
   }, {});
 
+  // Batch-resolve all collaborator profiles across all posts in one query
+  const allCollaboratorIds = [...new Set(updates.flatMap((u) => u.collaborator_ids ?? []))];
+  let collaboratorMap = new Map<string, CollaboratorProfile>();
+  if (allCollaboratorIds.length > 0) {
+    const { data: collabData } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, avatar_url")
+      .in("id", allCollaboratorIds);
+    collaboratorMap = new Map((collabData ?? []).map((p: any) => [p.id, p as CollaboratorProfile]));
+  }
+
   const posts: ThreadPost[] = updates.map((u) => ({
     id: u.id,
     artist_id: u.artist_id,
@@ -146,7 +157,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
     artist_full_name: u.profiles?.full_name ?? null,
     artist_avatar_url: u.profiles?.avatar_url ?? null,
     collaborator_ids: u.collaborator_ids ?? [],
-    collaborators: [],
+    collaborators: (u.collaborator_ids ?? []).map((id: string) => collaboratorMap.get(id)).filter(Boolean) as CollaboratorProfile[],
     notes: notesByUpdate[u.id] ?? [],
   }));
 
