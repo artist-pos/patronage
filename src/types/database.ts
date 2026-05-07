@@ -812,13 +812,22 @@ export interface ProjectUpdate {
   orientation: ImageOrientation | null;
   image_width: number | null;
   image_height: number | null;
+  collaborator_ids: string[];
   created_at: string;
+}
+
+export interface CollaboratorProfile {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
 }
 
 export interface ProjectUpdateWithArtist extends ProjectUpdate {
   artist_username: string;
   artist_full_name: string | null;
   artist_avatar_url: string | null;
+  collaborators: CollaboratorProfile[];
 }
 
 export interface Project {
