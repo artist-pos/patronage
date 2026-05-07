@@ -32,6 +32,10 @@ interface Props {
   hideSoldSection: boolean;
   displayName: string;
   collaboratedWorks?: CollaboratedWork[];
+  worksRowH?: number;
+  worksHGap?: number;
+  worksVGap?: number;
+  worksLastRowAlign?: "left" | "center" | "right";
 }
 
 export function WorkTab({
@@ -50,6 +54,10 @@ export function WorkTab({
   hideSoldSection,
   displayName,
   collaboratedWorks = [],
+  worksRowH,
+  worksHGap,
+  worksVGap,
+  worksLastRowAlign,
 }: Props) {
   const hasUpdates = studioUpdates.length > 0;
 
@@ -65,6 +73,10 @@ export function WorkTab({
           artistAvatarUrl={artistAvatarUrl}
           viewerRole={viewerRole}
           isOwner={isOwner}
+          initialRowH={worksRowH}
+          initialHGap={worksHGap}
+          initialVGap={worksVGap}
+          initialLastRowAlign={worksLastRowAlign}
         />
       )}
 
@@ -88,6 +100,9 @@ export function WorkTab({
               viewerRole={viewerRole}
               profileId={isOwner ? undefined : profileId}
               isOwner={isOwner}
+              rowH={worksRowH}
+              gutter={worksHGap}
+              lastRowAlign={worksLastRowAlign}
             />
           ) : (
             isOwner ? (

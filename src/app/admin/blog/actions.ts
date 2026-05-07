@@ -17,7 +17,6 @@ function generateSlug(title: string): string {
 
 /** Convert a NZ local datetime string ("YYYY-MM-DDTHH:mm") to a UTC ISO string. */
 function nzLocalToUtc(localStr: string): string {
-  // Try NZST (UTC+12) first, then NZDT (UTC+13) if the NZ display doesn't match.
   const d12 = new Date(localStr + ":00+12:00");
   const check = d12.toLocaleString("sv", { timeZone: "Pacific/Auckland" });
   if (check === localStr.replace("T", " ") + ":00") return d12.toISOString();
@@ -36,6 +35,18 @@ export async function searchArtistProfiles(query: string) {
   return data ?? [];
 }
 
+export async function getArtistProjects(profileId: string) {
+  if (!profileId) return [];
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("projects")
+    .select("id, title")
+    .eq("artist_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  return (data ?? []) as { id: string; title: string }[];
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 export async function upsertPost(data: {
@@ -48,14 +59,20 @@ export async function upsertPost(data: {
   status: "draft" | "published" | "scheduled";
   existingPublishedAt?: string | null;
   featured_profile_id: string | null;
-  spotlight_until: string | null; // "YYYY-MM-DD" date, or null
-  scheduled_at: string | null; // NZ local "YYYY-MM-DDTHH:mm", or null
+  spotlight_until: string | null;
+  scheduled_at: string | null;
+  existingLinkedUpdateId?: string | null;
+  studioUpdate: {
+    caption: string;
+    project_id: string | null;
+  } | null;
 }): Promise<{ error?: string; id?: string; slug?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
 
   const now = new Date().toISOString();
+  const admin = createAdminClient();
 
   const scheduled_at = data.scheduled_at ? nzLocalToUtc(data.scheduled_at) : null;
 
@@ -63,13 +80,38 @@ export async function upsertPost(data: {
     data.status === "published"
       ? (data.existingPublishedAt ?? now)
       : data.status === "scheduled" && scheduled_at && new Date(scheduled_at) <= new Date()
-      ? now // scheduled time already passed — publish immediately
+      ? now
       : null;
 
   const effectiveStatus =
     data.status === "scheduled" && scheduled_at && new Date(scheduled_at) <= new Date()
       ? "published"
       : data.status;
+
+  // Create studio update on first publish if requested
+  let linkedUpdateId = data.existingLinkedUpdateId ?? null;
+  if (
+    effectiveStatus === "published" &&
+    data.studioUpdate &&
+    data.featured_profile_id &&
+    data.image_url &&
+    !linkedUpdateId
+  ) {
+    const { data: update, error: updateErr } = await admin
+      .from("project_updates")
+      .insert({
+        artist_id: data.featured_profile_id,
+        project_id: data.studioUpdate.project_id ?? null,
+        content_type: "image",
+        image_url: data.image_url,
+        caption: data.studioUpdate.caption || null,
+      })
+      .select("id")
+      .single();
+    if (updateErr) return { error: `Studio update failed: ${updateErr.message}` };
+    linkedUpdateId = update.id;
+    revalidatePath("/feed");
+  }
 
   const payload = {
     title: data.title,
@@ -81,6 +123,7 @@ export async function upsertPost(data: {
     scheduled_at: effectiveStatus === "published" ? null : scheduled_at,
     featured_profile_id: data.featured_profile_id,
     spotlight_until: data.featured_profile_id ? (data.spotlight_until ?? null) : null,
+    linked_update_id: linkedUpdateId,
     updated_at: now,
   };
 
@@ -98,18 +141,16 @@ export async function upsertPost(data: {
 
     if (error) return { error: error.message };
     revalidatePath("/blog");
-    revalidatePath(`/blog/${data.existingSlug}`); // old slug
-    revalidatePath(`/blog/${row.slug}`);           // new slug
+    revalidatePath(`/blog/${data.existingSlug}`);
+    revalidatePath(`/blog/${row.slug}`);
     revalidatePath("/admin/blog");
-    // AutoDM: notify featured artist on publish
     if (effectiveStatus === "published" && data.featured_profile_id) {
-      const dmResult = await sendTagNotificationDM(user.id, data.featured_profile_id, {
+      await sendTagNotificationDM(user.id, data.featured_profile_id, {
         type: "blog_post",
         title: data.title,
         url: `${BASE_URL}/blog/${row.slug}`,
         image_url: data.image_url,
       });
-      if (dmResult.error) return { error: dmResult.error };
     }
     return { id: row.id, slug: row.slug };
   }
@@ -126,15 +167,13 @@ export async function upsertPost(data: {
   if (error) return { error: error.message };
   revalidatePath("/blog");
   revalidatePath("/admin/blog");
-  // AutoDM: notify featured artist on publish
   if (effectiveStatus === "published" && data.featured_profile_id) {
-    const dmResult = await sendTagNotificationDM(user.id, data.featured_profile_id, {
+    await sendTagNotificationDM(user.id, data.featured_profile_id, {
       type: "blog_post",
       title: data.title,
       url: `${BASE_URL}/blog/${slug}`,
       image_url: data.image_url,
     });
-    if (dmResult.error) return { error: dmResult.error };
   }
   return { id: row.id, slug: row.slug };
 }

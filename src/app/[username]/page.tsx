@@ -230,7 +230,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost] = await Promise.all([
     needsPortfolio
       ? (() => {
           const q = supabase
@@ -290,6 +290,18 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .then(({ data }) => (data ?? []) as unknown as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>)
       : Promise.resolve([] as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>),
+    // Latest blog post featuring this artist (for overview tab backlink)
+    isArtistProfile && tab === "overview"
+      ? supabase
+          .from("blog_posts")
+          .select("slug, title, image_url, published_at")
+          .eq("featured_profile_id", profile.id)
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => data as { slug: string; title: string; image_url: string | null; published_at: string | null } | null)
+      : Promise.resolve(null),
   ]);
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
@@ -575,6 +587,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   galleryRowHeight={profile.gallery_row_height}
                   galleryGutter={profile.gallery_gutter}
+                  featuredBlogPost={featuredBlogPost}
                 />
               )}
 
@@ -595,6 +608,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   hideSoldSection={profile.hide_sold_section}
                   displayName={displayName}
                   collaboratedWorks={collaboratedWorks}
+                  worksRowH={profile.works_row_height}
+                  worksHGap={profile.works_h_gap}
+                  worksVGap={profile.works_v_gap}
+                  worksLastRowAlign={profile.works_last_row_align}
                 />
               )}
 

@@ -80,6 +80,7 @@ interface Props {
   initialRowH?: number;
   initialHGap?: number;
   initialVGap?: number;
+  initialLastRowAlign?: "left" | "center" | "right";
   layout?: WorksGridLayout;
   initialOpenArtworkId?: string;
   ownerActions?: OwnerActions;
@@ -517,6 +518,7 @@ export function WorksJustifiedGrid({
   initialRowH,
   initialHGap,
   initialVGap,
+  initialLastRowAlign,
   layout = "justified",
   initialOpenArtworkId,
   ownerActions,
@@ -527,6 +529,7 @@ export function WorksJustifiedGrid({
   const [rowH, setRowH] = useState(initialRowH ?? DEFAULT_ROW_H);
   const [hGap, setHGap] = useState(initialHGap ?? DEFAULT_H_GAP);
   const [vGap, setVGap] = useState(initialVGap ?? DEFAULT_V_GAP);
+  const [lastRowAlign, setLastRowAlign] = useState<"left" | "center" | "right">(initialLastRowAlign ?? "left");
   const [dims, setDims] = useState<Record<string, { w: number; h: number }>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState<number | null>(null);
@@ -631,7 +634,7 @@ export function WorksJustifiedGrid({
     setSaveState("saving");
     setSaveError(null);
     startTransition(async () => {
-      const result = await saveWorksLayout(rowH, hGap, vGap);
+      const result = await saveWorksLayout(rowH, hGap, vGap, lastRowAlign);
       if (result?.error) {
         setSaveState("error");
         setSaveError(result.error);
@@ -701,6 +704,26 @@ export function WorksJustifiedGrid({
               onChange={(e) => setVGap(Number(e.target.value))}
               className="w-20 accent-black"
             />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Last row</label>
+            <div className="flex border border-border rounded overflow-hidden">
+              {(["left", "center", "right"] as const).map((align) => (
+                <button
+                  key={align}
+                  type="button"
+                  onClick={() => setLastRowAlign(align)}
+                  title={align.charAt(0).toUpperCase() + align.slice(1)}
+                  className={`px-2.5 py-1 text-xs transition-colors ${
+                    lastRowAlign === align
+                      ? "bg-black text-white"
+                      : "hover:bg-stone-100 text-stone-600"
+                  }`}
+                >
+                  {align === "left" ? "⬛▫▫" : align === "center" ? "▫⬛▫" : "▫▫⬛"}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -784,7 +807,9 @@ export function WorksJustifiedGrid({
                 display: "flex",
                 gap: hGap,
                 marginBottom: ri < rows.length - 1 ? vGap : 0,
-                justifyContent: "flex-start",
+                justifyContent: row.isLast
+                  ? lastRowAlign === "center" ? "center" : lastRowAlign === "right" ? "flex-end" : "flex-start"
+                  : "flex-start",
                 alignItems: "flex-start",
               }}
             >

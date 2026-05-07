@@ -13,6 +13,7 @@ interface Props {
   isOwner?: boolean;
   rowH?: number;    // target row height in px
   gutter?: number;  // fixed gap between tiles in px
+  lastRowAlign?: "left" | "center" | "right";
 }
 
 function getAR(img: PortfolioImage): number {
@@ -99,6 +100,7 @@ export function PortfolioGrid({
   limit,
   rowH = 280,
   gutter = 6,
+  lastRowAlign = "left",
 }: Props) {
   const displayed = limit ? images.slice(0, limit) : images;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -124,7 +126,9 @@ export function PortfolioGrid({
             display: "flex",
             gap: gutter,
             marginBottom: ri < rows.length - 1 ? gutter : 0,
-            justifyContent: row.isLast ? "center" : "flex-start",
+            justifyContent: row.isLast
+              ? lastRowAlign === "center" ? "center" : lastRowAlign === "right" ? "flex-end" : "flex-start"
+              : "flex-start",
             alignItems: "flex-start",
           }}
         >

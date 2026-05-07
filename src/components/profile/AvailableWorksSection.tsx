@@ -16,6 +16,10 @@ interface Props {
   artistAvatarUrl?: string | null;
   viewerRole: string | null;
   isOwner: boolean;
+  initialRowH?: number;
+  initialHGap?: number;
+  initialVGap?: number;
+  initialLastRowAlign?: "left" | "center" | "right";
 }
 
 function AvailableWorksSectionInner({
@@ -26,6 +30,10 @@ function AvailableWorksSectionInner({
   artistAvatarUrl,
   viewerRole: _viewerRole,
   isOwner,
+  initialRowH,
+  initialHGap,
+  initialVGap,
+  initialLastRowAlign,
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(
@@ -125,6 +133,10 @@ function AvailableWorksSectionInner({
         <WorksJustifiedGrid
           artworks={artworksForGrid}
           layout="justified"
+          initialRowH={initialRowH}
+          initialHGap={initialHGap}
+          initialVGap={initialVGap}
+          initialLastRowAlign={initialLastRowAlign}
           initialOpenArtworkId={initialOpenArtworkId}
           ownerActions={ownerActions}
         />

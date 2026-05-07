@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TiptapLink from "@tiptap/extension-link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { upsertPost, searchArtistProfiles } from "@/app/admin/blog/actions";
+import { upsertPost, searchArtistProfiles, getArtistProjects } from "@/app/admin/blog/actions";
 import Image from "next/image";
 import { BlogPreviewModal } from "@/components/admin/BlogPreviewModal";
 
@@ -30,6 +30,7 @@ interface Post {
   featured_profile: FeaturedProfile | null;
   spotlight_until: string | null; // "YYYY-MM-DD"
   scheduled_at: string | null; // UTC ISO
+  linked_update_id: string | null;
 }
 
 interface Props {
@@ -66,6 +67,10 @@ export function BlogEditor({ post, userId }: Props) {
   const [spotlightUntil, setSpotlightUntil] = useState<string>(
     post?.spotlight_until ?? ""
   );
+  const [createStudioUpdate, setCreateStudioUpdate] = useState(false);
+  const [studioCaption, setStudioCaption] = useState("");
+  const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
+  const [artistProjects, setArtistProjects] = useState<{ id: string; title: string }[]>([]);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistResults, setArtistResults] = useState<FeaturedProfile[]>([]);
   const [searchingArtists, setSearchingArtists] = useState(false);
@@ -97,6 +102,16 @@ export function BlogEditor({ post, userId }: Props) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  // Fetch featured artist's projects when artist changes
+  useEffect(() => {
+    if (!featuredProfile) {
+      setArtistProjects([]);
+      setStudioProjectId(null);
+      return;
+    }
+    getArtistProjects(featuredProfile.id).then(setArtistProjects);
+  }, [featuredProfile]);
 
   // Debounced artist search
   useEffect(() => {
@@ -167,6 +182,11 @@ export function BlogEditor({ post, userId }: Props) {
         featured_profile_id: featuredProfile?.id ?? null,
         spotlight_until: featuredProfile && spotlightUntil ? spotlightUntil : null,
         scheduled_at: targetStatus === "scheduled" ? scheduledAt : null,
+        existingLinkedUpdateId: post?.linked_update_id ?? null,
+        studioUpdate:
+          createStudioUpdate && featuredProfile && imageUrl && targetStatus === "published"
+            ? { caption: studioCaption, project_id: studioProjectId }
+            : null,
       });
 
       if (result.error) {
@@ -452,6 +472,78 @@ export function BlogEditor({ post, userId }: Props) {
             >
               Clear
             </button>
+          )}
+        </div>
+      )}
+
+      {/* Studio update — only shown when artist + image are set */}
+      {featuredProfile && imageUrl && (
+        <div className="space-y-3 p-4 border border-dashed border-stone-300 rounded-xl">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
+                Also post as studio update
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Posts the image + caption to {featuredProfile.full_name ?? featuredProfile.username}&apos;s feed
+              </p>
+            </div>
+            {post?.linked_update_id ? (
+              <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full shrink-0">
+                ✓ Already posted
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCreateStudioUpdate((v) => !v)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                  createStudioUpdate ? "bg-black" : "bg-stone-200"
+                }`}
+                role="switch"
+                aria-checked={createStudioUpdate}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    createStudioUpdate ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            )}
+          </div>
+
+          {createStudioUpdate && !post?.linked_update_id && (
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Instagram caption</label>
+                <textarea
+                  value={studioCaption}
+                  onChange={(e) => setStudioCaption(e.target.value)}
+                  placeholder="Short caption for the studio update…"
+                  rows={3}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300 resize-none"
+                />
+              </div>
+
+              {artistProjects.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Add to project thread (optional)</label>
+                  <select
+                    value={studioProjectId ?? ""}
+                    onChange={(e) => setStudioProjectId(e.target.value || null)}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
+                  >
+                    <option value="">— No project —</option>
+                    {artistProjects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <p className="text-[11px] text-muted-foreground">
+                The studio update will be created when you publish.
+              </p>
+            </div>
           )}
         </div>
       )}
