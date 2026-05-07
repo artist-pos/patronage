@@ -72,6 +72,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [studioDate, setStudioDate] = useState<string>("");
+  const [localLinkedUpdateId, setLocalLinkedUpdateId] = useState<string | null>(post?.linked_update_id ?? null);
   const [myProjects, setMyProjects] = useState<{ id: string; title: string }[]>([]);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistResults, setArtistResults] = useState<FeaturedProfile[]>([]);
@@ -179,7 +180,7 @@ export function BlogEditor({ post, userId }: Props) {
         featured_profile_id: featuredProfile?.id ?? null,
         spotlight_until: featuredProfile && spotlightUntil ? spotlightUntil : null,
         scheduled_at: targetStatus === "scheduled" ? scheduledAt : null,
-        existingLinkedUpdateId: post?.linked_update_id ?? null,
+        existingLinkedUpdateId: localLinkedUpdateId,
         studioUpdate:
           createStudioUpdate && featuredProfile && imageUrl && targetStatus === "published"
             ? {
@@ -490,10 +491,19 @@ export function BlogEditor({ post, userId }: Props) {
                 Posted from your account · {featuredProfile.full_name ?? featuredProfile.username} tagged as credit · blog link attached
               </p>
             </div>
-            {post?.linked_update_id ? (
-              <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full shrink-0">
-                ✓ Already posted
-              </span>
+            {localLinkedUpdateId ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                  ✓ Posted
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setLocalLinkedUpdateId(null); setCreateStudioUpdate(true); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                >
+                  Repost
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -519,7 +529,7 @@ export function BlogEditor({ post, userId }: Props) {
             )}
           </div>
 
-          {createStudioUpdate && !post?.linked_update_id && (
+          {createStudioUpdate && !localLinkedUpdateId && (
             <div className="space-y-3 pt-1">
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">Instagram caption</label>

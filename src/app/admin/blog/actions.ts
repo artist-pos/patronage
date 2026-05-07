@@ -143,6 +143,17 @@ export async function upsertPost(data: {
 
   // Create studio update on first publish — posted from admin's account, artist tagged as credit
   let linkedUpdateId = data.existingLinkedUpdateId ?? null;
+
+  // If a linked update ID exists, verify the record still exists (user may have deleted it)
+  if (linkedUpdateId) {
+    const { data: existing } = await admin
+      .from("project_updates")
+      .select("id")
+      .eq("id", linkedUpdateId)
+      .maybeSingle();
+    if (!existing) linkedUpdateId = null;
+  }
+
   if (
     effectiveStatus === "published" &&
     data.studioUpdate &&
