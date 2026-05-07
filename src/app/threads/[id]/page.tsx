@@ -8,6 +8,8 @@ import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
