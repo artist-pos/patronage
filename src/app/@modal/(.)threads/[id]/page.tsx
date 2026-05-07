@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getThread } from "@/lib/projects";
+import { getThread, type ThreadPost } from "@/lib/projects";
 import { getProfileById } from "@/lib/profiles";
-import { NotesSection } from "@/components/projects/NotesSection";
 import { ModalShell } from "@/components/projects/ModalShell";
-import type { ThreadPost } from "@/lib/projects";
+import { NotesSection } from "@/components/projects/NotesSection";
+import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
+import type { CollaboratorProfile } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,16 +40,14 @@ export default async function ThreadModal({ params }: Props) {
 
   return (
     <ModalShell>
-      <div className="space-y-8">
-        {/* Project header */}
+      <div className="space-y-6">
+        {/* Thread header */}
         <div className="space-y-3 border-b border-border pb-6">
-          <h1 className="text-2xl font-bold tracking-tight">{project.title}</h1>
+          <h2 className="text-xl font-bold tracking-tight">{project.title}</h2>
           {project.description && (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {project.description}
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{project.description}</p>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {project.artist_avatar_url && (
               <div className="relative w-7 h-7 shrink-0 border border-black overflow-hidden">
                 <Image
@@ -59,20 +59,21 @@ export default async function ThreadModal({ params }: Props) {
                 />
               </div>
             )}
-            {/* Hard navigation: resets @modal parallel route so modal closes */}
-            <a
-              href={`/${project.artist_username}`}
-              className="text-sm font-semibold hover:underline underline-offset-2"
-            >
-              {artistName}
-            </a>
-            <span className="text-xs text-muted-foreground">
-              {posts.length} {posts.length === 1 ? "post" : "posts"}
-            </span>
+            <div>
+              <Link
+                href={`/${project.artist_username}`}
+                className="text-sm font-semibold hover:underline underline-offset-2"
+              >
+                {artistName}
+              </Link>
+              <p className="text-xs text-muted-foreground">
+                {posts.length} {posts.length === 1 ? "post" : "posts"}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Posts */}
+        {/* Timeline */}
         {posts.length === 0 ? (
           <p className="text-sm text-muted-foreground">No posts in this thread yet.</p>
         ) : (
@@ -116,6 +117,7 @@ function ModalThreadPost({
 }) {
   return (
     <div className="relative pl-10 pb-10">
+      {/* Timeline dot */}
       <div
         className={`absolute left-0 top-1 w-7 h-7 border border-black flex items-center justify-center bg-background z-10 ${isFirst ? "bg-foreground" : ""}`}
         aria-hidden
@@ -163,11 +165,42 @@ function ModalThreadPost({
         )}
 
         {post.caption && (
-          <p className="text-base leading-relaxed">{post.caption}</p>
+          <p className="text-sm leading-relaxed">{post.caption}</p>
+        )}
+
+        {post.collaborators && post.collaborators.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Featuring</span>
+            {post.collaborators.map((c: CollaboratorProfile) => {
+              const cName = c.full_name ?? c.username;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/${c.username}`}
+                  className="flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-2"
+                >
+                  {c.avatar_url ? (
+                    <div className="relative w-5 h-5 shrink-0 border border-black overflow-hidden">
+                      <Image src={c.avatar_url} alt={cName} fill className="object-cover" sizes="20px" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
+                      {cName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  {cName}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {post.embed_provider === "Patronage" && post.embed_url && (
+          <PatronageArticleCard articleUrl={post.embed_url} />
         )}
 
         {(post.notes.length > 0 || canNote) && (
-          <div className="space-y-4 border-t border-border pt-4">
+          <div className="space-y-3 border-t border-border pt-3">
             <NotesSection
               initialNotes={post.notes}
               updateId={post.id}
