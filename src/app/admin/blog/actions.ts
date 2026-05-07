@@ -180,7 +180,7 @@ export async function upsertPost(data: {
       .from("project_updates")
       .insert({
         artist_id: user.id,
-        collaborator_ids: [data.featured_profile_id],
+        collaborator_ids: data.featured_profile_id ? [data.featured_profile_id] : [],
         project_id: resolvedProjectId,
         content_type: "image",
         image_url: data.image_url,
