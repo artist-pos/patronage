@@ -9,6 +9,11 @@ export default function robots(): MetadataRoute.Robots {
       allow: ["/", "/api/public/opportunities", "/api/public/artists"],
       disallow: ["/admin", "/dashboard", "/inbox", "/api"],
     },
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: [
+      `${BASE_URL}/sitemap.xml`,
+      `${BASE_URL}/sitemap-artists.xml`,
+      `${BASE_URL}/sitemap-opportunities.xml`,
+      `${BASE_URL}/sitemap-blog.xml`,
+    ],
   };
 }

@@ -81,7 +81,7 @@ export async function upsertPost(data: {
     new_project_title: string | null;
     override_date: string | null; // NZ local "YYYY-MM-DDTHH:mm"
   } | null;
-}): Promise<{ error?: string; id?: string; slug?: string }> {
+}): Promise<{ error?: string; id?: string; slug?: string; linked_update_id?: string | null }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
@@ -218,7 +218,7 @@ export async function upsertPost(data: {
     });
   }
 
-  return { id: row.id, slug: row.slug };
+  return { id: row.id, slug: row.slug, linked_update_id: linkedUpdateId };
 }
 
 export async function deletePost(id: string): Promise<{ error?: string }> {

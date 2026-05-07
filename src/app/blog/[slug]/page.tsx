@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const metaNow = new Date().toISOString();
   const { data: post } = await supabase
     .from("blog_posts")
-    .select("title, image_url, body, published_at, created_at")
+    .select("title, image_url, body, published_at, updated_at, created_at")
     .eq("slug", slug)
     .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${metaNow})`)
     .single();
@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = rawText.length > 155 ? rawText.slice(0, 152) + "…" : rawText || undefined;
 
   const publishedTime = post.published_at ?? post.created_at ?? undefined;
+  const modifiedTime = post.updated_at ?? publishedTime;
 
   return {
     title,
@@ -43,6 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: canonicalUrl,
       type: "article",
       ...(publishedTime && { publishedTime }),
+      ...(modifiedTime && { modifiedTime }),
       ...(post.image_url && {
         images: [{ url: post.image_url, width: 1200, height: 630, alt: post.title }],
       }),
@@ -91,8 +93,48 @@ export default async function BlogPostPage({ params }: Props) {
 
   const sidebar = otherPosts ?? [];
 
+  const canonicalUrl = `${BASE_URL}/blog/${slug}`;
+  const rawText = (post.body ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const description = rawText.length > 155 ? rawText.slice(0, 152) + "…" : rawText || undefined;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": `${canonicalUrl}#article`,
+        headline: post.title,
+        url: canonicalUrl,
+        ...(description && { description }),
+        datePublished: post.published_at ?? post.created_at,
+        dateModified: (post as any).updated_at ?? post.published_at ?? post.created_at,
+        ...(post.image_url && {
+          image: { "@type": "ImageObject", url: post.image_url, width: 1200, height: 630 },
+        }),
+        author: { "@type": "Organization", name: "Patronage", url: BASE_URL },
+        publisher: { "@type": "Organization", name: "Patronage", url: BASE_URL },
+        mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
+        ...(post.featured_profile && {
+          about: {
+            "@type": "Person",
+            name: post.featured_profile.full_name ?? post.featured_profile.username,
+            url: `${BASE_URL}/${post.featured_profile.username}`,
+          },
+        }),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Blog", item: `${BASE_URL}/blog` },
+          { "@type": "ListItem", position: 2, name: post.title, item: canonicalUrl },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Back link */}
       <Link
         href="/blog"

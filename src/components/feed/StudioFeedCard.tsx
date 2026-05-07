@@ -57,9 +57,6 @@ export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArti
           )}
           <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
         </div>
-        {u.caption && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 break-words whitespace-normal">{u.caption}</p>
-        )}
       </div>
     </Link>
   );

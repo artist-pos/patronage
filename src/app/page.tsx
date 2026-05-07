@@ -100,7 +100,7 @@ export default async function Home() {
   const [artists, opportunities, updates] = await Promise.all([
     getProfiles({}, 4),
     getClosingSoonOpportunities(4),
-    getLatestUpdates(12),
+    getLatestUpdates(8),
   ]);
 
   return (
@@ -237,7 +237,7 @@ export default async function Home() {
             </div>
 
             <div
-              className="flex flex-row flex-nowrap gap-2 overflow-x-auto sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [scroll-snap-type:x_mandatory] [-webkit-overflow-scrolling:touch]"
+              className="flex flex-row flex-nowrap gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [scroll-snap-type:x_mandatory] [-webkit-overflow-scrolling:touch]"
             >
               {updates.map((u) => (
                 <StudioFeedCard

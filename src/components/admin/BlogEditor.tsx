@@ -197,6 +197,9 @@ export function BlogEditor({ post, userId }: Props) {
         return;
       }
 
+      if (result.linked_update_id !== undefined) {
+        setLocalLinkedUpdateId(result.linked_update_id);
+      }
       setStatus(targetStatus);
       showToast(
         targetStatus === "published"

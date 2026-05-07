@@ -1,15 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist, ProfileAchievement } from "@/types/database";
-
-interface BlogPost {
-  slug: string;
-  title: string;
-  image_url: string | null;
-  published_at: string | null;
-}
 
 interface Props {
   exhibitions: ExhibitionEntry[];
@@ -25,7 +17,6 @@ interface Props {
   isOwner?: boolean;
   galleryRowHeight?: number;
   galleryGutter?: number;
-  featuredBlogPost?: BlogPost | null;
 }
 
 export function OverviewTab({
@@ -42,7 +33,6 @@ export function OverviewTab({
   isOwner,
   galleryRowHeight,
   galleryGutter,
-  featuredBlogPost,
 }: Props) {
   const selectedExhibitions = [...exhibitions]
     .sort((a, b) => b.year - a.year)
@@ -63,35 +53,6 @@ export function OverviewTab({
 
   return (
     <div className="space-y-12 py-8">
-      {/* Patronage feature backlink */}
-      {featuredBlogPost && (
-        <Link
-          href={`/blog/${featuredBlogPost.slug}`}
-          className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow max-w-xl"
-        >
-          {featuredBlogPost.image_url && (
-            <div className="relative w-14 h-14 shrink-0 overflow-hidden bg-stone-100">
-              <Image
-                src={featuredBlogPost.image_url}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="56px"
-              />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-              Featured on Patronage
-            </p>
-            <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-              {featuredBlogPost.title}
-            </p>
-          </div>
-          <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-        </Link>
-      )}
-
       {/* Highlights: exhibitions · press · grants */}
       {hasHighlights && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

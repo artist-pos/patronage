@@ -17,13 +17,14 @@ export function WorksControls({ mediumOptions, currentSort, currentMedium, curre
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
-    next.set("tab", "works");
+    next.delete("tab");
     if (value) {
       next.set(key, value);
     } else {
       next.delete(key);
     }
-    router.push(`/feed?${next.toString()}`, { scroll: false });
+    const qs = next.toString();
+    router.push(qs ? `/works?${qs}` : "/works", { scroll: false });
   }
 
   const selectCls =

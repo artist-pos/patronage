@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
       ? [{ protocol: "https", hostname: supabaseHostname }]
       : [],
   },
+  async rewrites() {
+    return [
+      { source: "/works", destination: "/feed?tab=works" },
+    ];
+  },
   async headers() {
     return [
       // Negative-lookahead matcher so /embed routes don't inherit

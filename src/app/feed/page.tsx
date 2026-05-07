@@ -174,7 +174,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
           <span className="text-2xl font-semibold tracking-tight">Feed</span>
           <span className="text-[10px] text-stone-400">studio updates</span>
         </Link>
-        <Link href="/feed?tab=works" className={tabCls("works")}>
+        <Link href="/works" className={tabCls("works")}>
           <span className="text-2xl font-semibold tracking-tight">Works</span>
           <span className="text-[10px] text-stone-400">for sale</span>
         </Link>
