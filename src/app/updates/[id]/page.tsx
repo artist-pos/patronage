@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Instagram } from "lucide-react";
+import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import type { Metadata } from "next";
 import { getUpdateById } from "@/lib/feed";
 import type { ProjectUpdateWithArtist } from "@/types/database";
@@ -179,26 +179,7 @@ export default async function UpdatePage({ params }: Props) {
         )}
 
         {update.embed_provider === "Patronage" && update.embed_url && (
-          <div className="flex items-center gap-4 pt-1">
-            <a
-              href={update.embed_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Read on Patronage →
-            </a>
-            <a
-              href="https://www.instagram.com/patronage.nz/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Instagram className="w-3 h-3" />
-              Instagram
-            </a>
-          </div>
+          <PatronageArticleCard articleUrl={update.embed_url} />
         )}
       </div>
     </div>
