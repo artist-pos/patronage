@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useTransition } from "react";
+import { useState, useEffect, useRef, useMemo, useTransition, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { X, Bookmark, BookmarkCheck } from "lucide-react";
 import { saveWorksLayout } from "@/app/feed/works-layout-actions";
 import { formatPrice } from "@/lib/format-price";
 
@@ -16,11 +18,60 @@ export interface ArtworkForGrid {
   price_currency: "NZD" | "AUD";
   medium: string | null;
   hide_price: boolean;
+  hide_available?: boolean;
+  listing_mode?: "direct_sale" | "enquire_first" | null;
   profile: {
+    id?: string;
     username: string;
     full_name: string | null;
     avatar_url: string | null;
   } | null;
+}
+
+export type WorksGridLayout = "justified" | "list";
+
+const SAVED_WORKS_KEY = "patronage_saved_works";
+
+function useSavedWorks() {
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SAVED_WORKS_KEY);
+      const ids: string[] = raw ? JSON.parse(raw) : [];
+      setSavedIds(new Set(ids));
+    } catch {
+      // ignore
+    }
+    setLoaded(true);
+  }, []);
+
+  const toggle = useCallback((id: string) => {
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      try {
+        localStorage.setItem(SAVED_WORKS_KEY, JSON.stringify([...next]));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  return { savedIds, toggle, loaded };
+}
+
+export interface OwnerActions {
+  onUnlist: (id: string) => void;
+  onToggleHide: (id: string, hidden: boolean) => void;
+  onMarkCollected: (id: string) => void;
+  hiddenIds: Set<string>;
 }
 
 interface Props {
@@ -29,6 +80,9 @@ interface Props {
   initialRowH?: number;
   initialHGap?: number;
   initialVGap?: number;
+  layout?: WorksGridLayout;
+  initialOpenArtworkId?: string;
+  ownerActions?: OwnerActions;
 }
 
 const DEFAULT_ROW_H = 300;
@@ -87,8 +141,389 @@ function buildRows(
   return rows;
 }
 
+function ArtistAvatar({
+  avatarUrl,
+  displayName,
+  size = 20,
+}: {
+  avatarUrl: string | null;
+  displayName: string;
+  size?: number;
+}) {
+  if (avatarUrl) {
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          overflow: "hidden",
+          flexShrink: 0,
+        }}
+      >
+        <Image
+          src={avatarUrl}
+          alt={displayName}
+          fill
+          className="object-cover"
+          sizes={`${size}px`}
+        />
+      </div>
+    );
+  }
+  if (displayName) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: "#e7e5e4",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: size * 0.5,
+          color: "#78716c",
+          flexShrink: 0,
+          fontWeight: 500,
+        }}
+      >
+        {displayName.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+  return null;
+}
 
-export function WorksJustifiedGrid({ artworks, isAdmin, initialRowH, initialHGap, initialVGap }: Props) {
+function WorksLightbox({
+  artworks,
+  index,
+  onClose,
+  onPrev,
+  onNext,
+  savedIds,
+  onToggleSave,
+  ownerActions,
+}: {
+  artworks: ArtworkForGrid[];
+  index: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  savedIds: Set<string>;
+  onToggleSave: (id: string) => void;
+  ownerActions?: OwnerActions;
+}) {
+  const artwork = artworks[index];
+  const [collectModal, setCollectModal] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && index > 0) onPrev();
+      if (e.key === "ArrowRight" && index < artworks.length - 1) onNext();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, artworks.length, onClose, onPrev, onNext]);
+
+  if (!artwork) return null;
+
+  const title = artwork.title ?? artwork.caption ?? "Untitled";
+  const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
+  const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
+  const workHref = artwork.profile
+    ? `/${artwork.profile.username}?tab=work&artwork=${artwork.id}`
+    : "#";
+  const formattedPrice = !artwork.hide_price
+    ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
+    : null;
+  const isSaved = savedIds.has(artwork.id);
+  const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
+
+  return (
+    <>
+      {/* Place in collection modal rendered via dynamic import to keep bundle small */}
+      {collectModal && (
+        <PlaceInCollectionModalWrapper
+          artworkId={artwork.id}
+          artworkTitle={artwork.title ?? artwork.caption}
+          onClose={() => setCollectModal(false)}
+          onSuccess={() => {
+            setCollectModal(false);
+            ownerActions?.onMarkCollected(artwork.id);
+          }}
+        />
+      )}
+
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
+        onClick={onClose}
+      >
+        {/* Close — absolute top-right of viewport */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm z-10"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4 text-stone-600" />
+        </button>
+
+        {/* Modal card — no rounded corners, image + info panel side by side */}
+        <div
+          className="flex overflow-hidden shadow-2xl"
+          style={{ maxHeight: "90vh" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Image — natural aspect ratio, no letterboxing background */}
+          <div className="relative flex-shrink-0 self-stretch flex items-center">
+            {/* Bookmark overlay — top-right on the image */}
+            <button
+              type="button"
+              onClick={() => onToggleSave(artwork.id)}
+              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-white/80 hover:bg-white rounded-full transition-colors shadow-sm"
+              aria-label={isSaved ? "Remove bookmark" : "Bookmark"}
+            >
+              {isSaved ? (
+                <BookmarkCheck className="w-4 h-4 text-black" />
+              ) : (
+                <Bookmark className="w-4 h-4 text-stone-500" />
+              )}
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={artwork.url}
+              alt={title}
+              style={{ height: "90vh", width: "auto", maxWidth: "70vw", display: "block" }}
+            />
+          </div>
+
+          {/* Info panel */}
+          <div
+            className="bg-white flex flex-col"
+            style={{ width: 280, overflowY: "auto" }}
+          >
+            <div className="flex-1 p-6 space-y-5">
+              {/* Title */}
+              <div>
+                <h2 className="text-sm font-semibold leading-snug text-foreground">{title}</h2>
+                {isHidden && (
+                  <span className="inline-block mt-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-stone-100 px-2 py-0.5 rounded">
+                    Hidden
+                  </span>
+                )}
+              </div>
+
+              {/* Artist */}
+              {artwork.profile && (
+                <Link
+                  href={profileHref}
+                  className="flex items-center gap-2 group"
+                >
+                  <ArtistAvatar
+                    avatarUrl={artwork.profile.avatar_url}
+                    displayName={displayName}
+                    size={24}
+                  />
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                    {displayName}
+                  </span>
+                </Link>
+              )}
+
+              {/* Medium */}
+              {artwork.medium && (
+                <p className="text-xs text-muted-foreground">{artwork.medium}</p>
+              )}
+
+              {/* Price */}
+              {formattedPrice && (
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-sm font-medium text-foreground">{formattedPrice}</span>
+                </div>
+              )}
+
+              {/* Enquire / Buy / Make an offer — shown to non-owners when artist ID is known */}
+              {!ownerActions && artwork.profile?.id && (
+                <WorkDetailActionsWrapper
+                  artistId={artwork.profile.id}
+                  artistName={displayName}
+                  artworkId={artwork.id}
+                  workTitle={artwork.title ?? artwork.caption}
+                  workDescription={artwork.caption}
+                  priceCents={artwork.price_cents}
+                  isPoa={artwork.is_poa}
+                  priceCurrency={artwork.price_currency}
+                  hidePrice={artwork.hide_price}
+                  listingMode={artwork.listing_mode ?? "enquire_first"}
+                  workImageUrl={artwork.url}
+                />
+              )}
+
+              {/* Owner actions */}
+              {ownerActions && (
+                <div className="border-t border-border pt-4 space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    Manage
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => ownerActions.onUnlist(artwork.id)}
+                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                    >
+                      Unlist
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ownerActions.onToggleHide(artwork.id, !isHidden)}
+                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                    >
+                      {isHidden ? "Show" : "Hide"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectModal(true)}
+                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                    >
+                      Collected
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 border-t border-border pt-4">
+              <Link
+                href={workHref}
+                className="block text-sm font-medium text-foreground hover:underline"
+              >
+                View {displayName}&apos;s profile →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Lazy wrapper for WorkDetailActions to keep it out of the initial bundle
+function WorkDetailActionsWrapper({
+  artistId,
+  artistName,
+  artworkId,
+  workTitle,
+  workDescription,
+  priceCents,
+  isPoa,
+  priceCurrency,
+  hidePrice,
+  listingMode,
+  workImageUrl,
+}: {
+  artistId: string;
+  artistName: string;
+  artworkId: string;
+  workTitle: string | null;
+  workDescription: string | null;
+  priceCents: number | null;
+  isPoa: boolean;
+  priceCurrency: "NZD" | "AUD";
+  hidePrice: boolean;
+  listingMode: "direct_sale" | "enquire_first";
+  workImageUrl?: string | null;
+}) {
+  const [Actions, setActions] = useState<React.ComponentType<{
+    artistId: string; artistName: string; artworkId: string;
+    workTitle: string | null; workDescription: string | null;
+    priceCents: number | null; isPoa: boolean; priceCurrency: "NZD" | "AUD";
+    hidePrice: boolean; listingMode: "direct_sale" | "enquire_first";
+    workImageUrl?: string | null;
+  }> | null>(null);
+
+  useEffect(() => {
+    import("@/components/profile/WorkDetailActions").then((m) => {
+      setActions(() => m.WorkDetailActions);
+    });
+  }, []);
+
+  if (!Actions) return null;
+  return (
+    <Actions
+      artistId={artistId}
+      artistName={artistName}
+      artworkId={artworkId}
+      workTitle={workTitle}
+      workDescription={workDescription}
+      priceCents={priceCents}
+      isPoa={isPoa}
+      priceCurrency={priceCurrency}
+      hidePrice={hidePrice}
+      listingMode={listingMode}
+      workImageUrl={workImageUrl}
+    />
+  );
+}
+
+// Lazy wrapper for PlaceInCollectionModal to avoid loading it upfront
+function PlaceInCollectionModalWrapper({
+  artworkId,
+  artworkTitle,
+  onClose,
+  onSuccess,
+}: {
+  artworkId: string;
+  artworkTitle: string | null | undefined;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [Modal, setModal] = useState<React.ComponentType<{
+    artworkId: string;
+    artworkTitle: string | null;
+    onClose: () => void;
+    onSuccess: () => void;
+  }> | null>(null);
+
+  useEffect(() => {
+    import("@/components/profile/PlaceInCollectionModal").then((m) => {
+      setModal(() => m.PlaceInCollectionModal);
+    });
+  }, []);
+
+  if (!Modal) return null;
+  return (
+    <Modal
+      artworkId={artworkId}
+      artworkTitle={artworkTitle ?? null}
+      onClose={onClose}
+      onSuccess={onSuccess}
+    />
+  );
+}
+
+export function WorksJustifiedGrid({
+  artworks,
+  isAdmin,
+  initialRowH,
+  initialHGap,
+  initialVGap,
+  layout = "justified",
+  initialOpenArtworkId,
+  ownerActions,
+}: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [rowH, setRowH] = useState(initialRowH ?? DEFAULT_ROW_H);
   const [hGap, setHGap] = useState(initialHGap ?? DEFAULT_H_GAP);
   const [vGap, setVGap] = useState(initialVGap ?? DEFAULT_V_GAP);
@@ -97,7 +532,78 @@ export function WorksJustifiedGrid({ artworks, isAdmin, initialRowH, initialHGap
   const [containerW, setContainerW] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [, startTransition] = useTransition();
+  const { savedIds, toggle: toggleSave, loaded: savedLoaded } = useSavedWorks();
+
+  const displayedArtworks = useMemo(
+    () => (showSavedOnly && savedLoaded ? artworks.filter((a) => savedIds.has(a.id)) : artworks),
+    [artworks, showSavedOnly, savedLoaded, savedIds],
+  );
+
+  // Auto-exit saved filter when the last saved work is unsaved
+  useEffect(() => {
+    if (showSavedOnly && savedLoaded && !artworks.some((a) => savedIds.has(a.id))) {
+      setShowSavedOnly(false);
+    }
+  }, [savedIds, showSavedOnly, savedLoaded, artworks]);
+
+  // Resolve initial lightbox from prop or URL param
+  useEffect(() => {
+    const artworkId = initialOpenArtworkId ?? searchParams.get("artwork");
+    if (artworkId) {
+      const idx = artworks.findIndex((a) => a.id === artworkId);
+      if (idx >= 0) setLightboxIndex(idx);
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync URL when lightbox opens/closes
+  const openLightbox = useCallback((idx: number) => {
+    setLightboxIndex(idx);
+    const artwork = displayedArtworks[idx];
+    if (!artwork) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("artwork", artwork.id);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [displayedArtworks, router, searchParams]);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("artwork");
+    const newSearch = params.toString();
+    router.replace(newSearch ? `?${newSearch}` : window.location.pathname, { scroll: false });
+  }, [router, searchParams]);
+
+  const goNext = useCallback(() => {
+    setLightboxIndex((i) => {
+      const next = Math.min(displayedArtworks.length - 1, (i ?? 0) + 1);
+      const artwork = displayedArtworks[next];
+      if (artwork) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("artwork", artwork.id);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+      return next;
+    });
+  }, [displayedArtworks, router, searchParams]);
+
+  const goPrev = useCallback(() => {
+    setLightboxIndex((i) => {
+      const prev = Math.max(0, (i ?? 1) - 1);
+      const artwork = displayedArtworks[prev];
+      if (artwork) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("artwork", artwork.id);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+      return prev;
+    });
+  }, [displayedArtworks, router, searchParams]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -114,8 +620,11 @@ export function WorksJustifiedGrid({ artworks, isAdmin, initialRowH, initialHGap
   }
 
   const rows = useMemo(
-    () => (containerW !== null ? buildRows(artworks, dims, containerW, rowH, hGap) : []),
-    [artworks, dims, containerW, rowH, hGap],
+    () =>
+      containerW !== null && layout === "justified"
+        ? buildRows(displayedArtworks, dims, containerW, rowH, hGap)
+        : [],
+    [displayedArtworks, dims, containerW, rowH, hGap, layout],
   );
 
   function handleSave() {
@@ -143,7 +652,25 @@ export function WorksJustifiedGrid({ artworks, isAdmin, initialRowH, initialHGap
 
   return (
     <div className="space-y-4">
-      {isAdmin && (
+      {/* Saved filter toggle — only shown after localStorage loads and there are saved works in this view */}
+      {savedLoaded && artworks.some((a) => savedIds.has(a.id)) && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSavedOnly((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              showSavedOnly
+                ? "bg-black text-white border-black"
+                : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
+            }`}
+          >
+            <BookmarkCheck className="w-3 h-3" />
+            Saved ({artworks.filter((a) => savedIds.has(a.id)).length})
+          </button>
+        </div>
+      )}
+      {/* Admin layout controls — justified only */}
+      {isAdmin && layout === "justified" && (
         <div className="flex flex-wrap items-center gap-6 pb-3 border-b border-border">
           <div className="flex items-center gap-3">
             <label className="text-xs text-muted-foreground whitespace-nowrap">
@@ -191,81 +718,304 @@ export function WorksJustifiedGrid({ artworks, isAdmin, initialRowH, initialHGap
         </div>
       )}
 
-      <div ref={containerRef}>
-        {rows.map((row, ri) => (
-          <div
-            key={ri}
-            style={{
-              display: "flex",
-              gap: hGap,
-              marginBottom: ri < rows.length - 1 ? vGap : 0,
-              justifyContent: "flex-start",
-              alignItems: "flex-start",
-            }}
-          >
-            {row.tiles.map(({ artwork, w, h }) => {
-              const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
-              const title = artwork.title ?? artwork.caption ?? "Untitled";
-              const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
-              const workHref = artwork.profile ? `/${artwork.profile.username}?tab=work#artwork-${artwork.id}` : "#";
-
-              return (
-                <div key={artwork.id} style={{ width: w, flexShrink: 0, minWidth: 0 }}>
-                  <Link href={workHref} style={{ display: "block", width: w, height: h, overflow: "hidden", position: "relative" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={artwork.url}
-                      alt={title}
-                      loading="lazy"
-                      onLoad={(e) => handleLoad(artwork.id, e)}
-                      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#FAFAF9" }}
-                    />
-                  </Link>
-
-                  <div style={{ paddingTop: 6, width: w, overflow: "hidden" }}>
-                    <Link
-                      href={workHref}
-                      style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#1c1c1c", lineHeight: 1.4, marginBottom: 3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", textDecoration: "none" }}
-                    >
-                      {title}
-                    </Link>
-
-                    <Link
-                      href={profileHref}
-                      style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none", marginBottom: 2 }}
-                    >
-                      {artwork.profile?.avatar_url ? (
-                        <div style={{ position: "relative", width: 16, height: 16, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-                          <Image src={artwork.profile.avatar_url} alt={displayName} fill className="object-cover" sizes="16px" />
-                        </div>
-                      ) : displayName ? (
-                        <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#e7e5e4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#78716c", flexShrink: 0, fontWeight: 500 }}>
-                          {displayName.charAt(0).toUpperCase()}
-                        </div>
-                      ) : null}
-                      <span style={{ fontSize: 11, color: "#78716c", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                        {displayName}
-                      </span>
-                    </Link>
-
-                    {artwork.medium && (
-                      <p style={{ fontSize: 11, color: "#a8a29e", margin: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                        {artwork.medium}
-                      </p>
-                    )}
-
-                    {!artwork.hide_price && (formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)) && (
-                      <p style={{ fontSize: 12, fontWeight: 500, color: "#1c1c1c", marginTop: 2 }}>
-                        {formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)}
-                      </p>
-                    )}
-                  </div>
+      {/* List layout */}
+      {layout === "list" && (
+        <div className="divide-y divide-border">
+          {displayedArtworks.map((artwork, idx) => {
+            const title = artwork.title ?? artwork.caption ?? "Untitled";
+            const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
+            const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
+            const formattedPrice = !artwork.hide_price
+              ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
+              : null;
+            const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
+            return (
+              <div
+                key={artwork.id}
+                className="flex items-center gap-4 py-3 -mx-2 px-2 hover:bg-stone-50 transition-colors cursor-pointer group"
+                onClick={() => openLightbox(idx)}
+              >
+                <div className="w-14 h-14 flex-shrink-0 overflow-hidden bg-stone-100 relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={artwork.url}
+                    alt={title}
+                    loading="lazy"
+                    className="w-full h-full object-contain"
+                  />
+                  {isHidden && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <span className="text-[8px] text-white font-mono uppercase tracking-wider">Hidden</span>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{title}</p>
+                  <Link
+                    href={profileHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {displayName}
+                  </Link>
+                  {artwork.medium && (
+                    <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{artwork.medium}</p>
+                  )}
+                </div>
+                {formattedPrice && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-sm font-medium">{formattedPrice}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Justified grid layout */}
+      {layout === "justified" && (
+        <div ref={containerRef}>
+          {rows.map((row, ri) => (
+            <div
+              key={ri}
+              style={{
+                display: "flex",
+                gap: hGap,
+                marginBottom: ri < rows.length - 1 ? vGap : 0,
+                justifyContent: "flex-start",
+                alignItems: "flex-start",
+              }}
+            >
+              {row.tiles.map(({ artwork, w, h }) => {
+                const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
+                const title = artwork.title ?? artwork.caption ?? "Untitled";
+                const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
+                const formattedPrice = !artwork.hide_price
+                  ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
+                  : null;
+                const artworkIndex = displayedArtworks.indexOf(artwork);
+                const isSaved = savedLoaded && savedIds.has(artwork.id);
+                const isHovered = hoveredId === artwork.id;
+                const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
+
+                return (
+                  <div
+                    key={artwork.id}
+                    style={{ width: w, flexShrink: 0, minWidth: 0 }}
+                  >
+                    {/* Image tile — click opens lightbox */}
+                    <div
+                      style={{
+                        width: w,
+                        height: h,
+                        overflow: "hidden",
+                        position: "relative",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => openLightbox(artworkIndex)}
+                      onMouseEnter={() => setHoveredId(artwork.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={artwork.url}
+                        alt={title}
+                        loading="lazy"
+                        onLoad={(e) => handleLoad(artwork.id, e)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          display: "block",
+                          background: "#FAFAF9",
+                          transition: "transform 0.3s ease",
+                          transform: isHovered ? "scale(1.02)" : "scale(1)",
+                        }}
+                      />
+
+                      {/* Hover gradient overlay — visual affordance only, no text */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          opacity: isHovered ? 1 : 0,
+                          transition: "opacity 0.2s ease",
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)",
+                          pointerEvents: "none",
+                        }}
+                      />
+
+                      {/* "For sale" badge — top-left, hover only */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          left: 8,
+                          opacity: isHovered ? 1 : 0,
+                          transition: "opacity 0.2s ease",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          For sale
+                        </span>
+                      </div>
+
+                      {/* Bookmark icon — top-right, hover only */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); toggleSave(artwork.id); }}
+                        style={{
+                          position: "absolute",
+                          top: 6,
+                          right: 6,
+                          opacity: isHovered ? 1 : 0,
+                          transition: "opacity 0.2s ease",
+                          background: "rgba(255,255,255,0.85)",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: 28,
+                          height: 28,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          backdropFilter: "blur(2px)",
+                        }}
+                        aria-label={isSaved ? "Remove bookmark" : "Bookmark"}
+                      >
+                        {isSaved ? (
+                          <BookmarkCheck className="w-3.5 h-3.5 text-black" />
+                        ) : (
+                          <Bookmark className="w-3.5 h-3.5 text-stone-600" />
+                        )}
+                      </button>
+
+                      {/* Hidden badge — always visible for owner */}
+                      {isHidden && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 6,
+                            left: 6,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          <span className="text-[9px] font-mono uppercase tracking-widest text-white bg-black/60 px-2 py-0.5 rounded">
+                            Hidden
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Below tile: avatar + artist name + title + medium + price */}
+                    <div style={{ paddingTop: 6, width: w, overflow: "hidden" }}>
+                      {/* Artist row */}
+                      <Link
+                        href={profileHref}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none", marginBottom: 2 }}
+                      >
+                        <ArtistAvatar
+                          avatarUrl={artwork.profile?.avatar_url ?? null}
+                          displayName={displayName}
+                          size={14}
+                        />
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#78716c",
+                            overflow: "hidden",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {displayName}
+                        </span>
+                      </Link>
+
+                      {/* Title */}
+                      <p
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: "#1c1917",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                          lineHeight: 1.3,
+                          margin: 0,
+                        }}
+                      >
+                        {title}
+                      </p>
+
+                      {/* Medium */}
+                      {artwork.medium && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#a8a29e",
+                            overflow: "hidden",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            margin: "1px 0 0",
+                          }}
+                        >
+                          {artwork.medium}
+                        </p>
+                      )}
+
+                      {/* Price */}
+                      {formattedPrice && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: "#10b981",
+                              flexShrink: 0,
+                              display: "inline-block",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#1c1917",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {formattedPrice}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxIndex !== null && (
+        <WorksLightbox
+          artworks={displayedArtworks}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={goPrev}
+          onNext={goNext}
+          savedIds={savedIds}
+          onToggleSave={toggleSave}
+          ownerActions={ownerActions}
+        />
+      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
-export async function getLatestUpdates(limit = 12, offset = 0): Promise<ProjectUpdateWithArtist[]> {
+export async function getLatestUpdates(limit = 12, offset = 0, artistIds?: string[]): Promise<ProjectUpdateWithArtist[]> {
+  if (artistIds !== undefined && artistIds.length === 0) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("project_updates")
     .select(`
       id,
@@ -30,6 +31,12 @@ export async function getLatestUpdates(limit = 12, offset = 0): Promise<ProjectU
     `)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (artistIds && artistIds.length > 0) {
+    query = query.in("artist_id", artistIds);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
 

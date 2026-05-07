@@ -244,6 +244,7 @@ export interface Profile {
   press_bibliography: BibliographyEntry[];
   is_active: boolean;
   is_patronage_supported: boolean;
+  is_spotlight: boolean;
   acquired_works: string[];
   hide_sold_section: boolean;
   collection_public: boolean;

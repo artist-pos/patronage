@@ -26,6 +26,7 @@ interface Props {
   profileId: string;
   username: string;
   artistName: string;
+  artistAvatarUrl?: string | null;
   viewerRole: string | null;
   isOwner: boolean;
   hideSoldSection: boolean;
@@ -43,6 +44,7 @@ export function WorkTab({
   profileId,
   username,
   artistName,
+  artistAvatarUrl,
   viewerRole,
   isOwner,
   hideSoldSection,
@@ -60,6 +62,7 @@ export function WorkTab({
           profileId={profileId}
           artistName={artistName}
           artistUsername={username}
+          artistAvatarUrl={artistAvatarUrl}
           viewerRole={viewerRole}
           isOwner={isOwner}
         />
@@ -96,20 +99,15 @@ export function WorkTab({
         </section>
       )}
 
-      {/* Studio updates */}
+      {/* Studio updates — StudioCarousel renders its own section heading */}
       {(isOwner || hasUpdates) && (
-        <section className="space-y-6 border-t border-border pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Studio Updates
-          </h2>
-          <StudioCarousel
-            updates={studioUpdates}
-            artistUsername={username}
-            isOwner={isOwner}
-            projects={projects.map((p) => ({ id: p.id, title: p.title }))}
-            profileId={profileId}
-          />
-        </section>
+        <StudioCarousel
+          updates={studioUpdates}
+          artistUsername={username}
+          isOwner={isOwner}
+          projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+          profileId={profileId}
+        />
       )}
 
       {/* In Collection / Sold works */}

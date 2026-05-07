@@ -83,11 +83,14 @@ export async function getClosingSoonOpportunities(
 export async function getMarketplaceStats(): Promise<{
   count: number;
   totalFunding: number;
+  closingThisWeek: number;
+  freeToEnter: number;
 }> {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
+  const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-  const [{ count }, { data: fundingData }] = await Promise.all([
+  const [{ count }, { data: fundingData }, { count: closingCount }, { count: freeCount }] = await Promise.all([
     supabase
       .from("opportunities")
       .select("*", { count: "exact", head: true })
@@ -100,11 +103,29 @@ export async function getMarketplaceStats(): Promise<{
       .eq("is_active", true)
       .eq("status", "published")
       .or(`deadline.gte.${today},deadline.is.null`),
+    supabase
+      .from("opportunities")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("status", "published")
+      .gte("deadline", today)
+      .lte("deadline", weekFromNow),
+    supabase
+      .from("opportunities")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("status", "published")
+      .or(`deadline.gte.${today},deadline.is.null`)
+      .or("entry_fee.is.null,entry_fee.eq.0"),
   ]);
+
+  const totalFunding = (fundingData ?? []).reduce((s, o) => s + ((o.funding_amount as number | null) ?? 0), 0);
 
   return {
     count: count ?? 0,
-    totalFunding: (fundingData ?? []).reduce((s, o) => s + (o.funding_amount ?? 0), 0),
+    totalFunding,
+    closingThisWeek: closingCount ?? 0,
+    freeToEnter: freeCount ?? 0,
   };
 }
 

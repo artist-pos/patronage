@@ -1,70 +1,51 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { AvailableWorkCard, CARD_W, CARD_IMG_H } from "./AvailableWorkCard";
+import { useState, Suspense, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
+import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
 import { AddAvailableWorkModal } from "./AddAvailableWorkModal";
+import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
 import type { Artwork } from "@/types/database";
-
-// One-row height: image + text area + owner controls allowance
-const CARD_H = CARD_IMG_H + 70;
 
 interface Props {
   initialWorks: Artwork[];
   profileId: string;
   artistName: string;
   artistUsername: string;
+  artistAvatarUrl?: string | null;
   viewerRole: string | null;
   isOwner: boolean;
 }
 
-export function AvailableWorksSection({
+function AvailableWorksSectionInner({
   initialWorks,
   profileId,
   artistName,
   artistUsername,
-  viewerRole,
+  artistAvatarUrl,
+  viewerRole: _viewerRole,
   isOwner,
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(
+    () => new Set(initialWorks.filter((w) => w.hide_available).map((w) => w.id))
+  );
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
-  const [overflows, setOverflows] = useState(false);
-  const [contentH, setContentH] = useState(CARD_H);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const sectionRef = useRef<HTMLElement>(null);
 
-  // Track actual content height for smooth expand animation
+  const initialOpenArtworkId = searchParams.get("artwork") ?? undefined;
+
+  // Auto-scroll to this section when arriving via a direct artwork URL
   useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const measure = () => {
-      setContentH(el.scrollHeight);
-      setOverflows(el.scrollHeight > CARD_H + 8);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // Auto-expand and scroll when navigated from feed Works tab
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.startsWith("#artwork-")) return;
-
-    setExpanded(true);
-
-    // Wait for expand animation to complete before scrolling
+    if (!initialOpenArtworkId || !sectionRef.current) return;
     const timer = setTimeout(() => {
-      const el = document.querySelector<HTMLElement>(hash);
-      if (!el) return;
-      const header = document.querySelector("header");
-      const headerH = header ? header.getBoundingClientRect().height : 64;
-      const top = el.getBoundingClientRect().top + window.scrollY - headerH - 24;
-      window.scrollTo({ top, behavior: "smooth" });
-    }, 420);
-
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
     return () => clearTimeout(timer);
+    // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleWorkAdded(newWork: Artwork) {
@@ -72,17 +53,68 @@ export function AvailableWorksSection({
     router.refresh();
   }
 
-  function handleWorkRemoved(id: string) {
-    setWorks((prev) => prev.filter((w) => w.id !== id));
-  }
+  // Convert Artwork[] → ArtworkForGrid[]
+  const artworksForGrid: ArtworkForGrid[] = (
+    isOwner ? works : works.filter((w) => !w.hide_available)
+  ).map((w) => ({
+    id: w.id,
+    url: w.url ?? "",
+    title: w.title,
+    caption: w.caption,
+    price_cents: w.price_cents,
+    is_poa: w.is_poa ?? false,
+    price_currency: (w.price_currency as "NZD" | "AUD") ?? "NZD",
+    medium: w.medium ?? null,
+    hide_price: w.hide_price ?? false,
+    hide_available: w.hide_available ?? false,
+    listing_mode: (w.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first",
+    profile: {
+      id: profileId,
+      username: artistUsername,
+      full_name: artistName || null,
+      avatar_url: artistAvatarUrl ?? null,
+    },
+  }));
 
-  if (!isOwner && works.length === 0) return null;
+  // Owner action callbacks
+  const ownerActions = isOwner
+    ? {
+        onUnlist: async (id: string) => {
+          setWorks((prev) => prev.filter((w) => w.id !== id));
+          await unlistWork(id);
+        },
+        onToggleHide: async (id: string, hidden: boolean) => {
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            if (hidden) {
+              next.add(id);
+            } else {
+              next.delete(id);
+            }
+            return next;
+          });
+          await toggleHideAvailable(id, hidden);
+        },
+        onMarkCollected: (id: string) => {
+          setWorks((prev) => prev.filter((w) => w.id !== id));
+          router.refresh();
+        },
+        hiddenIds,
+      }
+    : undefined;
+
+  if (!isOwner && works.filter((w) => !w.hide_available).length === 0) return null;
 
   return (
-    <section className="space-y-4 border-t border-border pt-10">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-        Available Works
-      </h2>
+    <section ref={sectionRef} className="space-y-4 border-t border-border pt-10">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+          Available Works
+        </h2>
+        {isOwner && works.length > 0 && (
+          <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
+        )}
+      </div>
 
       {works.length === 0 && isOwner ? (
         <div className="flex items-center gap-4">
@@ -90,51 +122,22 @@ export function AvailableWorksSection({
           <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
         </div>
       ) : (
-        <>
-          <div
-            style={{
-              height: expanded ? contentH : CARD_H,
-              overflow: "hidden",
-              transition: "height 0.35s ease",
-            }}
-          >
-            <div ref={contentRef} className="flex flex-wrap gap-4">
-              {works.map((img) => (
-                <div key={img.id} id={`artwork-${img.id}`}>
-                  <AvailableWorkCard
-                    img={img}
-                    artistId={profileId}
-                    artistName={artistName}
-                    artistUsername={artistUsername}
-                    viewerRole={viewerRole}
-                    isOwner={isOwner}
-                    onRemove={handleWorkRemoved}
-                  />
-                </div>
-              ))}
-
-              {isOwner && (
-                <div
-                  className="flex items-center justify-center border border-dashed border-border"
-                  style={{ height: CARD_IMG_H, width: CARD_W }}
-                >
-                  <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {overflows && (
-            <button
-              type="button"
-              onClick={() => setExpanded((e) => !e)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? "Show less" : `Show all works (${works.length})`}
-            </button>
-          )}
-        </>
+        <WorksJustifiedGrid
+          artworks={artworksForGrid}
+          layout="justified"
+          initialOpenArtworkId={initialOpenArtworkId}
+          ownerActions={ownerActions}
+        />
       )}
     </section>
+  );
+}
+
+// Wrap in Suspense because WorksJustifiedGrid uses useSearchParams
+export function AvailableWorksSection(props: Props) {
+  return (
+    <Suspense>
+      <AvailableWorksSectionInner {...props} />
+    </Suspense>
   );
 }

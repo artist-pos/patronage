@@ -19,20 +19,34 @@ export const metadata: Metadata = {
 const INITIAL_COUNT = 10;
 
 interface PageProps {
-  searchParams: Promise<{ tab?: string; sort?: string; medium?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    sort?: string;
+    medium?: string;
+    wlayout?: string;
+    audience?: string;
+  }>;
 }
 
 export default async function FeedPage({ searchParams }: PageProps) {
-  const { tab = "feed", sort = "recent", medium } = await searchParams;
+  const {
+    tab = "feed",
+    sort = "recent",
+    medium,
+    wlayout = "justified",
+    audience = "everyone",
+  } = await searchParams;
+
   const activeTab = tab === "works" ? "works" : "feed";
+  const worksLayout = wlayout === "list" ? "list" : "justified";
+  const feedAudience =
+    audience === "subscribed" ? "subscribed" : audience === "following" ? "following" : "everyone";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const profile = user ? await getProfileById(user.id) : null;
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
 
-  // Fetch saved works layout. Admin reads from their own profile (the one saves go to).
-  // Non-admins read from whichever admin/owner profile holds the setting.
   const worksLayoutPromise = activeTab === "works"
     ? (isAdmin && user
         ? supabase
@@ -50,98 +64,147 @@ export default async function FeedPage({ searchParams }: PageProps) {
             .then((r) => r.data))
     : Promise.resolve(null);
 
-  const [updatesResult, userProjects, worksResult, worksLayout] = await Promise.all([
-    activeTab === "feed" ? getLatestUpdates(INITIAL_COUNT) : Promise.resolve(null),
-    profile ? getArtistProjects(profile.id) : Promise.resolve([]),
-    activeTab === "works"
-      ? (async () => {
-          let q = supabase
-            .from("artworks")
-            .select("id, url, title, caption, price_cents, is_poa, price_currency, medium, hide_price, created_at, profile:profiles!profile_id(username, full_name, avatar_url)")
-            .eq("is_available", true)
-            .eq("hide_available", false);
+  // Start the feed fetch early for "everyone" — runs in parallel with other queries below
+  const everyoneFeedPromise =
+    activeTab === "feed" && feedAudience === "everyone"
+      ? getLatestUpdates(INITIAL_COUNT, 0, undefined)
+      : null;
 
-          if (medium) q = (q as typeof q).contains("medium_category", [medium]);
+  // For subscribed/following feed, fetch the relevant artist IDs (in parallel with other queries)
+  const subscribedArtistIdsPromise =
+    activeTab === "feed" && feedAudience === "subscribed" && user
+      ? supabase
+          .from("support_subscriptions")
+          .select("recipient_id")
+          .eq("supporter_id", user.id)
+          .in("status", ["active", "one_off_paid"])
+          .then(({ data }) =>
+            (data ?? []).map((s: { recipient_id: string }) => s.recipient_id).filter(Boolean)
+          )
+      : activeTab === "feed" && feedAudience === "following" && user
+        ? supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", user.id)
+            .then(({ data }) =>
+              (data ?? []).map((f: { following_id: string }) => f.following_id).filter(Boolean)
+            )
+        : Promise.resolve(undefined as string[] | undefined);
 
-          if (sort === "price_asc") {
-            q = (q as typeof q).order("price_cents", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false });
-          } else if (sort === "price_desc") {
-            q = (q as typeof q).order("price_cents", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
-          } else {
-            q = (q as typeof q).order("created_at", { ascending: false });
-          }
-
-          const [artworksRes, mediumsRes] = await Promise.all([
-            q,
-            supabase
+  const [userProjects, worksResult, worksLayoutData, subscribedArtistIds] =
+    await Promise.all([
+      profile ? getArtistProjects(profile.id) : Promise.resolve([]),
+      activeTab === "works"
+        ? (async () => {
+            let q = supabase
               .from("artworks")
-              .select("medium_category")
+              .select(
+                "id, url, title, caption, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
+              )
               .eq("is_available", true)
-              .eq("hide_available", false)
-              .not("medium_category", "is", null),
-          ]);
+              .eq("hide_available", false);
 
-          const mediumOptions = [
-            ...new Set(
-              (mediumsRes.data ?? [])
-                .flatMap((r: { medium_category: string[] | null }) => r.medium_category ?? [])
-                .filter(Boolean)
-            ),
-          ].sort();
+            if (medium) q = (q as typeof q).contains("medium_category", [medium]);
 
-          return { artworks: (artworksRes.data ?? []) as unknown as ArtworkForGrid[], mediumOptions };
-        })()
-      : Promise.resolve(null),
-    worksLayoutPromise,
-  ]);
+            if (sort === "price_asc") {
+              q = (q as typeof q)
+                .order("price_cents", { ascending: true, nullsFirst: false })
+                .order("created_at", { ascending: false });
+            } else if (sort === "price_desc") {
+              q = (q as typeof q)
+                .order("price_cents", { ascending: false, nullsFirst: false })
+                .order("created_at", { ascending: false });
+            } else {
+              q = (q as typeof q).order("created_at", { ascending: false });
+            }
 
-  const updates = updatesResult ?? [];
-  const hasMore = activeTab === "feed" && updates.length === INITIAL_COUNT;
+            const [artworksRes, mediumsRes] = await Promise.all([
+              q,
+              supabase
+                .from("artworks")
+                .select("medium_category")
+                .eq("is_available", true)
+                .eq("hide_available", false)
+                .not("medium_category", "is", null),
+            ]);
+
+            const mediumOptions = [
+              ...new Set(
+                (mediumsRes.data ?? [])
+                  .flatMap((r: { medium_category: string[] | null }) => r.medium_category ?? [])
+                  .filter(Boolean)
+              ),
+            ].sort();
+
+            return {
+              artworks: (artworksRes.data ?? []) as unknown as ArtworkForGrid[],
+              mediumOptions,
+            };
+          })()
+        : Promise.resolve(null),
+      worksLayoutPromise,
+      subscribedArtistIdsPromise,
+    ]);
+
+  // Resolve feed updates — "everyone" was already in flight; "subscribed" needs the artist IDs first
+  const feedUpdates =
+    everyoneFeedPromise !== null
+      ? await everyoneFeedPromise
+      : activeTab === "feed"
+        ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds)
+        : [];
+
+  const hasMore = activeTab === "feed" && feedUpdates.length === INITIAL_COUNT;
   const artworks = worksResult?.artworks ?? [];
   const mediumOptions = worksResult?.mediumOptions ?? [];
 
   const tabCls = (t: string) =>
-    `px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+    `flex flex-col items-start px-4 pb-2.5 pt-2 transition-colors border-b-2 ${
       activeTab === t
-        ? "border-b-2 border-black text-foreground -mb-px"
-        : "text-muted-foreground hover:text-foreground"
+        ? "border-black text-foreground -mb-px"
+        : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
 
-      {/* Tab bar — first */}
-      <div className="flex gap-0 border-b border-black">
-        <Link href="/feed" className={tabCls("feed")}>Feed</Link>
-        <Link href="/feed?tab=works" className={tabCls("works")}>Works</Link>
-      </div>
+      {/* Page heading */}
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {activeTab === "feed" ? "Feed" : "Works"}
+      </h1>
 
-      {/* Title row */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-0.5">
-          <h1 className="text-xl font-semibold tracking-tight">
-            {activeTab === "feed" ? "Feed" : "Works"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {activeTab === "feed"
-              ? "Work in progress from the Patronage community."
-              : "Available works from Patronage artists."}
-          </p>
-        </div>
-        {activeTab === "feed" && profile && (
-          <CreateUpdateModal
-            profileId={profile.id}
-            label="New update +"
-            className="shrink-0 px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
-            projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
-          />
-        )}
+      {/* Tab bar */}
+      <div className="flex gap-0 border-b border-stone-200 -mt-4">
+        <Link href="/feed" className={tabCls("feed")}>
+          <span className="text-sm font-medium">Feed</span>
+          <span className="text-[10px] text-stone-400">studio updates</span>
+        </Link>
+        <Link href="/feed?tab=works" className={tabCls("works")}>
+          <span className="text-sm font-medium">Works</span>
+          <span className="text-[10px] text-stone-400">for sale</span>
+        </Link>
       </div>
 
       {activeTab === "feed" ? (
-        <InfiniteFeed initialUpdates={updates} initialHasMore={hasMore} />
+        <InfiniteFeed
+          initialUpdates={feedUpdates}
+          initialHasMore={hasMore}
+          audience={feedAudience}
+          isLoggedIn={!!user}
+          rightSlot={
+            profile ? (
+              <CreateUpdateModal
+                profileId={profile.id}
+                label="New update +"
+                className="shrink-0 px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
+                projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+              />
+            ) : undefined
+          }
+        />
       ) : (
         <div className="space-y-6">
+          {/* Works controls row: count on left, controls + layout switcher on right */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-xs text-muted-foreground">
               {artworks.length} work{artworks.length !== 1 ? "s" : ""} available
@@ -151,16 +214,20 @@ export default async function FeedPage({ searchParams }: PageProps) {
                 mediumOptions={mediumOptions}
                 currentSort={sort}
                 currentMedium={medium}
+                currentLayout={worksLayout}
               />
             </Suspense>
           </div>
-          <WorksJustifiedGrid
-            artworks={artworks}
-            isAdmin={isAdmin}
-            initialRowH={worksLayout?.works_row_height ?? undefined}
-            initialHGap={worksLayout?.works_h_gap ?? undefined}
-            initialVGap={worksLayout?.works_v_gap ?? undefined}
-          />
+          <Suspense>
+            <WorksJustifiedGrid
+              artworks={artworks}
+              isAdmin={isAdmin}
+              initialRowH={worksLayoutData?.works_row_height ?? undefined}
+              initialHGap={worksLayoutData?.works_h_gap ?? undefined}
+              initialVGap={worksLayoutData?.works_v_gap ?? undefined}
+              layout={worksLayout}
+            />
+          </Suspense>
         </div>
       )}
     </div>

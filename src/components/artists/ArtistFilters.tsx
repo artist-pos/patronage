@@ -22,6 +22,16 @@ const MEDIUMS = [
   "Film", "Music", "Public Art",
 ];
 
+function SpotlightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="1" y="1" width="14" height="7" />
+      <rect x="1" y="10" width="6" height="5" />
+      <rect x="9" y="10" width="6" height="5" />
+    </svg>
+  );
+}
+
 function GridIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -51,7 +61,7 @@ export function ArtistFilters() {
   const currentCountry = searchParams.get("country") as CountryEnum | null;
   const currentStage = searchParams.get("stage") as CareerStageEnum | null;
   const currentMedium = searchParams.get("medium");
-  const currentView = searchParams.get("view") ?? "gallery";
+  const currentView = searchParams.get("view") ?? "spotlight";
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -108,9 +118,18 @@ export function ArtistFilters() {
         {/* View switcher */}
         <div className="flex items-center border border-black shrink-0">
           <button
+            onClick={() => updateParam("view", "spotlight")}
+            aria-label="Spotlight view"
+            className={`p-2 transition-colors ${
+              currentView === "spotlight" ? "bg-black text-white" : "hover:bg-muted"
+            }`}
+          >
+            <SpotlightIcon />
+          </button>
+          <button
             onClick={() => updateParam("view", "gallery")}
             aria-label="Gallery view"
-            className={`p-2 transition-colors ${
+            className={`p-2 border-l border-black transition-colors ${
               currentView === "gallery" ? "bg-black text-white" : "hover:bg-muted"
             }`}
           >

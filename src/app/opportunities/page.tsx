@@ -3,6 +3,7 @@ import { getOpportunities, getMarketplaceStats } from "@/lib/opportunities";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
+import { FeaturedOpportunityHero } from "@/components/opportunities/FeaturedOpportunityHero";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { createClient } from "@/lib/supabase/server";
 import type { CountryEnum, OppTypeEnum } from "@/types/database";
@@ -44,12 +45,15 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     getMarketplaceStats(),
   ]);
 
+  const featuredOpp = !hasManualFilters ? (opportunities.find((o) => o.is_featured) ?? null) : null;
+  const gridOpps = featuredOpp ? opportunities.filter((o) => o.id !== featuredOpp.id) : opportunities;
+
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
 
       {/* Page heading */}
       <div className="flex items-end justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Art Grants & Opportunities</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Art Grants &amp; Opportunities</h1>
         <FoundOpportunityButton />
       </div>
 
@@ -63,23 +67,34 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         </p>
       )}
 
-      {/* Marketplace Stats bar */}
-      <div className="border border-black px-6 py-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
-        <span className="font-mono text-sm">
-          {hasManualFilters && opportunities.length < stats.count
-            ? <><strong>Showing {opportunities.length}</strong> of <strong>{stats.count}</strong> Active Opportunities</>
-            : <><strong>{stats.count}</strong> Active Opportunities</>
-          }
-        </span>
-        {stats.totalFunding > 0 && (
-          <>
-            <span className="hidden sm:block w-px h-4 bg-black" />
-            <span className="font-mono text-sm">
-              <strong>{formatFunding(stats.totalFunding)}</strong> Total Funding Available
-            </span>
-          </>
-        )}
+      {/* Stats bar — 4 blocks */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 border border-black divide-x divide-y sm:divide-y-0 divide-black">
+        <div className="px-5 py-4">
+          <p className="text-2xl font-semibold tabular-nums">
+            {hasManualFilters && opportunities.length < stats.count ? opportunities.length : stats.count}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {hasManualFilters && opportunities.length < stats.count ? "filtered results" : "active opportunities"}
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-2xl font-semibold tabular-nums text-orange-600">{stats.closingThisWeek}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">close this week</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-2xl font-semibold tabular-nums">{stats.freeToEnter}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">free to enter</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-2xl font-semibold tabular-nums">
+            {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "—"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">approx. funding tracked</p>
+        </div>
       </div>
+
+      {/* Featured opportunity hero */}
+      {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} />}
 
       {/* Filters */}
       <Suspense>
@@ -87,12 +102,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       </Suspense>
 
       {/* Feed */}
-      {opportunities.length === 0 ? (
+      {gridOpps.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
           No opportunities match those filters. New listings are added regularly.
         </p>
       ) : (
-        <MasonryGrid opportunities={opportunities} view={view} isAuthenticated={!!user} />
+        <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
       )}
     </div>
   );

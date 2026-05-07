@@ -48,6 +48,7 @@ export async function upsertPost(data: {
   status: "draft" | "published" | "scheduled";
   existingPublishedAt?: string | null;
   featured_profile_id: string | null;
+  spotlight_until: string | null; // "YYYY-MM-DD" date, or null
   scheduled_at: string | null; // NZ local "YYYY-MM-DDTHH:mm", or null
 }): Promise<{ error?: string; id?: string; slug?: string }> {
   const supabase = await createClient();
@@ -79,6 +80,7 @@ export async function upsertPost(data: {
     published_at,
     scheduled_at: effectiveStatus === "published" ? null : scheduled_at,
     featured_profile_id: data.featured_profile_id,
+    spotlight_until: data.featured_profile_id ? (data.spotlight_until ?? null) : null,
     updated_at: now,
   };
 

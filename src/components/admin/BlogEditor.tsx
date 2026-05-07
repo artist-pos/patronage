@@ -28,6 +28,7 @@ interface Post {
   published_at: string | null;
   featured_profile_id: string | null;
   featured_profile: FeaturedProfile | null;
+  spotlight_until: string | null; // "YYYY-MM-DD"
   scheduled_at: string | null; // UTC ISO
 }
 
@@ -61,6 +62,9 @@ export function BlogEditor({ post, userId }: Props) {
   );
   const [featuredProfile, setFeaturedProfile] = useState<FeaturedProfile | null>(
     post?.featured_profile ?? null
+  );
+  const [spotlightUntil, setSpotlightUntil] = useState<string>(
+    post?.spotlight_until ?? ""
   );
   const [artistQuery, setArtistQuery] = useState("");
   const [artistResults, setArtistResults] = useState<FeaturedProfile[]>([]);
@@ -161,6 +165,7 @@ export function BlogEditor({ post, userId }: Props) {
         status: targetStatus,
         existingPublishedAt: post?.published_at,
         featured_profile_id: featuredProfile?.id ?? null,
+        spotlight_until: featuredProfile && spotlightUntil ? spotlightUntil : null,
         scheduled_at: targetStatus === "scheduled" ? scheduledAt : null,
       });
 
@@ -423,6 +428,33 @@ export function BlogEditor({ post, userId }: Props) {
           </div>
         )}
       </div>
+
+      {/* Spotlight until — only shown when a featured artist is attached */}
+      {featuredProfile && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
+            Spotlight until{" "}
+            <span className="normal-case tracking-normal font-normal text-muted-foreground">
+              — show this artist in the spotlight section until this date
+            </span>
+          </label>
+          <input
+            type="date"
+            value={spotlightUntil}
+            onChange={(e) => setSpotlightUntil(e.target.value)}
+            className="text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
+          />
+          {spotlightUntil && (
+            <button
+              type="button"
+              onClick={() => setSpotlightUntil("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Rich Text Editor */}
       <div className="space-y-2">

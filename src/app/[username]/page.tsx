@@ -589,6 +589,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}
+                  artistAvatarUrl={profile.avatar_url}
                   viewerRole={viewerRole}
                   isOwner={isOwner}
                   hideSoldSection={profile.hide_sold_section}
