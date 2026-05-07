@@ -79,6 +79,7 @@ export async function upsertPost(data: {
     caption: string;
     project_id: string | null;
     new_project_title: string | null;
+    override_date: string | null; // NZ local "YYYY-MM-DDTHH:mm"
   } | null;
 }): Promise<{ error?: string; id?: string; slug?: string }> {
   const supabase = await createClient();
@@ -161,6 +162,9 @@ export async function upsertPost(data: {
     }
 
     const blogUrl = `${BASE_URL}/blog/${row.slug}`;
+    const overrideCreatedAt = data.studioUpdate.override_date
+      ? nzLocalToUtc(data.studioUpdate.override_date)
+      : null;
     const { data: update, error: updateErr } = await admin
       .from("project_updates")
       .insert({
@@ -172,6 +176,7 @@ export async function upsertPost(data: {
         caption: data.studioUpdate.caption || null,
         embed_url: blogUrl,
         embed_provider: "Patronage",
+        ...(overrideCreatedAt ? { created_at: overrideCreatedAt } : {}),
       })
       .select("id")
       .single();

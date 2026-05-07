@@ -71,6 +71,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [studioCaption, setStudioCaption] = useState("");
   const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
   const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [studioDate, setStudioDate] = useState<string>("");
   const [myProjects, setMyProjects] = useState<{ id: string; title: string }[]>([]);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistResults, setArtistResults] = useState<FeaturedProfile[]>([]);
@@ -185,6 +186,7 @@ export function BlogEditor({ post, userId }: Props) {
                 caption: studioCaption,
                 project_id: studioProjectId === "__new__" ? null : studioProjectId,
                 new_project_title: studioProjectId === "__new__" ? newProjectTitle : null,
+                override_date: studioDate || null,
               }
             : null,
       });
@@ -495,7 +497,13 @@ export function BlogEditor({ post, userId }: Props) {
             ) : (
               <button
                 type="button"
-                onClick={() => setCreateStudioUpdate((v) => !v)}
+                onClick={() => {
+                  const next = !createStudioUpdate;
+                  setCreateStudioUpdate(next);
+                  if (next && !studioDate && post?.published_at) {
+                    setStudioDate(utcToNzLocal(post.published_at));
+                  }
+                }}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
                   createStudioUpdate ? "bg-black" : "bg-stone-200"
                 }`}
@@ -521,6 +529,19 @@ export function BlogEditor({ post, userId }: Props) {
                   placeholder="Short caption for the studio update…"
                   rows={3}
                   className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300 resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">
+                  Post date{" "}
+                  <span className="text-stone-400">(NZ time — leave blank for now)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={studioDate}
+                  onChange={(e) => setStudioDate(e.target.value)}
+                  className="text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
                 />
               </div>
 
