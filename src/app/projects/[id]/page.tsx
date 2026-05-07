@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { ExternalLink, Instagram } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
@@ -247,6 +248,56 @@ export default async function ProjectPage({ params }: Props) {
             <p className="text-xs text-muted-foreground">{date}</p>
           </div>
         </div>
+
+        {update.collaborators && update.collaborators.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Featuring</span>
+            {update.collaborators.map(c => {
+              const cName = c.full_name ?? c.username;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/${c.username}`}
+                  className="flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-2"
+                >
+                  {c.avatar_url ? (
+                    <div className="relative w-5 h-5 shrink-0 border border-black overflow-hidden">
+                      <Image src={c.avatar_url} alt={cName} fill className="object-cover" sizes="20px" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
+                      {cName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  {cName}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {update.embed_provider === "Patronage" && update.embed_url && (
+          <div className="flex items-center gap-4 pt-1">
+            <a
+              href={update.embed_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Read on Patronage →
+            </a>
+            <a
+              href="https://www.instagram.com/patronage.nz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Instagram className="w-3 h-3" />
+              Instagram
+            </a>
+          </div>
+        )}
       </div>
 
       {(notes.length > 0 || canNote) && (

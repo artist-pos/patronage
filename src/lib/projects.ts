@@ -68,6 +68,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
       orientation,
       image_width,
       image_height,
+      collaborator_ids,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -144,6 +145,8 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
     artist_username: u.profiles?.username ?? "",
     artist_full_name: u.profiles?.full_name ?? null,
     artist_avatar_url: u.profiles?.avatar_url ?? null,
+    collaborator_ids: u.collaborator_ids ?? [],
+    collaborators: [],
     notes: notesByUpdate[u.id] ?? [],
   }));
 
