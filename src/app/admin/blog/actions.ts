@@ -88,32 +88,7 @@ export async function upsertPost(data: {
       ? "published"
       : data.status;
 
-  // Create studio update on first publish if requested
-  let linkedUpdateId = data.existingLinkedUpdateId ?? null;
-  if (
-    effectiveStatus === "published" &&
-    data.studioUpdate &&
-    data.featured_profile_id &&
-    data.image_url &&
-    !linkedUpdateId
-  ) {
-    const { data: update, error: updateErr } = await admin
-      .from("project_updates")
-      .insert({
-        artist_id: data.featured_profile_id,
-        project_id: data.studioUpdate.project_id ?? null,
-        content_type: "image",
-        image_url: data.image_url,
-        caption: data.studioUpdate.caption || null,
-      })
-      .select("id")
-      .single();
-    if (updateErr) return { error: `Studio update failed: ${updateErr.message}` };
-    linkedUpdateId = update.id;
-    revalidatePath("/feed");
-  }
-
-  const payload = {
+  const basePayload = {
     title: data.title,
     body: data.body,
     image_url: data.image_url,
@@ -123,58 +98,85 @@ export async function upsertPost(data: {
     scheduled_at: effectiveStatus === "published" ? null : scheduled_at,
     featured_profile_id: data.featured_profile_id,
     spotlight_until: data.featured_profile_id ? (data.spotlight_until ?? null) : null,
-    linked_update_id: linkedUpdateId,
     updated_at: now,
   };
 
+  // Upsert the blog post first so we have the final slug before creating the studio update
+  let row: { id: string; slug: string };
   if (data.id) {
     const newSlug = data.existingSlug && generateSlug(data.title) === data.existingSlug
       ? data.existingSlug
       : generateSlug(data.title) || data.existingSlug || `post-${Date.now()}`;
-
-    const { data: row, error } = await supabase
+    const { data: updated, error } = await supabase
       .from("blog_posts")
-      .update({ ...payload, slug: newSlug })
+      .update({ ...basePayload, slug: newSlug })
       .eq("id", data.id)
       .select("id, slug")
       .single();
-
     if (error) return { error: error.message };
-    revalidatePath("/blog");
-    revalidatePath(`/blog/${data.existingSlug}`);
-    revalidatePath(`/blog/${row.slug}`);
-    revalidatePath("/admin/blog");
-    if (effectiveStatus === "published" && data.featured_profile_id) {
-      await sendTagNotificationDM(user.id, data.featured_profile_id, {
-        type: "blog_post",
-        title: data.title,
-        url: `${BASE_URL}/blog/${row.slug}`,
-        image_url: data.image_url,
-      });
-    }
-    return { id: row.id, slug: row.slug };
+    row = updated;
+  } else {
+    const slug = generateSlug(data.title) || `post-${Date.now()}`;
+    const { data: inserted, error } = await supabase
+      .from("blog_posts")
+      .insert({ ...basePayload, slug })
+      .select("id, slug")
+      .single();
+    if (error) return { error: error.message };
+    row = inserted;
   }
 
-  const baseSlug = generateSlug(data.title);
-  const slug = baseSlug || `post-${Date.now()}`;
+  // Create studio update on first publish — posted from admin's account, artist tagged as credit
+  let linkedUpdateId = data.existingLinkedUpdateId ?? null;
+  if (
+    effectiveStatus === "published" &&
+    data.studioUpdate &&
+    data.featured_profile_id &&
+    data.image_url &&
+    !linkedUpdateId
+  ) {
+    const blogUrl = `${BASE_URL}/blog/${row.slug}`;
+    const { data: update, error: updateErr } = await admin
+      .from("project_updates")
+      .insert({
+        artist_id: user.id,
+        collaborator_ids: [data.featured_profile_id],
+        project_id: data.studioUpdate.project_id ?? null,
+        content_type: "image",
+        image_url: data.image_url,
+        caption: data.studioUpdate.caption || null,
+        embed_url: blogUrl,
+        embed_provider: "Patronage",
+      })
+      .select("id")
+      .single();
+    if (updateErr) return { error: `Studio update failed: ${updateErr.message}` };
+    linkedUpdateId = update.id;
+    revalidatePath("/feed");
+  }
 
-  const { data: row, error } = await supabase
-    .from("blog_posts")
-    .insert({ ...payload, slug })
-    .select("id, slug")
-    .single();
+  // Save linked_update_id back onto the post
+  if (linkedUpdateId !== (data.existingLinkedUpdateId ?? null)) {
+    await supabase
+      .from("blog_posts")
+      .update({ linked_update_id: linkedUpdateId })
+      .eq("id", row.id);
+  }
 
-  if (error) return { error: error.message };
   revalidatePath("/blog");
+  revalidatePath(`/blog/${data.existingSlug ?? ""}`);
+  revalidatePath(`/blog/${row.slug}`);
   revalidatePath("/admin/blog");
+
   if (effectiveStatus === "published" && data.featured_profile_id) {
     await sendTagNotificationDM(user.id, data.featured_profile_id, {
       type: "blog_post",
       title: data.title,
-      url: `${BASE_URL}/blog/${slug}`,
+      url: `${BASE_URL}/blog/${row.slug}`,
       image_url: data.image_url,
     });
   }
+
   return { id: row.id, slug: row.slug };
 }
 

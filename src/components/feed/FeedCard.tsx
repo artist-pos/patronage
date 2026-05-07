@@ -190,6 +190,20 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
             {u.caption}
           </p>
         )}
+
+        {u.embed_provider === "Patronage" && u.embed_url && (
+          <a
+            href={u.embed_url}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 pt-0.5 group/blog"
+          >
+            <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">Patronage</span>
+            <span className="text-stone-300">·</span>
+            <span className="text-[10px] text-stone-500 group-hover/blog:text-foreground transition-colors underline underline-offset-2">
+              Read article →
+            </span>
+          </a>
+        )}
       </div>
     </Link>
   );

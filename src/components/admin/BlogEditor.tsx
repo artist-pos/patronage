@@ -485,7 +485,7 @@ export function BlogEditor({ post, userId }: Props) {
                 Also post as studio update
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Posts the image + caption to {featuredProfile.full_name ?? featuredProfile.username}&apos;s feed
+                Posted from your account · {featuredProfile.full_name ?? featuredProfile.username} tagged as credit · blog link attached
               </p>
             </div>
             {post?.linked_update_id ? (
