@@ -168,19 +168,14 @@ export default async function FeedPage({ searchParams }: PageProps) {
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
 
-      {/* Page heading */}
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {activeTab === "feed" ? "Feed" : "Works"}
-      </h1>
-
       {/* Tab bar */}
-      <div className="flex gap-0 border-b border-stone-200 -mt-4">
+      <div className="flex gap-0 border-b border-stone-200">
         <Link href="/feed" className={tabCls("feed")}>
-          <span className="text-sm font-medium">Feed</span>
+          <span className="text-2xl font-semibold tracking-tight">Feed</span>
           <span className="text-[10px] text-stone-400">studio updates</span>
         </Link>
         <Link href="/feed?tab=works" className={tabCls("works")}>
-          <span className="text-sm font-medium">Works</span>
+          <span className="text-2xl font-semibold tracking-tight">Works</span>
           <span className="text-[10px] text-stone-400">for sale</span>
         </Link>
       </div>
