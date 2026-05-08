@@ -51,13 +51,13 @@ export default async function FeedPage({ searchParams }: PageProps) {
     ? (isAdmin && user
         ? supabase
             .from("profiles")
-            .select("works_row_height, works_h_gap, works_v_gap")
+            .select("works_row_height, works_h_gap, works_v_gap, works_last_row_align")
             .eq("id", user.id)
             .single()
             .then((r) => r.data)
         : supabase
             .from("profiles")
-            .select("works_row_height, works_h_gap, works_v_gap")
+            .select("works_row_height, works_h_gap, works_v_gap, works_last_row_align")
             .in("role", ["admin", "owner"])
             .limit(1)
             .single()
@@ -220,6 +220,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
               initialRowH={worksLayoutData?.works_row_height ?? undefined}
               initialHGap={worksLayoutData?.works_h_gap ?? undefined}
               initialVGap={worksLayoutData?.works_v_gap ?? undefined}
+              initialLastRowAlign={(worksLayoutData?.works_last_row_align as "left" | "center" | "right") ?? undefined}
               layout={worksLayout}
             />
           </Suspense>
