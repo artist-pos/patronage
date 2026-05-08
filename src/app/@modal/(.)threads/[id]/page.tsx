@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
 import { getProfileById } from "@/lib/profiles";
 import { ModalShell } from "@/components/projects/ModalShell";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
+import { ArtistProfileLink } from "@/components/projects/ArtistProfileLink";
 import type { CollaboratorProfile } from "@/types/database";
 
 interface Props {
@@ -60,12 +60,12 @@ export default async function ThreadModal({ params }: Props) {
               </div>
             )}
             <div>
-              <Link
-                href={`/${project.artist_username}`}
+              <ArtistProfileLink
+                username={project.artist_username}
                 className="text-sm font-semibold hover:underline underline-offset-2"
               >
                 {artistName}
-              </Link>
+              </ArtistProfileLink>
               <p className="text-xs text-muted-foreground">
                 {posts.length} {posts.length === 1 ? "post" : "posts"}
               </p>
@@ -174,9 +174,9 @@ function ModalThreadPost({
             {post.collaborators.map((c: CollaboratorProfile) => {
               const cName = c.full_name ?? c.username;
               return (
-                <Link
+                <ArtistProfileLink
                   key={c.id}
-                  href={`/${c.username}`}
+                  username={c.username}
                   className="flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-2"
                 >
                   {c.avatar_url ? (
@@ -189,7 +189,7 @@ function ModalThreadPost({
                     </div>
                   )}
                   {cName}
-                </Link>
+                </ArtistProfileLink>
               );
             })}
           </div>

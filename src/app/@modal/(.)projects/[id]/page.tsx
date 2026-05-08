@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
@@ -100,9 +99,9 @@ export default async function ProjectModal({ params }: Props) {
               {update.collaborators.map(c => {
                 const cName = c.full_name ?? c.username;
                 return (
-                  <Link
+                  <ArtistProfileLink
                     key={c.id}
-                    href={`/${c.username}`}
+                    username={c.username}
                     className="flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-2"
                   >
                     {c.avatar_url ? (
@@ -115,7 +114,7 @@ export default async function ProjectModal({ params }: Props) {
                       </div>
                     )}
                     {cName}
-                  </Link>
+                  </ArtistProfileLink>
                 );
               })}
             </div>
