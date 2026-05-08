@@ -215,53 +215,14 @@ const { data } = await supabase
 
 ---
 
-## Database Schema — Key Tables
+## Database Schema
 
-### `profiles`
-`id, username, full_name, bio, country, role (artist|patron|partner|owner|admin)`
-`avatar_url, featured_image_url, cv_url, professional_cv_url`
-`medium[], disciplines[], career_stage`
-`exhibition_history[], press_bibliography[], received_grants[]`
-`hide_sold_section, collection_public, support_enabled`
-
-### `portfolio_images` (archival — always `is_available=false`)
-`id, profile_id, url, caption, description, position`
-`creator_id, current_owner_id` (immutable — stays with creator)
-`hide_from_archive, orientation, natural_width, natural_height`
-`content_type (image|audio|video|text|document|embed)`
-`audio_url, video_url, text_content`
-
-### `artworks` (marketplace — available + sold)
-`id, profile_id, creator_id, current_owner_id`
-`content_type, discipline, title, caption`
-`image_url, audio_url, video_url, text_content, embed_url`
-`price, is_available, hide_available, collection_visible`
-`position`
-
-### `opportunities`
-`id, title, organiser, type (Grant|Residency|Commission|Open Call|Prize|Display|Job/Employment|Studio/Space|Public Art)`
-`description, caption, full_description, country, city`
-`opens_at, deadline, url, slug`
-`funding_amount, funding_range, grant_type, recipients_count`
-`featured_image_url, sub_categories[]`
-`routing_type (external|pipeline), custom_fields[]`
-`is_featured, is_active, status (pending|published|rejected), view_count`
-
-### `project_updates` (studio feed)
-`id, artist_id, project_id`
-`content_type, discipline`
-`image_url, audio_url, video_url, text_content, embed_url, embed_provider`
-`caption, orientation`
-
-### `opportunity_applications`
-`id, opportunity_id, artist_id`
-`status (pending|shortlisted|selected|approved_pending_assets|production_ready|rejected)`
-`custom_answers {}, artwork_id, submitted_image_url, highres_asset_url`
-
-### `messages`
-`id, conversation_id, sender_id, content, is_read`
-`message_type (text|transfer_request|transfer_accepted)`
-`work_id → artworks(id) ON DELETE SET NULL`
+Full schema: `src/types/database.ts`. Key facts:
+- `artworks` — marketplace (available + sold); `portfolio_images` — archival only (`is_available=false`)
+- `artworks.creator_id` immutable; `artworks.current_owner_id` changes on transfer
+- `opportunities.routing_type` — `external` | `pipeline`; pipeline opps use `opportunity_applications`
+- `opportunity_applications.status` — `pending|shortlisted|selected|approved_pending_assets|production_ready|rejected`
+- `messages.message_type` — `text|transfer_request|transfer_accepted|work_offer`
 
 ---
 
@@ -281,19 +242,7 @@ Source URL
 
 **CI**: GitHub Actions matrix runs 4 parallel jobs (`tier: [1,2,3,4]`), each with 55-minute timeout. Do NOT run all sources in a single job — it will time out.
 
-**Source definition** (`scraper/sources/index.ts`):
-```typescript
-{
-  name: "Creative NZ",
-  url: "https://www.creativenz.govt.nz/...",
-  country: "NZ",
-  disciplines: ["visual_art", "music"],
-  needsBrowser: false,     // true → Playwright; false → axios
-  isRss: false,
-  followLinks: true,       // fetch linked detail pages
-  maxLinks: 10,
-}
-```
+**Source definition**: `scraper/sources/index.ts` — each source has `name, url, country, disciplines[], needsBrowser, isRss, followLinks, maxLinks`.
 
 ---
 
