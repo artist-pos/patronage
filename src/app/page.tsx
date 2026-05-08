@@ -115,7 +115,7 @@ export default async function Home() {
         ) : (
           <div className="space-y-6 flex flex-col items-center text-center">
             <div className="space-y-1.5">
-              <h1 className="text-4xl font-semibold tracking-tight">Career infrastructure for artists in Aotearoa and Australia.</h1>
+              <h1 className="text-4xl font-semibold tracking-tight">Career infrastructure for artists in Aotearoa.</h1>
               <p className="text-lg text-muted-foreground">
                 Grants, residencies, open calls, commissions, and the tools to build a sustainable practice. Free to use.
               </p>
