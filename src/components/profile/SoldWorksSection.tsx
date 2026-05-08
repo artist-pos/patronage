@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
 import { removeFromArtistProfile, requestArtworkDeletion } from "@/app/profile/artwork-delete-actions";
 import type { Artwork } from "@/types/database";
@@ -19,51 +20,299 @@ interface Props {
   hideSoldSection: boolean;
 }
 
+function SoldLightbox({
+  works,
+  index,
+  isOwner,
+  onClose,
+  onPrev,
+  onNext,
+  onToggleHide,
+  onToggleHidePrice,
+  onRemove,
+  onRequestDeletion,
+}: {
+  works: SoldWork[];
+  index: number;
+  isOwner: boolean;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onToggleHide: (work: SoldWork) => void;
+  onToggleHidePrice: (work: SoldWork) => void;
+  onRemove: (id: string) => void;
+  onRequestDeletion: (id: string) => void;
+}) {
+  const work = works[index];
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
+    setConfirmDelete(false);
+    setBusy(false);
+  }, [index]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && index > 0) onPrev();
+      if (e.key === "ArrowRight" && index < works.length - 1) onNext();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, works.length, onClose, onPrev, onNext]);
+
+  if (!work) return null;
+
+  const ownerName = work.owner_profile?.full_name ?? work.owner_profile?.username;
+  const ownerUsername = work.owner_profile?.username;
+  const title = work.title ?? work.caption ?? "Untitled";
+
+  const priceStr = work.hide_price
+    ? null
+    : work.is_poa
+    ? "Price on application"
+    : work.price_cents
+    ? `${work.price_currency} ${(work.price_cents / 100).toLocaleString("en-NZ")}`
+    : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm z-10"
+        aria-label="Close"
+      >
+        <X className="w-4 h-4 text-stone-600" />
+      </button>
+
+      {/* Prev */}
+      {index > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm z-10"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="w-4 h-4 text-stone-600" />
+        </button>
+      )}
+
+      {/* Next */}
+      {index < works.length - 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm z-10"
+          aria-label="Next"
+        >
+          <ChevronRight className="w-4 h-4 text-stone-600" />
+        </button>
+      )}
+
+      {/* Modal card */}
+      <div
+        className="flex overflow-hidden shadow-2xl"
+        style={{ maxHeight: "90vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Image */}
+        <div className="relative flex-shrink-0 self-stretch flex items-center bg-[#FAFAF9]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={work.url}
+            alt={title}
+            style={{ height: "90vh", width: "auto", maxWidth: "70vw", display: "block", objectFit: "contain" }}
+          />
+          {/* Sold badge */}
+          <div className="absolute top-3 left-3">
+            <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+              Sold
+            </span>
+          </div>
+        </div>
+
+        {/* Info panel */}
+        <div className="bg-white flex flex-col" style={{ width: 280, overflowY: "auto" }}>
+          <div className="flex-1 p-6 space-y-5">
+
+            {/* Title */}
+            <div>
+              <h2 className="text-sm font-semibold leading-snug">{title}</h2>
+              {isOwner && work.hide_from_archive && (
+                <span className="inline-block mt-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-stone-100 px-2 py-0.5 rounded">
+                  Hidden
+                </span>
+              )}
+            </div>
+
+            {/* Collector */}
+            {ownerName && ownerUsername && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mb-1">
+                  Collection
+                </p>
+                <Link
+                  href={`/${ownerUsername}`}
+                  className="text-xs hover:underline underline-offset-2 transition-colors"
+                >
+                  {ownerName}
+                </Link>
+              </div>
+            )}
+
+            {/* Details */}
+            {(work.year || work.medium || work.dimensions || work.edition || work.description) && (
+              <div className="space-y-1.5">
+                {work.year && (
+                  <p className="text-xs text-muted-foreground">{work.year}</p>
+                )}
+                {work.medium && (
+                  <p className="text-xs text-muted-foreground">{work.medium}</p>
+                )}
+                {work.dimensions && (
+                  <p className="text-xs text-muted-foreground">{work.dimensions}</p>
+                )}
+                {work.edition && (
+                  <p className="text-xs text-muted-foreground">{work.edition}</p>
+                )}
+                {work.description && (
+                  <p className="text-xs text-muted-foreground leading-relaxed pt-1">{work.description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Price */}
+            {priceStr && (
+              <p className="text-sm font-medium">{priceStr}</p>
+            )}
+
+            {/* Owner controls */}
+            {isOwner && (
+              <div className="border-t border-border pt-4 space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                  Manage
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => onToggleHide(work)}
+                    disabled={busy}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                  >
+                    {work.hide_from_archive ? "Show in archive" : "Hide from archive"}
+                  </button>
+                  <button
+                    onClick={() => onToggleHidePrice(work)}
+                    disabled={busy}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                  >
+                    {work.hide_price ? "Show price" : "Hide price"}
+                  </button>
+                  <button
+                    onClick={() => { setBusy(true); onRemove(work.id); }}
+                    disabled={busy}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                  >
+                    Remove from my profile
+                  </button>
+                  {confirmDelete ? (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        Request patron approval via DM?
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => { setBusy(true); onRequestDeletion(work.id); }}
+                          disabled={busy}
+                          className="text-xs text-destructive hover:opacity-70 transition-opacity"
+                        >
+                          {busy ? "Sending…" : "Yes, send request"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="text-xs text-destructive/70 hover:text-destructive transition-colors text-left"
+                    >
+                      Request deletion
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Props) {
   const router = useRouter();
   const [works, setWorks] = useState<SoldWork[]>(initialWorks);
   const [sectionHidden, setSectionHidden] = useState(hideSoldSection);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [toggling, setToggling] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (!isOwner && sectionHidden) return null;
   if (!isOwner && works.length === 0) return null;
 
   const visibleWorks = isOwner ? works : works.filter((w) => !w.hide_from_archive);
 
-  async function toggleHideFromArchive(workId: string, current: boolean) {
-    setToggling(workId);
-    await updateWorkPrivacy(workId, "hide_from_archive", !current);
-    setWorks((prev) => prev.map((w) => (w.id === workId ? { ...w, hide_from_archive: !current } : w)));
-    setToggling(null);
+  const openLightbox = useCallback((idx: number) => setLightboxIndex(idx), []);
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const goPrev = useCallback(() => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i)), []);
+  const goNext = useCallback(
+    () => setLightboxIndex((i) => (i !== null && i < visibleWorks.length - 1 ? i + 1 : i)),
+    [visibleWorks.length],
+  );
+
+  async function handleToggleHide(work: SoldWork) {
+    await updateWorkPrivacy(work.id, "hide_from_archive", !work.hide_from_archive);
+    setWorks((prev) =>
+      prev.map((w) => (w.id === work.id ? { ...w, hide_from_archive: !work.hide_from_archive } : w))
+    );
   }
 
-  async function toggleHidePrice(workId: string, current: boolean) {
-    setToggling(`price-${workId}`);
-    await updateWorkPrivacy(workId, "hide_price", !current);
-    setWorks((prev) => prev.map((w) => (w.id === workId ? { ...w, hide_price: !current } : w)));
-    setToggling(null);
+  async function handleToggleHidePrice(work: SoldWork) {
+    await updateWorkPrivacy(work.id, "hide_price", !work.hide_price);
+    setWorks((prev) =>
+      prev.map((w) => (w.id === work.id ? { ...w, hide_price: !work.hide_price } : w))
+    );
   }
 
-  async function handleRemoveFromProfile(workId: string) {
-    setDeleting(workId);
+  async function handleRemove(workId: string) {
     const result = await removeFromArtistProfile(workId);
-    if (!result.error) setWorks((prev) => prev.filter((w) => w.id !== workId));
-    setDeleting(null);
+    if (!result.error) {
+      setWorks((prev) => prev.filter((w) => w.id !== workId));
+      closeLightbox();
+    }
   }
 
   async function handleRequestDeletion(workId: string) {
-    setDeleting(workId);
     const result = await requestArtworkDeletion(workId);
-    setDeleting(null);
-    setConfirmDelete(null);
     if (result.error) return;
     if (result.conversationId) {
       router.push(`/messages/${result.conversationId}`);
     } else {
       setWorks((prev) => prev.filter((w) => w.id !== workId));
+      closeLightbox();
     }
   }
 
@@ -74,187 +323,127 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
   }
 
   return (
-    <section className="space-y-4 border-t border-border pt-10">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-          Sold Works
-        </h2>
-        {isOwner && (
-          <button
-            onClick={toggleSectionVisibility}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+    <>
+      {lightboxIndex !== null && (
+        <SoldLightbox
+          works={visibleWorks}
+          index={lightboxIndex}
+          isOwner={isOwner}
+          onClose={closeLightbox}
+          onPrev={goPrev}
+          onNext={goNext}
+          onToggleHide={handleToggleHide}
+          onToggleHidePrice={handleToggleHidePrice}
+          onRemove={handleRemove}
+          onRequestDeletion={handleRequestDeletion}
+        />
+      )}
+
+      <section className="space-y-4 border-t border-border pt-10">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+            Sold Works
+          </h2>
+          {isOwner && (
+            <button
+              onClick={toggleSectionVisibility}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {sectionHidden ? "Show sold section" : "Hide sold section"}
+            </button>
+          )}
+        </div>
+
+        {visibleWorks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No sold works to display.</p>
+        ) : (
+          <div
+            className="flex gap-2 overflow-x-auto scrollbar-hide"
+            style={{ height: TILE_H }}
           >
-            {sectionHidden ? "Show sold section" : "Hide sold section"}
-          </button>
-        )}
-      </div>
+            {visibleWorks.map((work, idx) => {
+              const isHovered = hoveredId === work.id;
+              const isHidden = isOwner && work.hide_from_archive;
+              const ownerName = work.owner_profile?.full_name ?? work.owner_profile?.username;
 
-      {visibleWorks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No sold works to display.</p>
-      ) : (
-        <div
-          className="flex gap-2 overflow-x-auto scrollbar-hide"
-          style={{ height: TILE_H }}
-        >
-          {visibleWorks.map((work) => {
-            const ownerName = work.owner_profile?.full_name ?? work.owner_profile?.username;
-            const ownerUsername = work.owner_profile?.username;
-            const isHovered = hoveredId === work.id;
-            const isHidden = isOwner && work.hide_from_archive;
-
-            return (
-              <div
-                key={work.id}
-                className="relative flex-none overflow-hidden"
-                style={{
-                  height: TILE_H,
-                  width: "auto",
-                  opacity: isHidden ? 0.45 : 1,
-                  cursor: "default",
-                }}
-                onMouseEnter={() => setHoveredId(work.id)}
-                onMouseLeave={() => {
-                  setHoveredId(null);
-                  if (confirmDelete === work.id) setConfirmDelete(null);
-                }}
-              >
-                {/* Image */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={work.url}
-                  alt={work.caption ?? "Sold work"}
+              return (
+                <div
+                  key={work.id}
+                  className="relative flex-none overflow-hidden cursor-pointer"
                   style={{
                     height: TILE_H,
-                    width: "auto",
-                    display: "block",
-                    objectFit: "contain",
-                    background: "#FAFAF9",
-                    transition: "transform 0.3s ease",
-                    transform: isHovered ? "scale(1.02)" : "scale(1)",
+                    opacity: isHidden ? 0.45 : 1,
                   }}
-                />
-
-                {/* Hover gradient */}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    opacity: isHovered ? 1 : 0,
-                    transition: "opacity 0.2s ease",
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)",
-                    pointerEvents: "none",
-                  }}
-                />
-
-                {/* "Sold" badge — top-left, always visible */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    left: 8,
-                    pointerEvents: "none",
-                  }}
+                  onClick={() => openLightbox(idx)}
+                  onMouseEnter={() => setHoveredId(work.id)}
+                  onMouseLeave={() => setHoveredId(null)}
                 >
-                  <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
-                    Sold
-                  </span>
-                </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={work.url}
+                    alt={work.caption ?? "Sold work"}
+                    style={{
+                      height: TILE_H,
+                      width: "auto",
+                      display: "block",
+                      objectFit: "contain",
+                      background: "#FAFAF9",
+                      transition: "transform 0.3s ease",
+                      transform: isHovered ? "scale(1.02)" : "scale(1)",
+                    }}
+                  />
 
-                {/* Hover info — bottom */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    padding: "10px 12px",
-                    opacity: isHovered ? 1 : 0,
-                    transition: "opacity 0.2s ease",
-                    pointerEvents: isHovered ? "auto" : "none",
-                  }}
-                >
-                  {work.caption && (
-                    <p className="text-xs font-semibold text-white leading-snug line-clamp-2 mb-1">
-                      {work.caption}
-                    </p>
-                  )}
-                  {ownerName && ownerUsername && (
-                    <Link
-                      href={`/${ownerUsername}`}
-                      className="text-[10px] text-white/75 hover:text-white transition-colors"
-                    >
-                      Collection of {ownerName}
-                    </Link>
-                  )}
-                  {!work.hide_price && (work.is_poa || work.price_cents) && (
-                    <p className="text-[10px] text-white/60 mt-0.5">
-                      {work.is_poa
-                        ? "POA"
-                        : `${work.price_currency} ${((work.price_cents ?? 0) / 100).toLocaleString("en-NZ")}`}
-                    </p>
-                  )}
+                  {/* Hover gradient */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      opacity: isHovered ? 1 : 0,
+                      transition: "opacity 0.2s ease",
+                      background:
+                        "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)",
+                      pointerEvents: "none",
+                    }}
+                  />
 
-                  {/* Owner controls */}
-                  {isOwner && (
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                      {confirmDelete === work.id ? (
-                        <>
-                          <span className="text-[10px] text-white/70 w-full">Request patron approval via DM?</span>
-                          <button
-                            onClick={() => handleRequestDeletion(work.id)}
-                            disabled={deleting === work.id}
-                            className="text-[10px] text-red-300 hover:text-red-200 transition-colors"
-                          >
-                            {deleting === work.id ? "Sending…" : "Yes, send request"}
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(null)}
-                            className="text-[10px] text-white/50 hover:text-white/80 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => toggleHideFromArchive(work.id, work.hide_from_archive)}
-                            disabled={toggling === work.id}
-                            className="text-[10px] text-white/60 hover:text-white transition-colors"
-                          >
-                            {work.hide_from_archive ? "Show" : "Hide"}
-                          </button>
-                          <button
-                            onClick={() => toggleHidePrice(work.id, work.hide_price)}
-                            disabled={toggling === `price-${work.id}`}
-                            className="text-[10px] text-white/60 hover:text-white transition-colors"
-                          >
-                            {work.hide_price ? "Show price" : "Hide price"}
-                          </button>
-                          <button
-                            onClick={() => handleRemoveFromProfile(work.id)}
-                            disabled={deleting === work.id}
-                            className="text-[10px] text-white/60 hover:text-white transition-colors"
-                          >
-                            Remove
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(work.id)}
-                            className="text-[10px] text-red-300/70 hover:text-red-300 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {/* Sold badge */}
+                  <div className="absolute top-2 left-2" style={{ pointerEvents: "none" }}>
+                    <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+                      Sold
+                    </span>
+                  </div>
+
+                  {/* Hover info */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: "8px 10px",
+                      opacity: isHovered ? 1 : 0,
+                      transition: "opacity 0.2s ease",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {(work.title ?? work.caption) && (
+                      <p className="text-xs font-semibold text-white leading-snug line-clamp-1">
+                        {work.title ?? work.caption}
+                      </p>
+                    )}
+                    {ownerName && (
+                      <p className="text-[10px] text-white/70 mt-0.5">
+                        Collection of {ownerName}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </>
   );
 }
