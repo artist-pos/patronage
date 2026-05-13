@@ -18,16 +18,14 @@ export function ArtistSpotlightHero({ artist }: Props) {
       </p>
 
       <Link href={href} className="group flex flex-col sm:flex-row border border-black hover:shadow-sm transition-shadow duration-150">
-        {/* Image — left, taller than opp hero */}
-        <div className="relative sm:w-[55%] h-56 sm:h-72 shrink-0 overflow-hidden bg-stone-100">
+        {/* Image — left, stretches to match content panel height on desktop */}
+        <div className="relative sm:w-[55%] h-56 sm:h-auto sm:min-h-72 shrink-0 overflow-hidden bg-stone-100">
           {artist.primary_image_url ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={artist.primary_image_url}
               alt={displayName}
-              fill
-              className="object-cover group-hover:scale-[1.02] transition-transform duration-500"
-              sizes="(max-width: 640px) 100vw, 55vw"
-              priority
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
             />
           ) : artist.avatar_url ? (
             <>

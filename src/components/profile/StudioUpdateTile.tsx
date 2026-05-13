@@ -7,7 +7,7 @@ import type { ProjectUpdateWithArtist } from "@/types/database";
 const TILE_H = 200;
 
 export function StudioUpdateTile({ u }: { u: ProjectUpdateWithArtist }) {
-  const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}`;
+  const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}`;
 
   const isImage = u.content_type === "image" || (!u.content_type && !!u.image_url);
 

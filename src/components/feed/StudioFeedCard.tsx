@@ -9,7 +9,7 @@ const FEED_H = 200;
 
 export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArtist; className?: string }) {
   const name = u.artist_full_name ?? u.artist_username;
-  const href = u.project_id ? `/threads/${u.project_id}#post-${u.id}` : `/projects/${u.id}?from=feed`;
+  const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`;
 
   const [cardWidth, setCardWidth] = useState<number | null>(() =>
     u.image_url && u.image_width && u.image_height

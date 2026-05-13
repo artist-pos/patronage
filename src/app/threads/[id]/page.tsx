@@ -9,11 +9,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
+import { ThreadScrollTo } from "@/components/projects/ThreadScrollTo";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ scroll?: string }>;
 }
 
 function formatTimestamp(iso: string): string {
@@ -36,14 +38,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ThreadPage({ params }: Props) {
+export default async function ThreadPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { scroll } = await searchParams;
   const thread = await getThread(id);
   if (!thread) notFound();
 
-  // Redirect UUID access to the readable slug URL
+  // Redirect UUID access to slug URL, preserving ?scroll= so the target post stays visible
   if (UUID_RE.test(id) && thread.project.slug) {
-    redirect(`/threads/${thread.project.slug}`);
+    const destination = `/threads/${thread.project.slug}${scroll ? `?scroll=${scroll}` : ""}`;
+    redirect(destination);
   }
 
   const supabase = await createClient();
@@ -106,6 +110,8 @@ export default async function ThreadPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {scroll && <ThreadScrollTo postId={scroll} />}
 
       {/* Timeline */}
       {posts.length === 0 ? (

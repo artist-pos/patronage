@@ -192,7 +192,7 @@ function Tile({
   const router = useRouter();
 
   const href = u.project_id
-    ? `/threads/${u.project_id}`
+    ? `/threads/${u.project_id}?scroll=${u.id}`
     : from
     ? `/projects/${u.id}?from=${from}`
     : `/projects/${u.id}`;
