@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processImage } from "@/lib/image-processing";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -14,14 +15,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File must be under 2 MB" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-  const path = `${user.id}/logo.${ext}`;
   const bytes = await file.arrayBuffer();
+  const { data: processed } = await processImage(Buffer.from(bytes), { maxWidth: 400, quality: 85 });
 
+  const path = `${user.id}/logo.webp`;
   const admin = createAdminClient();
   const { error } = await admin.storage
     .from("provenance-assets")
-    .upload(path, Buffer.from(bytes), { contentType: file.type, upsert: true });
+    .upload(path, processed, { contentType: "image/webp", upsert: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

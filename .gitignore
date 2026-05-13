@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Migration logs
+scripts/webp-migration-log.json
+
 # dependencies
 /node_modules
 scraper/node_modules

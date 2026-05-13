@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Pencil, X, Check, ChevronUp, ChevronDown, EyeOff, Eye, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/upload-image";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { updateActivationType } from "@/app/partners/actions";
 import type { ActivationType } from "@/app/partners/page";
@@ -133,14 +134,13 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
   }
 
   async function handleImgUpload(file: File, id: string) {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${Date.now()}-${id}.${ext}`;
-    const { error } = await supabase.storage
-      .from("activation-images")
-      .upload(path, file, { contentType: file.type, upsert: false });
-    if (error) return;
-    const { data } = supabase.storage.from("activation-images").getPublicUrl(path);
-    setEditDraft(prev => ({ ...prev, image_url: data.publicUrl }));
+    const path = `${Date.now()}-${id}.webp`;
+    const { url } = await uploadImage(file, {
+      bucket: "activation-images",
+      path,
+      quality: 90,
+    }).catch(() => ({ url: null as unknown as string }));
+    if (url) setEditDraft(prev => ({ ...prev, image_url: url }));
   }
 
   const visibleCards = isAdmin ? cards : cards.filter(c => c.is_active);

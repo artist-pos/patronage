@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/upload-image";
 import { updateWorkMetadata, setPrimaryWorkImageUrl } from "@/app/dashboard/works/actions";
 import type { WorkImage } from "@/types/database";
 
@@ -248,22 +249,26 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
     try {
       const supabase = createClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${profileId}/work-images/${work.id}/${Date.now()}.${ext}`;
+      const ts = Date.now();
+      const path = `${profileId}/work-images/${work.id}/${ts}.webp`;
+      const thumbPath = `${profileId}/work-images/${work.id}/${ts}-thumb.webp`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("portfolio")
-        .upload(path, file, { upsert: false });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-
+      const { url: uploadedUrl } = await uploadImage(file, {
+        bucket: "portfolio",
+        path,
+        maxWidth: 1600,
+        quality: 90,
+        thumb: true,
+        thumbPath,
+        thumbWidth: 800,
+        thumbQuality: 80,
+      });
       const isPrimary = images.length === 0;
       const { data: newRow, error: insertError } = await supabase
         .from("work_images")
         .insert({
           portfolio_image_id: work.id,
-          url: urlData.publicUrl,
+          url: uploadedUrl,
           position: images.length,
           is_primary: isPrimary,
         })
@@ -277,9 +282,9 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
       setSelectedImageId(inserted.id);
 
       if (isPrimary) {
-        const dims = await detectImageDimensions(urlData.publicUrl);
-        setPrimaryWorkImageUrl(work.id, urlData.publicUrl, dims.naturalWidth > 0 ? dims : undefined);
-        onThumbnailChange?.(`${urlData.publicUrl}?t=${Date.now()}`);
+        const dims = await detectImageDimensions(uploadedUrl);
+        setPrimaryWorkImageUrl(work.id, uploadedUrl, dims.naturalWidth > 0 ? dims : undefined);
+        onThumbnailChange?.(`${uploadedUrl}?t=${Date.now()}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");

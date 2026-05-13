@@ -7,37 +7,13 @@ import { X, ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createProject } from "@/actions/projects";
 import { detectOrientation } from "@/lib/image";
+import { uploadImage } from "@/lib/upload-image";
 import { CollaboratorPicker } from "@/components/profile/CollaboratorPicker";
-import type { ContentTypeEnum, ImageOrientation } from "@/types/database";
+import type { ContentTypeEnum } from "@/types/database";
 
 type CollaboratorEntry = { id: string; username: string; full_name: string | null; avatar_url: string | null };
 
-const MAX_PX = 1600;
 const MAX_PROJ_TITLE = 140;
-
-async function resizeImage(file: File): Promise<{ blob: Blob; orientation: ImageOrientation }> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      const orientation = detectOrientation(canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve({ blob, orientation }) : reject(new Error("toBlob failed"))),
-        "image/jpeg",
-        0.9
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 // Convert watch URLs to embed URLs
 function toEmbedUrl(url: string): string | null {
@@ -108,8 +84,7 @@ export function CreateUpdateModal({
 
   // Image
   const [preview, setPreview] = useState<string | null>(null);
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
-  const [imageOrientation, setImageOrientation] = useState<ImageOrientation | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Audio
@@ -143,8 +118,7 @@ export function CreateUpdateModal({
     setOpen(false);
     setContentType("image");
     setPreview(null);
-    setImageBlob(null);
-    setImageOrientation(null);
+    setImageFile(null);
     setAudioFile(null);
     setVideoFile(null);
     setCaption("");
@@ -164,24 +138,22 @@ export function CreateUpdateModal({
   function handleTypeChange(t: ContentTypeEnum) {
     setContentType(t);
     setPreview(null);
-    setImageBlob(null);
+    setImageFile(null);
     setAudioFile(null);
     setVideoFile(null);
     setEmbedUrl("");
     setError(null);
   }
 
-  async function handleImageFile(file: File | null) {
+  function handleImageFile(file: File | null) {
     if (!file) return;
-    const { blob, orientation } = await resizeImage(file);
-    setImageBlob(blob);
-    setImageOrientation(orientation);
-    setPreview(URL.createObjectURL(blob));
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
   }
 
   function canPost(): boolean {
     if (projectMode === "new" && !newProjectTitle.trim()) return false;
-    if (contentType === "image") return !!imageBlob;
+    if (contentType === "image") return !!imageFile;
     if (contentType === "audio") return !!audioFile || !!embedUrl.trim();
     if (contentType === "video") return !!videoFile || !!embedUrl.trim();
     if (contentType === "text") return !!textContent.trim();
@@ -203,25 +175,20 @@ export function CreateUpdateModal({
 
       let image_width: number | null = null;
       let image_height: number | null = null;
+      let imageOrientation: string | null = null;
 
-      if (contentType === "image" && imageBlob) {
-        const path = `${profileId}/updates/${Date.now()}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from("portfolio")
-          .upload(path, imageBlob, { contentType: "image/jpeg" });
-        if (upErr) { setError(upErr.message); setUploading(false); return; }
-        const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-        image_url = urlData.publicUrl;
-        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-          const img = new window.Image();
-          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-          img.onerror = () => resolve({ w: 0, h: 0 });
-          img.src = image_url!;
+      if (contentType === "image" && imageFile) {
+        const path = `${profileId}/updates/${Date.now()}.webp`;
+        const result = await uploadImage(imageFile, {
+          bucket: "portfolio",
+          path,
+          maxWidth: 1600,
+          quality: 90,
         });
-        if (dims.w > 0 && dims.h > 0) {
-          image_width = dims.w;
-          image_height = dims.h;
-        }
+        image_url = result.url;
+        image_width = result.width;
+        image_height = result.height;
+        imageOrientation = detectOrientation(result.width, result.height);
       }
 
       if (contentType === "audio" && audioFile) {
@@ -377,7 +344,7 @@ export function CreateUpdateModal({
                       className="border border-border"
                     />
                     <button
-                      onClick={() => { setPreview(null); setImageBlob(null); if (imageInputRef.current) imageInputRef.current.value = ""; }}
+                      onClick={() => { setPreview(null); setImageFile(null); if (imageInputRef.current) imageInputRef.current.value = ""; }}
                       className="absolute top-2 right-2 text-xs bg-background border border-black px-2 py-1 hover:bg-muted transition-colors"
                     >
                       Change

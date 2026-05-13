@@ -2,31 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const MAX_PX = 3840;
-
-async function resizeToJpeg(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg",
-        0.9
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
+import { uploadImage } from "@/lib/upload-image";
 
 interface Props {
   profileId: string;
@@ -60,15 +36,14 @@ export function FeaturedImageUploader({ profileId }: Props) {
     setError(null);
     setUploading(true);
     try {
-      const blob = await resizeToJpeg(file);
-      const path = `${profileId}/__featured.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("portfolio")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
-      if (upErr) { setError(upErr.message); setUploading(false); return; }
-
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-      const url = urlData.publicUrl;
+      const path = `${profileId}/__featured.webp`;
+      const { url } = await uploadImage(file, {
+        bucket: "portfolio",
+        path,
+        maxWidth: 1600,
+        quality: 85,
+        upsert: true,
+      });
 
       await supabase.from("profiles").update({ featured_image_url: url }).eq("id", profileId);
       setImageUrl(url);
@@ -84,7 +59,7 @@ export function FeaturedImageUploader({ profileId }: Props) {
 
   function handleRemove() {
     startTransition(async () => {
-      const path = `${profileId}/__featured.jpg`;
+      const path = `${profileId}/__featured.webp`;
       await supabase.storage.from("portfolio").remove([path]);
       await supabase.from("profiles").update({ featured_image_url: null }).eq("id", profileId);
       setImageUrl(null);

@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { ImageIcon, Music, Play, Type, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { detectOrientation } from "@/lib/image";
+import { uploadImage } from "@/lib/upload-image";
 import { createPortfolioWork, publishPortfolioWorkAsAvailable } from "@/app/dashboard/works/actions";
 import { CollaboratorPicker } from "@/components/profile/CollaboratorPicker";
-
-const MAX_PX = 1600;
 
 type ContentTab = "image" | "audio" | "video" | "text" | "embed";
 
@@ -19,36 +18,6 @@ const TABS: { type: ContentTab; label: string; icon: React.ReactNode }[] = [
   { type: "text",   label: "Writing", icon: <Type className="w-3.5 h-3.5" /> },
   { type: "embed",  label: "Embed",   icon: <ExternalLink className="w-3.5 h-3.5" /> },
 ];
-
-async function resizeToJpeg(file: File): Promise<{
-  blob: Blob;
-  orientation: "landscape" | "portrait" | "square";
-  width: number;
-  height: number;
-}> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      canvas.toBlob(
-        blob =>
-          blob
-            ? resolve({ blob, orientation: detectOrientation(canvas.width, canvas.height), width: canvas.width, height: canvas.height })
-            : reject(new Error("Resize failed")),
-        "image/jpeg",
-        0.85
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 function toEmbedUrl(url: string): string | null {
   try {
@@ -201,17 +170,23 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
       // ── Image ────────────────────────────────────────────────────────────────
       if (tab === "image" && imageFile) {
-        const { blob, orientation: ori, width, height } = await resizeToJpeg(imageFile);
-        orientation = ori;
-        naturalWidth = width;
-        naturalHeight = height;
-        const path = `${profileId}/${Date.now()}-${imageFile.name.replace(/[^a-z0-9.]/gi, "_")}`;
-        const { error: upErr } = await supabase.storage
-          .from("portfolio")
-          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-        url = urlData.publicUrl;
+        const baseName = imageFile.name.replace(/[^a-z0-9]/gi, "_").replace(/\.[^.]+$/, "");
+        const ts = Date.now();
+        const path = `${profileId}/${ts}-${baseName}.webp`;
+        const thumbPath = `${profileId}/${ts}-${baseName}-thumb.webp`;
+        const result = await uploadImage(imageFile, {
+          bucket: "portfolio",
+          path,
+          quality: 90,
+          thumb: true,
+          thumbPath,
+          thumbWidth: 800,
+          thumbQuality: 80,
+        });
+        url = result.url;
+        naturalWidth = result.width;
+        naturalHeight = result.height;
+        orientation = detectOrientation(result.width, result.height);
       }
 
       // ── Audio ────────────────────────────────────────────────────────────────
@@ -227,15 +202,14 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
         // Optional cover art
         if (coverFile) {
-          const { blob: coverBlob } = await resizeToJpeg(coverFile);
-          const coverPath = `${profileId}/${Date.now()}-cover.jpg`;
-          const { error: coverErr } = await supabase.storage
-            .from("portfolio")
-            .upload(coverPath, coverBlob, { contentType: "image/jpeg", upsert: false });
-          if (!coverErr) {
-            const { data: coverUrlData } = supabase.storage.from("portfolio").getPublicUrl(coverPath);
-            url = coverUrlData.publicUrl;
-          }
+          const coverPath = `${profileId}/${Date.now()}-cover.webp`;
+          const coverResult = await uploadImage(coverFile, {
+            bucket: "portfolio",
+            path: coverPath,
+            maxWidth: 800,
+            quality: 85,
+          }).catch(() => null);
+          if (coverResult) url = coverResult.url;
         }
       }
 

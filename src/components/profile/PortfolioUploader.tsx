@@ -26,35 +26,11 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleHidePortfolioWork } from "@/app/profile/available-work-actions";
 import { Button } from "@/components/ui/button";
 import { detectOrientation } from "@/lib/image";
+import { uploadImage } from "@/lib/upload-image";
 import type { PortfolioImage } from "@/types/database";
 
 const MAX_IMAGES = 10;
-const MAX_PX = 1600;
 const THUMB_H = 112; // h-28 in px
-
-async function resizeToJpeg(file: File): Promise<{ blob: Blob; orientation: "landscape" | "portrait" | "square"; width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      const orientation = detectOrientation(canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve({ blob, orientation, width: canvas.width, height: canvas.height }) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg",
-        0.85
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 // ── Static preview used inside DragOverlay (floating copy while dragging) ───
 function ThumbPreview({ img }: { img: PortfolioImage }) {
@@ -272,15 +248,14 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       const uploaded: PortfolioImage[] = [];
       for (const file of toUpload) {
         try {
-          const { blob, orientation, width, height } = await resizeToJpeg(file);
-          const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-          const { error: upErr } = await supabase.storage
-            .from("portfolio")
-            .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-          if (upErr) { setError(upErr.message); continue; }
-
-          const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-          const url = urlData.publicUrl;
+          const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_").replace(/\.[^.]+$/, "")}.webp`;
+          const { url, width, height } = await uploadImage(file, {
+            bucket: "portfolio",
+            path,
+            maxWidth: 1600,
+            quality: 85,
+          });
+          const orientation = detectOrientation(width, height);
 
           const { data: row } = await supabase
             .from("portfolio_images")

@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/upload-image";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { Button } from "@/components/ui/button";
 import { OpportunityForm, defaultFormData, getDefaultPipelineSetup, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
@@ -11,44 +12,6 @@ import { getFundingFieldMeta } from "@/lib/opportunity-constants";
 import type { PipelineExternalConfig } from "@/components/partners/PipelineConfigPanel";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import type { Opportunity, OppTypeEnum, CountryEnum } from "@/types/database";
-
-// ── Image resize ──────────────────────────────────────────────────────────────
-const MAX_IMG_PX = 1600;
-async function resizeImage(file: File): Promise<Blob> {
-  const isPng = file.type === "image/png";
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_IMG_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d")!;
-      if (!isPng) {
-        // For non-PNG formats, fill white so any semi-transparent areas composite correctly
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      if (isPng) {
-        // Preserve transparency — keep as PNG
-        canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-          "image/png"
-        );
-      } else {
-        canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-          "image/jpeg", 0.9
-        );
-      }
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 // ── Date formatting ───────────────────────────────────────────────────────────
 function fmtDate(iso: string | null | undefined): string | null {
@@ -122,17 +85,15 @@ export function OpportunitySubmissionForm({
   }
 
   async function handleImgUpload(file: File): Promise<string | null> {
-    const isPng = file.type === "image/png";
-    const blob = await resizeImage(file);
-    const ext = isPng ? "png" : "jpg";
     const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9]/gi, "_");
-    const path = `${Date.now()}-${baseName}.${ext}`;
-    const { error } = await supabase.storage
-      .from("opportunity-images")
-      .upload(path, blob, { contentType: isPng ? "image/png" : "image/jpeg", upsert: false });
-    if (error) return null;
-    const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
-    return data.publicUrl;
+    const path = `${Date.now()}-${baseName}.webp`;
+    const { url } = await uploadImage(file, {
+      bucket: "opportunity-images",
+      path,
+      maxWidth: 1600,
+      quality: 90,
+    }).catch(() => ({ url: null as unknown as string }));
+    return url ?? null;
   }
 
   async function handleTermsUpload(file: File): Promise<string | null> {

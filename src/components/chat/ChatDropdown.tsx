@@ -116,6 +116,16 @@ export function ChatDropdown({ userId, username }: Props) {
     return () => mql.removeEventListener("change", handler);
   }, []);
 
+  // Lock body scroll on mobile while panel is open
+  useEffect(() => {
+    if (open && isMobile) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [open, isMobile]);
+
   // Fetch own profile for avatar + display name in own messages
   useEffect(() => {
     if (!userId) return;

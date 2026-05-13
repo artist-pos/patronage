@@ -3,34 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-
-const AVATAR_SIZE = 400;
-
-async function resizeToSquare(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = AVATAR_SIZE;
-      canvas.height = AVATAR_SIZE;
-      const ctx = canvas.getContext("2d")!;
-      // Cover-crop: scale so the short side fills the square, then centre
-      const scale = Math.max(AVATAR_SIZE / img.width, AVATAR_SIZE / img.height);
-      const scaledW = img.width * scale;
-      const scaledH = img.height * scale;
-      ctx.drawImage(img, -(scaledW - AVATAR_SIZE) / 2, -(scaledH - AVATAR_SIZE) / 2, scaledW, scaledH);
-      URL.revokeObjectURL(src);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-        "image/jpeg",
-        0.9
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
+import { uploadImage } from "@/lib/upload-image";
 
 interface Props {
   profileId: string;
@@ -59,15 +32,14 @@ export function AvatarUploader({ profileId }: Props) {
     setError(null);
     setUploading(true);
     try {
-      const blob = await resizeToSquare(file);
-      const path = `${profileId}/__avatar.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("portfolio")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
-      if (upErr) { setError(upErr.message); setUploading(false); return; }
-
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-      const url = urlData.publicUrl;
+      const path = `${profileId}/__avatar.webp`;
+      const { url } = await uploadImage(file, {
+        bucket: "portfolio",
+        path,
+        maxWidth: 400,
+        quality: 85,
+        upsert: true,
+      });
 
       await supabase.from("profiles").update({ avatar_url: url }).eq("id", profileId);
       setAvatarUrl(url);
@@ -79,7 +51,7 @@ export function AvatarUploader({ profileId }: Props) {
 
   function handleRemove() {
     startTransition(async () => {
-      const path = `${profileId}/__avatar.jpg`;
+      const path = `${profileId}/__avatar.webp`;
       await supabase.storage.from("portfolio").remove([path]);
       await supabase.from("profiles").update({ avatar_url: null }).eq("id", profileId);
       setAvatarUrl(null);

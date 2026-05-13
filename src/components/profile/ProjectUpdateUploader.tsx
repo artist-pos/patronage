@@ -3,32 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/upload-image";
 import type { ProjectUpdate } from "@/types/database";
-
-const MAX_PX = 1600;
-
-async function resizeImage(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const src = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(src);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
-        "image/jpeg",
-        0.9
-      );
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 interface Props {
   profileId: string;
@@ -38,7 +14,7 @@ export function ProjectUpdateUploader({ profileId }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
-  const [blob, setBlob] = useState<Blob | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,35 +30,34 @@ export function ProjectUpdateUploader({ profileId }: Props) {
       .then(({ data }) => setUpdates((data ?? []) as ProjectUpdate[]));
   }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleFile(file: File | null) {
+  function handleFile(file: File | null) {
     if (!file) return;
     setError(null);
-    const resized = await resizeImage(file);
-    setBlob(resized);
-    setPreview(URL.createObjectURL(resized));
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
   }
 
   async function handlePost() {
-    if (!blob) return;
+    if (!imageFile) return;
     setError(null);
     setUploading(true);
     try {
-      const path = `${profileId}/updates/${Date.now()}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("portfolio")
-        .upload(path, blob, { contentType: "image/jpeg" });
-      if (upErr) { setError(upErr.message); setUploading(false); return; }
-
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
+      const path = `${profileId}/updates/${Date.now()}.webp`;
+      const { url: imageUrl } = await uploadImage(imageFile, {
+        bucket: "portfolio",
+        path,
+        maxWidth: 1600,
+        quality: 90,
+      });
       const { data: inserted } = await supabase
         .from("project_updates")
-        .insert({ artist_id: profileId, image_url: urlData.publicUrl, caption: caption.trim() || null })
+        .insert({ artist_id: profileId, image_url: imageUrl, caption: caption.trim() || null })
         .select()
         .single();
 
       if (inserted) setUpdates((prev) => [inserted as ProjectUpdate, ...prev]);
       setPreview(null);
-      setBlob(null);
+      setImageFile(null);
       setCaption("");
       if (inputRef.current) inputRef.current.value = "";
     } catch {
@@ -114,7 +89,7 @@ export function ProjectUpdateUploader({ profileId }: Props) {
               className="w-full h-auto max-h-[300px] object-contain border border-black"
             />
             <button
-              onClick={() => { setPreview(null); setBlob(null); if (inputRef.current) inputRef.current.value = ""; }}
+              onClick={() => { setPreview(null); setImageFile(null); if (inputRef.current) inputRef.current.value = ""; }}
               className="absolute top-2 right-2 text-xs bg-background border border-black px-2 py-1 hover:bg-muted transition-colors"
             >
               Change

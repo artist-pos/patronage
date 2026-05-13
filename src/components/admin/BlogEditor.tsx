@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TiptapLink from "@tiptap/extension-link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/upload-image";
 import { upsertPost, searchArtistProfiles, getMyProjects } from "@/app/admin/blog/actions";
 import Image from "next/image";
 import { BlogPreviewModal } from "@/components/admin/BlogPreviewModal";
@@ -129,22 +130,19 @@ export function BlogEditor({ post, userId }: Props) {
     };
   }, [artistQuery]);
 
-  async function uploadImage(file: File): Promise<string | null> {
-    const supabase = createClient();
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const path = `${userId}/blog/${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("portfolio")
-      .upload(path, file, { contentType: file.type });
-    if (upErr) { setError(upErr.message); return null; }
-    const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-    return urlData.publicUrl;
+  async function uploadBlogImage(file: File): Promise<string | null> {
+    const path = `${userId}/blog/${Date.now()}.webp`;
+    const { url } = await uploadImage(file, { bucket: "portfolio", path, quality: 90 }).catch(err => {
+      setError(err.message);
+      return { url: null as unknown as string };
+    });
+    return url ?? null;
   }
 
   async function handleImageUpload(file: File) {
     setUploading(true);
     setError(null);
-    const url = await uploadImage(file);
+    const url = await uploadBlogImage(file);
     if (url) setImageUrl(url);
     setUploading(false);
   }
@@ -152,7 +150,7 @@ export function BlogEditor({ post, userId }: Props) {
   async function handleImage2Upload(file: File) {
     setUploading(true);
     setError(null);
-    const url = await uploadImage(file);
+    const url = await uploadBlogImage(file);
     if (url) setImageUrl2(url);
     setUploading(false);
   }

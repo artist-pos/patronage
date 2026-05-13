@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processImage } from "@/lib/image-processing";
 import { findOrCreatePendingArtist } from "@/lib/artist-stub";
 import { revalidateHolderPublicSurfaces } from "@/lib/collection";
 import { mintUniqueLedgerId } from "@/lib/ledger";
@@ -87,17 +88,17 @@ export async function createCollectionEntry(
 
   const admin = createAdminClient();
 
-  // 1. Upload the image
-  const ext = (input.imageFile.name.split(".").pop() || "jpg")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "") || "jpg";
+  // 1. Upload the image — convert to WebP via Sharp
   const id = randomBytes(8).toString("hex");
-  const imagePath = `${user.id}/collection/${id}.${ext}`;
+  const imagePath = `${user.id}/collection/${id}.webp`;
+
+  const imgBytes = await input.imageFile.arrayBuffer();
+  const { data: processedImg } = await processImage(Buffer.from(imgBytes), { maxWidth: 1600, quality: 90 });
 
   const { error: uploadError } = await admin.storage
     .from(ARTWORK_BUCKET)
-    .upload(imagePath, input.imageFile, {
-      contentType: input.imageFile.type,
+    .upload(imagePath, processedImg, {
+      contentType: "image/webp",
       upsert: false,
     });
   if (uploadError) return { error: uploadError.message };

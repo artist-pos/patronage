@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { uploadImage } from "@/lib/upload-image";
 import { setPrimaryWorkImageUrl } from "@/app/dashboard/works/actions";
 import type { WorkImage } from "@/types/database";
 
@@ -31,18 +32,20 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
 
     try {
       const supabase = createClient();
-      const timestamp = Date.now();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${profileId}/work-images/${workId}/${timestamp}.${ext}`;
+      const ts = Date.now();
+      const path = `${profileId}/work-images/${workId}/${ts}.webp`;
+      const thumbPath = `${profileId}/work-images/${workId}/${ts}-thumb.webp`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("portfolio")
-        .upload(path, file, { upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("portfolio").getPublicUrl(path);
-      const url = urlData.publicUrl;
+      const { url } = await uploadImage(file, {
+        bucket: "portfolio",
+        path,
+        maxWidth: 1600,
+        quality: 90,
+        thumb: true,
+        thumbPath,
+        thumbWidth: 800,
+        thumbQuality: 80,
+      });
 
       const sourceKey = source === "portfolio" ? "portfolio_image_id" : "artwork_id";
       const { data: newRow, error: insertError } = await supabase
