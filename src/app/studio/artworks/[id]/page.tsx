@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ArtworkProvenancePanel } from "./ArtworkProvenancePanel";
 import { WorkDetailsEditor } from "./WorkDetailsEditor";
+import { AcquisitionModeEditor } from "./AcquisitionModeEditor";
 import { DocumentationPhotosEditor } from "./DocumentationPhotosEditor";
 import { PriorHistoryEditor } from "./PriorHistoryEditor";
 import { listDocPhotosWithUrls } from "@/lib/artwork-documentation";
@@ -146,6 +147,10 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
       />
 
       <div className="mt-8 space-y-4">
+        <AcquisitionModeEditor
+          artworkId={artwork.id}
+          initialMode={((artwork as { acquisition_mode?: string }).acquisition_mode ?? "enquire_first") as "buy_now" | "make_offer" | "enquire_first"}
+        />
         <WorkDetailsEditor
           artworkId={artwork.id}
           initial={{

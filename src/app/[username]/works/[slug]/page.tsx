@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/profiles";
 import { WorkDetailViewer } from "@/components/profile/WorkDetailViewer";
 import { WorkDetailActions } from "@/components/profile/WorkDetailActions";
 import { WorkEngagementTracker } from "@/components/profile/WorkEngagementTracker";
+import { ProjectThread } from "@/components/works/ProjectThread";
 import type { WorkImage } from "@/types/database";
 
 interface Props {
@@ -56,17 +57,52 @@ async function getWorkData(username: string, slug: string) {
     supabase.from("work_images").select("*").eq("portfolio_image_id", work.id).order("position", { ascending: true }),
     work.linked_artwork_id
       ? supabase.from("artworks")
-          .select("id, url, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, hide_from_archive, current_owner_id, creator_id, year, medium, dimensions, edition, listing_mode")
+          .select("id, url, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, hide_from_archive, current_owner_id, creator_id, year, medium, dimensions, edition, listing_mode, ledger_id")
           .eq("id", work.linked_artwork_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.auth.getUser(),
   ]);
+
+  const artworkId = artworkResult.data?.id ?? null;
+
+  // Fetch project thread and selected provenance entry concurrently (both independent)
+  const [projectResult, selectedEntryResult] = artworkId
+    ? await Promise.all([
+        supabase
+          .from("projects")
+          .select("id, title, description")
+          .eq("artwork_id", artworkId)
+          .maybeSingle(),
+        supabase
+          .from("artwork_provenance_ledger")
+          .select("entry_type")
+          .eq("artwork_id", artworkId)
+          .eq("entry_type", "selected")
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }];
+
+  const project = projectResult.data ?? null;
+  const selectedEntry = selectedEntryResult.data ?? null;
+
+  // Updates depend on project.id — fetch after project resolves
+  const updates = project
+    ? ((await supabase
+        .from("project_updates")
+        .select("id, caption, image_url, created_at")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: true })
+      ).data ?? [])
+    : [];
 
   return {
     profile,
     work,
     galleryImages: (galleryResult.data ?? []) as WorkImage[],
     artwork: artworkResult.data ?? null,
+    project,
+    updates,
+    selectedEntry,
     viewer: authResult.data.user,
   };
 }
@@ -90,7 +126,7 @@ export default async function WorkDetailPage({ params }: Props) {
   const result = await getWorkData(username, slug);
   if (!result) notFound();
 
-  const { profile, work, galleryImages, artwork, viewer } = result;
+  const { profile, work, galleryImages, artwork, project, updates, selectedEntry, viewer } = result;
   const isOwner = viewer?.id === profile.id;
 
   if (work.hide_from_archive && !isOwner) notFound();
@@ -178,6 +214,26 @@ export default async function WorkDetailPage({ params }: Props) {
             )}
           </div>
 
+          {/* Tag row — medium + opportunity type tags */}
+          {(work.medium || selectedEntry) && (
+            <div className="flex flex-wrap gap-1.5">
+              {work.medium && (
+                <span className="bg-stone-100 text-stone-600 rounded-full px-3 py-1 text-xs">
+                  {work.medium}
+                </span>
+              )}
+              {selectedEntry && (() => {
+                const opps = (selectedEntry as unknown as { opportunities?: { type?: string }[] | { type?: string } | null }).opportunities;
+                const oppType = Array.isArray(opps) ? opps[0]?.type : opps?.type;
+                return oppType ? (
+                  <span className="bg-stone-100 text-stone-600 rounded-full px-3 py-1 text-xs">
+                    {oppType}
+                  </span>
+                ) : null;
+              })()}
+            </div>
+          )}
+
           {isAvailable && !isOwner && (
             <WorkDetailActions
               artistId={profile.id}
@@ -190,6 +246,7 @@ export default async function WorkDetailPage({ params }: Props) {
               priceCurrency={(artwork!.price_currency as "NZD" | "AUD") ?? "NZD"}
               hidePrice={artwork!.hide_price}
               listingMode={(artwork!.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first"}
+              acquisitionMode="enquire_first"
               workImageUrl={artwork!.url ?? work.url}
               year={work.year}
               medium={work.medium}
@@ -212,16 +269,6 @@ export default async function WorkDetailPage({ params }: Props) {
             </div>
           )}
 
-          {isSold && (
-            <div className="py-3 border-t border-border border-b space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                Provenance
-              </p>
-              <p className="text-xs text-muted-foreground">Created by {artistName}</p>
-              <p className="text-xs text-muted-foreground">Transferred to a private collector</p>
-            </div>
-          )}
-
           {work.description && (
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
               {work.description}
@@ -233,6 +280,45 @@ export default async function WorkDetailPage({ params }: Props) {
               <Link href="/auth/login" className="underline underline-offset-2">Sign in</Link>{" "}
               to enquire about this work.
             </p>
+          )}
+
+          {/* Project thread — only shown when a project is linked to this artwork */}
+          {project && (
+            <ProjectThread
+              project={{
+                title: (project as unknown as { title: string }).title,
+                opportunity_id: (project as unknown as { opportunity_id: string | null }).opportunity_id,
+                opportunity: (() => {
+                  const opps = (project as unknown as { opportunities?: { title: string; type: string }[] | { title: string; type: string } | null }).opportunities;
+                  if (!opps) return null;
+                  return Array.isArray(opps) ? (opps[0] ?? null) : opps;
+                })(),
+              }}
+              updates={(updates as Array<{
+                id: string;
+                title: string | null;
+                caption: string | null;
+                update_tag: string;
+                image_url: string | null;
+                created_at: string;
+              }>).map(u => ({
+                ...u,
+                update_tag: (u.update_tag ?? "update") as "concept" | "update" | "milestone" | "complete",
+              }))}
+            />
+          )}
+
+          {/* Provenance row — always visible when artwork has a ledger ID */}
+          {artwork?.ledger_id && (
+            <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+              <span className="font-mono">{artwork.ledger_id}</span>
+              <Link
+                href={`/provenance/${artwork.ledger_id}`}
+                className="hover:text-foreground transition-colors"
+              >
+                Recorded on Patronage →
+              </Link>
+            </div>
           )}
         </div>
       </div>

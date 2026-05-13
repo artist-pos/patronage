@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getProfile } from "@/lib/profiles";
 import { getPublicCollection } from "@/lib/collection";
-import { PublicCollectionGrid } from "@/components/collection/PublicCollectionGrid";
+import { JustifiedGrid } from "@/components/collection/JustifiedGrid";
 import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
+import { DEFAULT_EMBED_CONFIG } from "@/types/database";
 import type { Metadata } from "next";
 
 interface Props {
@@ -76,7 +77,11 @@ export default async function PublicCollectionPage({ params }: Props) {
           </p>
         </div>
       ) : (
-        <PublicCollectionGrid entries={entries} />
+        <JustifiedGrid
+          entries={entries}
+          config={DEFAULT_EMBED_CONFIG}
+          siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}
+        />
       )}
     </main>
   );

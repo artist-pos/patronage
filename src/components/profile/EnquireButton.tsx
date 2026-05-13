@@ -13,9 +13,10 @@ interface Props {
   listingPrice?: string | null;
   listingCurrency?: string | null;
   className?: string;
+  label?: string;
 }
 
-export function EnquireButton({ artistId, workId, workTitle, workImageUrl, listingPrice, listingCurrency, className }: Props) {
+export function EnquireButton({ artistId, workId, workTitle, workImageUrl, listingPrice, listingCurrency, className, label }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -34,7 +35,7 @@ export function EnquireButton({ artistId, workId, workTitle, workImageUrl, listi
         onClick={() => setOpen(true)}
         className={className ?? "w-full border border-black text-xs py-1.5 px-3 hover:bg-muted/40 transition-colors"}
       >
-        Enquire
+        {label ?? "Enquire"}
       </button>
     </>
   );

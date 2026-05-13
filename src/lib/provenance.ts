@@ -19,7 +19,7 @@ export interface LedgerEntry {
   id: string;
   artwork_id: string;
   ledger_id: string;
-  entry_type: "created" | "transferred" | "resold";
+  entry_type: "created" | "transferred" | "resold" | "selected";
   from_owner_id: string | null;
   to_owner_id: string;
   transfer_method: "listing" | "stripe" | "claim" | "direct" | "negotiated_sale" | "gift";
@@ -29,6 +29,7 @@ export interface LedgerEntry {
   certificate_url: string | null;
   notes: string | null;
   campaign_id: string | null;
+  source_opportunity_id: string | null;
 }
 
 export interface PendingClaim {
@@ -151,6 +152,7 @@ export interface OwnerInfo {
   name: string;
   username: string | null;
   isShadow: boolean;
+  collectionPublic: boolean;
 }
 
 export interface ProvenancePageData {
@@ -273,7 +275,7 @@ export async function getLedgerByLedgerId(ledgerId: string): Promise<ProvenanceP
   if (ownerIds.length > 0) {
     const { data: ownerProfiles } = await admin
       .from("profiles")
-      .select("id, full_name, username, account_status")
+      .select("id, full_name, username, account_status, collection_public")
       .in("id", ownerIds);
 
     for (const p of ownerProfiles ?? []) {
@@ -283,6 +285,7 @@ export async function getLedgerByLedgerId(ledgerId: string): Promise<ProvenanceP
         name,
         username: p.username ?? null,
         isShadow: p.account_status === "shadow",
+        collectionPublic: (p as { collection_public?: boolean }).collection_public ?? true,
       };
     }
   }

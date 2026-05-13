@@ -60,6 +60,7 @@ export async function Header() {
           <NavBar
             isLoggedIn={!!user}
             username={profile?.username ?? null}
+            userId={user?.id ?? null}
             unreadCount={unreadCount}
             signOut={signOut}
             role={profile?.role ?? null}

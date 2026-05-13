@@ -110,6 +110,26 @@ export async function updateApplicationStatus(
           applicationId: applicationId,
         }).catch(console.error);
       }
+
+      // Upsert a project for this artist+opportunity — active only after migration 052
+      // adds opportunity_id + artwork_id columns and the unique constraint.
+      const { data: project } = await admin
+        .from("projects")
+        .upsert(
+          { artist_id: app.artist_id, title: opp.title },
+          { onConflict: "artist_id", ignoreDuplicates: true }
+        )
+        .select("id")
+        .maybeSingle();
+
+      if (project?.id) {
+        await admin.from("project_updates").insert({
+          project_id: project.id,
+          artist_id: app.artist_id,
+          body: `Selected for ${opp.title} (${opp.type})`,
+          content_type: "text",
+        });
+      }
     }
 
     // Email artist when approved (requesting high-res file)

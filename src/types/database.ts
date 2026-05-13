@@ -272,6 +272,8 @@ export interface Profile {
   provenance_signature_url: string | null;
   provenance_template_theme: 'minimal' | 'editorial' | 'gallery';
   account_status: 'active' | 'shadow';
+  // Migration 052: embed display configuration for patron collection embeds
+  patron_embed_config: Record<string, unknown> | null;
   created_at: string;
   // Gallery layout preferences (migration 115)
   gallery_row_height: number;
@@ -429,6 +431,11 @@ export interface Artwork {
   attributed_pending_artist_id: string | null;
   // Migration 114: controls whether a Buy button or Enquire button is shown
   listing_mode: 'direct_sale' | 'enquire_first';
+  // Migration 052: single CTA mode on the artwork detail page
+  acquisition_mode: 'buy_now' | 'make_offer' | 'enquire_first';
+  // Migration 052: physical dimensions for justified grid aspect-ratio calculation
+  width_mm: number | null;
+  height_mm: number | null;
   created_at: string;
 }
 
@@ -483,7 +490,7 @@ export interface ArtworkProvenanceLedger {
   id: string;
   artwork_id: string;
   ledger_id: string;
-  entry_type: 'created' | 'transferred' | 'resold';
+  entry_type: 'created' | 'transferred' | 'resold' | 'selected';
   from_owner_id: string | null;
   to_owner_id: string;
   transfer_method: 'listing' | 'stripe' | 'claim' | 'direct' | 'negotiated_sale' | 'gift';
@@ -493,6 +500,8 @@ export interface ArtworkProvenanceLedger {
   certificate_url: string | null;
   notes: string | null;
   campaign_id: string | null;
+  // Migration 052: links a 'selected' entry to the opportunity that caused selection
+  source_opportunity_id: string | null;
 }
 
 export interface PendingOwnershipClaim {
@@ -813,6 +822,9 @@ export interface ProjectUpdate {
   image_width: number | null;
   image_height: number | null;
   collaborator_ids: string[];
+  // Migration 052: tag and optional heading for project thread display
+  update_tag: 'concept' | 'update' | 'milestone' | 'complete';
+  title: string | null;
   created_at: string;
 }
 
@@ -835,6 +847,9 @@ export interface Project {
   artist_id: string;
   title: string;
   description: string | null;
+  // Migration 052: links project to the opportunity and artwork it relates to
+  opportunity_id: string | null;
+  artwork_id: string | null;
   created_at: string;
 }
 
@@ -892,3 +907,57 @@ export interface OpportunityCollaborator {
     full_name: string | null;
   } | null;
 }
+
+// ── Migration 052: Community chat ────────────────────────────────────────────
+
+export interface ChatChannel {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  channel_id: string;
+  sender_id: string | null;
+  body: string | null;
+  attachment_type: 'studio_update' | null;
+  attachment_id: string | null;
+  attachment_meta: {
+    title: string;
+    project_title: string;
+    artist_name: string;
+  } | null;
+  created_at: string;
+}
+
+// ── Migration 052: Embed config type ─────────────────────────────────────────
+
+export interface PatronEmbedConfig {
+  row_height: number;
+  gap_h: number;
+  gap_v: number;
+  show_title: boolean;
+  show_artist: boolean;
+  show_year: boolean;
+  show_medium: boolean;
+  show_trust: boolean;
+  theme: 'light' | 'dark' | 'transparent';
+  bg_color: string;
+}
+
+export const DEFAULT_EMBED_CONFIG: PatronEmbedConfig = {
+  row_height: 200,
+  gap_h: 6,
+  gap_v: 6,
+  show_title: true,
+  show_artist: true,
+  show_year: false,
+  show_medium: false,
+  show_trust: true,
+  theme: 'light',
+  bg_color: '#fafaf8',
+};

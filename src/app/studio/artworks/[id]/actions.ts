@@ -28,6 +28,26 @@ async function assertCreator(artworkId: string): Promise<{ userId: string } | { 
   return { userId: user.id };
 }
 
+// ── Acquisition mode ────────────────────────────────────────────────────────
+
+export async function updateAcquisitionMode(
+  artworkId: string,
+  mode: "buy_now" | "make_offer" | "enquire_first",
+): Promise<{ error?: string }> {
+  const gate = await assertCreator(artworkId);
+  if ("error" in gate) return { error: gate.error };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("artworks")
+    .update({ acquisition_mode: mode })
+    .eq("id", artworkId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/studio/artworks/${artworkId}`);
+  return {};
+}
+
 // ── Documentation photos ────────────────────────────────────────────────────
 
 export async function uploadDocumentationPhoto(form: FormData): Promise<{ error?: string }> {

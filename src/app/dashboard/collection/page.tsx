@@ -5,7 +5,9 @@ import { getCollection } from "@/lib/collection";
 import { CollectionGrid } from "@/components/collection/CollectionGrid";
 import { CollectionGroupsManager } from "@/components/collection/CollectionGroupsManager";
 import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
-import type { CollectionGroup } from "@/types/database";
+import { EmbedConfigurator } from "@/components/collection/EmbedConfigurator";
+import { DEFAULT_EMBED_CONFIG } from "@/types/database";
+import type { CollectionGroup, PatronEmbedConfig } from "@/types/database";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,6 +27,8 @@ export default async function CollectionPage() {
 
   const username = profileResult.data?.username ?? "";
   const groups = (groupsResult.data ?? []) as CollectionGroup[];
+  const embedConfig: PatronEmbedConfig = { ...DEFAULT_EMBED_CONFIG };
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-12">
@@ -46,6 +50,11 @@ export default async function CollectionPage() {
           </Link>
         </div>
       </div>
+
+      {/* Embed configurator */}
+      {username && (
+        <EmbedConfigurator initialConfig={embedConfig} username={username} siteUrl={siteUrl} />
+      )}
 
       {/* Collection groups */}
       {username && (

@@ -22,7 +22,7 @@ export async function getArtistProjects(artistId: string): Promise<Project[]> {
     .select("id, artist_id, title, description, created_at")
     .eq("artist_id", artistId)
     .order("created_at", { ascending: false });
-  return (data ?? []) as Project[];
+  return (data ?? []).map(r => ({ ...r, opportunity_id: null, artwork_id: null })) as Project[];
 }
 
 export async function getThread(projectId: string): Promise<ProjectThread | null> {
@@ -159,6 +159,8 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
     collaborator_ids: u.collaborator_ids ?? [],
     collaborators: (u.collaborator_ids ?? []).map((id: string) => collaboratorMap.get(id)).filter(Boolean) as CollaboratorProfile[],
     notes: notesByUpdate[u.id] ?? [],
+    title: u.title ?? null,
+    update_tag: u.update_tag ?? "update",
   }));
 
   return {
@@ -167,6 +169,8 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
       artist_id: pr.artist_id,
       title: pr.title,
       description: pr.description,
+      opportunity_id: null,
+      artwork_id: null,
       created_at: pr.created_at,
       artist_username: pr.profiles?.username ?? "",
       artist_full_name: pr.profiles?.full_name ?? null,
