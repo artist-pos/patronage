@@ -314,7 +314,22 @@ export default async function OpportunityPage({ params }: Props) {
         "@id": canonicalUrl,
         name: opp.title,
         url: canonicalUrl,
-        organizer: { "@type": "Organization", name: opp.organiser },
+        organizer: { "@type": "Organization", name: opp.organiser, url: canonicalUrl },
+        // startDate required by Google for Event; fall back to deadline if opens_at absent
+        ...(schemaType === "Event" && {
+          startDate: opp.opens_at ?? opp.deadline,
+          eventStatus: "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+          performer: { "@type": "Organization", name: opp.organiser },
+          offers: {
+            "@type": "Offer",
+            url: canonicalUrl,
+            price: "0",
+            priceCurrency: "NZD",
+            availability: "https://schema.org/InStock",
+            ...(opp.deadline && { validThrough: opp.deadline }),
+          },
+        }),
         ...(opp.opens_at && { startDate: opp.opens_at }),
         ...(opp.deadline && { endDate: opp.deadline }),
         ...(schemaType === "Grant" && opp.deadline && { applicationDeadline: opp.deadline }),

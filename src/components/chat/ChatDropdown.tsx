@@ -530,7 +530,7 @@ export function ChatDropdown({ userId, username }: Props) {
                       );
                       const cls = "border border-stone-200 rounded-lg px-3 py-2 mt-1 bg-white text-xs flex items-center gap-2 max-w-[260px]";
                       return meta.project_id ? (
-                        <Link href={`/projects/${meta.project_id}`} onClick={() => setOpen(false)} className={`${cls} hover:border-stone-300 hover:bg-stone-50 transition-colors`}>
+                        <Link href={`/threads/${meta.project_id}`} onClick={() => setOpen(false)} className={`${cls} hover:border-stone-300 hover:bg-stone-50 transition-colors`}>
                           {inner}
                         </Link>
                       ) : (

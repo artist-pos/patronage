@@ -22,7 +22,7 @@ interface FeedCardProps {
 
 export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCardProps) {
   const name = u.artist_full_name ?? u.artist_username;
-  const href = u.project_id ? `/threads/${u.project_id}` : `/projects/${u.id}?from=feed`;
+  const href = u.project_id ? `/threads/${u.project_id}#post-${u.id}` : `/projects/${u.id}?from=feed`;
 
   const mediaSection = (() => {
     if (u.content_type === "image" && u.image_url) {

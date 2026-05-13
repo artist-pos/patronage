@@ -144,7 +144,7 @@ function ThreadPostItem({
   currentUserAvatarUrl?: string | null;
 }) {
   return (
-    <div className="relative pl-10 pb-12">
+    <div id={`post-${post.id}`} className="relative pl-10 pb-12 scroll-mt-20">
       {/* Timeline dot */}
       <div
         className={`absolute left-0 top-1 w-7 h-7 border border-black flex items-center justify-center bg-background z-10 ${isFirst ? "bg-foreground" : ""}`}
