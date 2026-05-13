@@ -8,6 +8,7 @@ export interface ThreadPost extends ProjectUpdateWithArtist {
 
 export interface ProjectThread {
   project: Project & {
+    slug: string | null;
     artist_username: string;
     artist_full_name: string | null;
     artist_avatar_url: string | null;
@@ -25,29 +26,23 @@ export async function getArtistProjects(artistId: string): Promise<Project[]> {
   return (data ?? []).map(r => ({ ...r, opportunity_id: null, artwork_id: null })) as Project[];
 }
 
-export async function getThread(projectId: string): Promise<ProjectThread | null> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function getThread(idOrSlug: string): Promise<ProjectThread | null> {
   const supabase = await createClient();
 
-  // Fetch the project + artist profile
-  const { data: projectRow } = await supabase
-    .from("projects")
-    .select(`
-      id,
-      artist_id,
-      title,
-      description,
-      created_at,
-      profiles!projects_artist_id_fkey (
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq("id", projectId)
-    .single();
+  const PROJECT_SELECT = `
+    id, artist_id, title, description, slug, created_at,
+    profiles!projects_artist_id_fkey (username, full_name, avatar_url)
+  `;
+
+  // Accept UUID or human slug
+  const { data: projectRow } = UUID_RE.test(idOrSlug)
+    ? await supabase.from("projects").select(PROJECT_SELECT).eq("id", idOrSlug).maybeSingle()
+    : await supabase.from("projects").select(PROJECT_SELECT).eq("slug", idOrSlug).maybeSingle();
 
   if (!projectRow) return null;
-  const pr = projectRow as any;
+  const pr = projectRow as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // Fetch all updates belonging to this project, chronological
   const { data: updatesData } = await supabase
@@ -76,7 +71,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
         avatar_url
       )
     `)
-    .eq("project_id", projectId)
+    .eq("project_id", pr.id)
     .order("created_at", { ascending: true });
 
   const updates = (updatesData ?? []) as any[];
@@ -169,6 +164,7 @@ export async function getThread(projectId: string): Promise<ProjectThread | null
       artist_id: pr.artist_id,
       title: pr.title,
       description: pr.description,
+      slug: pr.slug ?? null,
       opportunity_id: null,
       artwork_id: null,
       created_at: pr.created_at,

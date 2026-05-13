@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
@@ -38,6 +40,11 @@ export default async function ThreadPage({ params }: Props) {
   const { id } = await params;
   const thread = await getThread(id);
   if (!thread) notFound();
+
+  // Redirect UUID access to the readable slug URL
+  if (UUID_RE.test(id) && thread.project.slug) {
+    redirect(`/threads/${thread.project.slug}`);
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

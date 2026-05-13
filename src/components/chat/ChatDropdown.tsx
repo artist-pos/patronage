@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createRealtimeClient } from "@/lib/supabase/client";
+import { deleteChatMessage } from "@/app/chat/actions";
 import Link from "next/link";
 
 interface Channel {
@@ -38,6 +39,7 @@ interface StudioUpdate {
 interface SelfProfile {
   full_name: string | null;
   avatar_url: string | null;
+  role: string | null;
 }
 
 const AVATAR_COLORS = [
@@ -96,6 +98,8 @@ export function ChatDropdown({ userId, username }: Props) {
   const [attachment, setAttachment] = useState<StudioUpdate | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [selfProfile, setSelfProfile] = useState<SelfProfile | null>(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [menuMsgId, setMenuMsgId] = useState<string | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,7 +121,7 @@ export function ChatDropdown({ userId, username }: Props) {
     if (!userId) return;
     supabase
       .from("profiles")
-      .select("full_name, avatar_url")
+      .select("full_name, avatar_url, role")
       .eq("id", userId)
       .maybeSingle()
       .then(({ data }) => { if (data) setSelfProfile(data); });
@@ -489,6 +493,8 @@ export function ChatDropdown({ userId, username }: Props) {
               const senderName = resolveDisplayName(msg.sender);
               const isOwnMessage = msg.sender_id === userId;
               const isArtist = msg.sender?.role === "artist" || msg.sender?.role === "owner";
+              const isAdmin = selfProfile?.role === "admin" || selfProfile?.role === "owner";
+              const canDelete = isAdmin || isOwnMessage;
               const meta = msg.attachment_meta as {
                 caption?: string;
                 project_title?: string;
@@ -496,7 +502,12 @@ export function ChatDropdown({ userId, username }: Props) {
               } | null;
 
               return (
-                <div key={msg.id} className={`flex gap-2.5 ${isOwnMessage ? "flex-row-reverse" : ""}`}>
+                <div
+                  key={msg.id}
+                  className={`group relative flex gap-2.5 ${isOwnMessage ? "flex-row-reverse" : ""}`}
+                  onMouseEnter={() => setHoveredMsgId(msg.id)}
+                  onMouseLeave={() => { setHoveredMsgId(null); if (menuMsgId === msg.id) setMenuMsgId(null); }}
+                >
                   {renderAvatar(msg, senderName)}
                   <div className={`flex-1 min-w-0 ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}>
                     <div className={`flex items-center gap-1.5 mb-0.5 ${isOwnMessage ? "flex-row-reverse" : ""}`}>
@@ -538,6 +549,39 @@ export function ChatDropdown({ userId, username }: Props) {
                       );
                     })()}
                   </div>
+
+                  {/* 3-dot delete menu — shown on hover for admin or own messages */}
+                  {canDelete && (hoveredMsgId === msg.id || menuMsgId === msg.id) && (
+                    <div className={`relative self-start mt-0.5 shrink-0 ${isOwnMessage ? "order-first" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => setMenuMsgId(prev => prev === msg.id ? null : msg.id)}
+                        className="p-1 text-stone-300 hover:text-stone-500 transition-colors rounded"
+                        aria-label="Message options"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                      </button>
+                      {menuMsgId === msg.id && (
+                        <div className={`absolute top-6 z-50 bg-white border border-stone-200 rounded shadow-md py-1 min-w-[110px] ${isOwnMessage ? "right-0" : "left-0"}`}>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setMenuMsgId(null);
+                              setMessages(prev => prev.filter(m => m.id !== msg.id));
+                              const result = await deleteChatMessage(msg.id);
+                              if (result.error) {
+                                // Restore on failure
+                                setMessages(prev => [...prev, msg].sort((a, b) => a.created_at.localeCompare(b.created_at)));
+                              }
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            Delete message
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
