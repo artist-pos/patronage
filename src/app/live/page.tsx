@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { CampaignFilters } from "@/components/live/CampaignFilters";
 import type { Metadata } from "next";
 
@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default async function LivePage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
 
-  const { data: rows } = await admin
+  const { data: rows } = await supabase
     .from("campaigns")
     .select(`
       id, slug, title, campaign_type, cover_image_url, location_address, is_featured,
