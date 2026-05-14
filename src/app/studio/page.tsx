@@ -33,6 +33,9 @@ import { getMyWrittenNotes } from "@/lib/notes";
 import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
 import { getProfileStats } from "@/lib/profileAnalytics";
 import { getFollowers } from "@/lib/follows";
+import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
+import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
+import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import type { Metadata } from "next";
 import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project } from "@/types/database";
 
@@ -51,6 +54,8 @@ interface PageProps {
     ft?: string;
     /** analytics period */
     range?: string;
+    /** opportunities filter */
+    of?: string;
   }>;
 }
 
@@ -59,18 +64,15 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("role, username")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profileRow }, completionProfile] = await Promise.all([
+    supabase.from("profiles").select("role, username").eq("id", user.id).single(),
+    fetchCompletionProfile(user.id),
+  ]);
 
   if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
     redirect("/dashboard");
   }
 
-  // Always fetch completion fields — lightweight, cached across shell + page.
-  const completionProfile = await fetchCompletionProfile(user.id);
   const missingFields = completionProfile ? getMissingFields(completionProfile) : [];
   const profileComplete = completionProfile ? isProfileComplete(completionProfile) : false;
 
@@ -100,14 +102,15 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const analyticsDays = params.range === "7" ? 7 : params.range === "90" ? 90 : 30;
 
   // ── Conditional data fetching ─────────────────────────────────────────────
-  const needsIdentity  = activeSection === "profile-cv";
-  const needsWorks     = activeSection === "works";
-  const needsUpdates   = activeSection === "feed";
-  const needsProjects  = activeSection === "feed";
-  const needsCampaigns = activeSection === "campaigns";
-  const needsTiers     = activeSection === "support-tiers";
-  const needsNotes     = activeSection === "feed" && feedTab === "notes";
-  const needsAnalytics = activeSection === "analytics";
+  const needsIdentity      = activeSection === "profile-cv" || activeSection === "account";
+  const needsWorks         = activeSection === "works";
+  const needsUpdates       = activeSection === "feed";
+  const needsProjects      = activeSection === "feed";
+  const needsCampaigns     = activeSection === "campaigns";
+  const needsTiers         = activeSection === "support-tiers";
+  const needsNotes         = activeSection === "feed" && feedTab === "notes";
+  const needsAnalytics     = activeSection === "analytics";
+  const needsOpportunities = activeSection === "opportunities" || activeSection === "home";
 
   // Identity: full profile + collectives (profile section only)
   const [fullProfile, membershipsRaw] = needsIdentity
@@ -126,8 +129,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
   const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
 
-  // Works: portfolio, available, sold
-  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows] =
+  // Works: portfolio, available, sold, confirmations, collected — all in one round
+  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, collectedWorksResult] =
     needsWorks
       ? await Promise.all([
           supabase
@@ -167,8 +170,15 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 .select("work_id, event_type")
                 .in("work_id", ids);
             }),
+          getPendingConfirmationCount(user.id),
+          supabase
+            .from("artworks")
+            .select("id, url, caption, price, price_currency, creator_id, created_at")
+            .eq("current_owner_id", user.id)
+            .neq("creator_id", user.id)
+            .order("created_at", { ascending: false }),
         ])
-      : [null, null, null, null, null];
+      : [null, null, null, null, null, 0, null];
 
   const featuredIds = new Set(
     ((featuredRows as { data: { id: string }[] | null } | null)?.data ?? []).map((r) => r.id)
@@ -232,19 +242,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : { data: null };
   const initialTiers = (tiersData ?? []) as SupportTier[];
 
-  // Pending confirmations count for Works section banner
-  const pendingConfirmationCount = needsWorks ? await getPendingConfirmationCount(user.id) : 0;
-
-  // Collected works (Works section — Collected tab)
-  const { data: collectedWorksData } = needsWorks
-    ? await supabase
-        .from("artworks")
-        .select("id, url, caption, price, price_currency, creator_id, created_at")
-        .eq("current_owner_id", user.id)
-        .neq("creator_id", user.id)
-        .order("created_at", { ascending: false })
-    : { data: null };
-  const collectedWorks = (collectedWorksData ?? []) as {
+  const collectedWorks = ((collectedWorksResult as { data: unknown[] | null } | null)?.data ?? []) as {
     id: string; url: string; caption: string | null;
     price: number | null; price_currency: string | null;
     creator_id: string; created_at: string;
@@ -252,6 +250,52 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
   // Notes (Feed section — Notes tab)
   const feedNotes = needsNotes ? await getMyWrittenNotes(user.id) : [];
+
+  // Opportunities
+  const OPP_FILTERS = ["all", "saved", "closing", "applied", "expired"] as const;
+  type OppFilter = typeof OPP_FILTERS[number];
+  const activeOppFilter: OppFilter = (OPP_FILTERS as readonly string[]).includes(params.of ?? "")
+    ? (params.of as OppFilter)
+    : "all";
+
+  let savedList: ReturnType<typeof categorizeSaved>["saved"] = [];
+  let closingSoon: ReturnType<typeof categorizeSaved>["closingSoon"] = [];
+  let applied: ReturnType<typeof categorizeSaved>["applied"] = [];
+  let expired: ReturnType<typeof categorizeSaved>["expired"] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let applications: any[] = [];
+
+  if (needsOpportunities) {
+    const [savedData, applicationsData] = await Promise.all([
+      getSavedOpportunities(),
+      supabase
+        .from("opportunity_applications")
+        .select("*, opportunity:opportunities(id, slug, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
+        .eq("artist_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    const categorised = categorizeSaved(savedData);
+    savedList   = categorised.saved;
+    closingSoon = categorised.closingSoon;
+    applied     = categorised.applied;
+    expired     = categorised.expired;
+    applications = applicationsData.data ?? [];
+  }
+
+  const oppFilterList =
+    activeOppFilter === "saved"   ? savedList
+    : activeOppFilter === "closing" ? closingSoon
+    : activeOppFilter === "applied" ? applied
+    : activeOppFilter === "expired" ? expired
+    : [...closingSoon, ...savedList, ...applied, ...expired];
+
+  const oppCounts = {
+    all:     savedList.length + closingSoon.length + applied.length + expired.length,
+    saved:   savedList.length,
+    closing: closingSoon.length,
+    applied: applied.length,
+    expired: expired.length,
+  };
 
   // Analytics
   const [analyticsStats, analyticsFollowers] = needsAnalytics
@@ -756,6 +800,148 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 <AnalyticsStatCard label="Saved" value={analyticsStats.opportunitiesSaved} description="Opportunities bookmarked" />
               </div>
             </section>
+          </div>
+        )}
+
+        {/* ── Home ── */}
+        {activeSection === "home" && (
+          <div className="space-y-10">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold">Welcome back</h2>
+              <p className="text-sm text-muted-foreground">Your studio at a glance.</p>
+            </div>
+
+            {/* Profile completion nudge */}
+            {!profileComplete && missingFields.length > 0 && (
+              <div className="border border-amber-200 bg-amber-50 rounded-lg px-5 py-4 space-y-2">
+                <p className="text-sm font-semibold text-amber-900">Finish setting up your profile</p>
+                <p className="text-sm text-amber-800">
+                  Add{" "}
+                  {missingFields.map((f, i) => (
+                    <span key={f.key}>
+                      {i > 0 && ", "}
+                      <Link href={f.href} className="underline underline-offset-2 hover:text-amber-950 transition-colors">
+                        {f.label}
+                      </Link>
+                    </span>
+                  ))}{" "}
+                  to unlock all features and appear in the directory.
+                </p>
+              </div>
+            )}
+
+            {/* Quick links grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { href: "/studio?section=works", label: "Works", description: "Manage your portfolio and listings" },
+                { href: "/studio?section=feed", label: "Studio Feed", description: "Post updates and project threads" },
+                { href: "/studio?section=opportunities", label: "Opportunities", description: "Saved grants, residencies, and applications" },
+                { href: "/studio?section=analytics", label: "Analytics", description: "Profile views, followers, and engagement" },
+                { href: "/studio?section=profile-cv", label: "Profile & CV", description: "Edit your bio, exhibitions, and press" },
+                { href: "/studio?section=support-tiers", label: "Support Tiers", description: "Configure patron support levels" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="border border-border p-4 space-y-1 hover:border-black transition-colors group"
+                >
+                  <p className="text-sm font-semibold group-hover:underline underline-offset-2">{item.label}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                </Link>
+              ))}
+            </div>
+
+            {/* Pending confirmations */}
+            {pendingConfirmationCount > 0 && (
+              <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-4 py-3">
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">{pendingConfirmationCount}</span> work{pendingConfirmationCount !== 1 ? "s" : ""} need attribution confirmation.
+                </p>
+                <Link href="/studio/pending-confirmations" className="text-sm text-amber-900 underline underline-offset-2 shrink-0 ml-4">
+                  Review →
+                </Link>
+              </div>
+            )}
+
+            {/* Closing soon opportunities */}
+            {closingSoon.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Closing Soon</p>
+                  <Link href="/studio?section=opportunities&of=closing" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
+                    View all
+                  </Link>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {closingSoon.slice(0, 3).map((saved) => (
+                    <OpportunityCard key={saved.id} opp={saved.opportunity} view="list" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Opportunities ── */}
+        {activeSection === "opportunities" && (
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Opportunities</h2>
+              <p className="text-sm text-muted-foreground">
+                Saved grants, residencies, and open calls — plus your active applications.
+              </p>
+            </div>
+
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2">
+              {OPP_FILTERS.map((f) => (
+                <Link
+                  key={f}
+                  href={`/studio?section=opportunities&of=${f}`}
+                  className={`text-xs px-3 py-1.5 border transition-colors capitalize ${
+                    activeOppFilter === f
+                      ? "border-black bg-black text-white"
+                      : "border-border hover:border-black"
+                  }`}
+                >
+                  {f === "all" ? "All" : f === "saved" ? "Saved" : f === "closing" ? "Closing Soon" : f === "applied" ? "Applied" : "Expired"}
+                  {" "}
+                  <span className="opacity-60 tabular-nums">({oppCounts[f]})</span>
+                </Link>
+              ))}
+            </div>
+
+            {/* Applications tab — show when filter is "applied" or "all" with applications present */}
+            {(activeOppFilter === "applied" || (activeOppFilter === "all" && applications.length > 0)) && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pipeline Applications</p>
+                <ApplicationsTab initialApplications={applications} userId={user.id} />
+              </div>
+            )}
+
+            {/* Opportunity list */}
+            {oppFilterList.length === 0 ? (
+              <div className="py-16 text-center border border-dashed border-border">
+                <p className="text-sm text-muted-foreground">
+                  {activeOppFilter === "saved" && "No saved opportunities. Browse and save ones you’re interested in."}
+                  {activeOppFilter === "closing" && "No saved opportunities closing soon."}
+                  {activeOppFilter === "applied" && "No saved opportunities marked as applied."}
+                  {activeOppFilter === "expired" && "No expired saved opportunities."}
+                  {activeOppFilter === "all" && "No saved opportunities yet."}
+                </p>
+                {(activeOppFilter === "all" || activeOppFilter === "saved") && (
+                  <Link href="/opportunities" className="inline-block mt-3 text-sm underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
+                    Browse opportunities →
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {oppFilterList.map((saved) => (
+                  <OpportunityCard key={saved.id} opp={saved.opportunity} view="list" />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
