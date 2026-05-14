@@ -41,7 +41,6 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
             alt={opp.title}
             width={120}
             height={120}
-            unoptimized
             className="w-full h-auto max-h-full object-contain p-3"
             sizes="144px"
           />

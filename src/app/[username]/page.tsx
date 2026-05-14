@@ -385,22 +385,23 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
       {/* ── Banner ── */}
       {profile.featured_image_url && (
-        <div
-          className="w-full aspect-[42/9]"
-          style={{
-            backgroundImage: `url("${profile.featured_image_url}")`,
-            backgroundSize: "100% auto",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: `center ${profile.banner_focus_y ?? 50}%`,
-            backgroundColor: "#f5f5f4",
-          }}
-        />
+        <div className="w-full aspect-[42/9] relative overflow-hidden bg-stone-100">
+          <Image
+            src={profile.featured_image_url}
+            alt={`${displayName} banner`}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+            style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
+          />
+        </div>
       )}
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
 
         {/* ── Identity block ── */}
-        <div className={profile.featured_image_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
+        <div className={profile.featured_image_url && profile.avatar_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
           {profile.avatar_url && (
             <div className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
               <Image
