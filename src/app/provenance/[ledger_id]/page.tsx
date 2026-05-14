@@ -45,28 +45,29 @@ export default async function ProvenancePage({ params }: PageProps) {
 
   if (!data) notFound();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
   const { artwork, entries, priorHistory, artist, owners } = data;
+
+  const selectedOppIds = entries
+    .filter(e => e.entry_type === "selected" && e.source_opportunity_id)
+    .map(e => e.source_opportunity_id as string);
+
+  // Run auth + non-auth-dependent fetches in parallel; sign URLs only if needed after
+  const [{ data: { user } }, trustTier, docPhotosCount, oppTitlesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getTrustTier(artwork.id),
+    listDocPhotos(artwork.id),
+    selectedOppIds.length > 0
+      ? supabase.from("opportunities").select("id, title, type").in("id", selectedOppIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const isArtist = user?.id === artwork.creator_id;
   const isCurrentOwner = user?.id === artwork.current_owner_id;
   const isLoggedIn = !!user;
   const canPrivateView = isArtist || isCurrentOwner;
 
-  // Fetch opportunity titles for any 'selected' entries
-  const selectedOppIds = entries
-    .filter(e => e.entry_type === "selected" && e.source_opportunity_id)
-    .map(e => e.source_opportunity_id as string);
-
-  const [trustTier, docPhotos, docPhotosCount, oppTitlesResult] = await Promise.all([
-    getTrustTier(artwork.id),
-    canPrivateView ? listDocPhotosWithUrls(artwork.id) : Promise.resolve([]),
-    !canPrivateView ? listDocPhotos(artwork.id) : Promise.resolve([]),
-    selectedOppIds.length > 0
-      ? supabase.from("opportunities").select("id, title, type").in("id", selectedOppIds)
-      : Promise.resolve({ data: [] }),
-  ]);
+  // Only generate signed URLs if the viewer can actually see the photos
+  const docPhotos = canPrivateView ? await listDocPhotosWithUrls(artwork.id) : [];
 
   const oppTitles: Record<string, { title: string; type: string }> = {};
   for (const opp of (oppTitlesResult as { data: Array<{ id: string; title: string; type: string }> | null }).data ?? []) {

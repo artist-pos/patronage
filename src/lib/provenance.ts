@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPriorHistory, type PriorHistoryEntry } from "@/lib/artwork-prior-history";
 
@@ -189,7 +190,7 @@ function resolveDisplayName(p: { full_name: string | null; username: string | nu
   return "Unknown";
 }
 
-export async function getLedgerByLedgerId(ledgerId: string): Promise<ProvenancePageData | null> {
+export const getLedgerByLedgerId = cache(async function getLedgerByLedgerId(ledgerId: string): Promise<ProvenancePageData | null> {
   const admin = createAdminClient();
 
   const { data: artwork } = await admin
@@ -300,7 +301,7 @@ export async function getLedgerByLedgerId(ledgerId: string): Promise<ProvenanceP
     ownerNames,
     owners,
   };
-}
+});
 
 // ── Artist dashboard overview ─────────────────────────────────────────────────
 

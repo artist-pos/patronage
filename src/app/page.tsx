@@ -90,17 +90,16 @@ function OpportunityMiniCard({ opp }: { opp: Opportunity }) {
 
 
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const isAuthenticated = !!user;
-  const isNewUser = !!user && !!user.created_at &&
-    (Date.now() - new Date(user.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
-
-  const [artists, opportunities, updates] = await Promise.all([
+  const [supabase, artists, opportunities, updates] = await Promise.all([
+    createClient(),
     getProfiles({}, 4),
     getClosingSoonOpportunities(4),
     getLatestUpdates(8),
   ]);
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthenticated = !!user;
+  const isNewUser = !!user && !!user.created_at &&
+    (Date.now() - new Date(user.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <div>

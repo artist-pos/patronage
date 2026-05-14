@@ -125,24 +125,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     ? (normalised as TabType)
     : "overview";
 
-  const profile = await getProfile(username);
+  const [profile, supabase] = await Promise.all([
+    getProfile(username),
+    createClient(),
+  ]);
   if (!profile) notFound();
 
-  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
-
-  // Fetch current viewer's role for conditional UI (e.g. "Enquire to Buy")
-  let viewerRole: string | null = null;
-  if (user && !isOwner) {
-    const { data: viewerProfile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    viewerRole = viewerProfile?.role ?? null;
-  }
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
 
@@ -157,6 +148,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     collectionWorks,
     profileOpportunities,
     profileCampaigns,
+    viewerRoleResult,
   ] = await Promise.all([
     // Available works: always needed for "X works available" badge
     isArtistProfile
@@ -237,7 +229,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("created_at", { ascending: false })
           .then(({ data }) => (data ?? []) as unknown as CampaignForProfile[])
       : Promise.resolve([] as CampaignForProfile[]),
+    // Viewer role for conditional UI — folded into Phase 1 to avoid sequential step
+    user && !isOwner
+      ? supabase.from("profiles").select("role").eq("id", user.id).single().then(r => r.data?.role ?? null)
+      : Promise.resolve(null as string | null),
   ]);
+
+  const viewerRole: string | null = viewerRoleResult;
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
   const needsPortfolio        = isArtistProfile && (tab === "overview" || tab === "work");
