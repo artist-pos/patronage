@@ -891,6 +891,8 @@ export interface ConversationWithOther {
   last_message_at: string | null;
   conv_created_at: string;
   unread_count: number;
+  source_work_id: string | null;
+  source_work_caption: string | null;
 }
 
 export interface OpportunityCollaborator {

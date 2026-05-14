@@ -9,6 +9,8 @@ import { DocumentationPhotosEditor } from "./DocumentationPhotosEditor";
 import { PriorHistoryEditor } from "./PriorHistoryEditor";
 import { listDocPhotosWithUrls } from "@/lib/artwork-documentation";
 import { listPriorHistory } from "@/lib/artwork-prior-history";
+import { ProcessThread } from "@/components/studio/ProcessThread";
+import { LinkProjectToArtwork } from "@/components/studio/LinkProjectToArtwork";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Artwork — Studio — Patronage" };
@@ -57,10 +59,43 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
 
   if (!artwork) notFound();
 
-  const [docPhotos, priorHistory] = await Promise.all([
+  const [docPhotos, priorHistory, linkedProjectResult] = await Promise.all([
     listDocPhotosWithUrls(artwork.id),
     listPriorHistory(artwork.id),
+    supabase
+      .from("projects")
+      .select("id, title")
+      .eq("artwork_id", id)
+      .eq("artist_id", user.id)
+      .maybeSingle(),
   ]);
+
+  const linkedProject = linkedProjectResult.data ?? null;
+
+  // Only fetch the artist's projects for the link UI if no project is already linked
+  const unlinkableProjectsResult = !linkedProject
+    ? await supabase
+        .from("projects")
+        .select("id, title, project_updates(count)")
+        .eq("artist_id", user.id)
+        .is("artwork_id", null)
+        .order("created_at", { ascending: false })
+    : null;
+
+  const linkedProjectUpdates = linkedProject
+    ? await supabase
+        .from("project_updates")
+        .select("id, content_type, image_url, caption, text_content, created_at")
+        .eq("project_id", linkedProject.id)
+        .order("created_at", { ascending: true })
+        .then((r) => r.data ?? [])
+    : [];
+
+  const unlinkableProjects = (unlinkableProjectsResult?.data ?? []).map((p) => ({
+    id: p.id,
+    title: p.title,
+    update_count: Array.isArray(p.project_updates) ? p.project_updates.length : (p.project_updates as { count: number } | null)?.count ?? 0,
+  }));
 
   // Resolve display names for owners in the ledger
   const ownerIds = [...new Set((entries ?? []).map(e => e.to_owner_id))];
@@ -181,6 +216,17 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
           artworkId={artwork.id}
           initialEntries={priorHistory}
         />
+
+        {/* Process thread — linked project */}
+        {linkedProject ? (
+          <ProcessThread
+            projectId={linkedProject.id}
+            projectTitle={linkedProject.title}
+            updates={linkedProjectUpdates as Parameters<typeof ProcessThread>[0]["updates"]}
+          />
+        ) : (
+          <LinkProjectToArtwork artworkId={artwork.id} projects={unlinkableProjects} />
+        )}
       </div>
     </div>
   );

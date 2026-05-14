@@ -1,40 +1,50 @@
-export const SIDEBAR_SECTIONS = [
-  { id: "profile",     label: "Profile",        group: "Identity"  },
-  { id: "cv",          label: "CV & History",   group: "Identity"  },
-  { id: "portfolio",   label: "Portfolio",       group: "Work"      },
-  { id: "available",   label: "Available",       group: "Work"      },
-  { id: "sold",        label: "Sold",            group: "Work"      },
-  { id: "collection",  label: "Collection",      group: "Work"      },
-  { id: "updates",     label: "Studio Updates",  group: "Creative"  },
-  { id: "projects",    label: "Projects",        group: "Creative"  },
-  { id: "campaigns",   label: "Campaigns",       group: "Creative"  },
-  { id: "support",     label: "Support Tiers",   group: "Commerce"  },
-  { id: "earnings",    label: "Earnings",         group: "Commerce"  },
-  { id: "provenance",  label: "Provenance",      group: "Commerce"  },
-  { id: "confirmations", label: "Confirmations", group: "Commerce" },
-  { id: "rooms",       label: "Viewing Rooms",   group: "Commerce"  },
+export const PRIMARY_SECTIONS = [
+  { id: "home",         label: "Home"             },
+  { id: "works",        label: "Works"            },
+  { id: "opportunities",label: "Opportunities"    },
+  { id: "feed",         label: "Studio Feed"      },
+  { id: "messages",     label: "Messages"         },
+  { id: "campaigns",    label: "Campaigns"        },
 ] as const;
+
+export const SECONDARY_SECTIONS = [
+  { id: "profile-cv",   label: "Profile & CV"     },
+  { id: "provenance",   label: "Provenance"       },
+  { id: "support-tiers",label: "Support Tiers"    },
+  { id: "rooms",        label: "Viewing Rooms"    },
+  { id: "earnings",     label: "Earnings & Payouts"},
+  { id: "analytics",    label: "Analytics"        },
+  { id: "account",      label: "Account"          },
+] as const;
+
+export const SIDEBAR_SECTIONS = [...PRIMARY_SECTIONS, ...SECONDARY_SECTIONS] as const;
 
 export type Section = typeof SIDEBAR_SECTIONS[number]["id"];
 export const VALID_SECTIONS = SIDEBAR_SECTIONS.map((s) => s.id) as string[];
-export const SIDEBAR_GROUPS = ["Identity", "Work", "Creative", "Commerce"] as const;
 
-export const TAB_TO_SECTION: Record<string, Section> = {
-  works:     "portfolio",
-  campaigns: "campaigns",
-  commerce:  "support",
-  support:   "support",
-  analytics: "profile",
+// Legacy section IDs that existed before the IA consolidation
+export const LEGACY_SECTION_ALIASES: Record<string, Section> = {
+  profile:       "profile-cv",
+  cv:            "profile-cv",
+  portfolio:     "works",
+  available:     "works",
+  sold:          "works",
+  collection:    "works",
+  updates:       "feed",
+  projects:      "feed",
+  support:       "support-tiers",
+  confirmations: "works",
+  // dashboard tab aliases
+  works:         "works",
+  campaigns:     "campaigns",
+  commerce:      "support-tiers",
+  analytics:     "analytics",
 };
 
-// Collection lives under /dashboard/collection — it's role-agnostic, shared
-// with patrons and partners. Surface it from the studio sidebar so artists
-// who collect other artists' work can reach it from one place.
 export function getSectionHref(id: string): string {
-  if (id === "provenance")   return "/studio/provenance";
-  if (id === "collection")   return "/dashboard/collection";
-  if (id === "confirmations") return "/studio/pending-confirmations";
-  if (id === "earnings")     return "/studio/earnings";
-  if (id === "rooms")        return "/studio/rooms";
+  if (id === "provenance") return "/studio/provenance";
+  if (id === "rooms")      return "/studio/rooms";
+  if (id === "earnings")   return "/studio/earnings";
+  if (id === "messages")   return "/messages";
   return `/studio?section=${id}`;
 }

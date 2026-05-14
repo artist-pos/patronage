@@ -63,9 +63,13 @@ export default async function MessagesPage() {
                 <p className={`text-sm leading-snug truncate group-hover:underline underline-offset-2 ${conv.unread_count > 0 ? "font-semibold" : ""}`}>
                   {conv.other_full_name ?? conv.other_username}
                 </p>
-                {conv.last_message && (
+                {conv.source_work_caption ? (
+                  <p className="text-xs text-muted-foreground truncate">
+                    <span className="font-medium">Enquiry:</span> {conv.source_work_caption}
+                  </p>
+                ) : conv.last_message ? (
                   <p className="text-xs text-muted-foreground truncate">{conv.last_message}</p>
-                )}
+                ) : null}
               </div>
 
               {/* Timestamp + unread dot */}

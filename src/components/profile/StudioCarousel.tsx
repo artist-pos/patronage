@@ -14,6 +14,7 @@ interface Props {
   artistUsername: string;
   isOwner?: boolean;
   projects?: { id: string; title: string }[];
+  artworks?: { id: string; label: string }[];
   profileId?: string;
 }
 
@@ -31,7 +32,7 @@ function formatTimestamp(iso: string): string {
   return `${hh}:${mm}, ${dd} ${mon}`;
 }
 
-export function StudioCarousel({ updates, artistUsername, isOwner = false, projects = [], profileId }: Props) {
+export function StudioCarousel({ updates, artistUsername, isOwner = false, projects = [], artworks = [], profileId }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
@@ -77,6 +78,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
               u={u}
               isOwner={isOwner}
               projects={projects}
+              artworks={artworks}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed={false}
@@ -91,6 +93,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
               u={u}
               isOwner={isOwner}
               projects={projects}
+              artworks={artworks}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed
@@ -177,6 +180,7 @@ function Tile({
   u,
   isOwner,
   projects,
+  artworks,
   from,
   onDeleted,
   fixed,
@@ -184,6 +188,7 @@ function Tile({
   u: ProjectUpdateWithArtist;
   isOwner: boolean;
   projects: { id: string; title: string }[];
+  artworks?: { id: string; label: string }[];
   from?: string;
   onDeleted: (id: string) => void;
   fixed: boolean;
@@ -271,6 +276,7 @@ function Tile({
                 updateId={u.id}
                 currentProjectId={u.project_id}
                 projects={projects}
+                artworks={artworks}
               />
             </div>
             <button

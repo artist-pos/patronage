@@ -8,17 +8,19 @@ interface Props {
   updateId: string;
   currentProjectId: string | null;
   projects: { id: string; title: string }[];
+  artworks?: { id: string; label: string }[];
 }
 
 const MAX_TITLE = 120;
 const MAX_LEAD = 280;
 
-export function AssignProjectButton({ updateId, currentProjectId, projects }: Props) {
+export function AssignProjectButton({ updateId, currentProjectId, projects, artworks = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"select" | "new">("select");
   const [selected, setSelected] = useState(currentProjectId ?? "none");
   const [newTitle, setNewTitle] = useState("");
   const [newLead, setNewLead] = useState("");
+  const [newArtworkId, setNewArtworkId] = useState("");
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -36,7 +38,7 @@ export function AssignProjectButton({ updateId, currentProjectId, projects }: Pr
   function handleSave() {
     startTransition(async () => {
       if (mode === "new" && newTitle.trim()) {
-        const projectId = await createProject(newTitle.trim(), newLead.trim() || null);
+        const projectId = await createProject(newTitle.trim(), newLead.trim() || null, newArtworkId || null);
         await assignUpdateToProject(updateId, projectId);
       } else {
         await assignUpdateToProject(updateId, selected === "none" ? null : selected);
@@ -108,6 +110,18 @@ export function AssignProjectButton({ updateId, currentProjectId, projects }: Pr
                 rows={2}
                 className="w-full border border-black text-xs px-2 py-1.5 resize-none outline-none"
               />
+              {artworks.length > 0 && (
+                <select
+                  value={newArtworkId}
+                  onChange={(e) => setNewArtworkId(e.target.value)}
+                  className="w-full border border-black text-xs px-2 py-1.5 bg-background outline-none"
+                >
+                  <option value="">Link to artwork (optional)</option>
+                  {artworks.map((a) => (
+                    <option key={a.id} value={a.id}>{a.label}</option>
+                  ))}
+                </select>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => setMode("select")}

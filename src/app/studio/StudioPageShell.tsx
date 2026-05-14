@@ -70,7 +70,9 @@ export async function StudioPageShell({ username, activeSection, children }: Pro
         activeSection={activeSection}
         sectionDots={{
           provenance: pendingProvenanceCount > 0,
-          confirmations: pendingConfirmationCount > 0,
+        }}
+        sectionCounts={{
+          works: pendingConfirmationCount > 0 ? pendingConfirmationCount : 0,
         }}
         lockedSections={lockedSections}
       >

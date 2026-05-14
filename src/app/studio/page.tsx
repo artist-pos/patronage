@@ -5,7 +5,7 @@ import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { SectionLockGate } from "@/components/studio/SectionLockGate";
 import { StudioPageShell } from "./StudioPageShell";
-import { Section, VALID_SECTIONS, TAB_TO_SECTION } from "./sidebar-config";
+import { Section, VALID_SECTIONS, LEGACY_SECTION_ALIASES } from "./sidebar-config";
 import { getProfileById } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
@@ -26,6 +26,13 @@ import { DigestToggle } from "@/components/profile/DigestToggle";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
 import { StudioCarousel } from "@/components/profile/StudioCarousel";
 import { ProjectsSection } from "@/components/profile/ProjectsSection";
+import { ManageNotesList } from "@/components/profile/ManageNotesList";
+import { FollowersTab } from "@/components/analytics/FollowersTab";
+import { ProfileViewsChartWrapper } from "@/components/analytics/ProfileViewsChartWrapper";
+import { getMyWrittenNotes } from "@/lib/notes";
+import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
+import { getProfileStats } from "@/lib/profileAnalytics";
+import { getFollowers } from "@/lib/follows";
 import type { Metadata } from "next";
 import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project } from "@/types/database";
 
@@ -35,7 +42,16 @@ export const metadata: Metadata = {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 interface PageProps {
-  searchParams: Promise<{ section?: string; tab?: string }>;
+  searchParams: Promise<{
+    section?: string;
+    tab?: string;
+    /** works sub-tab: archival | for-sale | sold | collected */
+    wt?: string;
+    /** feed sub-tab: updates | projects | notes */
+    ft?: string;
+    /** analytics period */
+    range?: string;
+  }>;
 }
 
 export default async function StudioPage({ searchParams }: PageProps) {
@@ -59,29 +75,45 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const profileComplete = completionProfile ? isProfileComplete(completionProfile) : false;
 
   const params = await searchParams;
-  const rawSection =
-    params.section ??
-    (params.tab ? TAB_TO_SECTION[params.tab] : undefined) ??
-    "profile";
-  const activeSection: Section = VALID_SECTIONS.includes(rawSection)
-    ? (rawSection as Section)
-    : "profile";
+  const raw = params.section ?? params.tab ?? "works";
+  // Resolve legacy section IDs and tab aliases to new canonical IDs
+  const resolved = LEGACY_SECTION_ALIASES[raw] ?? raw;
+  const activeSection: Section = VALID_SECTIONS.includes(resolved)
+    ? (resolved as Section)
+    : "works";
 
   if (activeSection === "provenance") redirect("/studio/provenance");
 
+  // Sub-tab params
+  const WORKS_TABS = ["archival", "for-sale", "sold", "collected"] as const;
+  type WorksTab = typeof WORKS_TABS[number];
+  const worksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
+    ? (params.wt as WorksTab)
+    : "archival";
+
+  const FEED_TABS = ["updates", "projects", "notes"] as const;
+  type FeedTab = typeof FEED_TABS[number];
+  const feedTab: FeedTab = (FEED_TABS as readonly string[]).includes(params.ft ?? "")
+    ? (params.ft as FeedTab)
+    : "updates";
+
+  const analyticsDays = params.range === "7" ? 7 : params.range === "90" ? 90 : 30;
+
   // ── Conditional data fetching ─────────────────────────────────────────────
-  const needsIdentity  = activeSection === "profile" || activeSection === "cv";
-  const needsWorks     = activeSection === "portfolio" || activeSection === "available" || activeSection === "sold";
-  const needsUpdates   = activeSection === "updates";
-  const needsProjects  = activeSection === "projects";
+  const needsIdentity  = activeSection === "profile-cv";
+  const needsWorks     = activeSection === "works";
+  const needsUpdates   = activeSection === "feed";
+  const needsProjects  = activeSection === "feed";
   const needsCampaigns = activeSection === "campaigns";
-  const needsTiers     = activeSection === "support";
+  const needsTiers     = activeSection === "support-tiers";
+  const needsNotes     = activeSection === "feed" && feedTab === "notes";
+  const needsAnalytics = activeSection === "analytics";
 
   // Identity: full profile + collectives (profile section only)
   const [fullProfile, membershipsRaw] = needsIdentity
     ? await Promise.all([
         getProfileById(user.id),
-        activeSection === "profile"
+        activeSection === "profile-cv"
           ? supabase
               .from("collective_members")
               .select("*, collective:collectives(*)")
@@ -155,14 +187,22 @@ export default async function StudioPage({ searchParams }: PageProps) {
     if (row.event_type === "play") engagementMap[row.work_id].play++;
   }
 
-  // Studio Updates + Projects
-  const [studioUpdates, studioProjects] =
+  // Studio Updates + Projects + artworks for project linking
+  const [studioUpdates, studioProjects, feedArtworksResult] =
     needsUpdates || needsProjects
       ? await Promise.all([
           getArtistUpdates(user.id),
           getArtistProjects(user.id),
+          supabase
+            .from("artworks")
+            .select("id, title, caption")
+            .eq("creator_id", user.id)
+            .order("created_at", { ascending: false }),
         ])
-      : [[] as ProjectUpdateWithArtist[], [] as Project[]];
+      : [[] as ProjectUpdateWithArtist[], [] as Project[], null];
+
+  const feedArtworks = ((feedArtworksResult as { data: { id: string; title: string | null; caption: string | null }[] | null } | null)?.data ?? [])
+    .map((a) => ({ id: a.id, label: a.title ?? a.caption ?? "Untitled" }));
 
   // Campaigns
   let campaigns: Array<{
@@ -192,344 +232,559 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : { data: null };
   const initialTiers = (tiersData ?? []) as SupportTier[];
 
+  // Pending confirmations count for Works section banner
+  const pendingConfirmationCount = needsWorks ? await getPendingConfirmationCount(user.id) : 0;
+
+  // Collected works (Works section — Collected tab)
+  const { data: collectedWorksData } = needsWorks
+    ? await supabase
+        .from("artworks")
+        .select("id, url, caption, price, price_currency, creator_id, created_at")
+        .eq("current_owner_id", user.id)
+        .neq("creator_id", user.id)
+        .order("created_at", { ascending: false })
+    : { data: null };
+  const collectedWorks = (collectedWorksData ?? []) as {
+    id: string; url: string; caption: string | null;
+    price: number | null; price_currency: string | null;
+    creator_id: string; created_at: string;
+  }[];
+
+  // Notes (Feed section — Notes tab)
+  const feedNotes = needsNotes ? await getMyWrittenNotes(user.id) : [];
+
+  // Analytics
+  const [analyticsStats, analyticsFollowers] = needsAnalytics
+    ? await Promise.all([
+        getProfileStats(user.id, analyticsDays),
+        getFollowers(user.id),
+      ])
+    : [null, null];
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <StudioPageShell username={profileRow.username} activeSection={activeSection}>
       <div className="space-y-10">
 
-          {/* ── Profile section ── */}
-          {activeSection === "profile" && fullProfile && (
-            <div className="space-y-12">
-              {/* Visuals */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-16 gap-10 items-start">
-                <section className="space-y-8">
-                  <h2 className="text-base font-semibold">Visuals</h2>
-                  <div className="space-y-3">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Profile Picture</p>
-                      <p className="text-xs text-muted-foreground">
-                        Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
-                      </p>
-                    </div>
-                    <AvatarUploader profileId={user.id} />
+        {/* ── Profile & CV ── */}
+        {activeSection === "profile-cv" && fullProfile && (
+          <div className="space-y-12">
+            {/* Visuals */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-16 gap-10 items-start">
+              <section className="space-y-8">
+                <h2 className="text-base font-semibold">Visuals</h2>
+                <div className="space-y-3">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Profile Picture</p>
+                    <p className="text-xs text-muted-foreground">
+                      Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Featured Image</p>
-                      <p className="text-xs text-muted-foreground">
-                        Displayed as the background of your directory card. Landscape works best.
-                      </p>
-                    </div>
-                    <FeaturedImageUploader profileId={user.id} />
+                  <AvatarUploader profileId={user.id} />
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Featured Image</p>
+                    <p className="text-xs text-muted-foreground">
+                      Displayed as the background of your directory card. Landscape works best.
+                    </p>
                   </div>
-                </section>
-
-                <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
-                  <h2 className="text-base font-semibold">Profile details</h2>
-                  <ProfileForm profile={fullProfile} role={fullProfile.role} />
-                </section>
-              </div>
-
-              {/* Email Preferences */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Email Preferences</h2>
-                  <p className="text-xs text-muted-foreground">
-                    You are subscribed to the weekly digest by default. Toggle off to unsubscribe.
-                  </p>
+                  <FeaturedImageUploader profileId={user.id} />
                 </div>
-                <DigestToggle
-                  initial={fullProfile.weekly_digest ?? true}
-                  autoSync={fullProfile.weekly_digest === null}
-                />
               </section>
-
-              {/* Collectives */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Collectives & Groups</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Create or join artist collectives. Expand a collective to manage members — search for artists by name or username to add them.
-                  </p>
-                </div>
-                <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
-              </section>
-
-              {/* Danger Zone */}
-              <section className="space-y-4 border-t border-black pt-10 mt-4">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Terminating your account is permanent. Your profile, portfolio images, and all data will be deleted immediately and cannot be recovered.
-                  </p>
-                </div>
-                <TerminateAccountButton />
+              <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
+                <h2 className="text-base font-semibold">Profile details</h2>
+                <ProfileForm profile={fullProfile} role={fullProfile.role} />
               </section>
             </div>
-          )}
 
-          {/* ── CV & History section ── */}
-          {activeSection === "cv" && fullProfile && (
-            <div className="space-y-12">
-              {/* CV upload */}
-              <section className="space-y-4">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">CV</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Upload a PDF of your CV. It will be publicly linked from your profile.
-                  </p>
-                </div>
-                <PortfolioUploader profileId={user.id} mode="cv" />
-              </section>
-
-              {/* Professional CV */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Professional CV</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Upload a PDF of your professional CV. This is <strong>not</strong> shown publicly — it is shared privately with partners only when you apply for roles through Patronage.
-                  </p>
-                </div>
-                <PortfolioUploader profileId={user.id} mode="professional-cv" />
-              </section>
-
-              {/* Exhibition History */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Exhibition History</h2>
-                  <p className="text-xs text-muted-foreground">
-                    List solo and group exhibitions. Displayed on your public profile grouped by type.
-                  </p>
-                </div>
-                <ExhibitionEditor
-                  profileId={user.id}
-                  initial={(fullProfile.exhibition_history ?? []) as ExhibitionEntry[]}
-                />
-              </section>
-
-              {/* Grants */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Grants Received</h2>
-                  <p className="text-xs text-muted-foreground">
-                    List grants, awards, or funding you have received. These appear as trust signals on your profile.
-                  </p>
-                </div>
-                <GrantsSection
-                  initialGrants={(fullProfile as unknown as { received_grants?: string[] }).received_grants ?? []}
-                />
-              </section>
-
-              {/* Media & Press */}
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Media & Press</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Reviews, interviews, and features. Displayed as bibliographic citations on your public profile.
-                  </p>
-                </div>
-                <BibliographyEditor
-                  profileId={user.id}
-                  initial={(fullProfile.press_bibliography ?? []) as BibliographyEntry[]}
-                />
-              </section>
-            </div>
-          )}
-
-          {/* ── Portfolio section ── */}
-          {activeSection === "portfolio" && (
-            <div className="space-y-6">
-              {featuredCount > 0 || portfolioWorks.length > 0 ? (
-                <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
-                  <span>
-                    <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
-                    {featuredCount > 0 && " — shown on your profile overview"}
-                  </span>
-                  {featuredCount === 0 && (
-                    <span>Open any work and mark it as Featured to curate your overview.</span>
-                  )}
-                </div>
-              ) : null}
-              <WorksTable
-                section="portfolio"
-                portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                featuredCount={featuredCount}
-                profileId={user.id}
-                engagementMap={engagementMap}
-              />
-              <AddPortfolioWorkButton profileId={user.id} />
-            </div>
-          )}
-
-          {/* ── Available section ── */}
-          {activeSection === "available" && (
-            <div className="space-y-6">
-              {!profileComplete && missingFields.length > 0 && (
-                <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 space-y-1">
-                  <p className="text-sm font-medium text-amber-900">
-                    Your listed works aren&apos;t publicly visible yet.
-                  </p>
-                  <p className="text-sm text-amber-800">
-                    Complete your profile to show works for sale on your public page. Add:{" "}
-                    {missingFields.map((f, i) => (
-                      <span key={f.key}>
-                        {i > 0 && ", "}
-                        <a href={f.href} className="underline underline-offset-2 hover:text-amber-950 transition-colors">
-                          {f.label}
-                        </a>
-                      </span>
-                    ))}
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Works listed for sale. Patrons can make offers directly from your profile.
-                </p>
-                <AddWorkButton profileId={user.id} />
-              </div>
-              <WorksTable
-                section="available"
-                portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                featuredCount={featuredCount}
-                profileId={user.id}
-              />
-            </div>
-          )}
-
-          {/* ── Sold section ── */}
-          {activeSection === "sold" && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Works transferred to collectors. These are permanent provenance records.
-              </p>
-              <WorksTable
-                section="sold"
-                portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                featuredCount={featuredCount}
-                profileId={user.id}
-              />
-            </div>
-          )}
-
-          {/* ── Studio Updates section ── */}
-          {activeSection === "updates" && (
-            <div className="space-y-6">
+            {/* Collectives */}
+            <section className="space-y-4 border-t border-border pt-10">
               <div className="space-y-1">
-                <h2 className="text-base font-semibold">Studio Updates</h2>
+                <h2 className="text-base font-semibold">Collectives & Groups</h2>
+                <p className="text-xs text-muted-foreground">
+                  Create or join artist collectives. Expand a collective to manage members — search for artists by name or username to add them.
+                </p>
+              </div>
+              <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
+            </section>
+
+            {/* CV */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">CV</h2>
+                <p className="text-xs text-muted-foreground">
+                  Upload a PDF of your CV. It will be publicly linked from your profile.
+                </p>
+              </div>
+              <PortfolioUploader profileId={user.id} mode="cv" />
+            </section>
+
+            {/* Professional CV */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Professional CV</h2>
+                <p className="text-xs text-muted-foreground">
+                  Upload a PDF of your professional CV. This is <strong>not</strong> shown publicly — it is shared privately with partners only when you apply for roles through Patronage.
+                </p>
+              </div>
+              <PortfolioUploader profileId={user.id} mode="professional-cv" />
+            </section>
+
+            {/* Exhibition History */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Exhibition History</h2>
+                <p className="text-xs text-muted-foreground">
+                  List solo and group exhibitions. Displayed on your public profile grouped by type.
+                </p>
+              </div>
+              <ExhibitionEditor
+                profileId={user.id}
+                initial={(fullProfile.exhibition_history ?? []) as ExhibitionEntry[]}
+              />
+            </section>
+
+            {/* Grants */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Grants Received</h2>
+                <p className="text-xs text-muted-foreground">
+                  List grants, awards, or funding you have received. These appear as trust signals on your profile.
+                </p>
+              </div>
+              <GrantsSection
+                initialGrants={(fullProfile as unknown as { received_grants?: string[] }).received_grants ?? []}
+              />
+            </section>
+
+            {/* Press */}
+            <section className="space-y-4 border-t border-border pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Media & Press</h2>
+                <p className="text-xs text-muted-foreground">
+                  Reviews, interviews, and features. Displayed as bibliographic citations on your public profile.
+                </p>
+              </div>
+              <BibliographyEditor
+                profileId={user.id}
+                initial={(fullProfile.press_bibliography ?? []) as BibliographyEntry[]}
+              />
+            </section>
+          </div>
+        )}
+
+        {/* ── Account ── */}
+        {activeSection === "account" && fullProfile && (
+          <div className="space-y-12 max-w-2xl">
+            <section className="space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold">Email Preferences</h2>
+                <p className="text-xs text-muted-foreground">
+                  You are subscribed to the weekly digest by default. Toggle off to unsubscribe.
+                </p>
+              </div>
+              <DigestToggle
+                initial={fullProfile.weekly_digest ?? true}
+                autoSync={fullProfile.weekly_digest === null}
+              />
+            </section>
+
+            <section className="space-y-4 border-t border-black pt-10">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
+                <p className="text-xs text-muted-foreground">
+                  Terminating your account is permanent. Your profile, portfolio images, and all data will be deleted immediately and cannot be recovered.
+                </p>
+              </div>
+              <TerminateAccountButton />
+            </section>
+          </div>
+        )}
+
+        {/* ── Works ── */}
+        {activeSection === "works" && (
+          <div className="space-y-6">
+            {/* Confirmations banner */}
+            {pendingConfirmationCount > 0 && (
+              <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-4 py-3">
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">{pendingConfirmationCount}</span> work{pendingConfirmationCount !== 1 ? "s" : ""} need attribution confirmation.
+                </p>
+                <Link href="/studio/pending-confirmations" className="text-sm text-amber-900 underline underline-offset-2 shrink-0 ml-4">
+                  Review →
+                </Link>
+              </div>
+            )}
+            {/* Tab bar */}
+            <div className="flex gap-0 border-b border-border">
+              {(["archival", "for-sale", "sold", "collected"] as const).map((t) => (
+                <Link
+                  key={t}
+                  href={`/studio?section=works&wt=${t}`}
+                  className={`px-4 py-2.5 text-sm transition-colors whitespace-nowrap ${
+                    worksTab === t
+                      ? "font-medium border-b-2 border-black -mb-px"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t === "archival" ? "Archival" : t === "for-sale" ? "For Sale" : t === "sold" ? "Sold" : "Collected"}
+                </Link>
+              ))}
+            </div>
+
+            {/* Archival */}
+            {worksTab === "archival" && (
+              <div className="space-y-6">
+                {(featuredCount > 0 || portfolioWorks.length > 0) && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
+                    <span>
+                      <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
+                      {featuredCount > 0 && " — shown on your profile overview"}
+                    </span>
+                    {featuredCount === 0 && (
+                      <span>Open any work and mark it as Featured to curate your overview.</span>
+                    )}
+                  </div>
+                )}
+                <WorksTable
+                  section="portfolio"
+                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
+                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
+                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
+                  featuredCount={featuredCount}
+                  profileId={user.id}
+                  engagementMap={engagementMap}
+                />
+                <AddPortfolioWorkButton profileId={user.id} />
+              </div>
+            )}
+
+            {/* For Sale */}
+            {worksTab === "for-sale" && (
+              <div className="space-y-6">
+                {!profileComplete && missingFields.length > 0 && (
+                  <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 space-y-1">
+                    <p className="text-sm font-medium text-amber-900">
+                      Your listed works aren&apos;t publicly visible yet.
+                    </p>
+                    <p className="text-sm text-amber-800">
+                      Complete your profile to show works for sale. Add:{" "}
+                      {missingFields.map((f, i) => (
+                        <span key={f.key}>
+                          {i > 0 && ", "}
+                          <a href={f.href} className="underline underline-offset-2 hover:text-amber-950 transition-colors">
+                            {f.label}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Works listed for sale. Patrons can make offers directly from your profile.
+                  </p>
+                  <AddWorkButton profileId={user.id} />
+                </div>
+                <WorksTable
+                  section="available"
+                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
+                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
+                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
+                  featuredCount={featuredCount}
+                  profileId={user.id}
+                />
+              </div>
+            )}
+
+            {/* Sold */}
+            {worksTab === "sold" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Works transferred to collectors. These are permanent provenance records.
+                </p>
+                <WorksTable
+                  section="sold"
+                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
+                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
+                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
+                  featuredCount={featuredCount}
+                  profileId={user.id}
+                />
+              </div>
+            )}
+
+            {/* Collected */}
+            {worksTab === "collected" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Works you own — received as gifts or purchased from other artists.
+                </p>
+                {collectedWorks.length === 0 ? (
+                  <div className="py-16 text-center border border-dashed border-border">
+                    <p className="text-sm text-muted-foreground">No collected works yet.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border border-t border-border">
+                    {collectedWorks.map((w) => (
+                      <div key={w.id} className="flex items-center gap-4 py-4">
+                        {w.url && (
+                          <img
+                            src={w.url}
+                            alt={w.caption ?? ""}
+                            className="w-12 h-12 object-cover shrink-0 bg-muted"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <p className="text-sm font-medium truncate">{w.caption ?? "Untitled"}</p>
+                          {w.price != null && (
+                            <p className="text-xs text-muted-foreground">
+                              {w.price_currency ?? "NZD"} {w.price.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Studio Feed ── */}
+        {activeSection === "feed" && (
+          <div className="space-y-6">
+            {/* Tab bar */}
+            <div className="flex gap-0 border-b border-border">
+              {(["updates", "projects", "notes"] as const).map((t) => (
+                <Link
+                  key={t}
+                  href={`/studio?section=feed&ft=${t}`}
+                  className={`px-4 py-2.5 text-sm transition-colors whitespace-nowrap capitalize ${
+                    feedTab === t
+                      ? "font-medium border-b-2 border-black -mb-px"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t === "updates" ? "Updates" : t === "projects" ? "Projects" : "Notes"}
+                </Link>
+              ))}
+            </div>
+
+            {feedTab === "updates" && (
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Post works in progress, process shots, and studio moments. Updates appear in the public feed and on your profile.
                 </p>
+                <StudioCarousel
+                  updates={studioUpdates}
+                  artistUsername={profileRow.username}
+                  isOwner={true}
+                  projects={studioProjects.map((p) => ({ id: p.id, title: p.title }))}
+                  artworks={feedArtworks}
+                  profileId={user.id}
+                />
               </div>
-              <StudioCarousel
-                updates={studioUpdates}
-                artistUsername={profileRow.username}
-                isOwner={true}
-                projects={studioProjects.map((p) => ({ id: p.id, title: p.title }))}
-                profileId={user.id}
-              />
-            </div>
-          )}
+            )}
 
-          {/* ── Projects section ── */}
-          {activeSection === "projects" && (
-            <div className="space-y-6">
+            {feedTab === "projects" && (
               <ProjectsSection
                 projects={studioProjects}
                 updates={studioUpdates}
                 isOwner={true}
               />
-            </div>
-          )}
+            )}
 
-          {/* ── Campaigns section ── */}
-          {activeSection === "campaigns" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Campaigns</h2>
-                  <p className="text-sm text-muted-foreground">
-                    QR campaigns for public art, exhibitions, and activations.
-                  </p>
-                </div>
-                {profileComplete && (
-                  <Link
-                    href="/studio/campaigns/new"
-                    className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
-                  >
-                    + Create campaign
-                  </Link>
-                )}
+            {feedTab === "notes" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Notes you&apos;ve left on studio updates across Patronage.
+                </p>
+                <ManageNotesList initialNotes={feedNotes} />
               </div>
+            )}
+          </div>
+        )}
 
-              {!profileComplete ? (
-                <SectionLockGate featureName="Campaigns" missingFields={missingFields} />
-              ) : campaigns.length === 0 ? (
-                <div className="py-16 space-y-3 text-center border border-dashed border-border">
-                  <p className="text-sm text-muted-foreground">
-                    Campaigns appear here when you&apos;re selected for partner opportunities, or when you create one for your next show.
-                  </p>
-                  <Link
-                    href="/studio/campaigns/new"
-                    className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
-                  >
-                    Create QR labels for your next show →
-                  </Link>
-                </div>
-              ) : (
-                <div className="divide-y divide-border border-t border-border">
-                  {campaigns.map((c) => (
-                    <div key={c.id} className="flex items-center gap-4 py-4">
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <p className="text-sm font-medium truncate">{c.title}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {c.partner_name ?? "Self-managed"}
-                          {c.campaign_start_date && ` · ${c.campaign_start_date}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${
-                          c.status === "live" ? "bg-green-100 text-green-700"
-                            : c.status === "completed" ? "bg-stone-100 text-stone-500"
-                            : "bg-stone-100 text-stone-600"
-                        }`}>
-                          {c.status}
-                        </span>
-                        <Link
-                          href={`/studio/campaigns/${c.id}`}
-                          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {c.status === "live" ? "View →" : "Configure →"}
-                        </Link>
-                        <CampaignDeleteButton campaignId={c.id} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Support Tiers section ── */}
-          {activeSection === "support" && (
-            <div className="space-y-6 max-w-2xl">
+        {/* ── Campaigns ── */}
+        {activeSection === "campaigns" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h2 className="text-base font-semibold">Support Tiers</h2>
-                <p className="text-xs text-muted-foreground">
-                  Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest.
+                <h2 className="text-base font-semibold">Campaigns</h2>
+                <p className="text-sm text-muted-foreground">
+                  QR campaigns for public art, exhibitions, and activations.
                 </p>
               </div>
-              <SupportTiersManager initialTiers={initialTiers} />
+              {profileComplete && (
+                <Link
+                  href="/studio/campaigns/new"
+                  className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
+                >
+                  + Create campaign
+                </Link>
+              )}
             </div>
-          )}
+
+            {!profileComplete ? (
+              <SectionLockGate featureName="Campaigns" missingFields={missingFields} />
+            ) : campaigns.length === 0 ? (
+              <div className="py-16 space-y-3 text-center border border-dashed border-border">
+                <p className="text-sm text-muted-foreground">
+                  Campaigns appear here when you&apos;re selected for partner opportunities, or when you create one for your next show.
+                </p>
+                <Link
+                  href="/studio/campaigns/new"
+                  className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
+                >
+                  Create QR labels for your next show →
+                </Link>
+              </div>
+            ) : (
+              <div className="divide-y divide-border border-t border-border">
+                {campaigns.map((c) => (
+                  <div key={c.id} className="flex items-center gap-4 py-4">
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="text-sm font-medium truncate">{c.title}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {c.partner_name ?? "Self-managed"}
+                        {c.campaign_start_date && ` · ${c.campaign_start_date}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${
+                        c.status === "live" ? "bg-green-100 text-green-700"
+                          : c.status === "completed" ? "bg-stone-100 text-stone-500"
+                          : "bg-stone-100 text-stone-600"
+                      }`}>
+                        {c.status}
+                      </span>
+                      <Link
+                        href={`/studio/campaigns/${c.id}`}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {c.status === "live" ? "View →" : "Configure →"}
+                      </Link>
+                      <CampaignDeleteButton campaignId={c.id} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Support Tiers ── */}
+        {activeSection === "support-tiers" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Support Tiers</h2>
+              <p className="text-xs text-muted-foreground">
+                Configure support tiers for patrons to back your practice. Payments are coming soon — configure tiers now to capture early interest.
+              </p>
+            </div>
+            <SupportTiersManager initialTiers={initialTiers} />
+          </div>
+        )}
+
+        {/* ── Analytics ── */}
+        {activeSection === "analytics" && analyticsStats && (
+          <div className="space-y-10">
+            {/* Period selector */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold">Analytics</h2>
+              <div className="flex gap-1">
+                {([7, 30, 90] as const).map((d) => (
+                  <Link
+                    key={d}
+                    href={`/studio?section=analytics&range=${d}`}
+                    className={`text-xs px-3 py-1.5 border transition-colors ${
+                      analyticsDays === d
+                        ? "border-black bg-black text-white"
+                        : "border-border hover:border-black"
+                    }`}
+                  >
+                    {d}d
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Audience */}
+            <section className="space-y-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Audience</p>
+              <div className="flex items-end gap-5">
+                <div className="space-y-0.5">
+                  <p className="text-6xl font-bold tabular-nums">{analyticsStats.followersTotal.toLocaleString()}</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Total Followers</p>
+                </div>
+                {analyticsStats.followersGained30 > 0 && (
+                  <p className="text-sm text-green-600 mb-1">+{analyticsStats.followersGained30} this period</p>
+                )}
+              </div>
+              {analyticsFollowers && <FollowersTab followers={analyticsFollowers} />}
+            </section>
+
+            {/* Discovery */}
+            <section className="space-y-5 border-t border-border pt-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Discovery</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <AnalyticsStatCard label="Profile Views" value={analyticsStats.profileViews30} prevValue={analyticsStats.profileViewsPrev30} description="Visits to your public profile" period={`${analyticsDays}d`} />
+                <AnalyticsStatCard label="CV Downloads" value={analyticsStats.cvClicks30} description="Clicks on your CV link" period={`${analyticsDays}d`} />
+                <AnalyticsStatCard label="Website Clicks" value={analyticsStats.websiteClicks30} description="Clicks through to your website" period={`${analyticsDays}d`} />
+              </div>
+              <ProfileViewsChartWrapper data={analyticsStats.profileViewsTimeline} days={analyticsDays} />
+            </section>
+
+            {/* Engagement */}
+            <section className="space-y-4 border-t border-border pt-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Engagement</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <AnalyticsStatCard label="Artwork Views" value={analyticsStats.artworkViews30} description="Times your portfolio works were opened" period={`${analyticsDays}d`} />
+                <AnalyticsStatCard label="Followers Gained" value={analyticsStats.followersGained30} description={`New followers in the last ${analyticsDays} days`} />
+                <AnalyticsStatCard label="Works Added" value={analyticsStats.worksAdded30} description="New works added to your portfolio" period={`${analyticsDays}d`} />
+              </div>
+            </section>
+
+            {/* Career */}
+            <section className="space-y-4 border-t border-border pt-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Activity</p>
+              <div className="grid grid-cols-2 gap-3">
+                <AnalyticsStatCard label="Applied" value={analyticsStats.opportunitiesApplied} description="Opportunities applied to through Patronage" />
+                <AnalyticsStatCard label="Saved" value={analyticsStats.opportunitiesSaved} description="Opportunities bookmarked" />
+              </div>
+            </section>
+          </div>
+        )}
 
       </div>
     </StudioPageShell>
+  );
+}
+
+function AnalyticsStatCard({
+  label, value, description, period, prevValue,
+}: {
+  label: string; value: number; description: string; period?: string; prevValue?: number;
+}) {
+  const diff = prevValue !== undefined ? value - prevValue : null;
+  return (
+    <div className="border border-black p-5 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-3xl font-bold tabular-nums">{value.toLocaleString()}</p>
+        {diff !== null && diff !== 0 && (
+          <span className={`text-xs tabular-nums mt-1.5 ${diff > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+            {diff > 0 ? "+" : "−"}{Math.abs(diff).toLocaleString()}
+          </span>
+        )}
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-widest">{label}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        {description}
+        {period && <span className="ml-1 opacity-60">· {period}</span>}
+      </p>
+    </div>
   );
 }

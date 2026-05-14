@@ -8,11 +8,22 @@ export async function getConversations(): Promise<ConversationWithOther[]> {
 
   const { data: convs } = await supabase
     .from("conversations")
-    .select("id, participant_a, participant_b, created_at")
+    .select("id, participant_a, participant_b, created_at, source_work_id")
     .or(`participant_a.eq.${user.id},participant_b.eq.${user.id}`)
     .order("created_at", { ascending: false });
 
   if (!convs || convs.length === 0) return [];
+
+  // Batch-fetch artwork captions for all enquiry conversations in one query
+  const sourceWorkIds = [...new Set(convs.map(c => c.source_work_id).filter(Boolean) as string[])];
+  const workCaptionMap: Record<string, string | null> = {};
+  if (sourceWorkIds.length > 0) {
+    const { data: works } = await supabase
+      .from("artworks")
+      .select("id, caption")
+      .in("id", sourceWorkIds);
+    for (const w of works ?? []) workCaptionMap[w.id] = w.caption ?? null;
+  }
 
   const results = await Promise.all(
     convs.map(async (conv) => {
@@ -50,6 +61,8 @@ export async function getConversations(): Promise<ConversationWithOther[]> {
         last_message_at: latestRes.data?.created_at ?? null,
         conv_created_at: conv.created_at,
         unread_count: unreadRes.count ?? 0,
+        source_work_id: conv.source_work_id ?? null,
+        source_work_caption: conv.source_work_id ? (workCaptionMap[conv.source_work_id] ?? null) : null,
       };
     })
   );

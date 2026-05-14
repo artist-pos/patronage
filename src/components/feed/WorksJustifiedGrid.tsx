@@ -199,6 +199,8 @@ function ArtistAvatar({
   return null;
 }
 
+type DocType = "coa" | "tearsheet" | "wall-label" | "consignment" | null;
+
 function WorksLightbox({
   artworks,
   index,
@@ -220,6 +222,17 @@ function WorksLightbox({
 }) {
   const artwork = artworks[index];
   const [collectModal, setCollectModal] = useState(false);
+  const [activeDoc, setActiveDoc] = useState<DocType>(null);
+  const [wallLabelQr, setWallLabelQr] = useState(false);
+  const [wallLabelQrTarget, setWallLabelQrTarget] = useState<"profile" | "provenance">("profile");
+  const [consigneeName, setConsigneeName] = useState("");
+  const [consigneeAddress, setConsigneeAddress] = useState("");
+  const [consignStartDate, setConsignStartDate] = useState("");
+  const [consignEndDate, setConsignEndDate] = useState("");
+  const [consignCommission, setConsignCommission] = useState("30");
+
+  // Reset generate state when artwork changes
+  useEffect(() => { setActiveDoc(null); }, [index]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -378,32 +391,179 @@ function WorksLightbox({
 
               {/* Owner actions */}
               {ownerActions && (
-                <div className="border-t border-border pt-4 space-y-2">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                    Manage
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => ownerActions.onUnlist(artwork.id)}
-                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
-                    >
-                      Unlist
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => ownerActions.onToggleHide(artwork.id, !isHidden)}
-                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
-                    >
-                      {isHidden ? "Show" : "Hide"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCollectModal(true)}
-                      className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
-                    >
-                      Collected
-                    </button>
+                <div className="border-t border-border pt-4 space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                      Manage
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => ownerActions.onUnlist(artwork.id)}
+                        className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                      >
+                        Unlist
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => ownerActions.onToggleHide(artwork.id, !isHidden)}
+                        className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                      >
+                        {isHidden ? "Show" : "Hide"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCollectModal(true)}
+                        className="text-xs px-3 py-1.5 border border-border rounded-md hover:bg-stone-50 transition-colors"
+                      >
+                        Collected
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Generate documents */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                      Generate
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(["coa", "tearsheet", "wall-label", "consignment"] as DocType[]).map((t) => (
+                        <button
+                          key={t!}
+                          type="button"
+                          onClick={() => setActiveDoc(activeDoc === t ? null : t)}
+                          className={`text-xs px-2.5 py-1 border rounded transition-colors ${
+                            activeDoc === t
+                              ? "border-black bg-black text-white"
+                              : "border-border hover:border-stone-400"
+                          }`}
+                        >
+                          {t === "coa" ? "COA" : t === "tearsheet" ? "Tear sheet" : t === "wall-label" ? "Wall label" : "Consignment"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* COA */}
+                    {activeDoc === "coa" && (
+                      <a
+                        href={`/api/documents/${artwork.id}?type=coa`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
+                      >
+                        Download COA →
+                      </a>
+                    )}
+
+                    {/* Tear sheet */}
+                    {activeDoc === "tearsheet" && (
+                      <a
+                        href={`/api/documents/${artwork.id}?type=tearsheet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
+                      >
+                        Download tear sheet →
+                      </a>
+                    )}
+
+                    {/* Wall label */}
+                    {activeDoc === "wall-label" && (
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={wallLabelQr}
+                            onChange={(e) => setWallLabelQr(e.target.checked)}
+                            className="accent-black"
+                          />
+                          <span className="text-xs">Include QR code</span>
+                        </label>
+                        {wallLabelQr && (
+                          <div className="flex gap-2">
+                            {(["profile", "provenance"] as const).map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => setWallLabelQrTarget(t)}
+                                className={`text-xs px-2 py-0.5 border rounded transition-colors ${
+                                  wallLabelQrTarget === t ? "border-black bg-black text-white" : "border-border hover:border-stone-400"
+                                }`}
+                              >
+                                {t === "profile" ? "Artist profile" : "Provenance page"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <a
+                          href={`/api/documents/${artwork.id}?type=wall-label${wallLabelQr ? `&include_qr=true&qr_target=${wallLabelQrTarget}` : ""}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
+                        >
+                          Download wall label →
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Consignment agreement */}
+                    {activeDoc === "consignment" && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={consigneeName}
+                          onChange={(e) => setConsigneeName(e.target.value)}
+                          placeholder="Consignee name (gallery / venue)"
+                          className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-black placeholder:text-muted-foreground"
+                        />
+                        <textarea
+                          value={consigneeAddress}
+                          onChange={(e) => setConsigneeAddress(e.target.value)}
+                          placeholder="Consignee address"
+                          rows={2}
+                          className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <div className="flex-1 space-y-0.5">
+                            <label className="text-[10px] text-muted-foreground">Start date</label>
+                            <input
+                              type="date"
+                              value={consignStartDate}
+                              onChange={(e) => setConsignStartDate(e.target.value)}
+                              className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-black"
+                            />
+                          </div>
+                          <div className="flex-1 space-y-0.5">
+                            <label className="text-[10px] text-muted-foreground">End date</label>
+                            <input
+                              type="date"
+                              value={consignEndDate}
+                              onChange={(e) => setConsignEndDate(e.target.value)}
+                              className="w-full text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-black"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-muted-foreground whitespace-nowrap">Gallery commission %</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={consignCommission}
+                            onChange={(e) => setConsignCommission(e.target.value)}
+                            className="w-16 text-xs border border-border rounded px-2 py-1.5 focus:outline-none focus:border-black"
+                          />
+                        </div>
+                        <a
+                          href={`/api/documents/${artwork.id}?type=consignment&consignee_name=${encodeURIComponent(consigneeName)}&consignee_address=${encodeURIComponent(consigneeAddress)}&start_date=${encodeURIComponent(consignStartDate)}&end_date=${encodeURIComponent(consignEndDate)}&commission=${encodeURIComponent(consignCommission)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
+                        >
+                          Download agreement →
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
