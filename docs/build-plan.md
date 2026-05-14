@@ -155,16 +155,21 @@ CREATE TABLE private_room_artworks (
 
 ## Phase 3 — Build later
 
-### #8 · Document generation (COA, tear sheet, wall label)
+### #8 · Document generation (COA, tear sheet, wall label, consignment agreement)
 
 **Foundation:** `@react-pdf/renderer` already in use for provenance certificates. Logo and signature per profile already stored.
 
 **New templates:**
-- **Certificate of Authenticity (COA)** — title, medium, dimensions, year, edition, artist signature, Patronage provenance ledger reference
-- **Tear sheet** — one-page gallery print: image, title, medium, dimensions, price, artist bio excerpt, contact
-- **Wall label** — minimal: title, year, medium, dimensions, edition
 
-**UI:** "Generate" dropdown on artwork lightbox info panel (owner only). Three options → server action renders PDF → download.
+- **Certificate of Authenticity (COA)** — title, medium, dimensions, year, edition, artist signature, Patronage provenance ledger reference
+
+- **Tear sheet** — one-page gallery print: image, title, medium, dimensions, price, artist bio excerpt, contact
+
+- **Wall label** — minimal: title, year, medium, dimensions, edition. Optional QR code linking to the artist's Patronage profile or the specific artwork's provenance page — same mechanic as the campaign QR, generated from a different surface. Toggle per label.
+
+- **Consignment agreement** — pre-filled with artwork details (title, medium, dimensions, year, edition, value), artist info, and the `location_text` field as the consignee location. Template fields: consignee name, consignee address, consignment period (start/end date), commission split (% to artist), return conditions, damage liability clause. A space for both parties to sign (printed names + signature line). Terms pre-written by Patronage (standard NZ consignment conditions). The artist fills in consignee name/address and the dates; everything else pre-fills from the artwork record. Genuinely useful for the cafe/pop-up gallery use case — most artists either skip it or write something informal. This is the only template that captures party-specific information, so the UI needs two extra input fields before generating.
+
+**UI:** "Generate" dropdown on artwork lightbox info panel (owner only). Four options → server action renders PDF → download.
 
 **All data already exists on artworks.** This is template work, not infrastructure work.
 
@@ -176,16 +181,19 @@ CREATE TABLE private_room_artworks (
 
 **CSV upload**
 - Route: `/studio/import`
-- Artist uploads a spreadsheet; system maps columns (title, medium, year, dimensions, price, edition, location)
-- Preview/confirm step before insert
-- Bulk insert to `artworks`
+- Supported columns: `title` (required), `artist_name` (for patron/partner collection uploads), `medium`, `year`, `dimensions` (single string or separate `height`, `width`, `depth` columns — merge to string on import), `edition`, `price`, `price_currency`, `location`, `acquisition_date`, `acquisition_source`
+- Column mapping: dropdown per detected column header — artist maps their column names to Patronage fields. Unrecognised columns are ignored.
+- Preview table showing first 10 rows with mapped values
+- Validation: reject rows with no `title`; show failing rows in an error summary rather than silently dropping them. Valid rows proceed to insert regardless.
+- Confirm button → bulk insert to `artworks`
 
 **OCR scan import**
-- Foundation: Tesseract already used in `src/app/provenance/ProvenanceLookup.tsx`
+- Foundation: Tesseract already in `src/app/provenance/ProvenanceLookup.tsx`
 - Artist photographs existing inventory list or catalogue pages
-- Tesseract extracts text → rule-based parsing maps to structured fields
-- LLM (Haiku) used **only** as fallback for genuinely unstructured documents where rule-based parsing fails (handwritten ledger, non-standard catalogue format)
-- Same preview/confirm step before insert
+- Tesseract extracts text → rule-based parsing (regex) maps to structured fields. Most artist inventories are spreadsheets or typed lists — Tesseract + regex covers the common cases without any LLM call.
+- Haiku used **only** as a genuine fallback for documents where rule-based parsing fails (handwritten ledger, non-standard catalogue layout). Not the default path.
+- Anything the parser isn't confident about is flagged for manual review in the preview step (same as the edition parsing approach — show the raw extracted value and let the artist correct it)
+- Same preview/confirm step as CSV before any insert
 
 Ships alongside the full collection vault work (Barnes onboarding path).
 
@@ -194,34 +202,51 @@ Ships alongside the full collection vault work (Barnes onboarding path).
 ### #10 · Provenance + exhibition manual linking
 
 The automatic side is covered by #1 (pipeline-to-inventory). The manual side:
-- When an artist adds a prior history entry to an artwork, give them a search-and-link field to attach it to an existing opportunity on Patronage
-- Stores `source_opportunity_id` FK instead of free text
-- Validates the opportunity exists; renders with a link to the live page
+
+- When an artist adds a prior history entry, offer a search field that queries Patronage opportunities first. If a match is found, store `source_opportunity_id` and render with a link to the live page.
+- If no Patronage opportunity matches, fall back to free-text structured fields: event name, venue, date, URL. This already exists in the prior history system — the UX should offer the Patronage search first and surface the free-text option clearly if nothing is found. Don't make free text the default or hide the search.
+- Not every exhibition or publication the artist participated in was listed on Patronage. The fallback is a feature, not a workaround.
 
 ---
 
 ### #11 · Analytics dashboard
 
-Post-100 artists. The data model is fine. At current scale there isn't enough data to make charts meaningful. Add visualisation (revenue over time, inventory value, collector geography) when there's substance to show. The Stripe earnings dashboard (Phase 2) is the foundation.
+**Trigger:** Build when there are 50+ artists with at least 10 completed sales across the platform. Below that threshold, the earnings dashboard (Phase 2) is sufficient and a chart with 3 data points is noise, not signal.
+
+**What to show:** Revenue over time (monthly, per artist), inventory value (sum of available works at listed price), collector geography (map view of `current_owner_id` profiles by region). The Stripe earnings dashboard is the foundation.
 
 ---
 
-### #12 · Multi-user access (data model prep)
+### #12 · Multi-user access (table already created — migration 132)
 
-Not needed at current scale. When a gallery or established artist with a studio manager asks, the pattern is:
+**Migration is done.** The table exists in the schema. Build the UI when a gallery or estate asks for it.
 
 ```sql
 CREATE TABLE user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id uuid REFERENCES profiles(id) ON DELETE CASCADE,  -- the profile being managed
-  granted_to_user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,  -- the manager
-  role text NOT NULL,  -- 'editor', 'viewer'
-  permissions jsonb,
-  created_at timestamptz DEFAULT now()
+  profile_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  granted_to_user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  role text CHECK (role IN ('studio_manager', 'gallery_rep', 'estate_manager')),
+  permissions jsonb DEFAULT '{}',
+  granted_by uuid REFERENCES profiles(id),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(profile_id, granted_to_user_id)
 );
 ```
 
-Create the table when convenient. Build the UI when someone specifically asks for it.
+Having it in the schema from day one means when someone asks, the data model is ready and only the UI needs building. Don't wait — migrations under pressure from real user requests are worse than migrations done in advance.
+
+---
+
+### #13 · Enquiry flow wiring
+
+`source_work_id` on conversations exists but the connection may not be complete end-to-end. When the "Enquire" button on an artwork page opens a DM, it must:
+
+1. Create a conversation with `source_work_id = artwork.id` and `initiated_via_enquiry = true`
+2. The artist's DM view shows the artwork image and title pinned at the top of the conversation thread — the artist needs to know which work the buyer is asking about without reading the message
+3. The `enquire_first` acquisition mode is only professionally credible if this context is always present
+
+Without it, the artist receives a blank DM with no visible link to the work. This is a critical polish gap for the `enquire_first` flow.
 
 ---
 
