@@ -98,12 +98,15 @@ export function ChatDropdown({ userId, username }: Props) {
   const [attachment, setAttachment] = useState<StudioUpdate | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [selfProfile, setSelfProfile] = useState<SelfProfile | null>(null);
+  const [presenceMap, setPresenceMap] = useState<Record<string, number>>({});
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [menuMsgId, setMenuMsgId] = useState<string | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subscriptionRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const presenceChannelRef = useRef<any>(null);
   // Stable realtime-enabled client — never recreated on render
   const supabase = useRef(createRealtimeClient()).current;
 
@@ -241,6 +244,53 @@ export function ChatDropdown({ userId, username }: Props) {
     computeUnread();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, channels]);
+
+  // Presence: track which channel the user is viewing; build per-channel online counts
+  useEffect(() => {
+    if (!open || !userId || !activeChannelId) {
+      presenceChannelRef.current?.untrack?.();
+      presenceChannelRef.current = null;
+      return;
+    }
+
+    const ch = supabase.channel("community:presence", {
+      config: { presence: { key: userId } },
+    });
+
+    function syncPresence() {
+      const state = ch.presenceState<{ channel_id: string }>();
+      const map: Record<string, number> = {};
+      for (const [key, presences] of Object.entries(state)) {
+        if (key === userId) continue; // exclude self
+        for (const p of presences as Array<{ channel_id: string }>) {
+          if (p.channel_id) map[p.channel_id] = (map[p.channel_id] ?? 0) + 1;
+        }
+      }
+      setPresenceMap(map);
+    }
+
+    ch.on("presence", { event: "sync" }, syncPresence)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track({ channel_id: activeChannelId });
+        }
+      });
+
+    presenceChannelRef.current = ch;
+
+    return () => {
+      supabase.removeChannel(ch);
+      presenceChannelRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
+
+  // Update presence when switching channels (without re-subscribing)
+  useEffect(() => {
+    if (!presenceChannelRef.current || !activeChannelId) return;
+    presenceChannelRef.current.track({ channel_id: activeChannelId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChannelId]);
 
   // Picker: click-outside to close
   useEffect(() => {
@@ -409,6 +459,12 @@ export function ChatDropdown({ userId, username }: Props) {
             {channels.map((ch) => {
               const isActive = ch.id === activeChannelId;
               const unread = unreadMap[ch.id] ?? 0;
+              const othersOnline = (presenceMap[ch.id] ?? 0) > 0;
+              const dotClass = othersOnline
+                ? "bg-emerald-500"
+                : isActive
+                ? "bg-stone-600"
+                : "bg-stone-300";
               return (
                 <button
                   key={ch.id}
@@ -420,7 +476,7 @@ export function ChatDropdown({ userId, username }: Props) {
                       : "text-stone-600 hover:bg-stone-50 border-l-2 border-transparent"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? "bg-emerald-500" : "bg-stone-300"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
                   <span className="flex-1 truncate">{ch.name}</span>
                   {unread > 0 && (
                     <span className="text-[10px] font-medium bg-stone-900 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
@@ -441,6 +497,7 @@ export function ChatDropdown({ userId, username }: Props) {
               {channels.map((ch) => {
                 const isActive = ch.id === activeChannelId;
                 const unread = unreadMap[ch.id] ?? 0;
+                const othersOnline = (presenceMap[ch.id] ?? 0) > 0;
                 return (
                   <button
                     key={ch.id}
@@ -450,6 +507,9 @@ export function ChatDropdown({ userId, username }: Props) {
                       isActive ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                     }`}
                   >
+                    {othersOnline && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    )}
                     {ch.name}
                     {unread > 0 && (
                       <span className={`text-[9px] font-medium rounded-full px-1 ${isActive ? "bg-white text-stone-900" : "bg-stone-900 text-white"}`}>
