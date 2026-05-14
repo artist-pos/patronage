@@ -89,12 +89,22 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
             key={tier.id}
             className="border border-border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           >
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold">{tier.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                NZD {tier.price.toLocaleString("en-NZ")}
-                {tier.description ? ` — ${tier.description}` : ""}
-              </p>
+            <div className="flex items-start gap-4">
+              {tier.tier_image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={tier.tier_image_url}
+                  alt={tier.title}
+                  className="w-16 h-16 object-cover flex-shrink-0"
+                />
+              )}
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold">{tier.title}</h3>
+                <p className="text-xs text-muted-foreground">
+                  NZD {tier.price.toLocaleString("en-NZ")}
+                  {tier.description ? ` — ${tier.description}` : ""}
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setSelectedTier(tier)}

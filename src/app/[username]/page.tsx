@@ -15,9 +15,15 @@ import { LazyCreateUpdateModal } from "@/components/feed/LazyCreateUpdateModal";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
+import { CampaignsSection } from "@/components/profile/CampaignsSection";
+import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import dynamic from "next/dynamic";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
+
+const WorksJustifiedGrid = dynamic(() =>
+  import("@/components/feed/WorksJustifiedGrid").then((m) => ({ default: m.WorksJustifiedGrid }))
+);
 
 const WorkTab = dynamic(() =>
   import("@/components/profile/tabs/WorkTab").then((m) => ({ default: m.WorkTab }))
@@ -29,6 +35,7 @@ const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier } from "@/types/database";
+import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
@@ -43,7 +50,7 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 
 interface Props {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; ptab?: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -110,7 +117,8 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ArtistProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, ptab: rawPtab } = await searchParams;
+  const patronTab = rawPtab === "collection" ? "collection" : "overview";
   // Redirect legacy ?tab=press → cv, ?tab=studio → work
   const normalised = rawTab === "press" ? "cv" : rawTab === "studio" ? "work" : rawTab;
   const tab: TabType = (VALID_TABS as readonly string[]).includes(normalised ?? "")
@@ -148,6 +156,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     followsData,
     collectionWorks,
     profileOpportunities,
+    profileCampaigns,
   ] = await Promise.all([
     // Available works: always needed for "X works available" badge
     isArtistProfile
@@ -203,7 +212,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     !isArtistProfile
       ? supabase
           .from("artworks")
-          .select("*, creator_profile:creator_id(username, full_name)")
+          .select("*, creator_profile:creator_id(username, full_name, avatar_url)")
           .eq("current_owner_id", profile.id)
           .order("created_at", { ascending: false })
           .then(({ data }) => data ?? [])
@@ -218,6 +227,16 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("created_at", { ascending: false })
           .then(({ data }) => (data ?? []) as Opportunity[])
       : Promise.resolve([] as Opportunity[]),
+    // Artist: public campaigns (selected for opportunities)
+    isArtistProfile
+      ? supabase
+          .from("campaigns")
+          .select("id, title, slug, qr_code_url, opportunity:opportunity_id(type, organiser)")
+          .eq("artist_profile_id", profile.id)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => (data ?? []) as unknown as CampaignForProfile[])
+      : Promise.resolve([] as CampaignForProfile[]),
   ]);
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
@@ -597,6 +616,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         {/* ── Artist profile: tabbed layout ── */}
         {isArtistProfile && (
           <>
+            <CampaignsSection
+              campaigns={profileCampaigns}
+              supportEnabled={profile.support_enabled}
+              username={profile.username}
+            />
+
             <ProfileTabs username={profile.username} tab={tab} artistName={profile.full_name ?? profile.username} />
 
             <div>
@@ -668,62 +693,112 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           </>
         )}
 
-        {/* ── Patron / Partner sections (flat layout) ── */}
-        {!isArtistProfile && (
-          <>
-            {/* 1. Live Opportunities — top */}
-            <LiveOpportunitiesSection
-              initialOpportunities={profileOpportunities}
-              isOwner={isOwner}
-            />
+        {/* ── Patron / Partner sections ── */}
+        {!isArtistProfile && (() => {
+          // Public collection works for grid + tab visibility check
+          const publicCollectionWorks = (collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[])
+            .filter((w) => w.collection_visible);
+          const showCollectionTab = (profile.collection_public ?? true) && publicCollectionWorks.length > 0;
 
-            {/* 2. Artists I Follow */}
-            <section className="space-y-4 border-t border-border pt-10">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                Artists I Follow
-              </h2>
-              {followingArtists.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Not following anyone yet.</p>
-              ) : (
-                <div className="flex flex-wrap gap-4">
-                  {followingArtists.map((a) => (
+          const collectionGridWorks: ArtworkForGrid[] = publicCollectionWorks.map((w) => ({
+            id: w.id,
+            url: w.url,
+            title: w.title,
+            caption: w.caption,
+            price_cents: w.price_cents,
+            is_poa: w.is_poa,
+            price_currency: w.price_currency as "NZD" | "AUD",
+            medium: w.medium,
+            hide_price: w.hide_price,
+            profile: w.creator_profile
+              ? { username: w.creator_profile.username, full_name: w.creator_profile.full_name, avatar_url: w.creator_profile.avatar_url }
+              : null,
+          }));
+
+          return (
+            <>
+              {/* Patron tab bar — only shows Collection tab when public works exist */}
+              {(isOwner || showCollectionTab) && (
+                <nav className="flex gap-6 border-b border-border">
+                  <Link
+                    href={`/${profile.username}`}
+                    className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${patronTab === "overview" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Overview
+                  </Link>
+                  {showCollectionTab && (
                     <Link
-                      key={a.id}
-                      href={`/${a.username}`}
-                      className="flex flex-col items-center gap-1.5 group"
+                      href={`/${profile.username}?ptab=collection`}
+                      className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${patronTab === "collection" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                     >
-                      <div className="relative w-14 h-14 border border-black overflow-hidden bg-muted">
-                        {a.avatar_url ? (
-                          <Image
-                            src={a.avatar_url}
-                            alt={a.full_name ?? a.username}
-                            fill
-                            className="object-cover"
-                            sizes="56px"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-lg font-medium text-muted-foreground">
-                            {(a.full_name ?? a.username).charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors text-center leading-tight">
-                        {a.full_name ?? a.username}
-                      </span>
+                      Collection
                     </Link>
-                  ))}
-                </div>
+                  )}
+                </nav>
               )}
-            </section>
 
-            {/* 3. Collection */}
-            <CollectionSection
-              initialWorks={collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null } | null })[]}
-              isOwner={isOwner}
-              collectionPublic={profile.collection_public ?? true}
-            />
-          </>
-        )}
+              {patronTab === "collection" && showCollectionTab ? (
+                <div className="py-6">
+                  <WorksJustifiedGrid artworks={collectionGridWorks} />
+                </div>
+              ) : (
+                <>
+                  {/* 1. Live Opportunities — top */}
+                  <LiveOpportunitiesSection
+                    initialOpportunities={profileOpportunities}
+                    isOwner={isOwner}
+                  />
+
+                  {/* 2. Artists I Follow */}
+                  <section className="space-y-4 border-t border-border pt-10">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                      Artists I Follow
+                    </h2>
+                    {followingArtists.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Not following anyone yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-4">
+                        {followingArtists.map((a) => (
+                          <Link
+                            key={a.id}
+                            href={`/${a.username}`}
+                            className="flex flex-col items-center gap-1.5 group"
+                          >
+                            <div className="relative w-14 h-14 border border-black overflow-hidden bg-muted">
+                              {a.avatar_url ? (
+                                <Image
+                                  src={a.avatar_url}
+                                  alt={a.full_name ?? a.username}
+                                  fill
+                                  className="object-cover"
+                                  sizes="56px"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-lg font-medium text-muted-foreground">
+                                  {(a.full_name ?? a.username).charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors text-center leading-tight">
+                              {a.full_name ?? a.username}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 3. Collection */}
+                  <CollectionSection
+                    initialWorks={collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null } | null })[]}
+                    isOwner={isOwner}
+                    collectionPublic={profile.collection_public ?? true}
+                  />
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {/* ── Back link ── */}
         <div className="border-t border-border pt-6 pb-12">

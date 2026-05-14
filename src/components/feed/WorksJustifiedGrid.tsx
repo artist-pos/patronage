@@ -20,6 +20,8 @@ export interface ArtworkForGrid {
   hide_price: boolean;
   hide_available?: boolean;
   listing_mode?: "direct_sale" | "enquire_first" | null;
+  location_text?: string | null;
+  show_location_publicly?: boolean;
   profile: {
     id?: string;
     username: string;
@@ -342,6 +344,11 @@ function WorksLightbox({
               {/* Medium */}
               {artwork.medium && (
                 <p className="text-xs text-muted-foreground">{artwork.medium}</p>
+              )}
+
+              {/* Location — owner always sees it; public only if show_location_publicly */}
+              {artwork.location_text && (ownerActions || artwork.show_location_publicly) && (
+                <p className="text-xs text-muted-foreground">{artwork.location_text}</p>
               )}
 
               {/* Price */}

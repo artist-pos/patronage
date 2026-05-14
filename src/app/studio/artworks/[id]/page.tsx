@@ -38,7 +38,7 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   const [{ data: artwork }, { data: claims }, { data: entries }] = await Promise.all([
     admin
       .from("artworks")
-      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at")
+      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, edition_number, edition_total, edition_type, location_text, show_location_publicly, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at")
       .eq("id", id)
       .eq("creator_id", user.id)
       .maybeSingle(),
@@ -161,6 +161,11 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
             dimensions: artwork.dimensions ?? null,
             year: artwork.year ?? null,
             edition: artwork.edition ?? null,
+            edition_number: (artwork.edition_number as number | null) ?? null,
+            edition_total: (artwork.edition_total as number | null) ?? null,
+            edition_type: (artwork.edition_type as string | null) ?? null,
+            location_text: (artwork.location_text as string | null) ?? null,
+            show_location_publicly: (artwork.show_location_publicly as boolean | null) ?? false,
           }}
         />
         <DocumentationPhotosEditor

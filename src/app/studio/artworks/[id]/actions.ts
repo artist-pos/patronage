@@ -129,6 +129,11 @@ export async function updateArtworkDetails(data: {
   dimensions?: string | null;
   year?: number | null;
   edition?: string | null;
+  edition_number?: number | null;
+  edition_total?: number | null;
+  edition_type?: string | null;
+  location_text?: string | null;
+  show_location_publicly?: boolean;
 }): Promise<{ error?: string }> {
   const gate = await assertCreator(data.artworkId);
   if ("error" in gate) return { error: gate.error };
@@ -141,6 +146,11 @@ export async function updateArtworkDetails(data: {
   if (data.surface_or_substrate !== undefined) patch.surface_or_substrate = data.surface_or_substrate?.trim() || null;
   if (data.dimensions !== undefined)        patch.dimensions         = data.dimensions?.trim() || null;
   if (data.edition !== undefined)           patch.edition            = data.edition?.trim() || null;
+  if (data.edition_number !== undefined)   patch.edition_number     = data.edition_number ?? null;
+  if (data.edition_total !== undefined)    patch.edition_total      = data.edition_total ?? null;
+  if (data.edition_type !== undefined)     patch.edition_type       = data.edition_type || null;
+  if (data.location_text !== undefined)    patch.location_text      = data.location_text?.trim() || null;
+  if (data.show_location_publicly !== undefined) patch.show_location_publicly = data.show_location_publicly;
   if (data.year !== undefined) {
     if (data.year === null || Number.isNaN(data.year)) {
       patch.year = null;

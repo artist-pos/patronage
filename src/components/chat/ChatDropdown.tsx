@@ -337,6 +337,8 @@ export function ChatDropdown({ userId, username }: Props) {
     setSending(false);
   }
 
+  if (!userId) return null;
+
   const activeChannel = channels.find(c => c.id === activeChannelId) ?? null;
   const panelHeight = isMobile
     ? "calc(100dvh - 49px)"

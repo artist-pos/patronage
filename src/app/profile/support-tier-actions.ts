@@ -42,7 +42,7 @@ export async function createSupportTier(data: {
 
 export async function updateSupportTier(
   tierId: string,
-  data: { title: string; price: number; description?: string; tier_type?: SupportTierType | null }
+  data: { title: string; price: number; description?: string; tier_type?: SupportTierType | null; tier_image_url?: string | null }
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -51,14 +51,17 @@ export async function updateSupportTier(
   if (!data.title.trim()) return { error: "Title is required" };
   if (data.price <= 0) return { error: "Price must be greater than 0" };
 
+  const patch: Record<string, unknown> = {
+    title: data.title.trim(),
+    price: data.price,
+    description: data.description?.trim() || null,
+    tier_type: data.tier_type ?? null,
+  };
+  if (data.tier_image_url !== undefined) patch.tier_image_url = data.tier_image_url;
+
   const { error } = await supabase
     .from("support_tiers")
-    .update({
-      title: data.title.trim(),
-      price: data.price,
-      description: data.description?.trim() || null,
-      tier_type: data.tier_type ?? null,
-    })
+    .update(patch)
     .eq("id", tierId)
     .eq("profile_id", user.id);
 

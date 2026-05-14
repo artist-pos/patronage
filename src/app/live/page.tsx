@@ -111,10 +111,10 @@ export default async function LivePage() {
       )}
 
       {/* Campaign grid with filters */}
-      {campaigns.length === 0 ? (
+      {campaigns.length < 3 ? (
         <div className="border border-dashed border-stone-200 rounded-xl px-8 py-20 text-center">
-          <p className="text-sm text-stone-500">No live campaigns right now.</p>
-          <p className="text-xs text-stone-400 mt-1">Check back soon.</p>
+          <p className="text-sm text-stone-500">Live campaigns are coming soon.</p>
+          <p className="text-xs text-stone-400 mt-1">We're onboarding our first artists — check back shortly.</p>
         </div>
       ) : (
         <CampaignFilters campaigns={campaigns} />

@@ -358,6 +358,7 @@ export interface SupportTier {
   // Phase 7.5d (migration 113) — Stripe IDs are minted lazily on first checkout
   stripe_product_id: string | null;
   stripe_price_id: string | null;
+  tier_image_url: string | null;
   created_at: string;
 }
 
@@ -420,6 +421,10 @@ export interface Artwork {
   surface_or_substrate: string | null;
   dimensions: string | null;
   edition: string | null;
+  // Structured edition fields (migration 110)
+  edition_number: number | null;
+  edition_total: number | null;
+  edition_type: 'unique' | 'limited' | 'open' | 'AP' | 'proof' | null;
   // Provenance (migration 098)
   ledger_id: string | null;
   certificate_note: string | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Pencil, Check, X, ChevronDown, ChevronUp, Mail, Download, Copy } from "lucide-react";
 import {
   createSupportTier,
@@ -11,6 +11,7 @@ import {
 } from "@/app/profile/support-tier-actions";
 import type { SupportIntentWithProfile } from "@/app/profile/support-tier-actions";
 import type { SupportTier, SupportTierType } from "@/types/database";
+import { uploadImage } from "@/lib/upload-image";
 
 interface Props {
   initialTiers: SupportTier[];
@@ -90,6 +91,9 @@ export function SupportTiersManager({ initialTiers }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TierFormState>(EMPTY_FORM);
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Intent dashboard
   const [intents, setIntents] = useState<IntentRow[] | null>(null);
@@ -111,6 +115,24 @@ export function SupportTiersManager({ initialTiers }: Props) {
       description: tier.description ?? "",
       tier_type: tier.tier_type ?? "",
     });
+    setEditImageUrl(tier.tier_image_url ?? null);
+  }
+
+  async function handleImageUpload(tierId: string, file: File) {
+    setImageUploading(true);
+    try {
+      const result = await uploadImage(file, {
+        bucket: "portfolio",
+        path: `tier-images/${tierId}.webp`,
+        maxWidth: 800,
+        quality: 85,
+        upsert: true,
+      });
+      setEditImageUrl(result.url);
+    } catch {
+      // ignore upload errors silently — user can retry
+    }
+    setImageUploading(false);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -140,9 +162,9 @@ export function SupportTiersManager({ initialTiers }: Props) {
         tier_type: (form.tier_type as SupportTierType) || null,
         sort_order: prev.length,
         is_active: true,
-        // Stripe ids minted on first checkout (Phase 7.5d).
         stripe_product_id: null,
         stripe_price_id: null,
+        tier_image_url: null,
         created_at: new Date().toISOString(),
       } satisfies SupportTier,
     ]);
@@ -159,6 +181,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
       price: parseFloat(editForm.price),
       description: editForm.description.trim() || undefined,
       tier_type: (editForm.tier_type as SupportTierType) || null,
+      tier_image_url: editImageUrl,
     });
     if (!result.error) {
       setTiers(prev =>
@@ -170,6 +193,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                 price: parseFloat(editForm.price),
                 description: editForm.description.trim() || null,
                 tier_type: (editForm.tier_type as SupportTierType) || null,
+                tier_image_url: editImageUrl,
               }
             : t
         )
@@ -268,11 +292,47 @@ export function SupportTiersManager({ initialTiers }: Props) {
                     setForm={setEditForm}
                     inputCls={inputCls}
                   />
+                  {/* Tier image */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground">Tier image (optional)</p>
+                    {editImageUrl && (
+                      <div className="relative w-24 h-24">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={editImageUrl} alt="" className="w-24 h-24 object-cover border border-border" />
+                        <button
+                          type="button"
+                          onClick={() => setEditImageUrl(null)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-border rounded-full flex items-center justify-center hover:bg-stone-50"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(tier.id, file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={imageUploading}
+                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                    >
+                      {imageUploading ? "Uploading…" : editImageUrl ? "Replace image" : "Upload image"}
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleUpdate(tier.id)}
-                      disabled={busy === tier.id}
+                      disabled={busy === tier.id || imageUploading}
                       className="flex items-center gap-1.5 text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 disabled:opacity-40 transition-opacity"
                     >
                       <Check className="w-3 h-3" />

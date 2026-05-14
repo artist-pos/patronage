@@ -21,6 +21,14 @@ function buildSuggestion(cats: string[], surface: string): string {
   return catStr;
 }
 
+const EDITION_TYPES = [
+  { value: "unique",  label: "Unique" },
+  { value: "limited", label: "Limited edition" },
+  { value: "open",    label: "Open edition" },
+  { value: "AP",      label: "Artist's Proof (AP)" },
+  { value: "proof",   label: "Proof" },
+] as const;
+
 interface Props {
   artworkId: string;
   initial: {
@@ -31,6 +39,11 @@ interface Props {
     dimensions: string | null;
     year: number | null;
     edition: string | null;
+    edition_number: number | null;
+    edition_total: number | null;
+    edition_type: string | null;
+    location_text: string | null;
+    show_location_publicly: boolean;
   };
 }
 
@@ -44,6 +57,11 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
   const [dimensions, setDimensions] = useState(initial.dimensions ?? "");
   const [year, setYear] = useState<string>(initial.year ? String(initial.year) : "");
   const [edition, setEdition] = useState(initial.edition ?? "");
+  const [editionNumber, setEditionNumber] = useState<string>(initial.edition_number ? String(initial.edition_number) : "");
+  const [editionTotal, setEditionTotal] = useState<string>(initial.edition_total ? String(initial.edition_total) : "");
+  const [editionType, setEditionType] = useState(initial.edition_type ?? "");
+  const [locationText, setLocationText] = useState(initial.location_text ?? "");
+  const [showLocationPublicly, setShowLocationPublicly] = useState(initial.show_location_publicly);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +73,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
     if (suggestion) setMedium(suggestion);
   }, [mediumCategory, surfaceOrSubstrate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filled = [title, medium, mediumCategory.length > 0 ? "x" : "", surfaceOrSubstrate, dimensions, year, edition].filter((v) => String(v).trim()).length;
+  const filled = [title, medium, mediumCategory.length > 0 ? "x" : "", surfaceOrSubstrate, dimensions, year, edition, editionType, locationText].filter((v) => String(v).trim()).length;
 
   function toggleCategory(cat: string) {
     setMediumCategory((prev) =>
@@ -77,6 +95,11 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
       dimensions: dimensions.trim() || null,
       edition: edition.trim() || null,
       year: year.trim() ? parseInt(year, 10) : null,
+      edition_number: editionNumber.trim() ? parseInt(editionNumber, 10) : null,
+      edition_total: editionTotal.trim() ? parseInt(editionTotal, 10) : null,
+      edition_type: editionType || null,
+      location_text: locationText.trim() || null,
+      show_location_publicly: showLocationPublicly,
     });
     setSaving(false);
     if (result.error) {
@@ -99,8 +122,8 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
         <div>
           <p className="text-sm font-medium text-stone-900">Work details</p>
           <p className="text-xs text-stone-500 mt-0.5">
-            Title, medium, category, dimensions, year, edition — appear on the certificate and provenance page.{" "}
-            <span className="text-stone-700">{filled}/7 filled</span>
+            Title, medium, category, dimensions, year, edition, location — appear on the certificate and provenance page.{" "}
+            <span className="text-stone-700">{filled}/9 filled</span>
           </p>
         </div>
         <svg
@@ -197,7 +220,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
             </div>
           </div>
 
-          {/* Edition */}
+          {/* Edition — free-text display value */}
           <div>
             <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition</label>
             <input
@@ -207,6 +230,66 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
               placeholder="e.g. 1/25 or Original"
               className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
             />
+          </div>
+
+          {/* Structured edition fields */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition No.</label>
+              <input
+                type="number"
+                value={editionNumber}
+                onChange={(e) => setEditionNumber(e.target.value)}
+                min={1}
+                placeholder="e.g. 1"
+                className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition Total</label>
+              <input
+                type="number"
+                value={editionTotal}
+                onChange={(e) => setEditionTotal(e.target.value)}
+                min={1}
+                placeholder="e.g. 25"
+                className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition Type</label>
+              <select
+                value={editionType}
+                onChange={(e) => setEditionType(e.target.value)}
+                className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm bg-white"
+              >
+                <option value="">— optional —</option>
+                {EDITION_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Location</label>
+            <input
+              type="text"
+              value={locationText}
+              onChange={(e) => setLocationText(e.target.value)}
+              placeholder="e.g. Auckland, NZ"
+              className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
+            />
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showLocationPublicly}
+                onChange={(e) => setShowLocationPublicly(e.target.checked)}
+                className="accent-black"
+              />
+              <span className="text-xs text-stone-600">Show location publicly</span>
+            </label>
           </div>
 
           {error && <p className="text-xs text-red-600">{error}</p>}

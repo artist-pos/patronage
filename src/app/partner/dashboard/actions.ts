@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendHighResRequest } from "@/lib/email";
 import { createCampaignForSelection } from "@/lib/campaigns";
+import { ensureLedgerId } from "@/lib/provenance";
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -19,7 +20,7 @@ export async function updateApplicationStatus(
     supabase.from("profiles").select("role").eq("id", user.id).single(),
     supabase
       .from("opportunity_applications")
-      .select("id, status, artist_id, opportunity_id, selected_at")
+      .select("id, status, artist_id, opportunity_id, selected_at, artwork_id")
       .eq("id", applicationId)
       .single(),
   ]);
@@ -129,6 +130,23 @@ export async function updateApplicationStatus(
           body: `Selected for ${opp.title} (${opp.type})`,
           content_type: "text",
         });
+      }
+
+      // Write a 'selected' provenance entry if this application has an artwork attached
+      const artworkId = (app as { artwork_id?: string | null }).artwork_id;
+      if (artworkId) {
+        void ensureLedgerId(artworkId).then((ledgerId) =>
+          admin.from("artwork_provenance_ledger").insert({
+            artwork_id: artworkId,
+            ledger_id: ledgerId,
+            entry_type: "selected",
+            from_owner_id: null,
+            to_owner_id: app.artist_id,
+            transfer_method: "direct",
+            source_opportunity_id: opp.id,
+            notes: `Selected for ${opp.title} (${opp.type ?? ""})`,
+          })
+        ).catch(console.error);
       }
     }
 
