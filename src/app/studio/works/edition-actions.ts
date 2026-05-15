@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { EditionType, EditionListingMode } from "@/types/database";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ async function syncArtworks(
   edition: Pick<EditionInput, 'price_cents' | 'currency' | 'poa' | 'listing_mode' | 'listed'>,
   extra?: ArtworkExtra,
 ) {
+  const admin = createAdminClient();
   const isListed = edition.listed ?? false;
   const mode = extra?.acquisitionMode ?? null;
   const artworkPayload: Record<string, unknown> = {
@@ -70,13 +72,13 @@ async function syncArtworks(
   };
 
   if (work.linked_artwork_id) {
-    await supabase
+    await admin
       .from("artworks")
       .update(artworkPayload)
       .eq("id", work.linked_artwork_id)
       .eq("creator_id", work.creator_id);
   } else if (isListed) {
-    const { data: newArtwork } = await supabase
+    const { data: newArtwork, error: insertError } = await admin
       .from("artworks")
       .insert({
         profile_id: work.creator_id,
@@ -104,8 +106,10 @@ async function syncArtworks(
       .select("id")
       .single();
 
+    if (insertError) console.error("[syncArtworks] insert failed:", insertError.message);
+
     if (newArtwork) {
-      await supabase
+      await admin
         .from("portfolio_images")
         .update({ linked_artwork_id: newArtwork.id })
         .eq("id", work.id)
