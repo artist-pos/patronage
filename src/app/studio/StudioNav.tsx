@@ -37,7 +37,7 @@ export function StudioNav({ activeSection, sectionDots, sectionCounts, lockedSec
 
       {/* Desktop: sidebar + content */}
       <div className="flex flex-col lg:flex-row gap-12 items-start">
-        <nav className="hidden lg:block w-[200px] shrink-0 sticky top-8 space-y-6">
+        <nav className="hidden lg:block w-[200px] shrink-0 sticky top-[72px] space-y-6">
 
           {/* Primary */}
           <div className="space-y-0.5">

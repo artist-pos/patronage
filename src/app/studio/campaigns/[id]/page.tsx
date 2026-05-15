@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { CampaignConfigPanel } from "@/components/campaigns/CampaignConfigPanel";
 import type { Metadata } from "next";
 
@@ -34,6 +35,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         partner_name, partner_profile_id,
         campaign_start_date, campaign_end_date,
         location_address, location_lat, location_lng,
+        venue_contact_name, venue_contact_email, venue_contact_phone,
         surface_type, production_specs, fee_amount,
         qr_code_url, landing_page_slug, landing_page_config,
         created_at, updated_at,
@@ -74,6 +76,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     partner_name: string | null; partner_profile_id: string | null;
     campaign_start_date: string | null; campaign_end_date: string | null;
     location_address: string | null; location_lat: number | null; location_lng: number | null;
+    venue_contact_name: string | null; venue_contact_email: string | null; venue_contact_phone: string | null;
     surface_type: string | null; production_specs: string | null; fee_amount: number | null;
     qr_code_url: string | null; landing_page_slug: string | null;
     landing_page_config: Record<string, unknown>;
@@ -85,13 +88,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   const landingUrl = `${SITE_URL}/live/${c.slug}/${profile.username}`;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+    <StudioPageShell username={profile.username ?? ""} activeSection="campaigns">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
-          Studio
-        </Link>
-        <span>/</span>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
           Campaigns
         </Link>
@@ -128,6 +127,6 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         bio={(profile as { bio?: string | null }).bio ?? null}
         featuredImageUrl={(profile as { featured_image_url?: string | null }).featured_image_url ?? null}
       />
-    </div>
+    </StudioPageShell>
   );
 }

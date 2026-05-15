@@ -5,7 +5,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { saveCertificateNote } from "./actions";
 
-const LogSaleModal = dynamic(() => import("./LogSaleModal").then(m => ({ default: m.LogSaleModal })), { ssr: false });
 const CertificatePdfModal = dynamic(
   () => import("@/components/provenance/CertificatePdfModal").then(m => ({ default: m.CertificatePdfModal })),
   { ssr: false }
@@ -186,8 +185,6 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
 }
 
 export function ProvenanceList({ works }: Props) {
-  const [showLogSale, setShowLogSale] = useState(false);
-
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -199,15 +196,15 @@ export function ProvenanceList({ works }: Props) {
               : `${works.length} work${works.length !== 1 ? "s" : ""} transferred`}
           </p>
         </div>
-        <button
-          onClick={() => setShowLogSale(true)}
+        <Link
+          href="/studio/works/new?mode=sale"
           className="flex items-center gap-1.5 px-4 py-2 border border-stone-200 rounded-lg text-xs font-medium text-stone-700 hover:bg-stone-50 transition-colors"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
           </svg>
           Log a sale
-        </button>
+        </Link>
       </div>
 
       {works.length === 0 ? (
@@ -215,12 +212,12 @@ export function ProvenanceList({ works }: Props) {
           <p className="text-sm text-stone-500">
             Works you transfer to collectors will appear here with their provenance records.
           </p>
-          <button
-            onClick={() => setShowLogSale(true)}
+          <Link
+            href="/studio/works/new?mode=sale"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
           >
             Log a past sale →
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -229,8 +226,6 @@ export function ProvenanceList({ works }: Props) {
           ))}
         </div>
       )}
-
-      {showLogSale && <LogSaleModal onClose={() => setShowLogSale(false)} />}
     </>
   );
 }

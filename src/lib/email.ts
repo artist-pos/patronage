@@ -769,32 +769,53 @@ export async function sendCampaignEnquiryNotification(params: {
   visitorEmail: string;
   message: string;
   campaignTitle: string;
+  venueContactEmail?: string | null;
+  venueContactName?: string | null;
 }): Promise<void> {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const { artistEmail, artistName, workTitle, visitorName, visitorEmail, message, campaignTitle } = params;
-  await getResend().emails.send({
-    from: FROM,
-    to: artistEmail,
-    replyTo: visitorEmail,
-    subject: `New enquiry about ${workTitle} from ${visitorName}`,
-    html: `<!DOCTYPE html>
+  const { artistEmail, artistName, workTitle, visitorName, visitorEmail, message, campaignTitle, venueContactEmail, venueContactName } = params;
+  const resend = getResend();
+
+  const bodyHtml = (recipientName: string) => `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
     <tr><td>
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New enquiry via ${esc(campaignTitle)}</p>
-      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(recipientName)}</strong>,</p>
       <p style="margin:0 0 4px;font-size:14px;color:#555;"><strong>${esc(visitorName)}</strong> (${esc(visitorEmail)}) enquired about <strong>${esc(workTitle)}</strong>:</p>
       <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;white-space:pre-wrap;">${esc(message)}</blockquote>
       <p style="margin:0 0 24px;font-size:14px;color:#555;">Reply directly to this email to respond.</p>
-      <a href="${SITE_URL}/studio?tab=commerce" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in Studio Commerce →</a>
-      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you're listed as a contact for this campaign on <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
     </td></tr>
   </table>
 </body>
-</html>`,
-  });
+</html>`;
+
+  const sends: Promise<unknown>[] = [
+    resend.emails.send({
+      from: FROM,
+      to: artistEmail,
+      replyTo: visitorEmail,
+      subject: `New enquiry about ${workTitle} from ${visitorName}`,
+      html: bodyHtml(artistName),
+    }),
+  ];
+
+  if (venueContactEmail) {
+    sends.push(
+      resend.emails.send({
+        from: FROM,
+        to: venueContactEmail,
+        replyTo: visitorEmail,
+        subject: `New enquiry about ${workTitle} from ${visitorName}`,
+        html: bodyHtml(venueContactName ?? "there"),
+      }),
+    );
+  }
+
+  await Promise.all(sends);
 }
 
 export async function sendOwnershipClaimNotification({

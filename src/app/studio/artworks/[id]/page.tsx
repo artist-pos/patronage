@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { ArtworkProvenancePanel } from "./ArtworkProvenancePanel";
 import { WorkDetailsEditor } from "./WorkDetailsEditor";
 import { AcquisitionModeEditor } from "./AcquisitionModeEditor";
@@ -27,7 +28,7 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, username")
     .eq("id", user.id)
     .single();
 
@@ -113,7 +114,7 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   const displayTitle = artwork.title ?? artwork.caption ?? "Untitled";
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+    <StudioPageShell username={profileRow.username ?? ""} activeSection="works">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link href="/studio?section=available" className="hover:text-foreground transition-colors">
@@ -228,6 +229,6 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
           <LinkProjectToArtwork artworkId={artwork.id} projects={unlinkableProjects} />
         )}
       </div>
-    </div>
+    </StudioPageShell>
   );
 }

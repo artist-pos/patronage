@@ -111,12 +111,20 @@ export function WorksTabsClient({
           )}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Works listed for sale. Patrons can make offers directly from your profile.</p>
-            <Link
-              href="/studio/works/new?mode=sale"
-              className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
-            >
-              + Add Available Work
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/studio/works/new?mode=sale"
+                className="text-xs border border-border px-3 py-1.5 hover:bg-muted/40 transition-colors font-medium"
+              >
+                + Log a sale
+              </Link>
+              <Link
+                href="/studio/works/new?mode=list"
+                className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
+              >
+                + Add Available Work
+              </Link>
+            </div>
           </div>
           <WorksTable
             section="available"
@@ -131,7 +139,15 @@ export function WorksTabsClient({
 
       {tab === "sold" && (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Works transferred to collectors. These are permanent provenance records.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Works transferred to collectors. These are permanent provenance records.</p>
+            <Link
+              href="/studio/works/new?mode=sale"
+              className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
+            >
+              + Log a sale
+            </Link>
+          </div>
           <WorksTable
             section="sold"
             portfolioWorks={portfolioWorks}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { sendCampaignEnquiry } from "./actions";
+import { sendCampaignEnquiry, createCampaignSaleCheckout, claimCampaignWorkFree } from "./actions";
 
 interface Work {
   id: string;
@@ -16,6 +16,7 @@ interface WorkPricing {
   available?: boolean;
   price?: number | null;
   is_poa?: boolean;
+  acquisition_mode?: "buy_now" | "enquire_first";
   prints_available?: boolean;
   print_sizes?: Array<{ size: string; price: string }>;
 }
@@ -54,6 +55,7 @@ interface Props {
   };
   highlightWorkId: string | null;
   artistEmail: null;
+  artistId: string;
 }
 
 const CAMPAIGN_TYPE_LABEL: Record<string, string> = {
@@ -93,8 +95,11 @@ export function LiveStorefrontClient({
   works,
   cfg,
   highlightWorkId,
+  artistId,
 }: Props) {
   const [loaded, setLoaded] = useState(false);
+  // Show success message if buyer was redirected back after Stripe checkout
+  const [purchased, setPurchased] = useState(false);
   const [activeWork, setActiveWork] = useState<Work | null>(
     highlightWorkId ? (works.find(w => w.id === highlightWorkId) ?? null) : null
   );
@@ -107,6 +112,11 @@ export function LiveStorefrontClient({
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [enquirySending, setEnquirySending] = useState(false);
   const [enquirySent, setEnquirySent] = useState(false);
+  const [purchaseName, setPurchaseName] = useState("");
+  const [purchaseEmail, setPurchaseEmail] = useState("");
+  const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchaseDone, setPurchaseDone] = useState(false);
   const scanLogged = useRef(false);
 
   const artistName = profile.full_name ?? profile.username;
@@ -127,7 +137,7 @@ export function LiveStorefrontClient({
   const displayLabel = displayWork?.caption ?? displayWork?.title ?? campaign.title;
 
   // Global pricing fallback
-  const globalPricing = { available: cfg.original_available, price: cfg.original_price, is_poa: cfg.is_poa, prints_available: cfg.prints_available, print_sizes: cfg.print_sizes };
+  const globalPricing: WorkPricing = { available: cfg.original_available, price: cfg.original_price, is_poa: cfg.is_poa, acquisition_mode: undefined, prints_available: cfg.prints_available, print_sizes: cfg.print_sizes };
   const globalHasPrints = cfg.prints_available && cfg.print_sizes?.some(r => r.size);
 
   // Per-work pricing for the active/display work
@@ -142,6 +152,12 @@ export function LiveStorefrontClient({
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 80);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("purchased") === "1") {
+      setPurchased(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -208,6 +224,49 @@ export function LiveStorefrontClient({
     }
   }
 
+  async function handlePurchaseSubmit(
+    e: React.FormEvent,
+    workId: string,
+    priceCents: number,
+    isFree: boolean,
+  ) {
+    e.preventDefault();
+    if (!purchaseName.trim() || !purchaseEmail.trim()) return;
+    setPurchaseSubmitting(true);
+    setPurchaseError(null);
+
+    if (isFree) {
+      const result = await claimCampaignWorkFree({
+        campaignId: campaign.id,
+        workId,
+        artistId,
+        claimerName: purchaseName.trim(),
+        claimerEmail: purchaseEmail.trim(),
+      });
+      setPurchaseSubmitting(false);
+      if (result.error) { setPurchaseError(result.error); return; }
+      setPurchaseDone(true);
+    } else {
+      const displayWork2 = works.find(w => w.id === workId) ?? works[0];
+      const result = await createCampaignSaleCheckout({
+        campaignId: campaign.id,
+        workId,
+        artistId,
+        campaignSlug: campaign.slug,
+        artistUsername: profile.username,
+        buyerName: purchaseName.trim(),
+        buyerEmail: purchaseEmail.trim(),
+        priceCents,
+        currency: "NZD",
+        workTitle: displayWork2?.caption ?? displayWork2?.title ?? campaign.title,
+        workImageUrl: displayWork2?.url ?? null,
+      });
+      setPurchaseSubmitting(false);
+      if (result.error) { setPurchaseError(result.error); return; }
+      if (result.checkoutUrl) window.location.href = result.checkoutUrl;
+    }
+  }
+
   const fade = (delay: string) =>
     `transition-all duration-700 ${delay} ${loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`;
 
@@ -247,6 +306,14 @@ export function LiveStorefrontClient({
   const ContentColumn = (
     <div className="space-y-0">
 
+      {/* Post-checkout success banner */}
+      {purchased && (
+        <div className="mx-6 mt-6 border border-border p-4 space-y-1 animate-in fade-in duration-300">
+          <p className="text-sm font-medium">Purchase confirmed.</p>
+          <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way. Check your email to claim your account.</p>
+        </div>
+      )}
+
       {/* Artwork title + meta */}
       <div className={`px-6 pt-7 pb-6 space-y-3 ${fade("delay-100")}`}>
         <h1 className="text-2xl font-normal leading-tight" style={{ fontFamily: "'Georgia','Times New Roman',serif", fontStyle: "italic" }}>
@@ -274,8 +341,10 @@ export function LiveStorefrontClient({
                   {resolvedPricing.is_poa
                     ? "Original · POA"
                     : resolvedPricing.price != null && resolvedPricing.price > 0
-                      ? `Original · $${resolvedPricing.price.toLocaleString()}`
-                      : "Enquire"}
+                      ? resolvedPricing.acquisition_mode === "buy_now"
+                        ? `Buy now · $${resolvedPricing.price.toLocaleString()}`
+                        : `Original · $${resolvedPricing.price.toLocaleString()}`
+                      : "Enquire about original"}
                 </button>
               )}
               {hasPrints && (
@@ -286,18 +355,68 @@ export function LiveStorefrontClient({
               )}
             </div>
 
-            {showOriginalPanel && (
-              <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Original work. Comes with a Patronage provenance record — full ownership history and artist verification.
-                </p>
-                <button onClick={() => openEnquiry(`Enquiry about original: ${displayLabel}`)}
-                  className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
-                  {resolvedPricing.is_poa ? "Enquire about price →" : `Express interest — $${resolvedPricing.price?.toLocaleString() ?? "POA"}`}
-                </button>
-                <p className="text-[10px] text-muted-foreground text-center">Artist responds directly · No obligation</p>
-              </div>
-            )}
+            {showOriginalPanel && (() => {
+              const isFree = !resolvedPricing.is_poa && resolvedPricing.price === 0;
+              const hasPrice = !resolvedPricing.is_poa && resolvedPricing.price != null && resolvedPricing.price > 0;
+              const acquisitionMode = resolvedPricing.acquisition_mode ?? "enquire_first";
+              const isBuyNow = acquisitionMode === "buy_now" && hasPrice;
+              const priceCents = Math.round((resolvedPricing.price ?? 0) * 100);
+              const currentWorkId = displayWork?.id ?? works[0]?.id ?? "";
+
+              if (purchaseDone) {
+                return (
+                  <div className="border border-border p-4 space-y-1 animate-in fade-in duration-200">
+                    <p className="text-sm font-medium">Done — check your inbox.</p>
+                    <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way to {purchaseEmail}.</p>
+                  </div>
+                );
+              }
+
+              if (isFree || isBuyNow) {
+                return (
+                  <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {isFree
+                        ? "Claim this work for free. You'll receive a Patronage provenance certificate by email."
+                        : "Purchase includes a Patronage provenance certificate — full ownership history and artist verification."}
+                    </p>
+                    <form onSubmit={e => handlePurchaseSubmit(e, currentWorkId, priceCents, isFree)} className="space-y-2">
+                      <input type="text" value={purchaseName} onChange={e => setPurchaseName(e.target.value)} required placeholder="Your name"
+                        className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
+                      <input type="email" value={purchaseEmail} onChange={e => setPurchaseEmail(e.target.value)} required placeholder="Email address"
+                        className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
+                      {purchaseError && <p className="text-xs text-red-600">{purchaseError}</p>}
+                      <button type="submit" disabled={purchaseSubmitting || !purchaseName.trim() || !purchaseEmail.trim()}
+                        className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40">
+                        {purchaseSubmitting
+                          ? (isFree ? "Claiming…" : "Redirecting to checkout…")
+                          : isFree
+                            ? "Claim for free →"
+                            : `Buy now — $${resolvedPricing.price?.toLocaleString()} →`}
+                      </button>
+                    </form>
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      {isFree ? "No payment required · You'll receive a certificate of provenance by email" : "Secure checkout via Stripe"}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {hasPrice
+                      ? `NZD ${resolvedPricing.price?.toLocaleString()} · get in touch to purchase.`
+                      : "Original work. Comes with a Patronage provenance record — full ownership history and artist verification."}
+                  </p>
+                  <button onClick={() => openEnquiry(`Enquiry about original: ${displayLabel}`)}
+                    className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
+                    {resolvedPricing.is_poa ? "Enquire about price →" : "Enquire →"}
+                  </button>
+                  <p className="text-[10px] text-muted-foreground text-center">Artist responds directly · No obligation</p>
+                </div>
+              );
+            })()}
 
             {showPrintsPanel && printSizes.length > 0 && (
               <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
@@ -361,7 +480,7 @@ export function LiveStorefrontClient({
           </div>
           <a href={`/${profile.username}`}
             className="text-xs border border-border px-4 py-1.5 rounded-full hover:border-black transition-colors text-muted-foreground hover:text-foreground">
-            Follow
+            View profile →
           </a>
         </div>
         {profile.bio && !statement && (

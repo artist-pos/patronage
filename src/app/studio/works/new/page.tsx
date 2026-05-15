@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
+import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { NewWorkClient } from "./NewWorkClient";
 import type { Metadata } from "next";
 
@@ -16,7 +17,7 @@ export default async function NewWorkPage({ searchParams }: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, username")
     .eq("id", user.id)
     .single();
 
@@ -25,21 +26,35 @@ export default async function NewWorkPage({ searchParams }: PageProps) {
   }
 
   const { mode } = await searchParams;
-  const defaultSale = mode === "sale";
+  const workMode = mode === "sale" ? "sale" : mode === "list" ? "list" : "archive";
+
+  const isSale = workMode === "sale";
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-10">
+    <StudioPageShell username={profile.username ?? ""} activeSection={isSale ? "provenance" : "works"}>
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/studio?section=works" className="hover:text-foreground transition-colors">
-          Works
-        </Link>
-        <span>/</span>
-        <span className="text-foreground font-medium">New work</span>
+        {isSale ? (
+          <>
+            <Link href="/studio/provenance" className="hover:text-foreground transition-colors">
+              Provenance
+            </Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">Log a sale</span>
+          </>
+        ) : (
+          <>
+            <Link href="/studio?section=works" className="hover:text-foreground transition-colors">
+              Works
+            </Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">New work</span>
+          </>
+        )}
       </div>
 
-      <h1 className="text-xl font-semibold mb-8">Add a work</h1>
+      <h1 className="text-xl font-semibold mb-8">{isSale ? "Log a sale" : "Add a work"}</h1>
 
-      <NewWorkClient profileId={user.id} defaultSale={defaultSale} />
-    </div>
+      <NewWorkClient profileId={user.id} mode={workMode} />
+    </StudioPageShell>
   );
 }

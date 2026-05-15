@@ -6,6 +6,7 @@ import { findMatchingStubsForName } from "@/lib/artist-stub";
 import { getPendingConfirmationsForArtist } from "@/lib/pending-confirmations";
 import { PendingConfirmationsList } from "@/components/studio/PendingConfirmationsList";
 import { StubMatchSuggestions } from "@/components/studio/StubMatchSuggestions";
+import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,13 +28,13 @@ export default async function PendingConfirmationsPage() {
   ]);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
+    <StudioPageShell username={profile?.username ?? ""} activeSection="works">
       <div className="mb-8 space-y-2">
         <Link
-          href="/studio"
+          href="/studio?section=works"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Back to studio
+          ← Back to works
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Pending confirmations</h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
@@ -58,6 +59,6 @@ export default async function PendingConfirmationsPage() {
       ) : (
         <PendingConfirmationsList confirmations={confirmations} />
       )}
-    </div>
+    </StudioPageShell>
   );
 }

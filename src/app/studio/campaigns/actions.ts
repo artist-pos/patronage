@@ -108,6 +108,9 @@ export async function updateCampaignConfig(
     campaign_start_date?: string | null;
     campaign_end_date?: string | null;
     location_address?: string | null;
+    venue_contact_name?: string | null;
+    venue_contact_email?: string | null;
+    venue_contact_phone?: string | null;
     production_specs?: string | null;
     landing_page_config?: Record<string, unknown>;
     status?: string;

@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
+import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { WorkPageClient } from "./WorkPageClient";
 import type { Metadata } from "next";
 
@@ -17,7 +18,7 @@ export default async function WorkEditorPage({ params }: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, username")
     .eq("id", user.id)
     .single();
 
@@ -45,7 +46,7 @@ export default async function WorkEditorPage({ params }: PageProps) {
   const displayTitle = work.title ?? work.caption ?? "Untitled";
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-10">
+    <StudioPageShell username={profile.username ?? ""} activeSection="works">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link href="/studio?section=works" className="hover:text-foreground transition-colors">
@@ -90,6 +91,6 @@ export default async function WorkEditorPage({ params }: PageProps) {
         }}
         editions={editions}
       />
-    </div>
+    </StudioPageShell>
   );
 }

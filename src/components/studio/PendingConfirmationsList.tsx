@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { supabaseTransform } from "@/lib/image";
 import {
   resolveClaim,
   resolveClaimsByHolder,
@@ -183,8 +182,7 @@ function ConfirmationTile({
   isPending: boolean;
   onDecision: (d: "confirmed" | "declined" | "unknown") => void;
 }) {
-  const thumb =
-    supabaseTransform(row.artwork.url, { width: 600, quality: 80 }) ?? row.artwork.url;
+  const thumb = row.artwork.url;
   return (
     <li className="border border-stone-100 rounded-lg overflow-hidden flex flex-col">
       <div className="aspect-square bg-stone-100">

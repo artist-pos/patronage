@@ -24,6 +24,7 @@ interface WorkPricing {
   available?: boolean;
   price?: number | null;
   is_poa?: boolean;
+  acquisition_mode?: "buy_now" | "enquire_first";
   prints_available?: boolean;
   print_sizes?: PrintSize[];
 }
@@ -62,6 +63,9 @@ interface Campaign {
   campaign_start_date: string | null;
   campaign_end_date: string | null;
   location_address: string | null;
+  venue_contact_name: string | null;
+  venue_contact_email: string | null;
+  venue_contact_phone: string | null;
   surface_type: string | null;
   production_specs: string | null;
   fee_amount: number | null;
@@ -208,6 +212,9 @@ export function CampaignConfigPanel({
   const [startDate, setStartDate] = useState(campaign.campaign_start_date ?? "");
   const [endDate, setEndDate] = useState(campaign.campaign_end_date ?? "");
   const [location, setLocation] = useState(campaign.location_address ?? "");
+  const [venueContactName, setVenueContactName] = useState(campaign.venue_contact_name ?? "");
+  const [venueContactEmail, setVenueContactEmail] = useState(campaign.venue_contact_email ?? "");
+  const [venueContactPhone, setVenueContactPhone] = useState(campaign.venue_contact_phone ?? "");
   const [saving, setSaving] = useState(false);
 
   // Storefront builder state
@@ -216,23 +223,13 @@ export function CampaignConfigPanel({
     new Set(cfg.selected_work_ids ?? [])
   );
 
-  // Commerce toggles
-  const [originalAvailable, setOriginalAvailable] = useState(cfg.original_available ?? false);
-  const [originalPrice, setOriginalPrice] = useState<string>(
-    cfg.original_price != null ? String(cfg.original_price) : ""
-  );
-  const [isPOA, setIsPOA] = useState(cfg.is_poa ?? false);
-  const [printsAvailable, setPrintsAvailable] = useState(cfg.prints_available ?? false);
-  const [printSizes, setPrintSizes] = useState<PrintSize[]>(cfg.print_sizes ?? [{ size: "", price: "" }]);
-  const [editionSize, setEditionSize] = useState(cfg.edition_size ?? "");
-  const [paperStock, setPaperStock] = useState(cfg.paper_stock ?? "");
   const [artistStatement, setArtistStatement] = useState(cfg.artist_statement ?? bio ?? "");
 
   // Layout mode
   const [layoutMode, setLayoutMode] = useState<"shopfront" | "showcase">(cfg.layout_mode ?? "shopfront");
 
   // Per-work pricing
-  type WP = { available: boolean; price: string; is_poa: boolean; prints_available: boolean; print_sizes: PrintSize[] };
+  type WP = { available: boolean; price: string; is_poa: boolean; acquisition_mode: "buy_now" | "enquire_first"; prints_available: boolean; print_sizes: PrintSize[] };
   const [workPricing, setWorkPricing] = useState<Record<string, WP>>(() => {
     const result: Record<string, WP> = {};
     if (cfg.work_pricing) {
@@ -241,6 +238,7 @@ export function CampaignConfigPanel({
           available: wp.available ?? true,
           price: wp.price != null ? String(wp.price) : "",
           is_poa: wp.is_poa ?? false,
+          acquisition_mode: (wp.acquisition_mode as "buy_now" | "enquire_first") ?? "enquire_first",
           prints_available: wp.prints_available ?? false,
           print_sizes: (wp.print_sizes && wp.print_sizes.length > 0) ? wp.print_sizes : [{ size: "", price: "" }],
         };
@@ -249,7 +247,7 @@ export function CampaignConfigPanel({
     return result;
   });
 
-  const defaultWP = (): WP => ({ available: false, price: "", is_poa: false, prints_available: false, print_sizes: [{ size: "", price: "" }] });
+  const defaultWP = (): WP => ({ available: false, price: "", is_poa: false, acquisition_mode: "enquire_first", prints_available: false, print_sizes: [{ size: "", price: "" }] });
 
   function setWorkField(workId: string, field: keyof WP, value: boolean | string | PrintSize[]) {
     setWorkPricing(prev => ({
@@ -320,29 +318,10 @@ export function CampaignConfigPanel({
     setSelectedWorkIds(prev => new Set([...prev, workId]));
   }
 
-  function addPrintRow() {
-    setPrintSizes(prev => [...prev, { size: "", price: "" }]);
-  }
-
-  function removePrintRow(i: number) {
-    setPrintSizes(prev => prev.filter((_, idx) => idx !== i));
-  }
-
-  function updatePrintRow(i: number, field: "size" | "price", value: string) {
-    setPrintSizes(prev => prev.map((row, idx) => idx === i ? { ...row, [field]: value } : row));
-  }
-
   function buildConfig(): StorefrontConfig {
     return {
       hero_work_id: heroWorkId,
       selected_work_ids: [...selectedWorkIds],
-      original_available: originalAvailable,
-      original_price: isPOA ? null : (originalPrice ? parseFloat(originalPrice) : null),
-      is_poa: isPOA,
-      prints_available: printsAvailable,
-      print_sizes: printsAvailable ? printSizes.filter(r => r.size.trim()) : [],
-      edition_size: editionSize.trim() || undefined,
-      paper_stock: paperStock.trim() || undefined,
       artist_statement: artistStatement.trim() || undefined,
       layout_mode: layoutMode,
       work_pricing: Object.fromEntries(
@@ -354,6 +333,7 @@ export function CampaignConfigPanel({
               available: wp.available,
               price: wp.is_poa ? null : (wp.price ? parseFloat(wp.price) : null),
               is_poa: wp.is_poa,
+              acquisition_mode: wp.acquisition_mode,
               prints_available: wp.prints_available,
               print_sizes: wp.prints_available ? wp.print_sizes.filter(r => r.size.trim()) : [],
             }];
@@ -369,6 +349,9 @@ export function CampaignConfigPanel({
       campaign_start_date: startDate || null,
       campaign_end_date: endDate || null,
       location_address: location.trim() || null,
+      venue_contact_name: venueContactName.trim() || null,
+      venue_contact_email: venueContactEmail.trim() || null,
+      venue_contact_phone: venueContactPhone.trim() || null,
       landing_page_config: buildConfig(),
     });
     setSaving(false);
@@ -610,6 +593,36 @@ export function CampaignConfigPanel({
                 value={location}
                 onChange={e => setLocation(e.target.value)}
                 placeholder="Address or venue name"
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+              />
+            </div>
+          )}
+
+          {!isPartnerCampaign && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Venue contact</label>
+                <p className="text-[11px] text-muted-foreground">For café or venue displays — enquiries are sent to this person as well as you.</p>
+              </div>
+              <input
+                type="text"
+                value={venueContactName}
+                onChange={e => setVenueContactName(e.target.value)}
+                placeholder="Contact name"
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+              />
+              <input
+                type="email"
+                value={venueContactEmail}
+                onChange={e => setVenueContactEmail(e.target.value)}
+                placeholder="Contact email"
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
+              />
+              <input
+                type="tel"
+                value={venueContactPhone}
+                onChange={e => setVenueContactPhone(e.target.value)}
+                placeholder="Contact phone (optional)"
                 className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
               />
             </div>
@@ -942,6 +955,20 @@ export function CampaignConfigPanel({
                             />
                           </div>
                         )}
+                        {!wp.is_poa && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {(["enquire_first", "buy_now"] as const).map(mode => (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setWorkField(workId, "acquisition_mode", mode)}
+                                className={`text-[10px] px-2.5 py-1 border transition-colors ${wp.acquisition_mode === mode ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
+                              >
+                                {mode === "enquire_first" ? "Enquire first" : "Buy now"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Prints */}
@@ -993,149 +1020,19 @@ export function CampaignConfigPanel({
         </section>
       )}
 
-      {/* ── Commerce ────────────────────────────────────────────────────── */}
-      <section className="space-y-6 border-t border-border pt-8">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Commerce</h2>
-
-        {/* Original */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOriginalAvailable(v => !v)}
-              className={`w-9 h-5 rounded-full transition-colors relative ${originalAvailable ? "bg-black" : "bg-stone-200"}`}
-              role="switch"
-              aria-checked={originalAvailable}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${originalAvailable ? "left-[18px]" : "left-0.5"}`} />
-            </button>
-            <span className="text-sm font-medium">Original available</span>
-          </div>
-
-          {originalAvailable && (
-            <div className="pl-12 space-y-3">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsPOA(v => !v)}
-                  className={`w-9 h-5 rounded-full transition-colors relative ${isPOA ? "bg-black" : "bg-stone-200"}`}
-                  role="switch"
-                  aria-checked={isPOA}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${isPOA ? "left-[18px]" : "left-0.5"}`} />
-                </button>
-                <span className="text-sm">Price on application (POA)</span>
-              </div>
-
-              {!isPOA && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Price (NZD)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={originalPrice}
-                    onChange={e => setOriginalPrice(e.target.value)}
-                    placeholder="e.g. 1200"
-                    className="w-40 border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                  />
-                </div>
-              )}
-            </div>
-          )}
+      {/* ── Artist statement ─────────────────────────────────────────── */}
+      <section className="space-y-4 border-t border-border pt-8">
+        <div className="space-y-1">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Artist statement</h2>
+          <p className="text-[11px] text-muted-foreground">A short statement about this body of work. Shown below the commerce buttons on your storefront.</p>
         </div>
-
-        {/* Prints */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setPrintsAvailable(v => !v)}
-              className={`w-9 h-5 rounded-full transition-colors relative ${printsAvailable ? "bg-black" : "bg-stone-200"}`}
-              role="switch"
-              aria-checked={printsAvailable}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${printsAvailable ? "left-[18px]" : "left-0.5"}`} />
-            </button>
-            <span className="text-sm font-medium">Prints available</span>
-          </div>
-
-          {printsAvailable && (
-            <div className="pl-12 space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium">Sizes &amp; prices</p>
-                {printSizes.map((row, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={row.size}
-                      onChange={e => updatePrintRow(i, "size", e.target.value)}
-                      placeholder="e.g. 16×20 inch"
-                      className="flex-1 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                    />
-                    <input
-                      type="text"
-                      value={row.price}
-                      onChange={e => updatePrintRow(i, "price", e.target.value)}
-                      placeholder="e.g. $150"
-                      className="w-28 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePrintRow(i)}
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addPrintRow}
-                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-                >
-                  + Add size
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Edition size</label>
-                  <input
-                    type="text"
-                    value={editionSize}
-                    onChange={e => setEditionSize(e.target.value)}
-                    placeholder="e.g. 10"
-                    className="w-full border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Paper / substrate</label>
-                  <input
-                    type="text"
-                    value={paperStock}
-                    onChange={e => setPaperStock(e.target.value)}
-                    placeholder="e.g. Hahnemühle 310gsm"
-                    className="w-full border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Artist statement */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-widest text-stone-400">Artist statement</label>
-          <textarea
-            value={artistStatement}
-            onChange={e => setArtistStatement(e.target.value)}
-            rows={4}
-            placeholder="A short statement about this body of work or campaign…"
-            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
-          />
-        </div>
-
+        <textarea
+          value={artistStatement}
+          onChange={e => setArtistStatement(e.target.value)}
+          rows={4}
+          placeholder="A short statement about this body of work or campaign…"
+          className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+        />
         <button
           type="button"
           onClick={handleSaveDetails}

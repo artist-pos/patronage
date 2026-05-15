@@ -55,7 +55,7 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
     hero_work_id?: string;
     selected_work_ids?: string[];
     layout_mode?: "shopfront" | "showcase";
-    work_pricing?: Record<string, { available?: boolean; price?: number | null; is_poa?: boolean; prints_available?: boolean; print_sizes?: Array<{ size: string; price: string }> }>;
+    work_pricing?: Record<string, { available?: boolean; price?: number | null; is_poa?: boolean; acquisition_mode?: "buy_now" | "enquire_first"; prints_available?: boolean; print_sizes?: Array<{ size: string; price: string }> }>;
     original_available?: boolean;
     original_price?: number | null;
     is_poa?: boolean;
@@ -115,6 +115,7 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
       cfg={cfg}
       highlightWorkId={highlightWorkId ?? null}
       artistEmail={null /* not exposed to client */}
+      artistId={p.id}
     />
   );
 }

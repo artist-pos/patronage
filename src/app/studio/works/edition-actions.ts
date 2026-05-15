@@ -38,6 +38,16 @@ async function getWork(
   return data;
 }
 
+type AcquisitionMode = 'buy_now' | 'make_offer' | 'enquire_first';
+
+interface ArtworkExtra {
+  acquisitionMode?: AcquisitionMode | null;
+  mediumCategory?: string[] | null;
+  surfaceOrSubstrate?: string | null;
+  widthMm?: number | null;
+  heightMm?: number | null;
+}
+
 // ── Artworks sync ─────────────────────────────────────────────────────────────
 // Keeps the artworks table in sync with the original edition until steps 4–7
 // migrate the display code to read from editions directly.
@@ -45,14 +55,17 @@ async function getWork(
 async function syncArtworks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   work: NonNullable<Awaited<ReturnType<typeof getWork>>>,
-  edition: Pick<EditionInput, 'price_cents' | 'currency' | 'poa' | 'listing_mode' | 'listed'>
+  edition: Pick<EditionInput, 'price_cents' | 'currency' | 'poa' | 'listing_mode' | 'listed'>,
+  extra?: ArtworkExtra,
 ) {
   const isListed = edition.listed ?? false;
+  const mode = extra?.acquisitionMode ?? null;
   const artworkPayload: Record<string, unknown> = {
     price_cents: edition.poa ? null : (edition.price_cents ?? null),
     is_poa: edition.poa ?? false,
     price_currency: edition.currency ?? 'NZD',
     listing_mode: edition.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+    acquisition_mode: mode ?? (edition.listing_mode === 'direct' ? 'buy_now' : 'enquire_first'),
     is_available: isListed,
   };
 
@@ -76,6 +89,10 @@ async function syncArtworks(
         year: work.year,
         medium: work.medium,
         dimensions: work.dimensions,
+        medium_category: extra?.mediumCategory ?? null,
+        surface_or_substrate: extra?.surfaceOrSubstrate ?? null,
+        width_mm: extra?.widthMm ?? null,
+        height_mm: extra?.heightMm ?? null,
         ...artworkPayload,
         hide_available: false,
         hide_from_archive: false,
@@ -99,6 +116,18 @@ async function syncArtworks(
 
 // ── Create work with initial edition (used by NewWorkClient) ──────────────────
 
+export interface ExtraEditionInput {
+  type: EditionType;
+  label: string;
+  price_cents: number | null;
+  currency: string;
+  poa: boolean;
+  listing_mode: EditionListingMode;
+  listed: boolean;
+  edition_size?: number | null;
+  substrate?: string | null;
+}
+
 export async function createWorkWithEdition(data: {
   url: string;
   title: string | null;
@@ -106,20 +135,28 @@ export async function createWorkWithEdition(data: {
   medium: string | null;
   mediumCategory: string[] | null;
   surfaceOrSubstrate: string | null;
+  widthMm?: number | null;
+  heightMm?: number | null;
   dimensions: string | null;
   description: string | null;
+  acquisitionMode?: AcquisitionMode | null;
   edition: {
     price_cents: number | null;
     currency: string;
     poa: boolean;
     listing_mode: EditionListingMode;
     listed: boolean;
+    edition_size?: number | null;
+    substrate?: string | null;
+    inventory?: number | null;
   };
+  extraEditions?: ExtraEditionInput[];
 }): Promise<{ id?: string; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // medium_category and surface_or_substrate live on artworks, not portfolio_images
   const { data: work, error: workError } = await supabase
     .from("portfolio_images")
     .insert({
@@ -131,8 +168,6 @@ export async function createWorkWithEdition(data: {
       title: data.title,
       year: data.year,
       medium: data.medium,
-      medium_category: data.mediumCategory ?? null,
-      surface_or_substrate: data.surfaceOrSubstrate || null,
       dimensions: data.dimensions,
       description: data.description,
       is_available: false,
@@ -152,13 +187,42 @@ export async function createWorkWithEdition(data: {
     poa: data.edition.poa,
     listing_mode: data.edition.listing_mode,
     listed: data.edition.listed,
+    edition_size: data.edition.edition_size ?? null,
+    substrate: data.edition.substrate ?? null,
+    inventory: data.edition.edition_size ?? null,
     sort_order: 0,
   });
 
   if (editionError) return { error: editionError.message };
 
+  if (data.extraEditions && data.extraEditions.length > 0) {
+    const { error: extrasError } = await supabase.from("editions").insert(
+      data.extraEditions.map((e, i) => ({
+        work_id: work.id,
+        type: e.type,
+        label: e.label,
+        price_cents: e.poa ? null : e.price_cents,
+        currency: e.currency,
+        poa: e.poa,
+        listing_mode: e.listing_mode,
+        listed: e.listed,
+        edition_size: e.edition_size ?? null,
+        substrate: e.substrate ?? null,
+        inventory: e.edition_size ?? null,
+        sort_order: i + 1,
+      }))
+    );
+    if (extrasError) return { error: extrasError.message };
+  }
+
   if (data.edition.listed) {
-    await syncArtworks(supabase, work, data.edition);
+    await syncArtworks(supabase, work, data.edition, {
+      acquisitionMode: data.acquisitionMode ?? null,
+      mediumCategory: data.mediumCategory,
+      surfaceOrSubstrate: data.surfaceOrSubstrate,
+      widthMm: data.widthMm ?? null,
+      heightMm: data.heightMm ?? null,
+    });
   }
 
   revalidatePath("/studio");
