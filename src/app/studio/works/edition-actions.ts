@@ -145,6 +145,7 @@ export async function createWorkWithEdition(data: {
   dimensions: string | null;
   description: string | null;
   acquisitionMode?: AcquisitionMode | null;
+  forSale?: boolean;
   edition: {
     price_cents: number | null;
     currency: string;
@@ -161,8 +162,9 @@ export async function createWorkWithEdition(data: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // medium_category and surface_or_substrate live on artworks, not portfolio_images
-  const { data: work, error: workError } = await supabase
+  const admin = createAdminClient();
+
+  const { data: work, error: workError } = await admin
     .from("portfolio_images")
     .insert({
       profile_id: user.id,
@@ -176,6 +178,7 @@ export async function createWorkWithEdition(data: {
       dimensions: data.dimensions,
       description: data.description,
       is_available: false,
+      hide_from_archive: data.forSale ? true : false,
       position: 9999,
     })
     .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
@@ -183,7 +186,7 @@ export async function createWorkWithEdition(data: {
 
   if (workError || !work) return { error: workError?.message ?? "Failed to create work" };
 
-  const { error: editionError } = await supabase.from("editions").insert({
+  const { error: editionError } = await admin.from("editions").insert({
     work_id: work.id,
     type: 'original',
     label: 'Original',
@@ -201,7 +204,7 @@ export async function createWorkWithEdition(data: {
   if (editionError) return { error: editionError.message };
 
   if (data.extraEditions && data.extraEditions.length > 0) {
-    const { error: extrasError } = await supabase.from("editions").insert(
+    const { error: extrasError } = await admin.from("editions").insert(
       data.extraEditions.map((e, i) => ({
         work_id: work.id,
         type: e.type,
@@ -221,27 +224,65 @@ export async function createWorkWithEdition(data: {
     if (extrasError) return { error: extrasError.message };
   }
 
-  const meta = {
-    acquisitionMode: data.acquisitionMode ?? null,
-    mediumCategory: data.mediumCategory,
-    surfaceOrSubstrate: data.surfaceOrSubstrate,
-    widthMm: data.widthMm ?? null,
-    heightMm: data.heightMm ?? null,
-  };
+  // For sale mode: always create the artworks row using the first listed edition
+  if (data.forSale) {
+    const firstListed =
+      (data.edition.listed ? data.edition : null) ??
+      data.extraEditions?.find((e) => e.listed);
 
-  if (data.edition.listed) {
-    await syncArtworks(supabase, work, data.edition, meta);
-  } else {
-    // No listed original — use the first listed extra edition to create the artworks row
-    const firstListed = data.extraEditions?.find((e) => e.listed);
     if (firstListed) {
-      await syncArtworks(supabase, work, {
-        price_cents: firstListed.poa ? null : firstListed.price_cents,
-        currency: firstListed.currency,
-        poa: firstListed.poa,
-        listing_mode: firstListed.listing_mode,
-        listed: true,
-      }, meta);
+      const { data: newArtwork, error: artErr } = await admin
+        .from("artworks")
+        .insert({
+          profile_id: user.id,
+          creator_id: user.id,
+          current_owner_id: user.id,
+          url: work.url,
+          caption: work.caption,
+          description: work.description,
+          title: work.title,
+          year: work.year,
+          medium: work.medium,
+          dimensions: work.dimensions,
+          medium_category: data.mediumCategory ?? null,
+          surface_or_substrate: data.surfaceOrSubstrate ?? null,
+          width_mm: data.widthMm ?? null,
+          height_mm: data.heightMm ?? null,
+          price_cents: firstListed.poa ? null : firstListed.price_cents,
+          is_poa: firstListed.poa ?? false,
+          price_currency: firstListed.currency ?? 'NZD',
+          listing_mode: firstListed.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+          acquisition_mode: data.acquisitionMode ?? (firstListed.listing_mode === 'direct' ? 'buy_now' : 'enquire_first'),
+          is_available: true,
+          hide_available: false,
+          hide_from_archive: false,
+          hide_price: false,
+          collection_visible: true,
+          hidden_from_artist: false,
+          position: 0,
+        })
+        .select("id")
+        .single();
+
+      if (artErr) return { error: artErr.message };
+
+      if (newArtwork) {
+        await admin
+          .from("portfolio_images")
+          .update({ linked_artwork_id: newArtwork.id })
+          .eq("id", work.id);
+      }
+    }
+  } else {
+    const meta = {
+      acquisitionMode: data.acquisitionMode ?? null,
+      mediumCategory: data.mediumCategory,
+      surfaceOrSubstrate: data.surfaceOrSubstrate,
+      widthMm: data.widthMm ?? null,
+      heightMm: data.heightMm ?? null,
+    };
+    if (data.edition.listed) {
+      await syncArtworks(supabase, work, data.edition, meta);
     }
   }
 

@@ -452,6 +452,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
           heightMm: hMm,
           dimensions: derivedDimensions,
           description: description.trim() || null,
+          forSale: true,
           acquisitionMode: origEd?.acquisitionMode ?? "enquire_first",
           edition: {
             price_cents: origEd?.poa || !origPricing ? null : Math.round(origPricing.listedPrice * 100),

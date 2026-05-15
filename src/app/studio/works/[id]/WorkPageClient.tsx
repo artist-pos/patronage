@@ -122,20 +122,18 @@ export function WorkPageClient({ profileId, work: initialWork, editions }: Props
       {/* ── Editions ──────────────────────────────────────────── */}
       <section className="border-t border-border pt-6">
         <EditionsSection workId={work.id} initialEditions={editions} />
-        {!work.linked_artwork_id && (
-          <div className="mt-6 pt-6 border-t border-border space-y-2">
-            <button
-              onClick={handlePublish}
-              disabled={busy}
-              className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
-            >
-              Publish to For Sale
-            </button>
-            <p className="text-xs text-muted-foreground">
-              This work isn&apos;t linked to a For Sale listing yet. Click to create one from the first edition.
-            </p>
-          </div>
-        )}
+        <div className="mt-6 pt-6 border-t border-border space-y-2">
+          <button
+            onClick={handlePublish}
+            disabled={busy}
+            className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
+          >
+            Publish to Sell
+          </button>
+          <p className="text-xs text-muted-foreground">
+            Creates or restores this work&apos;s listing in the Sell tab.
+          </p>
+        </div>
       </section>
 
       {/* ── Actions ───────────────────────────────────────────── */}

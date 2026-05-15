@@ -137,6 +137,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .select("id, url, caption, description, hide_from_archive, position, created_at, content_type, title, year, medium, dimensions, linked_artwork_id")
             .eq("profile_id", user.id)
             .eq("is_available", false)
+            .is("linked_artwork_id", null)
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
@@ -155,6 +156,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .select("id, is_featured")
             .eq("profile_id", user.id)
             .eq("is_available", false)
+            .is("linked_artwork_id", null)
             .eq("is_featured", true),
           supabase
             .from("portfolio_images")
