@@ -130,16 +130,16 @@ export default async function ProvenancePage({ params }: PageProps) {
 
         {/* 2. Artwork row — thumbnail + title + meta + link */}
         <div className="flex items-start gap-4">
-          {thumbUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbUrl}
-              alt={artwork.title ?? "Artwork"}
-              className="w-[100px] h-[100px] object-cover rounded-lg bg-stone-100 shrink-0"
-            />
-          ) : (
-            <div className="w-[100px] h-[100px] rounded-lg bg-stone-100 shrink-0" />
-          )}
+          <div className="w-[100px] h-[100px] rounded-lg overflow-hidden bg-stone-100 shrink-0">
+            {thumbUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={thumbUrl}
+                alt={artwork.title ?? "Artwork"}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
           <div className="min-w-0">
             <h1 className="text-xl font-semibold text-stone-900 leading-snug">
               {artwork.title ?? artwork.caption ?? "Untitled"}

@@ -15,7 +15,6 @@ import { LazyCreateUpdateModal } from "@/components/feed/LazyCreateUpdateModal";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
-import { CampaignsSection } from "@/components/profile/CampaignsSection";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import dynamic from "next/dynamic";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
@@ -223,12 +222,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     isArtistProfile
       ? supabase
           .from("campaigns")
-          .select("id, title, slug, qr_code_url, opportunity:opportunity_id(type, organiser)")
+          .select("id, title, slug, landing_page_slug, campaign_start_date, campaign_end_date, location_address, landing_page_config")
           .eq("artist_profile_id", profile.id)
           .eq("is_public", true)
           .order("created_at", { ascending: false })
-          .then(({ data }) => (data ?? []) as unknown as CampaignForProfile[])
-      : Promise.resolve([] as CampaignForProfile[]),
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([] as unknown[]),
     // Viewer role for conditional UI — folded into Phase 1 to avoid sequential step
     user && !isOwner
       ? supabase.from("profiles").select("role").eq("id", user.id).single().then(r => r.data?.role ?? null)
@@ -236,6 +235,47 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
+
+  // ── Resolve campaign hero images ──────────────────────────────────────────
+  const rawCampaigns = profileCampaigns as Array<{
+    id: string;
+    title: string;
+    slug: string;
+    landing_page_slug: string | null;
+    campaign_start_date: string | null;
+    campaign_end_date: string | null;
+    location_address: string | null;
+    landing_page_config: Record<string, unknown> | null;
+  }>;
+
+  const heroWorkIds = rawCampaigns
+    .map((c) => (c.landing_page_config as { hero_work_id?: string } | null)?.hero_work_id)
+    .filter((id): id is string => !!id);
+
+  const heroImages =
+    heroWorkIds.length > 0
+      ? await supabase
+          .from("portfolio_images")
+          .select("id, url")
+          .in("id", heroWorkIds)
+          .then(({ data }) => data ?? [])
+      : [];
+
+  const heroImageMap = Object.fromEntries(heroImages.map((img: { id: string; url: string | null }) => [img.id, img.url]));
+
+  const resolvedCampaigns: import("@/components/profile/CampaignsSection").CampaignForProfile[] = rawCampaigns.map((c) => {
+    const heroWorkId = (c.landing_page_config as { hero_work_id?: string } | null)?.hero_work_id ?? null;
+    return {
+      id: c.id,
+      title: c.title,
+      slug: c.slug,
+      landing_page_slug: c.landing_page_slug,
+      campaign_start_date: c.campaign_start_date,
+      campaign_end_date: c.campaign_end_date,
+      location_address: c.location_address,
+      hero_image_url: heroWorkId ? (heroImageMap[heroWorkId] ?? null) : null,
+    };
+  });
 
   // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
   const needsPortfolio        = isArtistProfile && (tab === "overview" || tab === "work");
@@ -614,12 +654,6 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         {/* ── Artist profile: tabbed layout ── */}
         {isArtistProfile && (
           <>
-            <CampaignsSection
-              campaigns={profileCampaigns}
-              supportEnabled={profile.support_enabled}
-              username={profile.username}
-            />
-
             <ProfileTabs username={profile.username} tab={tab} artistName={profile.full_name ?? profile.username} />
 
             <div>
@@ -638,6 +672,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   galleryRowHeight={profile.gallery_row_height}
                   galleryGutter={profile.gallery_gutter}
+                  campaigns={resolvedCampaigns}
                 />
               )}
 
@@ -646,9 +681,6 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   portfolioImages={images}
                   availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
-                  projects={artistProjects}
-                  studioUpdates={studioUpdates}
-                  creativeWorks={creativeWorks}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}
@@ -657,7 +689,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   hideSoldSection={profile.hide_sold_section}
                   displayName={displayName}
-                  collaboratedWorks={collaboratedWorks}
+                  galleryRowHeight={profile.gallery_row_height}
+                  galleryGutter={profile.gallery_gutter}
                   worksRowH={profile.works_row_height}
                   worksHGap={profile.works_h_gap}
                   worksVGap={profile.works_v_gap}

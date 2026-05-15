@@ -1,7 +1,17 @@
 import Link from "next/link";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
+import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist, ProfileAchievement } from "@/types/database";
+
+function formatDateRange(start: string | null, end: string | null): string | null {
+  if (!start && !end) return null;
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return `From ${fmt(start)}`;
+  return `Until ${fmt(end!)}`;
+}
 
 interface Props {
   exhibitions: ExhibitionEntry[];
@@ -17,6 +27,7 @@ interface Props {
   isOwner?: boolean;
   galleryRowHeight?: number;
   galleryGutter?: number;
+  campaigns?: CampaignForProfile[];
 }
 
 export function OverviewTab({
@@ -33,6 +44,7 @@ export function OverviewTab({
   isOwner,
   galleryRowHeight,
   galleryGutter,
+  campaigns = [],
 }: Props) {
   const selectedExhibitions = [...exhibitions]
     .sort((a, b) => b.year - a.year)
@@ -53,6 +65,56 @@ export function OverviewTab({
 
   return (
     <div className="space-y-12 py-8">
+      {/* Active campaigns — side-by-side slim horizontal cards */}
+      {campaigns.length > 0 && (
+        <div className={`grid gap-3 ${campaigns.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
+          {campaigns.map((campaign) => {
+            const dateRange = formatDateRange(campaign.campaign_start_date, campaign.campaign_end_date);
+            const href = campaign.landing_page_slug
+              ? `/live/${campaign.landing_page_slug}/${username}`
+              : null;
+            return (
+              <div
+                key={campaign.id}
+                className="flex items-stretch border border-border bg-background overflow-hidden"
+              >
+                {/* Slim hero image */}
+                <div className="flex-none" style={{ width: 80 }}>
+                  {campaign.hero_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={campaign.hero_image_url}
+                      alt={campaign.title}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-stone-100" style={{ minHeight: 72 }} />
+                  )}
+                </div>
+                {/* Card body */}
+                <div className="flex flex-col justify-center gap-0.5 py-3 px-4 flex-1 min-w-0">
+                  <p className="text-sm font-semibold leading-snug truncate">{campaign.title}</p>
+                  {dateRange && (
+                    <p className="text-xs text-muted-foreground">{dateRange}</p>
+                  )}
+                  {campaign.location_address && (
+                    <p className="text-xs text-muted-foreground truncate">{campaign.location_address}</p>
+                  )}
+                  {href && (
+                    <Link
+                      href={href}
+                      className="text-[10px] font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1 self-start"
+                    >
+                      View →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Highlights: exhibitions · press · grants */}
       {hasHighlights && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

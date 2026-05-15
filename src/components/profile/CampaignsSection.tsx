@@ -1,24 +1,34 @@
 import Link from "next/link";
-import Image from "next/image";
 
 export interface CampaignForProfile {
   id: string;
   title: string;
   slug: string;
-  qr_code_url: string | null;
-  opportunity: { type: string; organiser: string } | null;
+  landing_page_slug: string | null;
+  campaign_start_date: string | null;
+  campaign_end_date: string | null;
+  location_address: string | null;
+  hero_image_url: string | null;
 }
 
 interface Props {
   campaigns: CampaignForProfile[];
-  supportEnabled: boolean;
   username: string;
 }
 
-const CARD_H = 225;
-const CARD_W = 280;
+const CARD_H = 260;
+const CARD_W = 300;
 
-export function CampaignsSection({ campaigns, supportEnabled, username }: Props) {
+function formatDateRange(start: string | null, end: string | null): string | null {
+  if (!start && !end) return null;
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return `From ${fmt(start)}`;
+  return `Until ${fmt(end!)}`;
+}
+
+export function CampaignsSection({ campaigns, username }: Props) {
   if (campaigns.length === 0) return null;
 
   return (
@@ -30,49 +40,64 @@ export function CampaignsSection({ campaigns, supportEnabled, username }: Props)
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
         style={{ height: CARD_H }}
       >
-        {campaigns.map((campaign) => (
-          <div
-            key={campaign.id}
-            className="flex-none flex flex-col border border-border bg-background snap-start overflow-hidden p-4 gap-2"
-            style={{ height: CARD_H, width: CARD_W, boxSizing: "border-box" }}
-          >
-            {campaign.opportunity?.type && (
-              <span className="text-[10px] font-mono uppercase tracking-widest border border-black px-1.5 py-0.5 self-start leading-none">
-                {campaign.opportunity.type}
-              </span>
-            )}
+        {campaigns.map((campaign) => {
+          const dateRange = formatDateRange(campaign.campaign_start_date, campaign.campaign_end_date);
+          const href = campaign.landing_page_slug
+            ? `/live/${campaign.landing_page_slug}/${username}`
+            : null;
 
-            <p className="text-sm font-semibold leading-snug line-clamp-3 flex-1">
-              {campaign.title}
-            </p>
-
-            {campaign.opportunity?.organiser && (
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {campaign.opportunity.organiser}
-              </p>
-            )}
-
-            <div className="flex items-center gap-3 mt-auto">
-              {campaign.qr_code_url && (
-                <Image
-                  src={campaign.qr_code_url}
-                  alt="Campaign QR code"
-                  width={40}
-                  height={40}
-                  className="border border-border shrink-0"
-                />
-              )}
-              {supportEnabled && (
-                <Link
-                  href={`/${username}?tab=support`}
-                  className="text-[10px] font-medium border border-black px-2 py-1 hover:bg-foreground hover:text-background transition-colors"
+          return (
+            <div
+              key={campaign.id}
+              className="flex-none flex flex-col border border-border bg-background snap-start overflow-hidden"
+              style={{ height: CARD_H, width: CARD_W, boxSizing: "border-box" }}
+            >
+              {/* Hero image */}
+              {campaign.hero_image_url ? (
+                <div className="w-full overflow-hidden" style={{ height: 140, flexShrink: 0 }}>
+                  <img
+                    src={campaign.hero_image_url}
+                    alt={campaign.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="w-full bg-stone-100 flex items-center justify-center"
+                  style={{ height: 140, flexShrink: 0 }}
                 >
-                  Support
-                </Link>
+                  <span className="text-xs text-muted-foreground">No image</span>
+                </div>
               )}
+
+              {/* Card body */}
+              <div className="flex flex-col gap-1.5 flex-1 p-4">
+                <p className="text-sm font-semibold leading-snug line-clamp-2">
+                  {campaign.title}
+                </p>
+
+                {dateRange && (
+                  <p className="text-xs text-muted-foreground">{dateRange}</p>
+                )}
+
+                {campaign.location_address && (
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {campaign.location_address}
+                  </p>
+                )}
+
+                {href && (
+                  <Link
+                    href={href}
+                    className="text-[10px] font-medium border border-black px-2 py-1 hover:bg-foreground hover:text-background transition-colors self-start mt-auto"
+                  >
+                    View →
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

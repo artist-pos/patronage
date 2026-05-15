@@ -1,28 +1,17 @@
-import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
+import Link from "next/link";
+import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
-import { ProjectsSection } from "@/components/profile/ProjectsSection";
-import { StudioCarousel } from "@/components/profile/StudioCarousel";
-import type { PortfolioImage, Artwork, Project, ProjectUpdateWithArtist, CreativeWork } from "@/types/database";
+import type { PortfolioImage, Artwork } from "@/types/database";
 
 interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
 }
 
-type CollaboratedWork = {
-  id: string;
-  url: string | null;
-  caption: string | null;
-  creator_profile: { username: string; full_name: string | null } | null;
-};
-
 interface Props {
   portfolioImages: PortfolioImage[];
   availableWorks: Artwork[];
   soldWorks: SoldWork[];
-  projects: Project[];
-  studioUpdates: ProjectUpdateWithArtist[];
-  creativeWorks: CreativeWork[];
   profileId: string;
   username: string;
   artistName: string;
@@ -31,7 +20,8 @@ interface Props {
   isOwner: boolean;
   hideSoldSection: boolean;
   displayName: string;
-  collaboratedWorks?: CollaboratedWork[];
+  galleryRowHeight?: number;
+  galleryGutter?: number;
   worksRowH?: number;
   worksHGap?: number;
   worksVGap?: number;
@@ -42,9 +32,6 @@ export function WorkTab({
   portfolioImages,
   availableWorks,
   soldWorks,
-  projects,
-  studioUpdates,
-  creativeWorks,
   profileId,
   username,
   artistName,
@@ -53,17 +40,17 @@ export function WorkTab({
   isOwner,
   hideSoldSection,
   displayName,
-  collaboratedWorks = [],
+  galleryRowHeight,
+  galleryGutter,
   worksRowH,
   worksHGap,
   worksVGap,
   worksLastRowAlign,
 }: Props) {
-  const hasUpdates = studioUpdates.length > 0;
-
   return (
-    <div className="space-y-12 py-8">
-      {/* Available works — top */}
+    <div className="space-y-16 py-8">
+
+      {/* ── Available — works for sale (buyers see what's purchasable first) ── */}
       {(isOwner || availableWorks.length > 0) && (
         <AvailableWorksSection
           initialWorks={availableWorks}
@@ -77,99 +64,60 @@ export function WorkTab({
           initialHGap={worksHGap}
           initialVGap={worksVGap}
           initialLastRowAlign={worksLastRowAlign}
+          noBorder
         />
       )}
 
-      {/* Projects */}
-      <ProjectsSection
-        projects={projects}
-        updates={studioUpdates}
-        isOwner={isOwner}
-      />
-
-      {/* Full portfolio */}
-      {(portfolioImages.length > 0 || isOwner) && (
+      {/* ── Work — full body of work ── */}
+      {(isOwner || portfolioImages.length > 0) && (
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Selected Work
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              Work
+            </h2>
+            {isOwner && (
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/studio/works/new"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  + Add work
+                </Link>
+                <Link
+                  href="/studio?section=works"
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  Manage in Studio →
+                </Link>
+              </div>
+            )}
+          </div>
           {portfolioImages.length > 0 ? (
-            <PortfolioGrid
+            <GalleryWithControls
               images={portfolioImages}
               username={username}
               viewerRole={viewerRole}
               profileId={isOwner ? undefined : profileId}
               isOwner={isOwner}
-              rowH={worksRowH}
-              gutter={worksHGap}
-              lastRowAlign={worksLastRowAlign}
+              savedRowHeight={galleryRowHeight}
+              savedGutter={galleryGutter}
+              noControls
             />
           ) : (
-            isOwner ? (
-              <p className="text-sm text-muted-foreground">No work added yet. Your portfolio is how people discover your practice — even one or two pieces makes a difference.</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{displayName} hasn&apos;t added work yet.</p>
-            )
+            <p className="text-sm text-muted-foreground">
+              No work added yet. Your portfolio is how people discover your practice — even one or two pieces makes a difference.
+            </p>
           )}
         </section>
       )}
 
-      {/* Studio updates — StudioCarousel renders its own section heading */}
-      {(isOwner || hasUpdates) && (
-        <StudioCarousel
-          updates={studioUpdates}
-          artistUsername={username}
-          isOwner={isOwner}
-          projects={projects.map((p) => ({ id: p.id, title: p.title }))}
-          profileId={profileId}
-        />
-      )}
-
-      {/* In Collection / Sold works */}
+      {/* ── Sold / In collection (market proof at the bottom) ── */}
       <SoldWorksSection
         initialWorks={soldWorks}
         isOwner={isOwner}
         hideSoldSection={hideSoldSection}
       />
 
-      {/* Collaborations — works by other artists that tag this artist */}
-      {collaboratedWorks.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Collaborations
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {collaboratedWorks.map(work => (
-              <a
-                key={work.id}
-                href={work.creator_profile ? `/${work.creator_profile.username}?tab=work` : "#"}
-                className="group block space-y-1.5"
-              >
-                <div className="aspect-square bg-stone-100 overflow-hidden">
-                  {work.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={work.url}
-                      alt={work.caption ?? ""}
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full" />
-                  )}
-                </div>
-                {work.creator_profile && (
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    {work.creator_profile.full_name ?? `@${work.creator_profile.username}`}
-                  </p>
-                )}
-                {work.caption && (
-                  <p className="text-[11px] truncate">{work.caption}</p>
-                )}
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

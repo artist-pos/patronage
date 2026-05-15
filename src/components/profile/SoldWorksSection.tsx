@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { updateWorkPrivacy, updateProfilePrivacy } from "@/app/profile/privacy-actions";
 import { removeFromArtistProfile, requestArtworkDeletion } from "@/app/profile/artwork-delete-actions";
 import type { Artwork } from "@/types/database";
@@ -14,10 +15,31 @@ interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
 }
 
+interface LedgerRow {
+  id: string;
+  entry_type: string;
+  transferred_at: string;
+  price: number | null;
+}
+
 interface Props {
   initialWorks: SoldWork[];
   isOwner: boolean;
   hideSoldSection: boolean;
+}
+
+function entryLabel(type: string): string {
+  if (type === "created") return "Created & registered";
+  if (type === "transferred") return "Transferred";
+  if (type === "resold") return "Resold";
+  if (type === "selected") return "Selected for exhibition";
+  return type;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-NZ", {
+    day: "numeric", month: "short", year: "numeric",
+  });
 }
 
 function SoldLightbox({
@@ -46,6 +68,8 @@ function SoldLightbox({
   const work = works[index];
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -56,6 +80,23 @@ function SoldLightbox({
     setConfirmDelete(false);
     setBusy(false);
   }, [index]);
+
+  // Fetch provenance ledger for current work
+  useEffect(() => {
+    if (!work?.id) return;
+    setLedger([]);
+    setLedgerLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("artwork_provenance_ledger")
+      .select("id, entry_type, transferred_at, price")
+      .eq("artwork_id", work.id)
+      .order("transferred_at", { ascending: true })
+      .then(({ data }) => {
+        setLedger((data ?? []) as LedgerRow[]);
+        setLedgerLoading(false);
+      });
+  }, [work?.id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -124,7 +165,7 @@ function SoldLightbox({
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image */}
+        {/* Image — full colour in lightbox */}
         <div className="relative flex-shrink-0 self-stretch flex items-center bg-[#FAFAF9]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -142,7 +183,7 @@ function SoldLightbox({
         </div>
 
         {/* Info panel */}
-        <div className="bg-white flex flex-col" style={{ width: 280, overflowY: "auto" }}>
+        <div className="bg-white flex flex-col" style={{ width: 300, overflowY: "auto" }}>
           <div className="flex-1 p-6 space-y-5">
 
             {/* Title */}
@@ -173,18 +214,10 @@ function SoldLightbox({
             {/* Details */}
             {(work.year || work.medium || work.dimensions || work.edition || work.description) && (
               <div className="space-y-1.5">
-                {work.year && (
-                  <p className="text-xs text-muted-foreground">{work.year}</p>
-                )}
-                {work.medium && (
-                  <p className="text-xs text-muted-foreground">{work.medium}</p>
-                )}
-                {work.dimensions && (
-                  <p className="text-xs text-muted-foreground">{work.dimensions}</p>
-                )}
-                {work.edition && (
-                  <p className="text-xs text-muted-foreground">{work.edition}</p>
-                )}
+                {work.year && <p className="text-xs text-muted-foreground">{work.year}</p>}
+                {work.medium && <p className="text-xs text-muted-foreground">{work.medium}</p>}
+                {work.dimensions && <p className="text-xs text-muted-foreground">{work.dimensions}</p>}
+                {work.edition && <p className="text-xs text-muted-foreground">{work.edition}</p>}
                 {work.description && (
                   <p className="text-xs text-muted-foreground leading-relaxed pt-1">{work.description}</p>
                 )}
@@ -192,8 +225,41 @@ function SoldLightbox({
             )}
 
             {/* Price */}
-            {priceStr && (
-              <p className="text-sm font-medium">{priceStr}</p>
+            {priceStr && <p className="text-sm font-medium">{priceStr}</p>}
+
+            {/* Provenance ledger */}
+            {(ledger.length > 0 || ledgerLoading || work.ledger_id) && (
+              <div className="border-t border-border pt-4 space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                  Provenance
+                </p>
+                {ledgerLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading…</p>
+                ) : ledger.length > 0 ? (
+                  <ol className="relative border-l border-stone-200 space-y-0 ml-1">
+                    {ledger.map((entry) => (
+                      <li key={entry.id} className="ml-3 pb-3 last:pb-0">
+                        <div className="absolute -left-[4px] mt-1 h-2 w-2 rounded-full border border-stone-300 bg-white" />
+                        <p className="text-[10px] text-stone-400">{formatDate(entry.transferred_at)}</p>
+                        <p className="text-xs text-stone-700">{entryLabel(entry.entry_type)}</p>
+                        {entry.price != null && (
+                          <p className="text-[10px] text-stone-400">
+                            NZD {entry.price.toLocaleString()}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+                {work.ledger_id && (
+                  <Link
+                    href={`/provenance/${work.ledger_id}`}
+                    className="text-[10px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
+                  >
+                    {work.ledger_id} →
+                  </Link>
+                )}
+              </div>
             )}
 
             {/* Owner controls */}
@@ -372,7 +438,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                   className="relative flex-none overflow-hidden cursor-pointer"
                   style={{
                     height: TILE_H,
-                    opacity: isHidden ? 0.45 : 1,
+                    opacity: isHidden ? 0.3 : 0.6,
                   }}
                   onClick={() => openLightbox(idx)}
                   onMouseEnter={() => setHoveredId(work.id)}
@@ -388,6 +454,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                       display: "block",
                       objectFit: "contain",
                       background: "#FAFAF9",
+                      filter: "grayscale(1)",
                       transition: "transform 0.3s ease",
                       transform: isHovered ? "scale(1.02)" : "scale(1)",
                     }}
@@ -401,7 +468,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                       opacity: isHovered ? 1 : 0,
                       transition: "opacity 0.2s ease",
                       background:
-                        "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)",
+                        "linear-gradient(to top, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)",
                       pointerEvents: "none",
                     }}
                   />

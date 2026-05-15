@@ -20,6 +20,7 @@ interface Props {
   initialHGap?: number;
   initialVGap?: number;
   initialLastRowAlign?: "left" | "center" | "right";
+  noBorder?: boolean;
 }
 
 function AvailableWorksSectionInner({
@@ -34,6 +35,7 @@ function AvailableWorksSectionInner({
   initialHGap,
   initialVGap,
   initialLastRowAlign,
+  noBorder,
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(
@@ -114,7 +116,7 @@ function AvailableWorksSectionInner({
   if (!isOwner && works.filter((w) => !w.hide_available).length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="space-y-4 border-t border-border pt-10">
+    <section ref={sectionRef} className={`space-y-4 ${noBorder ? "pt-0" : "border-t border-border pt-10"}`}>
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           Available Works

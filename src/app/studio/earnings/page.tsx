@@ -95,20 +95,27 @@ export default async function EarningsPage() {
   return (
     <StudioPageShell username={profileRow.username} activeSection="earnings">
       <div className="space-y-10 max-w-3xl">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight">Earnings</h2>
-          <p className="text-sm text-muted-foreground">
-            Your sales, support income, and royalties on Patronage.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight">Earnings</h2>
+            <p className="text-sm text-muted-foreground">
+              Sales, support payments, and resale royalties — all paid directly to your bank.
+            </p>
+          </div>
+          <a
+            href="/studio/connect"
+            className="shrink-0 text-sm px-4 py-2 border border-border hover:bg-muted/40 transition-colors whitespace-nowrap"
+          >
+            {connectEnabled ? "Manage payouts →" : "Connect bank →"}
+          </a>
         </div>
 
         {!connectEnabled && (
-          <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="border border-stone-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium">Connect your bank to receive automatic payouts</p>
+              <p className="text-sm font-medium">Bank account not connected</p>
               <p className="text-xs text-muted-foreground">
-                Without a connected bank account, payouts are processed manually by the Patronage team.
-                Connect once and future earnings are deposited automatically.
+                Commerce is live. Connect your bank once and all payouts — work sales, support, resale royalties — deposit automatically.
               </p>
             </div>
             <a

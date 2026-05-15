@@ -14,12 +14,13 @@ interface Props {
   isOwner?: boolean;
   savedRowHeight?: number;
   savedGutter?: number;
+  noControls?: boolean;
 }
 
 const DEFAULT_ROW_H  = 280;
 const DEFAULT_GUTTER = 6;
 
-export function GalleryWithControls({ images, username, viewerRole, profileId, limit, isOwner, savedRowHeight, savedGutter }: Props) {
+export function GalleryWithControls({ images, username, viewerRole, profileId, limit, isOwner, savedRowHeight, savedGutter, noControls }: Props) {
   const [rowH, setRowH]     = useState(savedRowHeight ?? DEFAULT_ROW_H);
   const [gutter, setGutter] = useState(savedGutter ?? DEFAULT_GUTTER);
   const [saved, setSaved]   = useState(false);
@@ -35,7 +36,7 @@ export function GalleryWithControls({ images, username, viewerRole, profileId, l
 
   return (
     <>
-      {isOwner && (
+      {isOwner && !noControls && (
         <div className="flex flex-wrap items-center gap-6 mb-4 pb-3 border-b border-border">
           <div className="flex items-center gap-3">
             <label className="text-xs text-muted-foreground whitespace-nowrap">

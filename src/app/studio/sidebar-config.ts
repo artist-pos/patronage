@@ -12,6 +12,7 @@ export const SECONDARY_SECTIONS = [
   { id: "provenance",   label: "Provenance"       },
   { id: "support-tiers",label: "Support Tiers"    },
   { id: "rooms",        label: "Viewing Rooms"    },
+  { id: "collection",   label: "Collection"       },
   { id: "earnings",     label: "Earnings & Payouts"},
   { id: "analytics",    label: "Analytics"        },
   { id: "account",      label: "Account"          },
@@ -29,7 +30,6 @@ export const LEGACY_SECTION_ALIASES: Record<string, Section> = {
   portfolio:     "works",
   available:     "works",
   sold:          "works",
-  collection:    "works",
   updates:       "feed",
   projects:      "feed",
   support:       "support-tiers",
@@ -42,9 +42,10 @@ export const LEGACY_SECTION_ALIASES: Record<string, Section> = {
 };
 
 export function getSectionHref(id: string): string {
-  if (id === "provenance") return "/studio/provenance";
-  if (id === "rooms")      return "/studio/rooms";
-  if (id === "earnings")   return "/studio/earnings";
-  if (id === "messages")   return "/messages";
+  if (id === "provenance")  return "/studio/provenance";
+  if (id === "rooms")       return "/studio/rooms";
+  if (id === "earnings")    return "/studio/earnings";
+  if (id === "collection")  return "/dashboard/collection";
+  if (id === "messages")    return "/messages";
   return `/studio?section=${id}`;
 }

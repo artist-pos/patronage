@@ -734,6 +734,31 @@ export interface ClaimTokenRow {
   created_at: string;
 }
 
+// ── Editions model ────────────────────────────────────────────────────────────
+
+export type EditionType = 'original' | 'limited_edition' | 'open_edition' | 'product';
+export type EditionListingMode = 'direct' | 'enquire';
+
+export interface Edition {
+  id: string;
+  work_id: string;
+  type: EditionType;
+  label: string;
+  edition_size: number | null;
+  edition_number: number | null;
+  dimensions: string | null;
+  substrate: string | null;
+  price_cents: number | null;
+  currency: string;
+  poa: boolean;
+  listing_mode: EditionListingMode;
+  listed: boolean;
+  inventory: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WorkImage {
   id: string;
   portfolio_image_id: string | null;

@@ -3,16 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { WorksTable } from "@/components/dashboard/WorksTable";
-import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
-import { AddPortfolioWorkButton } from "@/components/dashboard/AddPortfolioWorkButton";
 
-type WorksTab = "archival" | "for-sale" | "sold" | "collected";
-
-interface CollectedWork {
-  id: string; url: string; caption: string | null;
-  price: number | null; price_currency: string | null;
-  creator_id: string; created_at: string;
-}
+type WorksTab = "archival" | "for-sale" | "sold";
 
 interface Props {
   initialTab: WorksTab;
@@ -25,13 +17,12 @@ interface Props {
   featuredCount: number;
   engagementMap: Record<string, { view: number; play: number }>;
   pendingConfirmationCount: number;
-  collectedWorks: CollectedWork[];
 }
 
 export function WorksTabsClient({
   initialTab, profileId, profileComplete, missingFields,
   portfolioWorks, availableWorks, soldWorks, featuredCount,
-  engagementMap, pendingConfirmationCount, collectedWorks,
+  engagementMap, pendingConfirmationCount,
 }: Props) {
   const [tab, setTab] = useState<WorksTab>(initialTab);
 
@@ -54,7 +45,7 @@ export function WorksTabsClient({
       )}
 
       <div className="flex gap-0 border-b border-border">
-        {(["archival", "for-sale", "sold", "collected"] as const).map((t) => (
+        {(["archival", "for-sale", "sold"] as const).map((t) => (
           <button
             key={t}
             onClick={() => switchTab(t)}
@@ -64,7 +55,7 @@ export function WorksTabsClient({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "archival" ? "Archival" : t === "for-sale" ? "For Sale" : t === "sold" ? "Sold" : "Collected"}
+            {t === "archival" ? "Archival" : t === "for-sale" ? "For Sale" : "Sold"}
           </button>
         ))}
       </div>
@@ -91,7 +82,14 @@ export function WorksTabsClient({
             profileId={profileId}
             engagementMap={engagementMap}
           />
-          <AddPortfolioWorkButton profileId={profileId} />
+          <div className="pt-4 border-t border-border">
+            <Link
+              href="/studio/works/new"
+              className="text-sm border border-border px-4 py-2 hover:bg-muted/40 transition-colors inline-block"
+            >
+              + Add work
+            </Link>
+          </div>
         </div>
       )}
 
@@ -113,7 +111,12 @@ export function WorksTabsClient({
           )}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Works listed for sale. Patrons can make offers directly from your profile.</p>
-            <AddWorkButton profileId={profileId} />
+            <Link
+              href="/studio/works/new?mode=sale"
+              className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
+            >
+              + Add Available Work
+            </Link>
           </div>
           <WorksTable
             section="available"
@@ -140,32 +143,6 @@ export function WorksTabsClient({
         </div>
       )}
 
-      {tab === "collected" && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Works you own — received as gifts or purchased from other artists.</p>
-          {collectedWorks.length === 0 ? (
-            <div className="py-16 text-center border border-dashed border-border">
-              <p className="text-sm text-muted-foreground">No collected works yet.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border border-t border-border">
-              {collectedWorks.map((w) => (
-                <div key={w.id} className="flex items-center gap-4 py-4">
-                  {w.url && (
-                    <img src={w.url} alt={w.caption ?? ""} className="w-12 h-12 object-cover shrink-0 bg-muted" />
-                  )}
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="text-sm font-medium truncate">{w.caption ?? "Untitled"}</p>
-                    {w.price != null && (
-                      <p className="text-xs text-muted-foreground">{w.price_currency ?? "NZD"} {w.price.toLocaleString()}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -416,8 +416,8 @@ function CollectionModal({
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
             {provenanceHref && (
-              <a href={provenanceHref} {...openProps} style={{ fontSize: 13, color: "#1c1917", textDecoration: "underline" }}>
-                View provenance record →
+              <a href={provenanceHref} {...openProps} style={{ fontSize: 12, fontFamily: "monospace", color: "#1c1917", textDecoration: "underline" }}>
+                {ledgerId} →
               </a>
             )}
             {artistHref && (

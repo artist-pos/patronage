@@ -82,9 +82,10 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : "works";
 
   if (activeSection === "provenance") redirect("/studio/provenance");
+  if (activeSection === "collection") redirect("/dashboard/collection");
 
   // Sub-tab initial values — read once for SSR; client components manage subsequent switches
-  const WORKS_TABS = ["archival", "for-sale", "sold", "collected"] as const;
+  const WORKS_TABS = ["archival", "for-sale", "sold"] as const;
   type WorksTab = typeof WORKS_TABS[number];
   const initialWorksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
     ? (params.wt as WorksTab)
@@ -128,7 +129,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
 
   // Works: portfolio, available, sold, confirmations, collected — all in one round
-  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, collectedWorksResult] =
+  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount] =
     needsWorks
       ? await Promise.all([
           supabase
@@ -139,13 +140,13 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
-            .select("id, url, caption, description, price, price_currency, is_available, hide_available, hide_price, position, created_at")
+            .select("id, url, caption, description, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, position, created_at")
             .eq("profile_id", user.id)
             .eq("is_available", true)
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
-            .select("id, url, caption, price, price_currency, created_at, current_owner_id, hidden_from_artist, ledger_id")
+            .select("id, url, caption, price_cents, is_poa, price_currency, created_at, current_owner_id, hidden_from_artist, ledger_id")
             .eq("creator_id", user.id)
             .neq("current_owner_id", user.id)
             .order("created_at", { ascending: false }),
@@ -169,14 +170,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 .in("work_id", ids);
             }),
           getPendingConfirmationCount(user.id),
-          supabase
-            .from("artworks")
-            .select("id, url, caption, price, price_currency, creator_id, created_at")
-            .eq("current_owner_id", user.id)
-            .neq("creator_id", user.id)
-            .order("created_at", { ascending: false }),
         ])
-      : [null, null, null, null, null, 0, null];
+      : [null, null, null, null, null, 0];
 
   const featuredIds = new Set(
     ((featuredRows as { data: { id: string }[] | null } | null)?.data ?? []).map((r) => r.id)
@@ -240,11 +235,6 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : { data: null };
   const initialTiers = (tiersData ?? []) as SupportTier[];
 
-  const collectedWorks = ((collectedWorksResult as { data: unknown[] | null } | null)?.data ?? []) as {
-    id: string; url: string; caption: string | null;
-    price: number | null; price_currency: string | null;
-    creator_id: string; created_at: string;
-  }[];
 
   // Notes (Feed section — Notes tab)
   const feedNotes = needsNotes ? await getMyWrittenNotes(user.id) : [];
@@ -450,7 +440,6 @@ export default async function StudioPage({ searchParams }: PageProps) {
             featuredCount={featuredCount}
             engagementMap={engagementMap}
             pendingConfirmationCount={pendingConfirmationCount}
-            collectedWorks={collectedWorks}
           />
         )}
 
