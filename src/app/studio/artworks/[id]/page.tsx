@@ -41,9 +41,9 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   const [{ data: artwork }, { data: claims }, { data: entries }] = await Promise.all([
     admin
       .from("artworks")
-      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, edition_number, edition_total, edition_type, location_text, show_location_publicly, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at")
+      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, edition_number, edition_total, edition_type, location_text, show_location_publicly, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at, acquisition_mode")
       .eq("id", id)
-      .eq("creator_id", user.id)
+      .or(`creator_id.eq.${user.id},profile_id.eq.${user.id}`)
       .maybeSingle(),
     admin
       .from("pending_ownership_claims")
@@ -185,7 +185,7 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
       <div className="mt-8 space-y-4">
         <AcquisitionModeEditor
           artworkId={artwork.id}
-          initialMode={((artwork as { acquisition_mode?: string }).acquisition_mode ?? "enquire_first") as "buy_now" | "make_offer" | "enquire_first"}
+          initialMode={((artwork.acquisition_mode as string | null) ?? "enquire_first") as "buy_now" | "make_offer" | "enquire_first"}
         />
         <WorkDetailsEditor
           artworkId={artwork.id}
