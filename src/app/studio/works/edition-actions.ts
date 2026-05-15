@@ -217,14 +217,28 @@ export async function createWorkWithEdition(data: {
     if (extrasError) return { error: extrasError.message };
   }
 
+  const meta = {
+    acquisitionMode: data.acquisitionMode ?? null,
+    mediumCategory: data.mediumCategory,
+    surfaceOrSubstrate: data.surfaceOrSubstrate,
+    widthMm: data.widthMm ?? null,
+    heightMm: data.heightMm ?? null,
+  };
+
   if (data.edition.listed) {
-    await syncArtworks(supabase, work, data.edition, {
-      acquisitionMode: data.acquisitionMode ?? null,
-      mediumCategory: data.mediumCategory,
-      surfaceOrSubstrate: data.surfaceOrSubstrate,
-      widthMm: data.widthMm ?? null,
-      heightMm: data.heightMm ?? null,
-    });
+    await syncArtworks(supabase, work, data.edition, meta);
+  } else {
+    // No listed original — use the first listed extra edition to create the artworks row
+    const firstListed = data.extraEditions?.find((e) => e.listed);
+    if (firstListed) {
+      await syncArtworks(supabase, work, {
+        price_cents: firstListed.poa ? null : firstListed.price_cents,
+        currency: firstListed.currency,
+        poa: firstListed.poa,
+        listing_mode: firstListed.listing_mode,
+        listed: true,
+      }, meta);
+    }
   }
 
   revalidatePath("/studio");
