@@ -287,8 +287,8 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
               ) : (
                 <div className="border border-dashed border-black/40 px-4 py-3 space-y-1">
                   <p className="text-sm text-muted-foreground">No professional CV uploaded.</p>
-                  <a href="/onboarding" target="_blank" className="text-xs underline underline-offset-2">
-                    Upload one in your profile settings →
+                  <a href="/settings?tab=cv-press" target="_blank" className="text-xs underline underline-offset-2">
+                    Upload one in Settings →
                   </a>
                 </div>
               )}

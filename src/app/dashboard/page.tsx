@@ -51,8 +51,7 @@ const NAV_LINKS = [
 ] as const;
 
 const SECONDARY_LINKS = [
-  { id: "profile", label: "Profile", href: "/onboarding" },
-  { id: "account", label: "Account", href: "/onboarding" },
+  { id: "settings", label: "Settings", href: "/settings" },
 ] as const;
 
 const OPP_FILTERS = ["all", "saved", "closing", "applied", "expired"] as const;
@@ -138,6 +137,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .single();
 
   const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner";
+  if (isArtist) redirect("/studio");
   const isPatron = userProfile?.role === "patron" || userProfile?.role === "partner";
 
   // Compute days for analytics period (including "all time" from account creation)

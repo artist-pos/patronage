@@ -46,7 +46,7 @@ async function applyRole(role: string) {
   // Send role-specific welcome DM from @patronagenz
   sendWelcomeDm(user.id, role).catch(console.error);
 
-  redirect(isArtist ? "/onboarding?welcome=1" : "/onboarding");
+  redirect(isArtist ? "/studio?welcome=1" : "/dashboard");
 }
 
 async function setRole(formData: FormData) {
@@ -64,7 +64,7 @@ export default async function SelectRolePage({ searchParams }: Props) {
   if (!user) redirect("/auth/login");
 
   const profile = await getProfileById(user.id);
-  if (profile?.role) redirect("/onboarding");
+  if (profile?.role) redirect("/settings");
 
   // Pre-selected role from the homepage join buttons — skip the selection UI
   const { role: roleParam } = await searchParams;

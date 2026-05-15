@@ -52,6 +52,8 @@ interface PageProps {
     range?: string;
     /** opportunities filter */
     of?: string;
+    /** first-run welcome banner — set by /onboarding/role after artist signup */
+    welcome?: string;
   }>;
 }
 
@@ -289,6 +291,14 @@ export default async function StudioPage({ searchParams }: PageProps) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <StudioPageShell username={profileRow.username} activeSection={activeSection}>
+      {params.welcome === "1" && (
+        <div className="mb-8 border border-black bg-black text-white px-6 py-4 space-y-0.5">
+          <p className="text-sm font-semibold">Welcome to Patronage!</p>
+          <p className="text-sm opacity-80">
+            We&apos;ve subscribed you to the weekly digest — you&apos;ll never miss a deadline. Start by completing your profile.
+          </p>
+        </div>
+      )}
       <div className="space-y-10">
 
         {/* ── Profile & CV ── */}

@@ -54,12 +54,16 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
                   <Link href="/studio">Studio</Link>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/collection">Collection</Link>
-              </DropdownMenuItem>
+              {!isArtist && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+              )}
+              {!isArtist && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/collection">Collection</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link href="/messages" className="flex items-center gap-2">
                   Messages
@@ -73,6 +77,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
                   <Link href="/partner/dashboard">Partner Dashboard</Link>
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem asChild>
+                <Link href="/settings">Settings</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => signOut()}>
                 Sign Out
@@ -129,12 +136,16 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
                     Studio
                   </Link>
                 )}
-                <Link href="/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  Dashboard
-                </Link>
-                <Link href="/dashboard/collection" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  Collection
-                </Link>
+                {!isArtist && (
+                  <Link href="/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Dashboard
+                  </Link>
+                )}
+                {!isArtist && (
+                  <Link href="/dashboard/collection" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Collection
+                  </Link>
+                )}
                 <Link
                   href="/messages"
                   onClick={() => setOpen(false)}
@@ -148,6 +159,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
                     Partner Dashboard
                   </Link>
                 )}
+                <Link href="/settings" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  Settings
+                </Link>
                 <div className="border-t border-border pt-3">
                   <form action={signOut}>
                     <button type="submit" className="text-muted-foreground hover:text-foreground transition-colors">
