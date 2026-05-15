@@ -143,13 +143,21 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
     >
       <div
         className="
-          w-full max-w-4xl h-[70vh] border border-black bg-background overflow-hidden
-          grid grid-cols-1 [grid-template-rows:1fr_220px]
-          sm:grid-cols-[1fr_260px] sm:[grid-template-rows:1fr]
+          w-full max-w-4xl border border-black bg-background overflow-hidden
+          flex flex-col max-h-[90vh] overflow-y-auto
+          sm:grid sm:grid-cols-[1fr_260px] sm:h-[70vh] sm:max-h-none sm:overflow-hidden
         "
       >
         {/* ── Media panel ── */}
-        <div className="relative overflow-hidden bg-muted group">
+        <div className="relative overflow-hidden bg-muted group h-[50vh] shrink-0 sm:h-auto">
+          {/* Mobile-only close button */}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="sm:hidden absolute top-2 right-2 w-9 h-9 flex items-center justify-center bg-background border border-black hover:bg-muted transition-colors z-10"
+          >
+            <X className="w-4 h-4" />
+          </button>
 
           {/* Audio */}
           {ct === "audio" && (
@@ -212,7 +220,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
               src={img.url}
               alt={img.caption ?? "Portfolio work"}
               fill
-              style={{ objectFit: "contain" }}
+              className="object-cover sm:object-contain"
             />
           )}
 
@@ -238,8 +246,8 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
         </div>
 
         {/* ── Text panel ── */}
-        <div className="border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden">
-          <div className="flex justify-end shrink-0 border-b border-black">
+        <div className="border-t border-black sm:border-t-0 sm:border-l flex flex-col sm:overflow-hidden">
+          <div className="hidden sm:flex justify-end shrink-0 border-b border-black">
             <button
               onClick={onClose}
               aria-label="Close"
@@ -249,7 +257,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-3 min-h-0">
+          <div className="flex-1 sm:overflow-y-auto p-5 space-y-3 sm:min-h-0">
             {ct !== "image" && ct !== "document" && (
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 {ct === "audio" && <Music className="w-3 h-3" />}

@@ -544,6 +544,89 @@ export async function reorderCollection(
  * Search published profiles by name/username for the artist typeahead in
  * the upload form. Public read; small result set; case-insensitive.
  */
+/**
+ * Re-sends (or sends for the first time) the provenance certificate for a
+ * collected artwork. Includes the collector's uploaded source documents as
+ * additional reference photos so they appear in the PDF alongside the
+ * artist's documentation photos.
+ *
+ * Only the current owner can request a cert for their own work.
+ */
+export async function requestCertificate(artworkId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createAdminClient();
+
+  const { data: artwork } = await admin
+    .from("artworks")
+    .select("id, ledger_id, title, caption, url, year, medium, dimensions, edition, certificate_note, creator_id, current_owner_id, is_available")
+    .eq("id", artworkId)
+    .maybeSingle();
+
+  if (!artwork) return { error: "Artwork not found." };
+  if (artwork.current_owner_id !== user.id) return { error: "You don't own this work." };
+  if (!artwork.ledger_id) return { error: "No provenance record exists for this work yet." };
+
+  const [{ data: sourceDocs }, { data: artistProfile }, { data: branding }] = await Promise.all([
+    admin.from("artwork_source_documents").select("*").eq("artwork_id", artworkId).eq("uploaded_by", user.id).order("created_at", { ascending: true }),
+    admin.from("profiles").select("full_name, username").eq("id", artwork.creator_id).maybeSingle(),
+    admin.from("profiles").select("provenance_logo_url, provenance_signature_url").eq("id", artwork.creator_id).maybeSingle(),
+  ]);
+
+  const { data: buyerProfile } = await admin.from("profiles").select("full_name, username").eq("id", user.id).maybeSingle();
+
+  // Build signed URLs for image-format source documents
+  const imagePaths = (sourceDocs ?? [])
+    .map(d => d.storage_path)
+    .filter(p => /\.(jpe?g|png|webp|gif)$/i.test(p));
+
+  let sourceDocRefs: Array<{ label: string; url: string }> = [];
+  if (imagePaths.length > 0) {
+    const { data: signed } = await admin.storage
+      .from("artwork-source-documents")
+      .createSignedUrls(imagePaths, 3600);
+    const urlByPath = new Map<string, string>();
+    for (const s of signed ?? []) {
+      if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+    }
+    sourceDocRefs = (sourceDocs ?? [])
+      .filter(d => /\.(jpe?g|png|webp|gif)$/i.test(d.storage_path) && urlByPath.has(d.storage_path))
+      .map(d => ({
+        label: d.document_type === "certificate" ? "Existing certificate"
+          : d.document_type === "invoice" ? "Invoice"
+          : d.document_type === "receipt" ? "Receipt"
+          : "Supporting document",
+        url: urlByPath.get(d.storage_path)!,
+      }));
+  }
+
+  const { sendTransferCertificate } = await import("@/lib/pdf/transfer-certificate");
+  sendTransferCertificate({
+    artistId: artwork.creator_id,
+    buyerId: user.id,
+    ledgerId: artwork.ledger_id as string,
+    workTitle: artwork.title ?? artwork.caption ?? "Untitled",
+    workImageUrl: artwork.url ?? null,
+    artistName: artistProfile?.full_name ?? artistProfile?.username ?? "The artist",
+    artistUsername: artistProfile?.username ?? null,
+    patronName: buyerProfile?.full_name ?? buyerProfile?.username ?? "Collector",
+    yearCreated: (artwork as { year?: number | null }).year ?? null,
+    medium: (artwork as { medium?: string | null }).medium ?? null,
+    dimensions: (artwork as { dimensions?: string | null }).dimensions ?? null,
+    edition: (artwork as { edition?: string | null }).edition ?? null,
+    certificateNote: (artwork as { certificate_note?: string | null }).certificate_note ?? null,
+    logoUrl: branding?.provenance_logo_url ?? null,
+    signatureUrl: branding?.provenance_signature_url ?? null,
+    artworkId,
+    referencePhotos: sourceDocRefs.length > 0 ? sourceDocRefs : undefined,
+    isNewAccount: false,
+  }).catch(console.error);
+
+  return {};
+}
+
 export async function searchProfiles(query: string): Promise<
   { id: string; username: string; full_name: string | null; avatar_url: string | null }[]
 > {

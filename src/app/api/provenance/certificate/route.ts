@@ -122,10 +122,41 @@ export async function GET(req: NextRequest) {
   // Reference photos for page 2 of the PDF — pulled with signed URLs since the
   // certificate is private (downloaded by the artist or current owner only).
   const docTypeLabels = Object.fromEntries(DOC_PHOTO_TYPES.map(t => [t.id, t.label]));
-  const docPhotos = await listDocPhotosWithUrls(artwork.id);
-  const referencePhotos = docPhotos
+  const [docPhotos, sourceDocsResult] = await Promise.all([
+    listDocPhotosWithUrls(artwork.id),
+    // Collector source documents — image-format only (PDFs can't be embedded in react-pdf)
+    admin.from("artwork_source_documents").select("*").eq("artwork_id", artwork.id).eq("uploaded_by", artwork.current_owner_id).order("created_at", { ascending: true }),
+  ]);
+  const artistDocRefs = docPhotos
     .filter(p => p.signedUrl)
     .map(p => ({ label: docTypeLabels[p.type] ?? p.type, url: p.signedUrl! }));
+
+  // Only embed image-format source docs (JPEG, PNG, WebP) — PDF/Word can't be rendered
+  const sourceDocImagePaths = (sourceDocsResult.data ?? [])
+    .map((d: { storage_path: string; document_type: string }) => d.storage_path)
+    .filter((p: string) => /\.(jpe?g|png|webp|gif)$/i.test(p));
+  let collectorDocRefs: Array<{ label: string; url: string }> = [];
+  if (sourceDocImagePaths.length > 0) {
+    const { data: signed } = await admin.storage
+      .from("artwork-source-documents")
+      .createSignedUrls(sourceDocImagePaths, 3600);
+    const urlByPath = new Map<string, string>();
+    for (const s of signed ?? []) {
+      if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+    }
+    collectorDocRefs = (sourceDocsResult.data ?? [])
+      .filter((d: { storage_path: string; document_type: string }) =>
+        /\.(jpe?g|png|webp|gif)$/i.test(d.storage_path) && urlByPath.has(d.storage_path))
+      .map((d: { storage_path: string; document_type: string }) => ({
+        label: d.document_type === "certificate" ? "Collector: existing certificate"
+          : d.document_type === "invoice" ? "Collector: invoice"
+          : d.document_type === "receipt" ? "Collector: receipt"
+          : "Collector: supporting document",
+        url: urlByPath.get(d.storage_path)!,
+      }));
+  }
+
+  const referencePhotos = [...artistDocRefs, ...collectorDocRefs];
 
   const currentOwnerName =
     ownerNames[artwork.current_owner_id] ??

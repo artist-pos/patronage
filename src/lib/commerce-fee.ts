@@ -21,6 +21,7 @@ export type CommerceSurface =
   | "resale"
   | "primary_sale"
   | "negotiated_sale"
+  | "campaign_sale"
   | "support_one_off"
   | "support_recurring"
   | "pipeline_entry_fee"
@@ -41,6 +42,7 @@ const FEE_SCHEDULE: Record<CommerceSurface, FeeModel> = {
   resale:             { kind: "marketplace", commissionRate: 0.10, royaltyRate: 0.05 },
   primary_sale:       { kind: "marketplace", commissionRate: 0.10 },
   negotiated_sale:    { kind: "marketplace", commissionRate: 0.10 },
+  campaign_sale:      { kind: "marketplace", commissionRate: 0.10 },
   support_one_off:    { kind: "marketplace", commissionRate: 0.05 },
   support_recurring:  { kind: "marketplace", commissionRate: 0.05 },
   pipeline_entry_fee: { kind: "patronage_direct" },

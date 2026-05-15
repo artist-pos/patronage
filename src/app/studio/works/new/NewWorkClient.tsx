@@ -51,6 +51,7 @@ interface EditionDraft {
   acquisitionMode: AcquisitionMode;
   listed: boolean;
   editionSize: string;
+  printSize: string;
   substrate: string;
 }
 
@@ -65,6 +66,7 @@ function blankEdition(type: EditionType, defaultListed = false): EditionDraft {
     acquisitionMode: "enquire_first",
     listed: defaultListed,
     editionSize: "",
+    printSize: "",
     substrate: "",
   };
 }
@@ -405,6 +407,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
           listing_mode: acquisitionToListingMode(e.acquisitionMode),
           listed: e.listed,
           edition_size: e.editionSize.trim() ? parseInt(e.editionSize, 10) || null : null,
+          dimensions: e.printSize.trim() || null,
           substrate: e.substrate.trim() || null,
         };
       });
@@ -732,6 +735,16 @@ export function NewWorkClient({ profileId, mode }: Props) {
                     />
                   </div>
                   <div className="space-y-1.5">
+                    <label className={smallLabelCls}>Print size</label>
+                    <input
+                      type="text"
+                      value={ed.printSize}
+                      onChange={(e) => updateEdition(ed.id, "printSize", e.target.value)}
+                      placeholder="e.g. A2, 50×70 cm"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
                     <label className={smallLabelCls}>Edition size</label>
                     <input
                       type="number"
@@ -742,7 +755,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
                       className={inputCls}
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="col-span-3 space-y-1.5">
                     <label className={smallLabelCls}>Substrate</label>
                     <input
                       type="text"

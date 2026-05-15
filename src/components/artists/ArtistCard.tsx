@@ -162,7 +162,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
   return (
     <Link
       href={`/${artist.username}`}
-      className="group flex flex-row border border-black h-[154px] hover:shadow-sm transition-shadow duration-150"
+      className="group flex flex-row border border-black h-auto sm:h-[154px] hover:shadow-sm transition-shadow duration-150"
     >
       {/* Left: image strip — 40% width */}
       <div className="relative w-2/5 shrink-0 overflow-hidden bg-stone-100">
@@ -194,7 +194,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
       </div>
 
       {/* Right: info block — 60% width, 12px left padding */}
-      <div className="bg-white border-l border-black flex flex-col w-3/5 pl-3 pr-2 pt-6 pb-2 sm:pb-3 gap-2 overflow-hidden">
+      <div className="bg-white border-l border-black flex flex-col w-3/5 pl-3 pr-2 pt-6 pb-2 sm:pb-3 gap-2 sm:overflow-hidden">
         <div className="flex items-start gap-2">
           {artist.avatar_url && (
             <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">

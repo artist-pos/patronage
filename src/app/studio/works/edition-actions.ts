@@ -125,6 +125,7 @@ export interface ExtraEditionInput {
   listing_mode: EditionListingMode;
   listed: boolean;
   edition_size?: number | null;
+  dimensions?: string | null;
   substrate?: string | null;
 }
 
@@ -207,6 +208,7 @@ export async function createWorkWithEdition(data: {
         listing_mode: e.listing_mode,
         listed: e.listed,
         edition_size: e.edition_size ?? null,
+        dimensions: e.dimensions ?? null,
         substrate: e.substrate ?? null,
         inventory: e.edition_size ?? null,
         sort_order: i + 1,

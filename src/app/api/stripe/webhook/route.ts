@@ -13,6 +13,7 @@ import {
 } from "@/lib/commerce/support-handler";
 import { handlePartnerSubmissionCompleted } from "@/lib/commerce/partner-submission-handler";
 import { handleNegotiatedSaleCompleted } from "@/lib/commerce/negotiated-sale-handler";
+import { handleCampaignSaleCompleted } from "@/lib/commerce/campaign-sale-handler";
 import type { CheckoutPurpose } from "@/lib/stripe";
 
 // Stripe needs the raw body to verify the signature.
@@ -30,6 +31,7 @@ const COMPLETED_HANDLERS: Partial<Record<CheckoutPurpose, CompletedHandler>> = {
   resale: handleResaleCompleted,
   primary_sale: handlePrimarySaleCompleted,
   negotiated_sale: handleNegotiatedSaleCompleted,
+  campaign_sale: handleCampaignSaleCompleted,
   pipeline_entry_fee: handlePipelineEntryCompleted,
   featured_listing: handleFeaturedListingCompleted,
   support_one_off: handleSupportCompleted,
