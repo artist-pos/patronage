@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
 import { getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
@@ -13,30 +13,26 @@ interface Props {
   children: React.ReactNode;
 }
 
-async function getPendingProvenanceCount(): Promise<number> {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return 0;
-    const admin = createAdminClient();
-    const { count } = await admin
-      .from("artworks")
-      .select("id", { count: "exact", head: true })
-      .eq("creator_id", user.id)
-      .neq("current_owner_id", user.id)
-      .is("certificate_note", null);
-    return count ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
 export async function StudioPageShell({ username, activeSection, children }: Props) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getServerUser();
 
   const [pendingProvenanceCount, pendingConfirmationCount, completionProfile] = await Promise.all([
-    getPendingProvenanceCount(),
+    // Provenance count: artworks the artist created that have no certificate note yet
+    (async () => {
+      try {
+        if (!user) return 0;
+        const admin = createAdminClient();
+        const { count } = await admin
+          .from("artworks")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", user.id)
+          .neq("current_owner_id", user.id)
+          .is("certificate_note", null);
+        return count ?? 0;
+      } catch {
+        return 0;
+      }
+    })(),
     user ? getPendingConfirmationCount(user.id) : Promise.resolve(0),
     user ? fetchCompletionProfile(user.id) : Promise.resolve(null),
   ]);

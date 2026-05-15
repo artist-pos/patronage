@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { SectionLockGate } from "@/components/studio/SectionLockGate";
@@ -9,9 +9,6 @@ import { Section, VALID_SECTIONS, LEGACY_SECTION_ALIASES } from "./sidebar-confi
 import { getProfileById } from "@/lib/profiles";
 import { getArtistUpdates } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
-import { WorksTable } from "@/components/dashboard/WorksTable";
-import { AddWorkButton } from "@/components/dashboard/AddWorkButton";
-import { AddPortfolioWorkButton } from "@/components/dashboard/AddPortfolioWorkButton";
 import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
 import { CampaignDeleteButton } from "@/components/campaigns/CampaignDeleteButton";
 import { ProfileForm } from "@/components/profile/ProfileForm";
@@ -24,9 +21,6 @@ import { GrantsSection } from "@/components/profile/GrantsSection";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { DigestToggle } from "@/components/profile/DigestToggle";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
-import { StudioCarousel } from "@/components/profile/StudioCarousel";
-import { ProjectsSection } from "@/components/profile/ProjectsSection";
-import { ManageNotesList } from "@/components/profile/ManageNotesList";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
 import { ProfileViewsChartWrapper } from "@/components/analytics/ProfileViewsChartWrapper";
 import { getMyWrittenNotes } from "@/lib/notes";
@@ -35,7 +29,9 @@ import { getProfileStats } from "@/lib/profileAnalytics";
 import { getFollowers } from "@/lib/follows";
 import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
-import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
+import { WorksTabsClient } from "@/components/studio/WorksTabsClient";
+import { FeedTabsClient } from "@/components/studio/FeedTabsClient";
+import { OpportunitiesFilterClient } from "@/components/studio/OpportunitiesFilterClient";
 import type { Metadata } from "next";
 import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project } from "@/types/database";
 
@@ -60,8 +56,7 @@ interface PageProps {
 }
 
 export default async function StudioPage({ searchParams }: PageProps) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
   const [{ data: profileRow }, completionProfile] = await Promise.all([
@@ -86,16 +81,16 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
   if (activeSection === "provenance") redirect("/studio/provenance");
 
-  // Sub-tab params
+  // Sub-tab initial values — read once for SSR; client components manage subsequent switches
   const WORKS_TABS = ["archival", "for-sale", "sold", "collected"] as const;
   type WorksTab = typeof WORKS_TABS[number];
-  const worksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
+  const initialWorksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
     ? (params.wt as WorksTab)
     : "archival";
 
   const FEED_TABS = ["updates", "projects", "notes"] as const;
   type FeedTab = typeof FEED_TABS[number];
-  const feedTab: FeedTab = (FEED_TABS as readonly string[]).includes(params.ft ?? "")
+  const initialFeedTab: FeedTab = (FEED_TABS as readonly string[]).includes(params.ft ?? "")
     ? (params.ft as FeedTab)
     : "updates";
 
@@ -108,7 +103,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const needsProjects      = activeSection === "feed";
   const needsCampaigns     = activeSection === "campaigns";
   const needsTiers         = activeSection === "support-tiers";
-  const needsNotes         = activeSection === "feed" && feedTab === "notes";
+  // Notes always fetched with feed section so the tab switch is instant
+  const needsNotes         = activeSection === "feed";
   const needsAnalytics     = activeSection === "analytics";
   const needsOpportunities = activeSection === "opportunities" || activeSection === "home";
 
@@ -282,21 +278,6 @@ export default async function StudioPage({ searchParams }: PageProps) {
     applications = applicationsData.data ?? [];
   }
 
-  const oppFilterList =
-    activeOppFilter === "saved"   ? savedList
-    : activeOppFilter === "closing" ? closingSoon
-    : activeOppFilter === "applied" ? applied
-    : activeOppFilter === "expired" ? expired
-    : [...closingSoon, ...savedList, ...applied, ...expired];
-
-  const oppCounts = {
-    all:     savedList.length + closingSoon.length + applied.length + expired.length,
-    saved:   savedList.length,
-    closing: closingSoon.length,
-    applied: applied.length,
-    expired: expired.length,
-  };
-
   // Analytics
   const [analyticsStats, analyticsFollowers] = needsAnalytics
     ? await Promise.all([
@@ -448,208 +429,32 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
         {/* ── Works ── */}
         {activeSection === "works" && (
-          <div className="space-y-6">
-            {/* Confirmations banner */}
-            {pendingConfirmationCount > 0 && (
-              <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-4 py-3">
-                <p className="text-sm text-amber-900">
-                  <span className="font-semibold">{pendingConfirmationCount}</span> work{pendingConfirmationCount !== 1 ? "s" : ""} need attribution confirmation.
-                </p>
-                <Link href="/studio/pending-confirmations" className="text-sm text-amber-900 underline underline-offset-2 shrink-0 ml-4">
-                  Review →
-                </Link>
-              </div>
-            )}
-            {/* Tab bar */}
-            <div className="flex gap-0 border-b border-border">
-              {(["archival", "for-sale", "sold", "collected"] as const).map((t) => (
-                <Link
-                  key={t}
-                  href={`/studio?section=works&wt=${t}`}
-                  className={`px-4 py-2.5 text-sm transition-colors whitespace-nowrap ${
-                    worksTab === t
-                      ? "font-medium border-b-2 border-black -mb-px"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t === "archival" ? "Archival" : t === "for-sale" ? "For Sale" : t === "sold" ? "Sold" : "Collected"}
-                </Link>
-              ))}
-            </div>
-
-            {/* Archival */}
-            {worksTab === "archival" && (
-              <div className="space-y-6">
-                {(featuredCount > 0 || portfolioWorks.length > 0) && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
-                    <span>
-                      <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
-                      {featuredCount > 0 && " — shown on your profile overview"}
-                    </span>
-                    {featuredCount === 0 && (
-                      <span>Open any work and mark it as Featured to curate your overview.</span>
-                    )}
-                  </div>
-                )}
-                <WorksTable
-                  section="portfolio"
-                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                  featuredCount={featuredCount}
-                  profileId={user.id}
-                  engagementMap={engagementMap}
-                />
-                <AddPortfolioWorkButton profileId={user.id} />
-              </div>
-            )}
-
-            {/* For Sale */}
-            {worksTab === "for-sale" && (
-              <div className="space-y-6">
-                {!profileComplete && missingFields.length > 0 && (
-                  <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 space-y-1">
-                    <p className="text-sm font-medium text-amber-900">
-                      Your listed works aren&apos;t publicly visible yet.
-                    </p>
-                    <p className="text-sm text-amber-800">
-                      Complete your profile to show works for sale. Add:{" "}
-                      {missingFields.map((f, i) => (
-                        <span key={f.key}>
-                          {i > 0 && ", "}
-                          <a href={f.href} className="underline underline-offset-2 hover:text-amber-950 transition-colors">
-                            {f.label}
-                          </a>
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Works listed for sale. Patrons can make offers directly from your profile.
-                  </p>
-                  <AddWorkButton profileId={user.id} />
-                </div>
-                <WorksTable
-                  section="available"
-                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                  featuredCount={featuredCount}
-                  profileId={user.id}
-                />
-              </div>
-            )}
-
-            {/* Sold */}
-            {worksTab === "sold" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Works transferred to collectors. These are permanent provenance records.
-                </p>
-                <WorksTable
-                  section="sold"
-                  portfolioWorks={portfolioWorks as Parameters<typeof WorksTable>[0]["portfolioWorks"]}
-                  availableWorks={availableWorks as Parameters<typeof WorksTable>[0]["availableWorks"]}
-                  soldWorks={soldWorks as Parameters<typeof WorksTable>[0]["soldWorks"]}
-                  featuredCount={featuredCount}
-                  profileId={user.id}
-                />
-              </div>
-            )}
-
-            {/* Collected */}
-            {worksTab === "collected" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Works you own — received as gifts or purchased from other artists.
-                </p>
-                {collectedWorks.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-border">
-                    <p className="text-sm text-muted-foreground">No collected works yet.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border border-t border-border">
-                    {collectedWorks.map((w) => (
-                      <div key={w.id} className="flex items-center gap-4 py-4">
-                        {w.url && (
-                          <img
-                            src={w.url}
-                            alt={w.caption ?? ""}
-                            className="w-12 h-12 object-cover shrink-0 bg-muted"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0 space-y-0.5">
-                          <p className="text-sm font-medium truncate">{w.caption ?? "Untitled"}</p>
-                          {w.price != null && (
-                            <p className="text-xs text-muted-foreground">
-                              {w.price_currency ?? "NZD"} {w.price.toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <WorksTabsClient
+            initialTab={initialWorksTab}
+            profileId={user.id}
+            profileComplete={profileComplete}
+            missingFields={missingFields}
+            portfolioWorks={portfolioWorks as Parameters<typeof WorksTabsClient>[0]["portfolioWorks"]}
+            availableWorks={availableWorks as Parameters<typeof WorksTabsClient>[0]["availableWorks"]}
+            soldWorks={soldWorks as Parameters<typeof WorksTabsClient>[0]["soldWorks"]}
+            featuredCount={featuredCount}
+            engagementMap={engagementMap}
+            pendingConfirmationCount={pendingConfirmationCount}
+            collectedWorks={collectedWorks}
+          />
         )}
 
         {/* ── Studio Feed ── */}
         {activeSection === "feed" && (
-          <div className="space-y-6">
-            {/* Tab bar */}
-            <div className="flex gap-0 border-b border-border">
-              {(["updates", "projects", "notes"] as const).map((t) => (
-                <Link
-                  key={t}
-                  href={`/studio?section=feed&ft=${t}`}
-                  className={`px-4 py-2.5 text-sm transition-colors whitespace-nowrap capitalize ${
-                    feedTab === t
-                      ? "font-medium border-b-2 border-black -mb-px"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t === "updates" ? "Updates" : t === "projects" ? "Projects" : "Notes"}
-                </Link>
-              ))}
-            </div>
-
-            {feedTab === "updates" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Post works in progress, process shots, and studio moments. Updates appear in the public feed and on your profile.
-                </p>
-                <StudioCarousel
-                  updates={studioUpdates}
-                  artistUsername={profileRow.username}
-                  isOwner={true}
-                  projects={studioProjects.map((p) => ({ id: p.id, title: p.title }))}
-                  artworks={feedArtworks}
-                  profileId={user.id}
-                />
-              </div>
-            )}
-
-            {feedTab === "projects" && (
-              <ProjectsSection
-                projects={studioProjects}
-                updates={studioUpdates}
-                isOwner={true}
-              />
-            )}
-
-            {feedTab === "notes" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Notes you&apos;ve left on studio updates across Patronage.
-                </p>
-                <ManageNotesList initialNotes={feedNotes} />
-              </div>
-            )}
-          </div>
+          <FeedTabsClient
+            initialTab={initialFeedTab}
+            artistUsername={profileRow.username}
+            profileId={user.id}
+            studioUpdates={studioUpdates}
+            studioProjects={studioProjects}
+            feedArtworks={feedArtworks}
+            feedNotes={feedNotes}
+          />
         )}
 
         {/* ── Campaigns ── */}
@@ -891,57 +696,15 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 Saved grants, residencies, and open calls — plus your active applications.
               </p>
             </div>
-
-            {/* Filter chips */}
-            <div className="flex flex-wrap gap-2">
-              {OPP_FILTERS.map((f) => (
-                <Link
-                  key={f}
-                  href={`/studio?section=opportunities&of=${f}`}
-                  className={`text-xs px-3 py-1.5 border transition-colors capitalize ${
-                    activeOppFilter === f
-                      ? "border-black bg-black text-white"
-                      : "border-border hover:border-black"
-                  }`}
-                >
-                  {f === "all" ? "All" : f === "saved" ? "Saved" : f === "closing" ? "Closing Soon" : f === "applied" ? "Applied" : "Expired"}
-                  {" "}
-                  <span className="opacity-60 tabular-nums">({oppCounts[f]})</span>
-                </Link>
-              ))}
-            </div>
-
-            {/* Applications tab — show when filter is "applied" or "all" with applications present */}
-            {(activeOppFilter === "applied" || (activeOppFilter === "all" && applications.length > 0)) && (
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pipeline Applications</p>
-                <ApplicationsTab initialApplications={applications} userId={user.id} />
-              </div>
-            )}
-
-            {/* Opportunity list */}
-            {oppFilterList.length === 0 ? (
-              <div className="py-16 text-center border border-dashed border-border">
-                <p className="text-sm text-muted-foreground">
-                  {activeOppFilter === "saved" && "No saved opportunities. Browse and save ones you’re interested in."}
-                  {activeOppFilter === "closing" && "No saved opportunities closing soon."}
-                  {activeOppFilter === "applied" && "No saved opportunities marked as applied."}
-                  {activeOppFilter === "expired" && "No expired saved opportunities."}
-                  {activeOppFilter === "all" && "No saved opportunities yet."}
-                </p>
-                {(activeOppFilter === "all" || activeOppFilter === "saved") && (
-                  <Link href="/opportunities" className="inline-block mt-3 text-sm underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
-                    Browse opportunities →
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {oppFilterList.map((saved) => (
-                  <OpportunityCard key={saved.id} opp={saved.opportunity} view="list" />
-                ))}
-              </div>
-            )}
+            <OpportunitiesFilterClient
+              initialFilter={activeOppFilter}
+              userId={user.id}
+              savedList={savedList}
+              closingSoon={closingSoon}
+              applied={applied}
+              expired={expired}
+              applications={applications}
+            />
           </div>
         )}
 
