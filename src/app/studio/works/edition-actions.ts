@@ -178,7 +178,7 @@ export async function createWorkWithEdition(data: {
       dimensions: data.dimensions,
       description: data.description,
       is_available: false,
-      hide_from_archive: data.forSale ? true : false,
+      hide_from_archive: false,
       position: 9999,
     })
     .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
