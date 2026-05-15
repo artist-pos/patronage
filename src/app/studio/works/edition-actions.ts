@@ -386,3 +386,83 @@ export async function deleteEdition(
   revalidatePath("/studio");
   return {};
 }
+
+// ── Publish work to For Sale (bypasses RLS entirely via admin client) ──────────
+
+export async function publishWorkToForSale(
+  workId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const admin = createAdminClient();
+
+  const { data: work } = await admin
+    .from("portfolio_images")
+    .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
+    .eq("id", workId)
+    .eq("profile_id", user.id)
+    .single();
+
+  if (!work) return { error: "Work not found" };
+
+  const { data: editions } = await admin
+    .from("editions")
+    .select("*")
+    .eq("work_id", workId)
+    .neq("type", "original")
+    .order("sort_order", { ascending: true });
+
+  const ed = editions?.[0];
+  if (!ed) return { error: "No non-original editions found on this work." };
+
+  if (work.linked_artwork_id) {
+    const { error } = await admin
+      .from("artworks")
+      .update({ is_available: true })
+      .eq("id", work.linked_artwork_id);
+    if (error) return { error: error.message };
+  } else {
+    const { data: newArtwork, error: insertError } = await admin
+      .from("artworks")
+      .insert({
+        profile_id: work.creator_id,
+        creator_id: work.creator_id,
+        current_owner_id: work.creator_id,
+        url: work.url,
+        caption: work.caption,
+        description: work.description,
+        title: work.title,
+        year: work.year,
+        medium: work.medium,
+        dimensions: work.dimensions,
+        price_cents: ed.poa ? null : ed.price_cents,
+        is_poa: ed.poa ?? false,
+        price_currency: ed.currency ?? 'NZD',
+        listing_mode: ed.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+        acquisition_mode: ed.listing_mode === 'direct' ? 'buy_now' : 'enquire_first',
+        is_available: true,
+        hide_available: false,
+        hide_from_archive: false,
+        hide_price: false,
+        collection_visible: true,
+        hidden_from_artist: false,
+        position: 0,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) return { error: insertError.message };
+
+    if (newArtwork) {
+      await admin
+        .from("portfolio_images")
+        .update({ linked_artwork_id: newArtwork.id })
+        .eq("id", work.id);
+    }
+  }
+
+  revalidatePath("/studio");
+  return {};
+}

@@ -6,6 +6,7 @@ import { ArtworkEditor } from "@/components/dashboard/ArtworkEditor";
 import { toggleFeaturedWork, toggleHidePortfolioWork } from "@/app/profile/available-work-actions";
 import { deletePortfolioWork } from "@/app/profile/available-work-actions";
 import { EditionsSection } from "@/components/studio/EditionsSection";
+import { publishWorkToForSale } from "@/app/studio/works/edition-actions";
 import type { EditableWork } from "@/components/dashboard/ArtworkEditor";
 import type { Edition } from "@/types/database";
 
@@ -43,6 +44,14 @@ export function WorkPageClient({ profileId, work: initialWork, editions }: Props
     const result = await toggleHidePortfolioWork(work.id, !work.hide_from_archive);
     if (result.error) showError(result.error);
     else setWork(prev => ({ ...prev, hide_from_archive: !prev.hide_from_archive }));
+    setBusy(false);
+  }
+
+  async function handlePublish() {
+    setBusy(true);
+    const result = await publishWorkToForSale(work.id);
+    if (result.error) showError(result.error);
+    else router.refresh();
     setBusy(false);
   }
 
@@ -113,6 +122,20 @@ export function WorkPageClient({ profileId, work: initialWork, editions }: Props
       {/* ── Editions ──────────────────────────────────────────── */}
       <section className="border-t border-border pt-6">
         <EditionsSection workId={work.id} initialEditions={editions} />
+        {!work.linked_artwork_id && (
+          <div className="mt-6 pt-6 border-t border-border space-y-2">
+            <button
+              onClick={handlePublish}
+              disabled={busy}
+              className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
+            >
+              Publish to For Sale
+            </button>
+            <p className="text-xs text-muted-foreground">
+              This work isn&apos;t linked to a For Sale listing yet. Click to create one from the first edition.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* ── Actions ───────────────────────────────────────────── */}
