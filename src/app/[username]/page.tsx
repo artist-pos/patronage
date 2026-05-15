@@ -34,7 +34,7 @@ const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier } from "@/types/database";
-import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
+import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 
@@ -287,7 +287,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData] = await Promise.all([
     needsPortfolio
       ? (() => {
           const q = supabase
@@ -295,7 +295,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             .select("*")
             .eq("profile_id", profile.id)
             .eq("is_available", false)
-            .eq("current_owner_id", profile.id);
+            .eq("current_owner_id", profile.id)
+            .is("linked_artwork_id", null);
           return (!isOwner ? q.eq("hide_from_archive", false) : q)
             .order("position", { ascending: true })
             .then(({ data }) => data ?? []);
@@ -359,7 +360,31 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .maybeSingle()
           .then(({ data }) => data as { slug: string; title: string; image_url: string | null; published_at: string | null } | null)
       : Promise.resolve(null),
+    // Editions for available works — reverse-join through portfolio_images
+    isArtistProfile && (availableWorks as Artwork[]).length > 0
+      ? supabase
+          .from("portfolio_images")
+          .select("linked_artwork_id, editions(id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions)")
+          .in("linked_artwork_id", (availableWorks as Artwork[]).map((w) => w.id))
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
   ]);
+
+  // Build map: artworks.id → listed editions sorted by sort_order
+  const artworkEditionsMap: Record<string, EditionOption[]> = {};
+  for (const pw of artworkEditionsData as Array<{ linked_artwork_id: string | null; editions: unknown }>) {
+    if (pw.linked_artwork_id && Array.isArray(pw.editions)) {
+      artworkEditionsMap[pw.linked_artwork_id] = (pw.editions as EditionOption[])
+        .filter((e) => e.listed !== false)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    }
+  }
+
+  // Attach editions to each available work
+  const enrichedAvailableWorks = (availableWorks as Artwork[]).map((w) => ({
+    ...w,
+    editions: artworkEditionsMap[w.id] ?? [],
+  }));
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
   const artistProjects = ownerProjects.length > 0 ? ownerProjects : tabProjects;
@@ -373,7 +398,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const hasSoldWork = ((hasSoldWorkResult as { count: number | null }).count ?? 0) > 0;
   const isCollected = isArtistProfile && (hasSoldWork || soldWorks.length > 0);
   // Incomplete profiles don't expose available works to the public.
-  const publicAvailableWorks = isOwner || isProfileComplete(profile) ? (availableWorks as Artwork[]) : [];
+  const publicAvailableWorks = (isOwner || isProfileComplete(profile) ? enrichedAvailableWorks : []) as Artwork[];
 
   const imagesCount = images.length > 0 ? images.length : portfolioCount;
   const worksCount = isArtistProfile ? publicAvailableWorks.length + imagesCount : 0;

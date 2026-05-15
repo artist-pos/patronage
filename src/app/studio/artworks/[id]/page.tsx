@@ -41,9 +41,8 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   const [{ data: artwork }, { data: claims }, { data: entries }] = await Promise.all([
     admin
       .from("artworks")
-      .select("id, title, caption, url, year, medium, medium_category, surface_or_substrate, dimensions, edition, edition_number, edition_total, edition_type, location_text, show_location_publicly, certificate_note, ledger_id, is_available, creator_id, current_owner_id, created_at, acquisition_mode")
+      .select("*")
       .eq("id", id)
-      .or(`creator_id.eq.${user.id},profile_id.eq.${user.id}`)
       .maybeSingle(),
     admin
       .from("pending_ownership_claims")
@@ -59,6 +58,8 @@ export default async function ArtworkProvenancePage({ params }: PageProps) {
   ]);
 
   if (!artwork) notFound();
+  const artworkAny = artwork as unknown as Record<string, unknown>;
+  if (artworkAny.creator_id !== user.id && artworkAny.profile_id !== user.id) notFound();
 
   const [docPhotos, priorHistory, linkedProjectResult] = await Promise.all([
     listDocPhotosWithUrls(artwork.id),

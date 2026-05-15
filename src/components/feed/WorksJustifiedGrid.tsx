@@ -8,6 +8,19 @@ import { X, Bookmark, BookmarkCheck } from "lucide-react";
 import { saveWorksLayout } from "@/app/feed/works-layout-actions";
 import { formatPrice } from "@/lib/format-price";
 
+export interface EditionOption {
+  id: string;
+  label: string;
+  type: string;
+  price_cents: number | null;
+  currency: string;
+  poa: boolean;
+  listing_mode: string; // 'direct' | 'enquire'
+  listed: boolean;
+  dimensions: string | null;
+  sort_order: number;
+}
+
 export interface ArtworkForGrid {
   id: string;
   url: string;
@@ -20,6 +33,9 @@ export interface ArtworkForGrid {
   hide_price: boolean;
   hide_available?: boolean;
   listing_mode?: "direct_sale" | "enquire_first" | null;
+  acquisition_mode?: "buy_now" | "make_offer" | "enquire_first" | null;
+  edition?: string | null;
+  editions?: EditionOption[];
   location_text?: string | null;
   show_location_publicly?: boolean;
   profile: {
@@ -86,13 +102,14 @@ interface Props {
   layout?: WorksGridLayout;
   initialOpenArtworkId?: string;
   ownerActions?: OwnerActions;
+  hideProfileLink?: boolean;
 }
 
 const DEFAULT_ROW_H = 300;
 const DEFAULT_H_GAP = 4;
 const DEFAULT_V_GAP = 12;
 
-interface Tile { artwork: ArtworkForGrid; w: number; h: number }
+interface Tile { artwork: ArtworkForGrid; w: number; h: number; artworkIndex: number }
 interface Row  { tiles: Tile[]; isLast: boolean }
 
 function buildRows(
@@ -105,22 +122,23 @@ function buildRows(
   if (containerW <= 0 || artworks.length === 0) return [];
 
   const rows: Row[] = [];
-  let batch: ArtworkForGrid[] = [];
+  let batch: Array<{ artwork: ArtworkForGrid; idx: number }> = [];
   let batchAR = 0;
 
-  for (const art of artworks) {
+  for (let i = 0; i < artworks.length; i++) {
+    const art = artworks[i];
     const d = dims[art.id];
     const ar = d && d.h > 0 ? d.w / d.h : 1;
-    batch.push(art);
+    batch.push({ artwork: art, idx: i });
     batchAR += ar;
 
     const rowH = (containerW - (batch.length - 1) * hGap) / batchAR;
 
     if (rowH <= targetH) {
-      const tiles: Tile[] = batch.map((a) => {
+      const tiles: Tile[] = batch.map(({ artwork: a, idx }) => {
         const da = dims[a.id];
         const r = da && da.h > 0 ? da.w / da.h : 1;
-        return { artwork: a, w: Math.round(r * rowH), h: Math.round(rowH) };
+        return { artwork: a, w: Math.round(r * rowH), h: Math.round(rowH), artworkIndex: idx };
       });
       const used = tiles.reduce((s, t) => s + t.w, 0) + (tiles.length - 1) * hGap;
       tiles[tiles.length - 1].w += containerW - used;
@@ -132,10 +150,10 @@ function buildRows(
 
   if (batch.length > 0) {
     rows.push({
-      tiles: batch.map((a) => {
+      tiles: batch.map(({ artwork: a, idx }) => {
         const da = dims[a.id];
         const r = da && da.h > 0 ? da.w / da.h : 1;
-        return { artwork: a, w: Math.round(r * targetH), h: targetH };
+        return { artwork: a, w: Math.round(r * targetH), h: targetH, artworkIndex: idx };
       }),
       isLast: true,
     });
@@ -202,25 +220,29 @@ function ArtistAvatar({
 type DocType = "coa" | "tearsheet" | "wall-label" | "consignment" | null;
 
 function WorksLightbox({
-  artworks,
-  index,
+  artwork,
   onClose,
   onPrev,
   onNext,
+  hasPrev,
+  hasNext,
   savedIds,
   onToggleSave,
   ownerActions,
+  hideProfileLink,
 }: {
-  artworks: ArtworkForGrid[];
-  index: number;
+  artwork: ArtworkForGrid;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
   savedIds: Set<string>;
   onToggleSave: (id: string) => void;
   ownerActions?: OwnerActions;
+  hideProfileLink?: boolean;
 }) {
-  const artwork = artworks[index];
+  const [editionIndex, setEditionIndex] = useState(0);
   const [collectModal, setCollectModal] = useState(false);
   const [activeDoc, setActiveDoc] = useState<DocType>(null);
   const [wallLabelQr, setWallLabelQr] = useState(false);
@@ -231,8 +253,8 @@ function WorksLightbox({
   const [consignEndDate, setConsignEndDate] = useState("");
   const [consignCommission, setConsignCommission] = useState("30");
 
-  // Reset generate state when artwork changes
-  useEffect(() => { setActiveDoc(null); }, [index]);
+  // Reset edition + doc state when navigating to a different artwork
+  useEffect(() => { setEditionIndex(0); setActiveDoc(null); }, [artwork.id]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -242,14 +264,28 @@ function WorksLightbox({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && index > 0) onPrev();
-      if (e.key === "ArrowRight" && index < artworks.length - 1) onNext();
+      if (e.key === "ArrowLeft" && hasPrev) onPrev();
+      if (e.key === "ArrowRight" && hasNext) onNext();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [index, artworks.length, onClose, onPrev, onNext]);
+  }, [hasPrev, hasNext, onClose, onPrev, onNext]);
 
-  if (!artwork) return null;
+  // Selected edition from the editions table (source of truth for edition pricing)
+  const selectedEdition = artwork.editions?.[editionIndex] ?? null;
+
+  // Derive price/CTA values from selected edition, falling back to artwork row
+  const priceCents = selectedEdition?.price_cents ?? artwork.price_cents;
+  const isPoa = selectedEdition?.poa ?? artwork.is_poa;
+  const priceCurrency = (selectedEdition?.currency as "NZD" | "AUD") ?? artwork.price_currency;
+
+  const derivedListingMode: "direct_sale" | "enquire_first" = selectedEdition
+    ? (selectedEdition.listing_mode === "direct" ? "direct_sale" : "enquire_first")
+    : (artwork.listing_mode ?? "enquire_first");
+
+  const derivedAcquisitionMode = selectedEdition
+    ? (selectedEdition.listing_mode === "direct" ? "buy_now" : "enquire_first") as "buy_now" | "enquire_first"
+    : (artwork.acquisition_mode ?? undefined);
 
   const title = artwork.title ?? artwork.caption ?? "Untitled";
   const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
@@ -258,14 +294,13 @@ function WorksLightbox({
     ? `/${artwork.profile.username}?tab=work&artwork=${artwork.id}`
     : "#";
   const formattedPrice = !artwork.hide_price
-    ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
+    ? formatPrice(priceCents, priceCurrency, isPoa)
     : null;
   const isSaved = savedIds.has(artwork.id);
   const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
 
   return (
     <>
-      {/* Place in collection modal rendered via dynamic import to keep bundle small */}
       {collectModal && (
         <PlaceInCollectionModalWrapper
           artworkId={artwork.id}
@@ -283,7 +318,7 @@ function WorksLightbox({
         style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
         onClick={onClose}
       >
-        {/* Close — absolute top-right of viewport */}
+        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm z-10"
@@ -292,15 +327,14 @@ function WorksLightbox({
           <X className="w-4 h-4 text-stone-600" />
         </button>
 
-        {/* Modal card — no rounded corners, image + info panel side by side */}
+        {/* Modal card */}
         <div
           className="flex overflow-hidden shadow-2xl"
           style={{ maxHeight: "90vh" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Image — natural aspect ratio, no letterboxing background */}
+          {/* Image panel */}
           <div className="relative flex-shrink-0 self-stretch flex items-center">
-            {/* Bookmark overlay — top-right on the image */}
             <button
               type="button"
               onClick={() => onToggleSave(artwork.id)}
@@ -327,6 +361,27 @@ function WorksLightbox({
             style={{ width: 280, overflowY: "auto" }}
           >
             <div className="flex-1 p-6 space-y-5">
+
+              {/* Edition tabs — only shown when multiple listed editions exist */}
+              {artwork.editions && artwork.editions.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {artwork.editions.map((ed, i) => (
+                    <button
+                      key={ed.id}
+                      type="button"
+                      onClick={() => setEditionIndex(i)}
+                      className={`text-xs px-2.5 py-1 border rounded transition-colors ${
+                        editionIndex === i
+                          ? "border-black bg-black text-white"
+                          : "border-border hover:border-stone-400"
+                      }`}
+                    >
+                      {ed.label}{ed.dimensions ? ` · ${ed.dimensions}` : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Title */}
               <div>
                 <h2 className="text-sm font-semibold leading-snug text-foreground">{title}</h2>
@@ -359,7 +414,7 @@ function WorksLightbox({
                 <p className="text-xs text-muted-foreground">{artwork.medium}</p>
               )}
 
-              {/* Location — owner always sees it; public only if show_location_publicly */}
+              {/* Location */}
               {artwork.location_text && (ownerActions || artwork.show_location_publicly) && (
                 <p className="text-xs text-muted-foreground">{artwork.location_text}</p>
               )}
@@ -372,7 +427,7 @@ function WorksLightbox({
                 </div>
               )}
 
-              {/* Enquire / Buy / Make an offer — shown to non-owners when artist ID is known */}
+              {/* Buy / Enquire / Offer — shown to non-owners when artist ID is known */}
               {!ownerActions && artwork.profile?.id && (
                 <WorkDetailActionsWrapper
                   artistId={artwork.profile.id}
@@ -380,11 +435,12 @@ function WorksLightbox({
                   artworkId={artwork.id}
                   workTitle={artwork.title ?? artwork.caption}
                   workDescription={artwork.caption}
-                  priceCents={artwork.price_cents}
-                  isPoa={artwork.is_poa}
-                  priceCurrency={artwork.price_currency}
+                  priceCents={priceCents}
+                  isPoa={isPoa}
+                  priceCurrency={priceCurrency}
                   hidePrice={artwork.hide_price}
-                  listingMode={artwork.listing_mode ?? "enquire_first"}
+                  listingMode={derivedListingMode}
+                  acquisitionMode={derivedAcquisitionMode}
                   workImageUrl={artwork.url}
                 />
               )}
@@ -570,14 +626,16 @@ function WorksLightbox({
             </div>
 
             {/* Footer */}
-            <div className="px-6 pb-6 border-t border-border pt-4">
-              <Link
-                href={workHref}
-                className="block text-sm font-medium text-foreground hover:underline"
-              >
-                View {displayName}&apos;s profile →
-              </Link>
-            </div>
+            {!hideProfileLink && (
+              <div className="px-6 pb-6 border-t border-border pt-4">
+                <Link
+                  href={workHref}
+                  className="block text-sm font-medium text-foreground hover:underline"
+                >
+                  View {displayName}&apos;s profile →
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -597,6 +655,7 @@ function WorkDetailActionsWrapper({
   priceCurrency,
   hidePrice,
   listingMode,
+  acquisitionMode,
   workImageUrl,
 }: {
   artistId: string;
@@ -609,6 +668,7 @@ function WorkDetailActionsWrapper({
   priceCurrency: "NZD" | "AUD";
   hidePrice: boolean;
   listingMode: "direct_sale" | "enquire_first";
+  acquisitionMode?: "buy_now" | "make_offer" | "enquire_first";
   workImageUrl?: string | null;
 }) {
   const [Actions, setActions] = useState<React.ComponentType<{
@@ -616,6 +676,7 @@ function WorkDetailActionsWrapper({
     workTitle: string | null; workDescription: string | null;
     priceCents: number | null; isPoa: boolean; priceCurrency: "NZD" | "AUD";
     hidePrice: boolean; listingMode: "direct_sale" | "enquire_first";
+    acquisitionMode?: "buy_now" | "make_offer" | "enquire_first";
     workImageUrl?: string | null;
   }> | null>(null);
 
@@ -638,6 +699,7 @@ function WorkDetailActionsWrapper({
       priceCurrency={priceCurrency}
       hidePrice={hidePrice}
       listingMode={listingMode}
+      acquisitionMode={acquisitionMode}
       workImageUrl={workImageUrl}
     />
   );
@@ -689,6 +751,7 @@ export function WorksJustifiedGrid({
   layout = "justified",
   initialOpenArtworkId,
   ownerActions,
+  hideProfileLink,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -724,7 +787,7 @@ export function WorksJustifiedGrid({
   useEffect(() => {
     const artworkId = initialOpenArtworkId ?? searchParams.get("artwork");
     if (artworkId) {
-      const idx = artworks.findIndex((a) => a.id === artworkId);
+      const idx = displayedArtworks.findIndex((a) => a.id === artworkId);
       if (idx >= 0) setLightboxIndex(idx);
     }
     // Only run on mount
@@ -822,7 +885,7 @@ export function WorksJustifiedGrid({
 
   return (
     <div className="space-y-4">
-      {/* Saved filter toggle — only shown after localStorage loads and there are saved works in this view */}
+      {/* Saved filter toggle */}
       {savedLoaded && artworks.some((a) => savedIds.has(a.id)) && (
         <div className="flex items-center gap-2">
           <button
@@ -839,6 +902,7 @@ export function WorksJustifiedGrid({
           </button>
         </div>
       )}
+
       {/* Admin layout controls — justified only */}
       {isAdmin && layout === "justified" && (
         <div className="flex flex-wrap items-center gap-6 pb-3 border-b border-border">
@@ -980,14 +1044,14 @@ export function WorksJustifiedGrid({
                 alignItems: "flex-start",
               }}
             >
-              {row.tiles.map(({ artwork, w, h }) => {
+              {row.tiles.map(({ artwork, w, h, artworkIndex }) => {
                 const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
                 const title = artwork.title ?? artwork.caption ?? "Untitled";
                 const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
                 const formattedPrice = !artwork.hide_price
                   ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
                   : null;
-                const artworkIndex = displayedArtworks.indexOf(artwork);
+                const hasMultipleEditions = (artwork.editions?.length ?? 0) > 1;
                 const isSaved = savedLoaded && savedIds.has(artwork.id);
                 const isHovered = hoveredId === artwork.id;
                 const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
@@ -997,7 +1061,7 @@ export function WorksJustifiedGrid({
                     key={artwork.id}
                     style={{ width: w, flexShrink: 0, minWidth: 0 }}
                   >
-                    {/* Image tile — click opens lightbox */}
+                    {/* Image tile */}
                     <div
                       style={{
                         width: w,
@@ -1027,7 +1091,7 @@ export function WorksJustifiedGrid({
                         }}
                       />
 
-                      {/* Hover gradient overlay — visual affordance only, no text */}
+                      {/* Hover gradient overlay */}
                       <div
                         style={{
                           position: "absolute",
@@ -1040,7 +1104,7 @@ export function WorksJustifiedGrid({
                         }}
                       />
 
-                      {/* "For sale" badge — top-left, hover only */}
+                      {/* "For sale" / editions badge — top-left, hover only */}
                       <div
                         style={{
                           position: "absolute",
@@ -1049,12 +1113,20 @@ export function WorksJustifiedGrid({
                           opacity: isHovered ? 1 : 0,
                           transition: "opacity 0.2s ease",
                           pointerEvents: "none",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
                         }}
                       >
                         <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           For sale
                         </span>
+                        {hasMultipleEditions && (
+                          <span className="bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                            {artwork.editions!.length} editions
+                          </span>
+                        )}
                       </div>
 
                       {/* Bookmark icon — top-right, hover only */}
@@ -1087,7 +1159,7 @@ export function WorksJustifiedGrid({
                         )}
                       </button>
 
-                      {/* Hidden badge — always visible for owner */}
+                      {/* Hidden badge */}
                       {isHidden && (
                         <div
                           style={{
@@ -1196,16 +1268,18 @@ export function WorksJustifiedGrid({
       )}
 
       {/* Lightbox */}
-      {lightboxIndex !== null && (
+      {lightboxIndex !== null && displayedArtworks[lightboxIndex] && (
         <WorksLightbox
-          artworks={displayedArtworks}
-          index={lightboxIndex}
+          artwork={displayedArtworks[lightboxIndex]}
           onClose={closeLightbox}
           onPrev={goPrev}
           onNext={goNext}
+          hasPrev={lightboxIndex > 0}
+          hasNext={lightboxIndex < displayedArtworks.length - 1}
           savedIds={savedIds}
           onToggleSave={toggleSave}
           ownerActions={ownerActions}
+          hideProfileLink={hideProfileLink}
         />
       )}
     </div>

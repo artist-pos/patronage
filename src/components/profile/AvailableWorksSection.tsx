@@ -3,9 +3,8 @@
 import { useState, Suspense, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
-import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
+import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { AddAvailableWorkModal } from "./AddAvailableWorkModal";
-import { unlistWork, toggleHideAvailable } from "@/app/profile/available-work-actions";
 import type { Artwork } from "@/types/database";
 
 interface Props {
@@ -38,9 +37,6 @@ function AvailableWorksSectionInner({
   noBorder,
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(
-    () => new Set(initialWorks.filter((w) => w.hide_available).map((w) => w.id))
-  );
   const router = useRouter();
   const searchParams = useSearchParams();
   const sectionRef = useRef<HTMLElement>(null);
@@ -78,6 +74,9 @@ function AvailableWorksSectionInner({
     hide_price: w.hide_price ?? false,
     hide_available: w.hide_available ?? false,
     listing_mode: (w.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first",
+    acquisition_mode: (w.acquisition_mode as "buy_now" | "make_offer" | "enquire_first" | null) ?? null,
+    edition: w.edition ?? null,
+    editions: ((w as unknown as { editions?: EditionOption[] }).editions ?? []),
     profile: {
       id: profileId,
       username: artistUsername,
@@ -85,33 +84,6 @@ function AvailableWorksSectionInner({
       avatar_url: artistAvatarUrl ?? null,
     },
   }));
-
-  // Owner action callbacks
-  const ownerActions = isOwner
-    ? {
-        onUnlist: async (id: string) => {
-          setWorks((prev) => prev.filter((w) => w.id !== id));
-          await unlistWork(id);
-        },
-        onToggleHide: async (id: string, hidden: boolean) => {
-          setHiddenIds((prev) => {
-            const next = new Set(prev);
-            if (hidden) {
-              next.add(id);
-            } else {
-              next.delete(id);
-            }
-            return next;
-          });
-          await toggleHideAvailable(id, hidden);
-        },
-        onMarkCollected: (id: string) => {
-          setWorks((prev) => prev.filter((w) => w.id !== id));
-          router.refresh();
-        },
-        hiddenIds,
-      }
-    : undefined;
 
   if (!isOwner && works.filter((w) => !w.hide_available).length === 0) return null;
 
@@ -140,7 +112,7 @@ function AvailableWorksSectionInner({
           initialVGap={initialVGap}
           initialLastRowAlign={initialLastRowAlign}
           initialOpenArtworkId={initialOpenArtworkId}
-          ownerActions={ownerActions}
+          hideProfileLink
         />
       )}
     </section>
