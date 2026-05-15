@@ -331,6 +331,9 @@ export async function toggleEditionListed(
 
   if (edition?.type === 'original') {
     await syncArtworks(supabase, work, { ...edition, listed });
+  } else if (edition && listed && !work.linked_artwork_id) {
+    // Non-original edition being listed for the first time — create the artworks row
+    await syncArtworks(supabase, work, { ...edition, listed });
   }
 
   revalidatePath("/studio");
