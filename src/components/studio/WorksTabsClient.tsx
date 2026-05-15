@@ -55,7 +55,7 @@ export function WorksTabsClient({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "archival" ? "Archival" : t === "for-sale" ? "For Sale" : "Sold"}
+            {t === "archival" ? "Archival" : t === "for-sale" ? "Sell" : "Sold"}
           </button>
         ))}
       </div>

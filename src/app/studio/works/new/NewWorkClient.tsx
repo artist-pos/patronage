@@ -356,7 +356,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
   function addEdition(type: EditionType) {
     if (type === "original" && editions.some((e) => e.type === "original")) return;
-    const newEd = blankEdition(type, type === "original" && mode === "list");
+    const newEd = blankEdition(type, mode === "list");
     setEditions((prev) => [...prev, newEd]);
     setFocusedEditionId(newEd.id);
   }
@@ -699,17 +699,15 @@ export function NewWorkClient({ profileId, mode }: Props) {
                   {typeLabel}
                 </span>
                 <div className="flex items-center gap-4">
-                  {isOriginal && (
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ed.listed}
-                        onChange={(e) => updateEdition(ed.id, "listed", e.target.checked)}
-                        className="accent-black"
-                      />
-                      <span className="text-sm">Listed for sale</span>
-                    </label>
-                  )}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ed.listed}
+                      onChange={(e) => updateEdition(ed.id, "listed", e.target.checked)}
+                      className="accent-black"
+                    />
+                    <span className="text-sm">Listed for sale</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setEditions((prev) => prev.filter((e) => e.id !== ed.id))}
@@ -768,8 +766,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
                 </div>
               )}
 
-              {/* Pricing — show when listed (or always for non-originals) */}
-              {(isOriginal ? ed.listed : true) && (
+              {/* Pricing — show when listed */}
+              {ed.listed && (
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
