@@ -254,14 +254,6 @@ export async function drawShareCanvas(
     ctx.stroke()
     ctx.setLineDash([])
 
-    const linkFs = Math.round(W * 0.022)
-    ctx.font = `500 ${linkFs}px ${GF}`
-    ctx.fillStyle = t.light ? 'rgba(0,0,0,0.24)' : 'rgba(255,255,255,0.24)'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(payload.shareUrl.replace('https://', ''), shX + shW / 2, shY + shH / 2)
-    ctx.textAlign = 'left'
-
     const fY = shY + shH / 2
     drawFooter(ctx, m, fY, payload.handle, t.light, W, logoEl)
   }
