@@ -530,40 +530,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             </div>
           )}
 
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
 
             {/* Left: name, meta line, bio, action row */}
             <div className="space-y-3 max-w-3xl lg:flex-1">
               <div className="space-y-1">
-                <div className="flex items-start justify-between gap-3">
-                  <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
-                  {isArtistProfile && (() => {
-                    const shareImageOptions = [
-                      ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
-                      ...(publicAvailableWorks as Artwork[])
-                        .filter(w => !!w.url)
-                        .slice(0, 3)
-                        .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
-                    ];
-                    return (
-                      <ShareTrigger
-                        variant="icon"
-                        className="p-2 border border-border hover:bg-muted transition-colors shrink-0 mt-1"
-                        payload={{
-                          type: "profile",
-                          title: profile.full_name ?? profile.username,
-                          sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
-                          price: null,
-                          tag: "ARTIST",
-                          handle: `@${profile.username}`,
-                          imageUrl: profile.avatar_url,
-                          shareUrl: `https://patronage.nz/${profile.username}`,
-                          imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
-                        }}
-                      />
-                    );
-                  })()}
-                </div>
+                <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
                 {profile.is_patronage_supported && (
                   <p className="text-[10px] text-muted-foreground tracking-wide opacity-70">With Patronage</p>
                 )}
@@ -709,32 +681,60 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               </div>
             </div>
 
-            {/* Right: featured blog post card — shown whenever the artist has one */}
-            {featuredBlogPost && isArtistProfile && (
-              <Link
-                href={`/blog/${featuredBlogPost.slug}`}
-                className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80 shrink-0"
-              >
-                {featuredBlogPost.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={featuredBlogPost.image_url}
-                    alt=""
-                    className="shrink-0 block w-auto"
-                    style={{ height: "48px" }}
+            {/* Right: share button + optional featured blog post card */}
+            {isArtistProfile && (() => {
+              const shareImageOptions = [
+                ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
+                ...(publicAvailableWorks as Artwork[])
+                  .filter(w => !!w.url)
+                  .slice(0, 3)
+                  .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
+              ];
+              return (
+                <div className="flex flex-col items-end gap-3 shrink-0">
+                  <ShareTrigger
+                    variant="icon"
+                    className="p-2 border border-border hover:bg-muted transition-colors"
+                    payload={{
+                      type: "profile",
+                      title: profile.full_name ?? profile.username,
+                      sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+                      price: null,
+                      tag: "ARTIST",
+                      handle: `@${profile.username}`,
+                      imageUrl: profile.avatar_url,
+                      shareUrl: `https://patronage.nz/${profile.username}`,
+                      imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
+                    }}
                   />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                    Featured on Patronage
-                  </p>
-                  <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-                    {featuredBlogPost.title}
-                  </p>
+                  {featuredBlogPost && (
+                    <Link
+                      href={`/blog/${featuredBlogPost.slug}`}
+                      className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
+                    >
+                      {featuredBlogPost.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={featuredBlogPost.image_url}
+                          alt=""
+                          className="shrink-0 block w-auto"
+                          style={{ height: "48px" }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                          Featured on Patronage
+                        </p>
+                        <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
+                          {featuredBlogPost.title}
+                        </p>
+                      </div>
+                      <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
+                    </Link>
+                  )}
                 </div>
-                <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-              </Link>
-            )}
+              );
+            })()}
           </div>
         </div>
 
