@@ -535,7 +535,35 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             {/* Left: name, meta line, bio, action row */}
             <div className="space-y-3 max-w-3xl lg:flex-1">
               <div className="space-y-1">
-                <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
+                  {isArtistProfile && (() => {
+                    const shareImageOptions = [
+                      ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
+                      ...(publicAvailableWorks as Artwork[])
+                        .filter(w => !!w.url)
+                        .slice(0, 3)
+                        .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
+                    ];
+                    return (
+                      <ShareTrigger
+                        variant="icon"
+                        className="p-2 border border-border hover:bg-muted transition-colors shrink-0 mt-1"
+                        payload={{
+                          type: "profile",
+                          title: profile.full_name ?? profile.username,
+                          sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+                          price: null,
+                          tag: "ARTIST",
+                          handle: `@${profile.username}`,
+                          imageUrl: profile.avatar_url,
+                          shareUrl: `https://patronage.nz/${profile.username}`,
+                          imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
+                        }}
+                      />
+                    );
+                  })()}
+                </div>
                 {profile.is_patronage_supported && (
                   <p className="text-[10px] text-muted-foreground tracking-wide opacity-70">With Patronage</p>
                 )}
@@ -630,20 +658,6 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                     <MessageButton otherUserId={profile.id} />
                   </>
                 )}
-                <ShareTrigger
-                  variant="icon"
-                  className="p-2 border border-border hover:bg-muted transition-colors"
-                  payload={{
-                    type: "profile",
-                    title: profile.full_name ?? profile.username,
-                    sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
-                    price: null,
-                    tag: "ARTIST",
-                    handle: `@${profile.username}`,
-                    imageUrl: profile.avatar_url,
-                    shareUrl: `https://patronage.nz/${profile.username}`,
-                  }}
-                />
                 {profile.website_url && (
                   <TrackedLink
                     href={profile.website_url}

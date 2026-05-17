@@ -152,28 +152,60 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
     return null;
   })();
 
+  const SITE_URL = "https://patronage.nz";
   const sharePayload = {
     type: "update" as const,
-    title: u.caption?.slice(0, 60) ?? "Studio Update",
-    sub: `${name} · ${formatTimestamp(u.created_at)}`,
+    title: u.title ?? u.caption?.slice(0, 60) ?? "Studio Update",
+    sub: u.tldr ?? `${name} · ${formatTimestamp(u.created_at)}`,
     price: null,
     tag: "STUDIO UPDATE",
     handle: `@${u.artist_username}`,
     imageUrl: u.content_type === "image" ? u.image_url : null,
-    shareUrl: `https://patronage.nz/${u.artist_username}`,
+    shareUrl: `${SITE_URL}${href}`,
   };
 
   return (
     <div className="break-inside-avoid mb-2">
-    <Link
-      href={href}
-      scroll={false}
-      className="group block border border-border bg-background border-b-0"
-    >
-      {mediaSection}
+      <Link
+        href={href}
+        scroll={false}
+        className="group block border border-border bg-background border-b-0"
+      >
+        {mediaSection}
 
-      <div className="px-2.5 py-2 space-y-1.5 border-t border-border">
-        <div className="flex items-center gap-2">
+        {(u.caption && u.content_type !== "text") || u.embed_provider === "Patronage" ? (
+          <div className="px-2.5 py-2 space-y-1 border-t border-border">
+            {u.caption && u.content_type !== "text" && (
+              <p className="text-xs text-muted-foreground leading-snug line-clamp-3">
+                {u.caption}
+              </p>
+            )}
+            {u.embed_provider === "Patronage" && u.embed_url && (
+              <span
+                role="link"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
+                className="flex items-center gap-1.5 pt-0.5 group/blog cursor-pointer"
+              >
+                <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">Patronage</span>
+                <span className="text-stone-300">·</span>
+                <span className="text-[10px] text-stone-500 group-hover/blog:text-foreground transition-colors underline underline-offset-2">
+                  Read article →
+                </span>
+              </span>
+            )}
+          </div>
+        ) : null}
+      </Link>
+
+      {/* Artist identity + share — outside the card link so name is linkable */}
+      <div className="flex items-center gap-2 border border-border border-t-0 px-2.5 py-1.5 bg-background">
+        <Link
+          href={`/${u.artist_username}`}
+          className="flex items-center gap-2 min-w-0 flex-1 group/artist"
+          onClick={(e) => e.stopPropagation()}
+        >
           {u.artist_avatar_url ? (
             <div className="relative w-6 h-6 shrink-0 overflow-hidden border border-black">
               <Image
@@ -190,40 +222,15 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
               {name.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold truncate leading-tight">{name}</p>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate leading-tight group-hover/artist:underline underline-offset-2">{name}</p>
             <p className="text-[10px] text-muted-foreground leading-tight font-mono">
               {formatTimestamp(u.created_at)}
             </p>
           </div>
-        </div>
-
-        {u.caption && u.content_type !== "text" && (
-          <p className="text-xs text-muted-foreground leading-snug line-clamp-3">
-            {u.caption}
-          </p>
-        )}
-
-        {u.embed_provider === "Patronage" && u.embed_url && (
-          <span
-            role="link"
-            tabIndex={0}
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
-            className="flex items-center gap-1.5 pt-0.5 group/blog cursor-pointer"
-          >
-            <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">Patronage</span>
-            <span className="text-stone-300">·</span>
-            <span className="text-[10px] text-stone-500 group-hover/blog:text-foreground transition-colors underline underline-offset-2">
-              Read article →
-            </span>
-          </span>
-        )}
+        </Link>
+        <ShareTrigger payload={sharePayload} variant="icon" className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0" />
       </div>
-    </Link>
-    <div className="flex justify-end border border-border border-t-0 px-2 py-1.5 bg-background">
-      <ShareTrigger payload={sharePayload} variant="icon" className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground" />
-    </div>
     </div>
   );
 });

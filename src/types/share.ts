@@ -2,6 +2,11 @@ export type ShareType = 'work' | 'update' | 'support' | 'profile'
 export type ShareTemplate = 'dark' | 'light' | 'warm' | 'slate'
 export type ShareFormat = 'story' | 'post'
 
+export interface ShareImageOption {
+  url: string;
+  label: string;
+}
+
 export interface SharePayload {
   type: ShareType
   title: string
@@ -12,4 +17,5 @@ export interface SharePayload {
   imageUrl: string | null
   shareUrl: string
   editionCount?: number | null
+  imageOptions?: ShareImageOption[]
 }

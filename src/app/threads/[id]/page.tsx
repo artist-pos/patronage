@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getProfileById } from "@/lib/profiles";
@@ -126,6 +127,8 @@ export default async function ThreadPage({ params, searchParams }: Props) {
               key={post.id}
               post={post}
               isFirst={i === 0}
+              projectSlug={thread.project.slug ?? thread.project.id}
+              artistName={artistName}
               canNote={canNote}
               currentUserId={user?.id}
               currentUserName={currentUserName}
@@ -139,9 +142,13 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   );
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
 function ThreadPostItem({
   post,
   isFirst,
+  projectSlug,
+  artistName,
   canNote,
   currentUserId,
   currentUserName,
@@ -150,6 +157,8 @@ function ThreadPostItem({
 }: {
   post: ThreadPost;
   isFirst: boolean;
+  projectSlug: string;
+  artistName: string;
   canNote: boolean;
   currentUserId?: string;
   currentUserName?: string;
@@ -176,10 +185,26 @@ function ThreadPostItem({
 
       {/* Post content */}
       <div className="space-y-4">
-        {/* Timestamp */}
-        <p className="text-[11px] font-mono text-muted-foreground pt-1">
-          {formatTimestamp(post.created_at)}
-        </p>
+        {/* Timestamp + share */}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <p className="text-[11px] font-mono text-muted-foreground">
+            {formatTimestamp(post.created_at)}
+          </p>
+          <ShareTrigger
+            variant="icon"
+            className="w-6 h-6 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0"
+            payload={{
+              type: "update",
+              title: post.title ?? post.caption?.slice(0, 60) ?? "Studio Update",
+              sub: post.tldr ?? `${artistName} · ${formatTimestamp(post.created_at)}`,
+              price: null,
+              tag: "STUDIO UPDATE",
+              handle: `@${post.artist_username}`,
+              imageUrl: post.image_url ?? null,
+              shareUrl: `${SITE_URL}/threads/${projectSlug}?scroll=${post.id}`,
+            }}
+          />
+        </div>
 
         {/* Media */}
         {post.image_url && (

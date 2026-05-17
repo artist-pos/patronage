@@ -24,23 +24,30 @@ export function ShareSheet({ payload, onClose }: Props) {
   const [caption, setCaption] = useState("");
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(
+    payload.imageOptions?.[0]?.url ?? payload.imageUrl
+  );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load artwork image when payload changes
+  // Load selected image when it changes
   useEffect(() => {
-    if (!payload.imageUrl) { setImgEl(null); return; }
-    const img = new Image();
+    const url = selectedImageUrl;
+    if (!url) { setImgEl(null); return; }
+    const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => setImgEl(img);
     img.onerror = () => setImgEl(null);
-    img.src = payload.imageUrl;
-  }, [payload.imageUrl]);
+    img.src = url;
+  }, [selectedImageUrl]);
 
   const redraw = useCallback(async () => {
     if (!canvasRef.current) return;
-    await drawShareCanvas(canvasRef.current, payload, template, format, imgEl, showPrice, caption);
-  }, [payload, template, format, imgEl, showPrice, caption]);
+    const effectivePayload = selectedImageUrl !== payload.imageUrl
+      ? { ...payload, imageUrl: selectedImageUrl }
+      : payload;
+    await drawShareCanvas(canvasRef.current, effectivePayload, template, format, imgEl, showPrice, caption);
+  }, [payload, template, format, imgEl, showPrice, caption, selectedImageUrl]);
 
   useEffect(() => { redraw(); }, [redraw]);
 
@@ -97,7 +104,7 @@ export function ShareSheet({ payload, onClose }: Props) {
           w-full bg-background border-t border-black
           sm:w-auto sm:max-w-2xl sm:border sm:rounded-none
           flex flex-col sm:flex-row gap-0
-          max-h-[92vh] overflow-hidden
+          max-h-[92vh] overflow-y-auto sm:overflow-hidden
         "
         onClick={(e) => e.stopPropagation()}
       >
@@ -115,7 +122,7 @@ export function ShareSheet({ payload, onClose }: Props) {
         </div>
 
         {/* ── Controls panel ── */}
-        <div className="flex flex-col min-h-0 w-full sm:w-[260px]">
+        <div className="flex-none sm:flex sm:flex-col sm:min-h-0 w-full sm:w-[260px]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <p className="text-xs font-semibold uppercase tracking-widest">Share</p>
@@ -124,7 +131,29 @@ export function ShareSheet({ payload, onClose }: Props) {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 min-h-0">
+          <div className="sm:flex-1 sm:overflow-y-auto px-4 py-4 space-y-5 sm:min-h-0">
+
+            {/* Image picker — profile share with multiple options */}
+            {payload.imageOptions && payload.imageOptions.length > 1 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {payload.imageOptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImageUrl(opt.url)}
+                      title={opt.label}
+                      className={`w-12 h-12 border overflow-hidden shrink-0 transition-all ${
+                        selectedImageUrl === opt.url ? "border-black ring-1 ring-black ring-offset-1" : "border-border"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={opt.url} alt={opt.label} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Format */}
             <div className="space-y-2">

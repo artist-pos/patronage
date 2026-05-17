@@ -8,6 +8,8 @@ import { getUpdateById } from "@/lib/feed";
 import { getVisibleNotes } from "@/lib/notes";
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 interface Props {
@@ -226,26 +228,52 @@ export default async function ProjectPage({ params }: Props) {
           <p className="text-base leading-relaxed">{update.caption}</p>
         )}
 
-        <div className="flex items-center gap-3">
-          {update.artist_avatar_url && (
-            <div className="relative w-8 h-8 shrink-0 border border-black overflow-hidden">
-              <Image
-                src={update.artist_avatar_url}
-                alt={name}
-                fill
-                className="object-cover"
-                sizes="32px"
-              />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {update.artist_avatar_url && (
+              <div className="relative w-8 h-8 shrink-0 border border-black overflow-hidden">
+                <Image
+                  src={update.artist_avatar_url}
+                  alt={name}
+                  fill
+                  className="object-cover"
+                  sizes="32px"
+                />
+              </div>
+            )}
+            <div>
+              <Link
+                href={`/${update.artist_username}`}
+                className="text-sm font-semibold hover:underline underline-offset-2"
+              >
+                {name}
+              </Link>
+              <p className="text-xs text-muted-foreground">{date}</p>
             </div>
-          )}
-          <div>
-            <Link
-              href={`/${update.artist_username}`}
-              className="text-sm font-semibold hover:underline underline-offset-2"
-            >
-              {name}
-            </Link>
-            <p className="text-xs text-muted-foreground">{date}</p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner" ? (
+              <EditUpdateModal
+                updateId={id}
+                initialTitle={update.title}
+                initialTldr={update.tldr ?? null}
+              />
+            ) : null}
+            <ShareTrigger
+              variant="icon"
+              className="p-2 border border-border hover:bg-muted transition-colors"
+              payload={{
+                type: "update",
+                title: update.title ?? update.caption?.slice(0, 60) ?? "Studio Update",
+                sub: update.tldr ?? `${name} · ${date}`,
+                price: null,
+                tag: "STUDIO UPDATE",
+                handle: `@${update.artist_username}`,
+                imageUrl: update.content_type === "image" ? update.image_url : null,
+                shareUrl: `${SITE_URL}/projects/${id}`,
+              }}
+            />
           </div>
         </div>
 

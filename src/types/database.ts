@@ -858,6 +858,7 @@ export interface ProjectUpdate {
   // Migration 052: tag and optional heading for project thread display
   update_tag: 'concept' | 'update' | 'milestone' | 'complete';
   title: string | null;
+  tldr: string | null;
   created_at: string;
 }
 
