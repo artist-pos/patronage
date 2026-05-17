@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { getImpactMetrics } from "@/lib/admin";
 import { ExportButtons } from "./ExportButtons";

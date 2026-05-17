@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getAllOpportunities } from "@/lib/admin";
 import { OpportunityTable } from "@/components/admin/OpportunityTable";
 import { ClaimFunnelMetrics } from "@/components/admin/ClaimFunnelMetrics";

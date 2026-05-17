@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { getDigestData } from "@/lib/digest";
 import { DigestControls } from "./DigestControls";

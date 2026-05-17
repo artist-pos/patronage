@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QueueControls } from "./QueueControls";
 import type { Opportunity } from "@/types/database";

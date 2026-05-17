@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getOutreachHistory } from "./actions";
 import { OutreachCompose, SentHistory, ScheduledHistory } from "./OutreachCompose";
 

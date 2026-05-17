@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getAllProfiles } from "@/lib/admin";
 import { ArtistTable } from "@/components/admin/ArtistTable";
 

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { CsvUploader } from "@/components/admin/CsvUploader";
 
 export const metadata = {
