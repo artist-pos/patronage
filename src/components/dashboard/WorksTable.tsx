@@ -25,7 +25,7 @@ interface PortfolioRow {
   year: number | null;
   medium: string | null;
   dimensions: string | null;
-  linked_artwork_id: string | null;
+  is_available: boolean;
   is_featured: boolean;
   hide_from_archive: boolean;
   position: number;
@@ -259,7 +259,7 @@ export function WorksTable({
                 <div className="flex items-center gap-1.5 shrink-0">
                   {work.is_featured && <Badge>★</Badge>}
                   {work.hide_from_archive && <Badge muted>Hidden</Badge>}
-                  {work.linked_artwork_id && <Badge muted>For sale</Badge>}
+                  {work.is_available && <Badge muted>For sale</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
@@ -333,9 +333,9 @@ export function WorksTable({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Edit → existing artwork provenance+details page */}
+                  {/* Edit */}
                   <Link
-                    href={`/studio/artworks/${work.id}`}
+                    href={`/studio/works/${work.id}`}
                     className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                     title="Edit work"
                   >

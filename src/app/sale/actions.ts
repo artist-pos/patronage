@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateFees } from "@/lib/commerce-fee";
-import { createCheckoutSession } from "@/lib/stripe";
+import { createCheckoutSession, getStripe } from "@/lib/stripe";
+import type { ResolvedFees } from "@/lib/commerce-fee";
 
 interface BuyInput {
   artworkId: string;
@@ -129,5 +130,126 @@ export async function initiatePrimarySale(
   }
 
   return { checkoutUrl };
+}
+
+/**
+ * Create a Stripe PaymentIntent for an in-modal embedded checkout.
+ * Returns the client secret for use with @stripe/react-stripe-js.
+ */
+export async function createPrimaryPaymentIntent(input: {
+  artworkId: string;
+  editionId?: string | null;
+  buyerEmail: string;
+}): Promise<{ clientSecret?: string; fees?: ResolvedFees; error?: string }> {
+  const buyerEmail = input.buyerEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: artwork } = await admin
+    .from("artworks")
+    .select("id, title, caption, url, price_cents, is_poa, price_currency, is_available, creator_id, current_owner_id")
+    .eq("id", input.artworkId)
+    .maybeSingle();
+
+  if (!artwork) return { error: "Artwork not found." };
+  if (!artwork.is_available) return { error: "This work isn't available for sale." };
+  if (artwork.creator_id !== artwork.current_owner_id) {
+    return { error: "This work has already changed hands. Use the resale flow." };
+  }
+
+  let priceCents = artwork.price_cents;
+  let editionLabel: string | null = null;
+
+  if (input.editionId) {
+    const { data: edition } = await admin
+      .from("editions")
+      .select("price_cents, label, poa, listed")
+      .eq("id", input.editionId)
+      .maybeSingle();
+    if (edition?.listed && !edition.poa && edition.price_cents != null) {
+      priceCents = edition.price_cents;
+      editionLabel = edition.label;
+    }
+  }
+
+  if (artwork.is_poa || !priceCents || priceCents <= 0) {
+    return { error: "This work has no listed price." };
+  }
+
+  const fees = calculateFees("primary_sale", priceCents);
+  const currency = (artwork.price_currency ?? "NZD").toUpperCase();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [artistProfileResult] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("stripe_account_id, stripe_connect_status")
+      .eq("id", artwork.creator_id)
+      .maybeSingle(),
+  ]);
+  const artistProfile = artistProfileResult.data;
+
+  const useConnect =
+    artistProfile?.stripe_connect_status === "enabled" &&
+    !!artistProfile?.stripe_account_id;
+
+  const { data: row, error: insertError } = await admin
+    .from("primary_sale_transactions")
+    .insert({
+      artwork_id: artwork.id,
+      artist_id: artwork.creator_id,
+      buyer_id: user?.id ?? null,
+      buyer_email: buyerEmail,
+      sale_price_cents: priceCents,
+      currency,
+      patronage_commission_cents: fees.patronageRevenueCents,
+      buyer_paid_total_cents: fees.buyerPaidTotalCents,
+      payout_method: useConnect ? "stripe_connect" : "manual",
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !row) {
+    return { error: insertError?.message ?? "Couldn't create sale record." };
+  }
+
+  try {
+    const stripe = getStripe();
+    const intentParams: Parameters<typeof stripe.paymentIntents.create>[0] = {
+      amount: fees.buyerPaidTotalCents,
+      currency: currency.toLowerCase(),
+      receipt_email: buyerEmail,
+      metadata: {
+        purpose: "primary_sale",
+        primary_sale_id: row.id,
+        artwork_id: artwork.id,
+        edition_id: input.editionId ?? "",
+        edition_label: editionLabel ?? "",
+        buyer_email: buyerEmail,
+      },
+      ...(useConnect && artistProfile?.stripe_account_id
+        ? {
+            application_fee_amount: fees.stripeFeeCents + fees.patronageRevenueCents,
+            transfer_data: { destination: artistProfile.stripe_account_id },
+          }
+        : {}),
+    };
+    const intent = await stripe.paymentIntents.create(intentParams);
+
+    await admin
+      .from("primary_sale_transactions")
+      .update({ stripe_payment_intent: intent.id })
+      .eq("id", row.id);
+
+    return { clientSecret: intent.client_secret ?? undefined, fees };
+  } catch (err) {
+    await admin.from("primary_sale_transactions").delete().eq("id", row.id);
+    return { error: err instanceof Error ? err.message : "Stripe error." };
+  }
 }
 

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApplicationsManager } from "@/components/partner/ApplicationsManager";
+import { PostSelectionSetup } from "@/components/partner/PostSelectionSetup";
 import type { Metadata } from "next";
-import type { CustomField } from "@/types/database";
+import type { CustomField, PipelineConfig } from "@/types/database";
 import { isAdmin } from "@/lib/admin";
 
 interface Props {
@@ -23,6 +24,7 @@ interface AppRow {
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
   artist_id: string;
+  documentation: Record<string, string> | null;
   artwork: { id: string; url: string; caption: string | null } | null;
 }
 
@@ -90,7 +92,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   // Get applications with artwork
   const { data: appsData } = await supabase
     .from("opportunity_applications")
-    .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, artwork:artwork_id(id, url, caption)")
+    .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, artwork:artwork_id(id, url, caption)")
     .eq("opportunity_id", opportunityId)
     .order("created_at", { ascending: false });
 
@@ -178,8 +180,17 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     };
   });
 
+  const isPipeline = opp.routing_type === "pipeline";
+  const postSelectionConfigured = isPipeline
+    ? (opp.pipeline_config as PipelineConfig | null)?.post_selection != null
+    : true;
+
+  const selectedArtists = enrichedApps.filter((a) =>
+    ["selected", "approved_pending_assets", "production_ready"].includes(a.status)
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Header */}
       <div className="space-y-0.5">
         <Link href="/partner/dashboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -191,15 +202,65 @@ export default async function PartnerOpportunityPage({ params }: Props) {
         </p>
       </div>
 
-      {/* Client-side applications manager (filtering, CSV, gallery/table, impact) */}
-      <Suspense>
-        <ApplicationsManager
-          apps={enrichedApps}
-          opp={opp}
+      {/* Post-selection setup gate — shown once, before applications are accessible */}
+      {isPipeline && !postSelectionConfigured ? (
+        <PostSelectionSetup
           opportunityId={opportunityId}
-          followups={followups}
+          opportunityTitle={opp.title}
         />
-      </Suspense>
+      ) : (
+        <>
+          {/* Selected artists — simple grid shown once any are selected */}
+          {selectedArtists.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Selected Artists ({selectedArtists.length})
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {selectedArtists.map((app) => {
+                  const a = app.artist;
+                  if (!a) return null;
+                  return (
+                    <Link
+                      key={app.id}
+                      href={`/${a.username}`}
+                      target="_blank"
+                      className="flex items-center gap-3 border border-black/10 rounded-xl px-4 py-3 hover:border-black/30 transition-colors bg-white min-w-0"
+                    >
+                      {a.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={a.avatar_url}
+                          alt={a.full_name ?? a.username}
+                          className="w-8 h-8 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-stone-100 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{a.full_name ?? a.username}</p>
+                        {(a.medium ?? []).length > 0 && (
+                          <p className="text-xs text-muted-foreground truncate">{(a.medium ?? []).slice(0, 2).join(", ")}</p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Applications manager */}
+          <Suspense>
+            <ApplicationsManager
+              apps={enrichedApps}
+              opp={opp}
+              opportunityId={opportunityId}
+              followups={followups}
+            />
+          </Suspense>
+        </>
+      )}
     </div>
   );
 }

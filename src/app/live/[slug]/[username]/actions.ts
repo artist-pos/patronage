@@ -137,51 +137,16 @@ export async function claimCampaignWorkFree(opts: {
 
   const admin = createAdminClient();
 
-  // Resolve or create the artwork record
-  const { data: work } = await admin
-    .from("portfolio_images")
-    .select("id, url, caption, title, year, medium, dimensions, linked_artwork_id")
+  // Work IS the artwork row after migration 135
+  const { data: artwork } = await admin
+    .from("artworks")
+    .select("id, is_available, title, caption, url, year, medium, dimensions, certificate_note")
     .eq("id", opts.workId)
     .maybeSingle();
 
-  if (!work) return { error: "Work not found." };
+  if (!artwork) return { error: "Work not found." };
 
-  let artworkId = (work as { linked_artwork_id?: string | null }).linked_artwork_id ?? null;
-
-  if (!artworkId) {
-    const { data: created, error: createError } = await admin
-      .from("artworks")
-      .insert({
-        creator_id: opts.artistId,
-        current_owner_id: opts.artistId,
-        title: work.title ?? null,
-        caption: work.caption ?? null,
-        url: work.url ?? null,
-        year: (work as { year?: number | null }).year ?? null,
-        medium: (work as { medium?: string | null }).medium ?? null,
-        dimensions: (work as { dimensions?: string | null }).dimensions ?? null,
-        is_available: true,
-      })
-      .select("id")
-      .single();
-
-    if (createError || !created) {
-      return { error: "Failed to register work." };
-    }
-    artworkId = created.id;
-    await admin.from("portfolio_images").update({ linked_artwork_id: artworkId }).eq("id", opts.workId);
-  }
-
-  if (!artworkId) return { error: "Failed to resolve artwork." };
-  const resolvedArtworkId: string = artworkId;
-
-  const { data: artwork } = await admin
-    .from("artworks")
-    .select("is_available, title, caption, url, year, medium, dimensions, edition, certificate_note")
-    .eq("id", artworkId)
-    .maybeSingle();
-
-  if (!artwork) return { error: "Artwork not found." };
+  const resolvedArtworkId: string = artwork.id;
   if (!artwork.is_available) return { error: "This work has already been claimed." };
 
   const { userId: buyerId, isNew } = await createShadowAccount(

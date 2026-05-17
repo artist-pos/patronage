@@ -54,9 +54,6 @@ const TABLE_UPDATES: Record<string, (id: string, url: string) => Promise<void>> 
   "profiles:featured_image_url": async (id, url) => {
     await admin.from("profiles").update({ featured_image_url: url }).eq("id", id);
   },
-  "portfolio_images:url": async (id, url) => {
-    await admin.from("portfolio_images").update({ url }).eq("id", id);
-  },
   "artworks:url": async (id, url) => {
     await admin.from("artworks").update({ url }).eq("id", id);
   },

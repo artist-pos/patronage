@@ -8,7 +8,7 @@ import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
  *
  * Session metadata must contain:
  *   campaign_id  — campaigns.id
- *   work_id      — portfolio_images.id
+ *   work_id      — artworks.id
  *   artist_id    — profiles.id (the seller)
  *   buyer_name   — prefilled from the purchase form
  *
@@ -29,55 +29,19 @@ export async function handleCampaignSaleCompleted(
 
   const admin = createAdminClient();
 
-  // Resolve or create the artwork record for this portfolio_image
-  const { data: work } = await admin
-    .from("portfolio_images")
-    .select("id, url, caption, title, year, medium, dimensions, linked_artwork_id")
+  // work_id is now an artworks.id directly
+  const { data: artwork } = await admin
+    .from("artworks")
+    .select("id, is_available, creator_id, title, caption, url, year, medium, dimensions, certificate_note")
     .eq("id", work_id)
     .maybeSingle();
 
-  if (!work) {
+  if (!artwork) {
     console.warn(`[campaign sale handler] work ${work_id} not found`);
     return;
   }
 
-  let artworkId = (work as { linked_artwork_id?: string | null }).linked_artwork_id ?? null;
-
-  if (!artworkId) {
-    const { data: created, error: createError } = await admin
-      .from("artworks")
-      .insert({
-        creator_id: artist_id,
-        current_owner_id: artist_id,
-        title: work.title ?? null,
-        caption: work.caption ?? null,
-        url: work.url ?? null,
-        year: (work as { year?: number | null }).year ?? null,
-        medium: (work as { medium?: string | null }).medium ?? null,
-        dimensions: (work as { dimensions?: string | null }).dimensions ?? null,
-        is_available: true,
-      })
-      .select("id")
-      .single();
-
-    if (createError || !created) {
-      throw new Error(`[campaign sale handler] failed to create artwork: ${createError?.message}`);
-    }
-    artworkId = created.id;
-    await admin.from("portfolio_images").update({ linked_artwork_id: artworkId }).eq("id", work_id);
-  }
-
-  if (!artworkId) throw new Error("[campaign sale handler] could not resolve artworkId");
-  const resolvedArtworkId: string = artworkId;
-
-  // Idempotency — skip if already transferred
-  const { data: artwork } = await admin
-    .from("artworks")
-    .select("id, is_available, creator_id, title, caption, url, year, medium, dimensions, edition, certificate_note")
-    .eq("id", resolvedArtworkId)
-    .maybeSingle();
-
-  if (!artwork) throw new Error(`[campaign sale handler] artwork ${resolvedArtworkId} not found`);
+  const resolvedArtworkId: string = artwork.id;
   if (!artwork.is_available) {
     console.warn(`[campaign sale handler] artwork ${resolvedArtworkId} already transferred — skipping`);
     return;

@@ -54,9 +54,10 @@ export async function getPortfolioImages(
 ): Promise<PortfolioImage[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("*")
     .eq("profile_id", profileId)
+    .eq("is_available", false)
     .order("position", { ascending: true });
   return (data ?? []) as PortfolioImage[];
 }

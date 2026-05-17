@@ -8,6 +8,24 @@ import { X, Bookmark, BookmarkCheck } from "lucide-react";
 import { saveWorksLayout } from "@/app/feed/works-layout-actions";
 import { formatPrice } from "@/lib/format-price";
 
+function ExpandableDescription({ text, clamp = 4 }: { text: string; clamp?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="text-xs text-muted-foreground leading-relaxed">
+      <p className={expanded ? undefined : `line-clamp-${clamp}`}>{text}</p>
+      {text.length > 160 && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+          className="mt-0.5 text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export interface EditionOption {
   id: string;
   label: string;
@@ -26,6 +44,10 @@ export interface ArtworkForGrid {
   url: string;
   title: string | null;
   caption: string | null;
+  description?: string | null;
+  year?: number | null;
+  dimensions?: string | null;
+  ledger_id?: string | null;
   price_cents: number | null;
   is_poa: boolean;
   price_currency: "NZD" | "AUD";
@@ -360,20 +382,67 @@ function WorksLightbox({
             className="bg-white flex flex-col"
             style={{ width: 280, overflowY: "auto" }}
           >
-            <div className="flex-1 p-6 space-y-5">
+            <div className="flex-1 p-6 space-y-4">
 
-              {/* Edition tabs — only shown when multiple listed editions exist */}
-              {artwork.editions && artwork.editions.length > 1 && (
-                <div className="flex flex-wrap gap-1.5">
+              {/* ── Artwork context ─────────────────────────── */}
+              <div className="space-y-3">
+                {/* Title */}
+                <div>
+                  <h2 className="text-sm font-semibold leading-snug text-foreground">{title}</h2>
+                  {isHidden && (
+                    <span className="inline-block mt-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-stone-100 px-2 py-0.5 rounded">
+                      Hidden
+                    </span>
+                  )}
+                </div>
+
+                {/* Artist + meta line */}
+                {artwork.profile && (
+                  <div className="space-y-1">
+                    <Link href={profileHref} className="flex items-center gap-2 group">
+                      <ArtistAvatar avatarUrl={artwork.profile.avatar_url} displayName={displayName} size={20} />
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                        {displayName}
+                      </span>
+                    </Link>
+                    {(() => {
+                      const parts = [
+                        artwork.year ? String(artwork.year) : null,
+                        artwork.medium,
+                        artwork.dimensions,
+                      ].filter(Boolean);
+                      return parts.length > 0 ? (
+                        <p className="text-xs text-muted-foreground">{parts.join(" · ")}</p>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
+                {/* Description */}
+                {artwork.description && (
+                  <ExpandableDescription text={artwork.description} />
+                )}
+
+                {/* Location */}
+                {artwork.location_text && (ownerActions || artwork.show_location_publicly) && (
+                  <p className="text-xs text-muted-foreground">{artwork.location_text}</p>
+                )}
+              </div>
+
+              {/* ── Edition selector ────────────────────────── */}
+              {artwork.editions && artwork.editions.length >= 1 && (
+                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border">
                   {artwork.editions.map((ed, i) => (
                     <button
                       key={ed.id}
                       type="button"
-                      onClick={() => setEditionIndex(i)}
+                      onClick={() => artwork.editions!.length > 1 && setEditionIndex(i)}
                       className={`text-xs px-2.5 py-1 border rounded transition-colors ${
                         editionIndex === i
                           ? "border-black bg-black text-white"
-                          : "border-border hover:border-stone-400"
+                          : artwork.editions!.length > 1
+                            ? "border-border hover:border-stone-400 cursor-pointer"
+                            : "border-border cursor-default"
                       }`}
                     >
                       {ed.label}{ed.dimensions ? ` · ${ed.dimensions}` : ""}
@@ -382,68 +451,38 @@ function WorksLightbox({
                 </div>
               )}
 
-              {/* Title */}
-              <div>
-                <h2 className="text-sm font-semibold leading-snug text-foreground">{title}</h2>
-                {isHidden && (
-                  <span className="inline-block mt-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-stone-100 px-2 py-0.5 rounded">
-                    Hidden
-                  </span>
+              {/* ── Price + CTA ─────────────────────────────── */}
+              <div className="space-y-3 pt-1 border-t border-border">
+                {/* Price */}
+                {formattedPrice && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-sm font-medium text-foreground">{formattedPrice}</span>
+                  </div>
+                )}
+
+                {/* Buy / Enquire / Offer — shown to non-owners when artist ID is known */}
+                {!ownerActions && artwork.profile?.id && (
+                  <WorkDetailActionsWrapper
+                    artistId={artwork.profile.id}
+                    artistName={displayName}
+                    artworkId={artwork.id}
+                    workTitle={artwork.title ?? artwork.caption}
+                    workDescription={artwork.description ?? null}
+                    priceCents={priceCents}
+                    isPoa={isPoa}
+                    priceCurrency={priceCurrency}
+                    hidePrice={artwork.hide_price}
+                    listingMode={derivedListingMode}
+                    acquisitionMode={derivedAcquisitionMode}
+                    workImageUrl={artwork.url}
+                    year={artwork.year}
+                    medium={artwork.medium}
+                    dimensions={artwork.dimensions}
+                    editions={artwork.editions}
+                  />
                 )}
               </div>
-
-              {/* Artist */}
-              {artwork.profile && (
-                <Link
-                  href={profileHref}
-                  className="flex items-center gap-2 group"
-                >
-                  <ArtistAvatar
-                    avatarUrl={artwork.profile.avatar_url}
-                    displayName={displayName}
-                    size={24}
-                  />
-                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                    {displayName}
-                  </span>
-                </Link>
-              )}
-
-              {/* Medium */}
-              {artwork.medium && (
-                <p className="text-xs text-muted-foreground">{artwork.medium}</p>
-              )}
-
-              {/* Location */}
-              {artwork.location_text && (ownerActions || artwork.show_location_publicly) && (
-                <p className="text-xs text-muted-foreground">{artwork.location_text}</p>
-              )}
-
-              {/* Price */}
-              {formattedPrice && (
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-sm font-medium text-foreground">{formattedPrice}</span>
-                </div>
-              )}
-
-              {/* Buy / Enquire / Offer — shown to non-owners when artist ID is known */}
-              {!ownerActions && artwork.profile?.id && (
-                <WorkDetailActionsWrapper
-                  artistId={artwork.profile.id}
-                  artistName={displayName}
-                  artworkId={artwork.id}
-                  workTitle={artwork.title ?? artwork.caption}
-                  workDescription={artwork.caption}
-                  priceCents={priceCents}
-                  isPoa={isPoa}
-                  priceCurrency={priceCurrency}
-                  hidePrice={artwork.hide_price}
-                  listingMode={derivedListingMode}
-                  acquisitionMode={derivedAcquisitionMode}
-                  workImageUrl={artwork.url}
-                />
-              )}
 
               {/* Owner actions */}
               {ownerActions && (
@@ -657,6 +696,10 @@ function WorkDetailActionsWrapper({
   listingMode,
   acquisitionMode,
   workImageUrl,
+  year,
+  medium,
+  dimensions,
+  editions,
 }: {
   artistId: string;
   artistName: string;
@@ -670,6 +713,10 @@ function WorkDetailActionsWrapper({
   listingMode: "direct_sale" | "enquire_first";
   acquisitionMode?: "buy_now" | "make_offer" | "enquire_first";
   workImageUrl?: string | null;
+  year?: number | null;
+  medium?: string | null;
+  dimensions?: string | null;
+  editions?: EditionOption[];
 }) {
   const [Actions, setActions] = useState<React.ComponentType<{
     artistId: string; artistName: string; artworkId: string;
@@ -678,6 +725,9 @@ function WorkDetailActionsWrapper({
     hidePrice: boolean; listingMode: "direct_sale" | "enquire_first";
     acquisitionMode?: "buy_now" | "make_offer" | "enquire_first";
     workImageUrl?: string | null;
+    year?: number | null; medium?: string | null; dimensions?: string | null;
+    editions?: EditionOption[];
+    description?: string | null;
   }> | null>(null);
 
   useEffect(() => {
@@ -701,6 +751,11 @@ function WorkDetailActionsWrapper({
       listingMode={listingMode}
       acquisitionMode={acquisitionMode}
       workImageUrl={workImageUrl}
+      year={year}
+      medium={medium}
+      dimensions={dimensions}
+      editions={editions}
+      description={workDescription}
     />
   );
 }
@@ -1048,10 +1103,11 @@ export function WorksJustifiedGrid({
                 const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
                 const title = artwork.title ?? artwork.caption ?? "Untitled";
                 const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
-                const formattedPrice = !artwork.hide_price
+                const hasMultipleEditions = (artwork.editions?.length ?? 0) > 1;
+                const basePrice = !artwork.hide_price
                   ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
                   : null;
-                const hasMultipleEditions = (artwork.editions?.length ?? 0) > 1;
+                const formattedPrice = basePrice && hasMultipleEditions ? `From ${basePrice}` : basePrice;
                 const isSaved = savedLoaded && savedIds.has(artwork.id);
                 const isHovered = hoveredId === artwork.id;
                 const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;

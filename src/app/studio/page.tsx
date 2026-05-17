@@ -11,6 +11,7 @@ import { getArtistUpdates } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
 import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
 import { CampaignDeleteButton } from "@/components/campaigns/CampaignDeleteButton";
+import { CreateCampaignFromSelectionButton } from "@/components/campaigns/CreateCampaignFromSelectionButton";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
@@ -133,11 +134,12 @@ export default async function StudioPage({ searchParams }: PageProps) {
     needsWorks
       ? await Promise.all([
           supabase
-            .from("portfolio_images")
-            .select("id, url, caption, description, hide_from_archive, position, created_at, content_type, title, year, medium, dimensions, linked_artwork_id")
+            .from("artworks")
+            .select("id, url, caption, description, hide_from_archive, is_available, position, created_at, content_type, title, year, medium, dimensions")
             .eq("profile_id", user.id)
+            .eq("creator_id", user.id)
             .eq("is_available", false)
-            .is("linked_artwork_id", null)
+            .neq("source", "holder_uploaded")
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
@@ -152,16 +154,17 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .neq("current_owner_id", user.id)
             .order("created_at", { ascending: false }),
           supabase
-            .from("portfolio_images")
+            .from("artworks")
             .select("id, is_featured")
             .eq("profile_id", user.id)
+            .eq("creator_id", user.id)
             .eq("is_available", false)
-            .is("linked_artwork_id", null)
             .eq("is_featured", true),
           supabase
-            .from("portfolio_images")
+            .from("artworks")
             .select("id")
             .eq("profile_id", user.id)
+            .eq("creator_id", user.id)
             .eq("is_available", false)
             .then(async ({ data: pids }) => {
               const ids = (pids ?? []).map((r: { id: string }) => r.id);
@@ -214,14 +217,38 @@ export default async function StudioPage({ searchParams }: PageProps) {
     id: string; title: string; campaign_type: string; status: string;
     partner_name: string | null; campaign_start_date: string | null; campaign_end_date: string | null;
   }> = [];
+  let unlinkedSelections: Array<{
+    id: string;
+    opportunity_id: string;
+    opportunity: { id: string; title: string; type: string; organiser: string | null } | null;
+  }> = [];
   if (needsCampaigns) {
     try {
-      const { data } = await supabase
-        .from("campaigns")
-        .select("id, title, campaign_type, status, partner_name, campaign_start_date, campaign_end_date")
-        .eq("artist_profile_id", user.id)
-        .order("created_at", { ascending: false });
-      campaigns = (data ?? []) as typeof campaigns;
+      const [{ data: campaignsData }, { data: selectedApps }, { data: existingCampaigns }] = await Promise.all([
+        supabase
+          .from("campaigns")
+          .select("id, title, campaign_type, status, partner_name, campaign_start_date, campaign_end_date")
+          .eq("artist_profile_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("opportunity_applications")
+          .select("id, opportunity_id, opportunity:opportunity_id(id, title, type, organiser)")
+          .eq("artist_id", user.id)
+          .in("status", ["selected", "approved_pending_assets"]),
+        supabase
+          .from("campaigns")
+          .select("opportunity_id")
+          .eq("artist_profile_id", user.id)
+          .not("opportunity_id", "is", null),
+      ]);
+      campaigns = (campaignsData ?? []) as typeof campaigns;
+      const linkedOppIds = new Set(
+        ((existingCampaigns ?? []) as Array<{ opportunity_id: string | null }>)
+          .map(c => c.opportunity_id)
+          .filter(Boolean) as string[]
+      );
+      unlinkedSelections = ((selectedApps ?? []) as unknown as typeof unlinkedSelections)
+        .filter(a => a.opportunity_id && !linkedOppIds.has(a.opportunity_id));
     } catch {
       // Table may not exist yet — show empty state
     }
@@ -260,7 +287,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
       getSavedOpportunities(),
       supabase
         .from("opportunity_applications")
-        .select("*, opportunity:opportunities(id, slug, title, organiser, type, deadline, profile_id, profiles:profile_id(full_name, username))")
+        .select("*, opportunity:opportunities(id, slug, title, organiser, type, deadline, profile_id, pipeline_config, profiles:profile_id(full_name, username))")
         .eq("artist_id", user.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -477,6 +504,31 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 </Link>
               )}
             </div>
+
+            {/* Unlinked selection prompts */}
+            {profileComplete && unlinkedSelections.length > 0 && (
+              <div className="space-y-3">
+                {unlinkedSelections.map((sel) => (
+                  <div key={sel.id} className="flex items-center justify-between gap-4 border border-emerald-200 bg-emerald-50 px-5 py-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="text-sm font-medium text-emerald-900">
+                        You&apos;ve been selected for{" "}
+                        <span className="font-semibold">{sel.opportunity?.title ?? "an opportunity"}</span>.
+                      </p>
+                      <p className="text-xs text-emerald-700">Create a campaign page to share your work with the public.</p>
+                    </div>
+                    <div className="shrink-0">
+                      <CreateCampaignFromSelectionButton
+                        applicationId={sel.id}
+                        opportunityId={sel.opportunity_id}
+                        opportunityTitle={sel.opportunity?.title ?? ""}
+                        opportunityType={sel.opportunity?.type ?? "other"}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {!profileComplete ? (
               <SectionLockGate featureName="Campaigns" missingFields={missingFields} />

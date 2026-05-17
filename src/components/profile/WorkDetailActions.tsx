@@ -5,6 +5,7 @@ import { EnquireButton } from "@/components/profile/EnquireButton";
 import { MakeOfferModal } from "@/components/profile/MakeOfferModal";
 import { BuyWorkButton } from "@/components/profile/BuyWorkButton";
 import { formatPrice } from "@/lib/format-price";
+import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
 
 interface Props {
   artistId: string;
@@ -24,6 +25,8 @@ interface Props {
   medium?: string | null;
   dimensions?: string | null;
   edition?: string | null;
+  editions?: EditionOption[];
+  description?: string | null;
 }
 
 export function WorkDetailActions({
@@ -43,6 +46,8 @@ export function WorkDetailActions({
   medium,
   dimensions,
   edition,
+  editions,
+  description,
 }: Props) {
   const [offerOpen, setOfferOpen] = useState(false);
 
@@ -81,6 +86,8 @@ export function WorkDetailActions({
               medium={medium}
               dimensions={dimensions}
               edition={edition}
+              editions={editions}
+              description={description}
               artistName={artistName}
             />
           )}
@@ -145,6 +152,8 @@ export function WorkDetailActions({
               medium={medium}
               dimensions={dimensions}
               edition={edition}
+              editions={editions}
+              description={description}
               artistName={artistName}
             />
           ) : (

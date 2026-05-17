@@ -6,13 +6,19 @@ import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import { createRealtimeClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
-import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork } from "@/types/database";
+import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, PipelineConfig } from "@/types/database";
 import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
 import { UploadHighResButton } from "./UploadHighResButton";
+
+const DocumentationSubmitter = dynamic(
+  () => import("@/components/studio/DocumentationSubmitter").then((m) => m.DocumentationSubmitter),
+  { ssr: false }
+);
 
 const ApplyModal = dynamic(() => import("@/components/opportunities/ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 
 interface ApplicationWithOpportunity extends OpportunityApplication {
+  documentation?: Record<string, string> | null;
   opportunity: {
     id: string;
     slug: string | null;
@@ -21,6 +27,7 @@ interface ApplicationWithOpportunity extends OpportunityApplication {
     type: string;
     deadline: string | null;
     profile_id: string | null;
+    pipeline_config: PipelineConfig | null;
     profiles: { full_name: string | null; username: string } | null;
   } | null;
 }
@@ -257,6 +264,20 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                 {app.status === "approved_pending_assets" && (
                   <UploadHighResButton applicationId={app.id} />
                 )}
+
+                {/* Documentation submission — shown when partner requires it and app is selected/approved */}
+                {(app.status === "selected" || app.status === "approved_pending_assets" || app.status === "production_ready") &&
+                  opp?.pipeline_config?.post_selection?.requires_documentation &&
+                  (opp.pipeline_config.post_selection.doc_fields?.length ?? 0) > 0 && (
+                    <div className="mt-3 pt-3 border-t border-stone-100 space-y-2">
+                      <p className="text-xs font-medium text-stone-700">Documentation required</p>
+                      <DocumentationSubmitter
+                        applicationId={app.id}
+                        fields={opp.pipeline_config.post_selection.doc_fields}
+                        initial={(app.documentation as Record<string, string>) ?? {}}
+                      />
+                    </div>
+                  )}
               </div>
             );
           })}

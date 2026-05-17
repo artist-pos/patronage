@@ -85,7 +85,7 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
       .update({ is_primary: true })
       .eq("id", id);
     setImages(prev => prev.map(img => ({ ...img, is_primary: img.id === id })));
-    // Cascade new primary URL to portfolio_images.url so WorksTable thumbnail updates
+    // Cascade new primary URL to artworks.url so WorksTable thumbnail updates
     if (target) setPrimaryWorkImageUrl(workId, target.url);
     router.refresh();
   }

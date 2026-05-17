@@ -67,7 +67,6 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
   const isLightbox =
     (ct === "image" || ct === "document") &&
     !img.description &&
-    !img.price &&
     !img.audio_url &&
     !img.video_url &&
     !img.embed_url &&
@@ -269,9 +268,6 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
             )}
             {img.caption && (
               <p className="text-sm font-bold leading-snug">{img.caption}</p>
-            )}
-            {img.price && (
-              <p className="text-xs text-muted-foreground">{img.price}</p>
             )}
             {img.description && (
               <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">

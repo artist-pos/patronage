@@ -165,11 +165,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     // Cheap count for portfolio badge when full images not loaded
     isArtistProfile
       ? supabase
-          .from("portfolio_images")
+          .from("artworks")
           .select("id", { count: "exact", head: true })
           .eq("profile_id", profile.id)
-          .eq("is_available", false)
+          .eq("creator_id", profile.id)
           .eq("current_owner_id", profile.id)
+          .eq("hide_from_archive", false)
       : Promise.resolve({ count: 0 }),
     // Cheap check for "Collected" badge
     isArtistProfile
@@ -255,7 +256,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const heroImages =
     heroWorkIds.length > 0
       ? await supabase
-          .from("portfolio_images")
+          .from("artworks")
           .select("id, url")
           .in("id", heroWorkIds)
           .then(({ data }) => data ?? [])
@@ -286,32 +287,35 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsAchievements     = isArtistProfile && (tab === "overview" || tab === "cv");
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
+  const needsArtistCollection = isArtistProfile && tab === "work";
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks] = await Promise.all([
     needsPortfolio
-      ? (() => {
-          const q = supabase
-            .from("portfolio_images")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("is_available", false)
-            .eq("current_owner_id", profile.id)
-            .is("linked_artwork_id", null);
-          return (!isOwner ? q.eq("hide_from_archive", false) : q)
-            .order("position", { ascending: true })
-            .then(({ data }) => data ?? []);
-        })()
+      ? supabase
+          .from("artworks")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .eq("creator_id", profile.id)
+          .eq("current_owner_id", profile.id)
+          .eq("hide_from_archive", false)
+          .order("position", { ascending: true })
+          .then(({ data }) => data ?? [])
       : Promise.resolve([]),
     needsUpdates ? getArtistUpdates(profile.id) : Promise.resolve([]),
     needsProjects ? getArtistProjects(profile.id) : Promise.resolve([]),
     needsSold
       ? supabase
           .from("artworks")
-          .select("*, owner_profile:current_owner_id(username, full_name)")
+          .select("*, owner_profile:current_owner_id(username, full_name), editions(id, type)")
           .eq("creator_id", profile.id)
           .neq("current_owner_id", profile.id)
           .order("created_at", { ascending: false })
-          .then(({ data }) => data ?? [])
+          .then(({ data }) => (data ?? []).filter((w) => {
+            // Only show originals in the artist's sold section.
+            // Print editions (limited/open/product) appear in patron collections instead.
+            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
+            return eds.length === 0 || eds.every(e => e.type === "original");
+          }))
       : Promise.resolve([]),
     needsCreative
       ? supabase
@@ -339,7 +343,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       : Promise.resolve([] as SupportTier[]),
     needsCollaborations
       ? supabase
-          .from("portfolio_images")
+          .from("artworks")
           .select("id, url, caption, creator_profile:profile_id(username, full_name)")
           .contains("collaborator_ids", [profile.id])
           .eq("is_available", false)
@@ -360,24 +364,35 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .maybeSingle()
           .then(({ data }) => data as { slug: string; title: string; image_url: string | null; published_at: string | null } | null)
       : Promise.resolve(null),
-    // Editions for available works — reverse-join through portfolio_images
+    // Editions for available works — direct join on work_id
     isArtistProfile && (availableWorks as Artwork[]).length > 0
       ? supabase
-          .from("portfolio_images")
-          .select("linked_artwork_id, editions(id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions)")
-          .in("linked_artwork_id", (availableWorks as Artwork[]).map((w) => w.id))
+          .from("editions")
+          .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
+          .in("work_id", (availableWorks as Artwork[]).map((w) => w.id))
           .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
+    // Works in this artist's collection (queried via collection_membership.is_public)
+    needsArtistCollection
+      ? supabase
+          .from("collection_membership")
+          .select("position, artwork:artwork_id(*, creator_profile:creator_id(username, full_name, avatar_url))")
+          .eq("holder_id", profile.id)
+          .eq("is_public", true)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []).map((m) => m.artwork).filter(Boolean))
       : Promise.resolve([]),
   ]);
 
   // Build map: artworks.id → listed editions sorted by sort_order
   const artworkEditionsMap: Record<string, EditionOption[]> = {};
-  for (const pw of artworkEditionsData as Array<{ linked_artwork_id: string | null; editions: unknown }>) {
-    if (pw.linked_artwork_id && Array.isArray(pw.editions)) {
-      artworkEditionsMap[pw.linked_artwork_id] = (pw.editions as EditionOption[])
-        .filter((e) => e.listed !== false)
-        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    }
+  for (const ed of artworkEditionsData as Array<{ work_id: string; id: string; listed: boolean | null; sort_order: number | null } & EditionOption>) {
+    if (ed.listed === false) continue;
+    if (!artworkEditionsMap[ed.work_id]) artworkEditionsMap[ed.work_id] = [];
+    artworkEditionsMap[ed.work_id].push(ed as EditionOption);
+  }
+  for (const key of Object.keys(artworkEditionsMap)) {
+    artworkEditionsMap[key].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }
 
   // Attach editions to each available work
@@ -706,6 +721,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   portfolioImages={images}
                   availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
+                  collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}

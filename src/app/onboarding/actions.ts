@@ -23,16 +23,12 @@ async function maybeSetVerifiedAt(
 
   if (!bio || !avatarUrl || disciplines.length === 0) return;
 
-  const { count: portfolioCount } = await supabase
-    .from("portfolio_images")
-    .select("*", { count: "exact", head: true })
-    .eq("profile_id", userId);
   const { count: artworkCount } = await supabase
     .from("artworks")
     .select("*", { count: "exact", head: true })
     .eq("profile_id", userId);
 
-  if ((portfolioCount ?? 0) + (artworkCount ?? 0) >= 3) {
+  if ((artworkCount ?? 0) >= 3) {
     await supabase
       .from("profiles")
       .update({ verified_at: new Date().toISOString() })

@@ -226,7 +226,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       return;
     }
     supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("*")
       .eq("profile_id", profileId)
       .eq("is_available", false)
@@ -258,8 +258,8 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
           const orientation = detectOrientation(width, height);
 
           const { data: row } = await supabase
-            .from("portfolio_images")
-            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, orientation, natural_width: width, natural_height: height, position: images.length + uploaded.length })
+            .from("artworks")
+            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, orientation, natural_width: width, natural_height: height, position: images.length + uploaded.length, is_available: false, source: 'self_registered' })
             .select()
             .single();
           if (row) uploaded.push(row as PortfolioImage);
@@ -308,17 +308,17 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
     startTransition(async () => {
       const path = img.url.split("/portfolio/")[1];
       if (path) await supabase.storage.from("portfolio").remove([path]);
-      await supabase.from("portfolio_images").delete().eq("id", img.id);
+      await supabase.from("artworks").delete().eq("id", img.id);
       setImages((prev) => prev.filter((i) => i.id !== img.id));
     });
   }
 
   async function handleCaptionBlur(id: string, caption: string | null) {
-    await supabase.from("portfolio_images").update({ caption }).eq("id", id);
+    await supabase.from("artworks").update({ caption }).eq("id", id);
   }
 
   async function handleDescriptionBlur(id: string, description: string | null) {
-    await supabase.from("portfolio_images").update({ description }).eq("id", id);
+    await supabase.from("artworks").update({ description }).eq("id", id);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -340,7 +340,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
     setSaving(true);
     await Promise.all(
       images.map((img, i) =>
-        supabase.from("portfolio_images").update({ position: i }).eq("id", img.id)
+        supabase.from("artworks").update({ position: i }).eq("id", img.id)
       )
     );
     setSaving(false);

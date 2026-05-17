@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles";
 import { WorkDetailViewer } from "@/components/profile/WorkDetailViewer";
-import { WorkDetailActions } from "@/components/profile/WorkDetailActions";
+import { AvailableWorkPill } from "@/components/profile/AvailableWorkPill";
 import { WorkEngagementTracker } from "@/components/profile/WorkEngagementTracker";
 import { ProjectThread } from "@/components/works/ProjectThread";
 import type { WorkImage } from "@/types/database";
@@ -15,6 +15,20 @@ interface Props {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type WorkRow = {
+  id: string; url: string | null; caption: string | null; description: string | null;
+  title: string | null; year: number | null; medium: string | null;
+  dimensions: string | null; hide_from_archive: boolean; content_type: string;
+  audio_url: string | null; video_url: string | null;
+  text_content: string | null; embed_url: string | null; embed_provider: string | null;
+  price_cents: number | null; is_poa: boolean | null; price_currency: string | null;
+  is_available: boolean; hide_available: boolean | null; hide_price: boolean | null;
+  current_owner_id: string | null; creator_id: string; listing_mode: string | null;
+  acquisition_mode: string | null; ledger_id: string | null; slug: string | null;
+};
+
+const WORK_SELECT = "id, url, caption, description, title, year, medium, dimensions, hide_from_archive, content_type, audio_url, video_url, text_content, embed_url, embed_provider, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, current_owner_id, creator_id, listing_mode, acquisition_mode, ledger_id, slug";
+
 async function getWorkData(username: string, slug: string) {
   const supabase = await createClient();
   const profile = await getProfile(username);
@@ -22,87 +36,85 @@ async function getWorkData(username: string, slug: string) {
 
   const isUUID = UUID_RE.test(slug);
 
-  type WorkRow = {
-    id: string; url: string; caption: string | null; description: string | null;
-    title: string | null; year: number | null; medium: string | null;
-    dimensions: string | null; linked_artwork_id: string | null;
-    hide_from_archive: boolean; content_type: string;
-    audio_url: string | null; video_url: string | null;
-    text_content: string | null; embed_url: string | null; embed_provider: string | null;
-  };
-
-  const WORK_SELECT = "id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, hide_from_archive, content_type, audio_url, video_url, text_content, embed_url, embed_provider";
-
   let work: WorkRow | null = null;
 
   if (!isUUID) {
-    const { data } = await supabase.from("portfolio_images").select(WORK_SELECT)
+    const { data } = await supabase.from("artworks").select(WORK_SELECT)
       .eq("slug", slug).eq("profile_id", profile.id).maybeSingle();
     work = data;
   }
   if (!work && isUUID) {
-    const { data } = await supabase.from("portfolio_images").select(WORK_SELECT)
+    const { data } = await supabase.from("artworks").select(WORK_SELECT)
       .eq("id", slug).eq("profile_id", profile.id).maybeSingle();
-    work = data;
-  }
-  if (!work && isUUID) {
-    const { data } = await supabase.from("portfolio_images").select(WORK_SELECT)
-      .eq("linked_artwork_id", slug).eq("profile_id", profile.id).maybeSingle();
     work = data;
   }
 
   if (!work) return null;
 
-  const [galleryResult, artworkResult, authResult] = await Promise.all([
-    supabase.from("work_images").select("*").eq("portfolio_image_id", work.id).order("position", { ascending: true }),
-    work.linked_artwork_id
-      ? supabase.from("artworks")
-          .select("id, url, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, hide_from_archive, current_owner_id, creator_id, year, medium, dimensions, edition, listing_mode, ledger_id")
-          .eq("id", work.linked_artwork_id).maybeSingle()
-      : Promise.resolve({ data: null }),
+  const [galleryResult, authResult, editionsResult] = await Promise.all([
+    supabase.from("work_images").select("*").eq("artwork_id", work.id).order("position", { ascending: true }),
     supabase.auth.getUser(),
+    supabase.from("editions").select("id, label, type, price_cents, currency, poa, listing_mode, listed, dimensions, sort_order").eq("work_id", work.id).eq("listed", true).order("sort_order", { ascending: true }),
   ]);
 
-  const artworkId = artworkResult.data?.id ?? null;
-
-  // Fetch project thread and selected provenance entry concurrently (both independent)
-  const [projectResult, selectedEntryResult] = artworkId
-    ? await Promise.all([
-        supabase
-          .from("projects")
-          .select("id, title, description")
-          .eq("artwork_id", artworkId)
-          .maybeSingle(),
-        supabase
-          .from("artwork_provenance_ledger")
-          .select("entry_type")
-          .eq("artwork_id", artworkId)
-          .eq("entry_type", "selected")
-          .maybeSingle(),
-      ])
-    : [{ data: null }, { data: null }];
+  const [projectResult, selectedEntryResult] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, title, description, opportunity_id, opportunity:opportunity_id(title, organiser, type)")
+      .eq("artwork_id", work.id)
+      .maybeSingle(),
+    supabase
+      .from("artwork_provenance_ledger")
+      .select("entry_type")
+      .eq("artwork_id", work.id)
+      .eq("entry_type", "selected")
+      .maybeSingle(),
+  ]);
 
   const project = projectResult.data ?? null;
   const selectedEntry = selectedEntryResult.data ?? null;
 
-  // Updates depend on project.id — fetch after project resolves
-  const updates = project
-    ? ((await supabase
-        .from("project_updates")
-        .select("id, caption, image_url, created_at")
-        .eq("project_id", project.id)
-        .order("created_at", { ascending: true })
-      ).data ?? [])
-    : [];
+  const [updatesResult, campaignResult] = await Promise.all([
+    project
+      ? supabase
+          .from("project_updates")
+          .select("id, title, caption, update_tag, image_url, created_at")
+          .eq("project_id", (project as { id: string }).id)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("campaigns")
+      .select("id, title, campaign_type, slug, landing_page_slug, status, updated_at")
+      .eq("hero_work_id", work.id)
+      .eq("status", "live")
+      .maybeSingle(),
+  ]);
+
+  const updates = updatesResult.data ?? [];
+  const linkedCampaign = campaignResult.data ?? null;
+
+  const editions = (editionsResult.data ?? []).map(e => ({
+    id: e.id,
+    label: e.label,
+    type: e.type,
+    price_cents: e.price_cents ?? null,
+    currency: (e.currency ?? "NZD") as string,
+    poa: e.poa ?? false,
+    listing_mode: e.listing_mode ?? "enquire",
+    listed: e.listed ?? false,
+    dimensions: e.dimensions ?? null,
+    sort_order: e.sort_order ?? 0,
+  }));
 
   return {
     profile,
     work,
     galleryImages: (galleryResult.data ?? []) as WorkImage[],
-    artwork: artworkResult.data ?? null,
+    editions,
     project,
     updates,
     selectedEntry,
+    linkedCampaign,
     viewer: authResult.data.user,
   };
 }
@@ -126,7 +138,7 @@ export default async function WorkDetailPage({ params }: Props) {
   const result = await getWorkData(username, slug);
   if (!result) notFound();
 
-  const { profile, work, galleryImages, artwork, project, updates, selectedEntry, viewer } = result;
+  const { profile, work, galleryImages, editions, project, updates, selectedEntry, linkedCampaign, viewer } = result;
   const isOwner = viewer?.id === profile.id;
 
   if (work.hide_from_archive && !isOwner) notFound();
@@ -134,19 +146,15 @@ export default async function WorkDetailPage({ params }: Props) {
   const artistName = profile.full_name ?? profile.username;
   const displayTitle = work.title ?? work.caption ?? "Untitled";
 
-  const isAvailable = !!artwork && artwork.is_available && !artwork.hide_available;
+  const isAvailable = work.is_available && !work.hide_available;
   const isSold =
-    !!artwork && !artwork.is_available &&
-    !!artwork.current_owner_id && artwork.current_owner_id !== artwork.creator_id;
-
-  const artworkPriceCents = artwork?.price_cents ?? null;
-  const artworkIsPoa = artwork?.is_poa ?? false;
+    !work.is_available &&
+    !!work.current_owner_id && work.current_owner_id !== work.creator_id;
 
   const metaLine = [
     work.year ? String(work.year) : null,
     work.medium,
     work.dimensions,
-    artwork?.edition ? `Ed. ${artwork.edition}` : null,
   ].filter(Boolean).join(" · ");
 
   return (
@@ -201,20 +209,45 @@ export default async function WorkDetailPage({ params }: Props) {
           </div>
         )}
         {(work.content_type === "image" || (!work.content_type) || (work.content_type === "audio" && !work.audio_url)) && (
-          <WorkDetailViewer primaryUrl={work.url} galleryImages={galleryImages} caption={displayTitle} />
+          <WorkDetailViewer primaryUrl={work.url ?? ""} galleryImages={galleryImages} caption={displayTitle} />
         )}
 
         {/* Right — sticky sidebar */}
         <div className="md:sticky md:top-6 space-y-6">
           {/* Title + meta header */}
-          <div className="space-y-2 pb-5 border-b border-border">
-            <h1 className="text-2xl font-bold leading-snug">{displayTitle}</h1>
+          <div className="pb-5 border-b border-border">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h1 className="text-2xl font-bold leading-snug">{displayTitle}</h1>
+              {isAvailable && (
+                <div className="shrink-0 pt-0.5">
+                  <AvailableWorkPill
+                    artistId={profile.id}
+                    artistName={artistName}
+                    artworkId={work.id}
+                    workTitle={work.title ?? work.caption}
+                    workDescription={work.description}
+                    priceCents={work.price_cents ?? null}
+                    isPoa={work.is_poa ?? false}
+                    priceCurrency={(work.price_currency as "NZD" | "AUD") ?? "NZD"}
+                    hidePrice={work.hide_price ?? false}
+                    listingMode={(work.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first"}
+                    acquisitionMode={(work.acquisition_mode as "buy_now" | "make_offer" | "enquire_first") ?? "enquire_first"}
+                    workImageUrl={work.url}
+                    year={work.year}
+                    medium={work.medium}
+                    dimensions={work.dimensions}
+                    metaLine={metaLine || null}
+                    editions={editions}
+                  />
+                </div>
+              )}
+            </div>
             {metaLine && (
               <p className="text-sm text-muted-foreground font-normal">{metaLine}</p>
             )}
           </div>
 
-          {/* Tag row — medium + opportunity type tags */}
+          {/* Tag row */}
           {(work.medium || selectedEntry) && (
             <div className="flex flex-wrap gap-1.5">
               {work.medium && (
@@ -234,38 +267,9 @@ export default async function WorkDetailPage({ params }: Props) {
             </div>
           )}
 
-          {isAvailable && !isOwner && (
-            <WorkDetailActions
-              artistId={profile.id}
-              artistName={artistName}
-              artworkId={artwork!.id}
-              workTitle={work.title ?? work.caption}
-              workDescription={work.description}
-              priceCents={artworkPriceCents}
-              isPoa={artworkIsPoa}
-              priceCurrency={(artwork!.price_currency as "NZD" | "AUD") ?? "NZD"}
-              hidePrice={artwork!.hide_price}
-              listingMode={(artwork!.listing_mode as "direct_sale" | "enquire_first") ?? "enquire_first"}
-              acquisitionMode="enquire_first"
-              workImageUrl={artwork!.url ?? work.url}
-              year={work.year}
-              medium={work.medium}
-              dimensions={work.dimensions}
-              edition={artwork!.edition}
-            />
-          )}
-
-          {isAvailable && isOwner && (
+          {isSold && !isOwner && (
             <div className="py-3 border-t border-border border-b">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                {artwork?.hide_price
-                  ? "Listed for sale"
-                  : artworkIsPoa
-                    ? "Listed for sale · Price on application"
-                    : artworkPriceCents
-                      ? `Listed for sale · ${artwork!.price_currency} ${(artworkPriceCents / 100).toLocaleString("en-NZ")}`
-                      : "Listed for sale"}
-              </p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Sold</p>
             </div>
           )}
 
@@ -282,38 +286,11 @@ export default async function WorkDetailPage({ params }: Props) {
             </p>
           )}
 
-          {/* Project thread — only shown when a project is linked to this artwork */}
-          {project && (
-            <ProjectThread
-              project={{
-                title: (project as unknown as { title: string }).title,
-                opportunity_id: (project as unknown as { opportunity_id: string | null }).opportunity_id,
-                opportunity: (() => {
-                  const opps = (project as unknown as { opportunities?: { title: string; type: string }[] | { title: string; type: string } | null }).opportunities;
-                  if (!opps) return null;
-                  return Array.isArray(opps) ? (opps[0] ?? null) : opps;
-                })(),
-              }}
-              updates={(updates as Array<{
-                id: string;
-                title: string | null;
-                caption: string | null;
-                update_tag: string;
-                image_url: string | null;
-                created_at: string;
-              }>).map(u => ({
-                ...u,
-                update_tag: (u.update_tag ?? "update") as "concept" | "update" | "milestone" | "complete",
-              }))}
-            />
-          )}
-
-          {/* Provenance row — always visible when artwork has a ledger ID */}
-          {artwork?.ledger_id && (
+          {work.ledger_id && (
             <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-mono">{artwork.ledger_id}</span>
+              <span className="font-mono">{work.ledger_id}</span>
               <Link
-                href={`/provenance/${artwork.ledger_id}`}
+                href={`/provenance/${work.ledger_id}`}
                 className="hover:text-foreground transition-colors"
               >
                 Recorded on Patronage →
@@ -322,6 +299,37 @@ export default async function WorkDetailPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* ── Project Thread — full-width below the main grid ── */}
+      {project && updates.length >= 0 && (
+        <div className="mt-10">
+          <ProjectThread
+            project={{
+              title: (project as unknown as { title: string }).title,
+              opportunity_id: (project as unknown as { opportunity_id: string | null }).opportunity_id,
+              opportunity: (project as unknown as { opportunity?: { title: string; organiser?: string | null; type: string } | null }).opportunity ?? null,
+            }}
+            updates={(updates as Array<{
+              id: string;
+              title: string | null;
+              caption: string | null;
+              update_tag: string;
+              image_url: string | null;
+              created_at: string;
+            }>).map(u => ({
+              ...u,
+              update_tag: (u.update_tag ?? "update") as "concept" | "update" | "milestone" | "complete",
+            }))}
+            campaignOutcome={linkedCampaign ? {
+              title: (linkedCampaign as unknown as { title: string }).title,
+              campaignType: (linkedCampaign as unknown as { campaign_type: string }).campaign_type,
+              slug: (linkedCampaign as unknown as { slug: string; landing_page_slug: string | null }).landing_page_slug ?? (linkedCampaign as unknown as { slug: string }).slug,
+              artistUsername: profile.username,
+              liveDate: (linkedCampaign as unknown as { updated_at: string }).updated_at,
+            } : null}
+          />
+        </div>
+      )}
     </div>
   );
 }

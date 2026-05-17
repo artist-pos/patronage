@@ -240,7 +240,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
       // Get current max position
       const { data: existing } = await supabase
-        .from("portfolio_images")
+        .from("artworks")
         .select("position")
         .eq("profile_id", profileId)
         .eq("is_available", false)

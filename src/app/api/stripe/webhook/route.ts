@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { verifyWebhook } from "@/lib/stripe";
 import { handleResaleCompleted } from "@/lib/commerce/resale-handler";
-import { handlePrimarySaleCompleted } from "@/lib/commerce/primary-sale-handler";
+import { handlePrimarySaleCompleted, handlePrimaryPaymentIntentSucceeded } from "@/lib/commerce/primary-sale-handler";
 import { handlePipelineEntryCompleted } from "@/lib/commerce/pipeline-handler";
 import { handleFeaturedListingCompleted } from "@/lib/commerce/featured-handler";
 import {
@@ -81,6 +81,13 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.deleted":
         await handleSupportSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
+      case "payment_intent.succeeded": {
+        const intent = event.data.object as Stripe.PaymentIntent;
+        if (intent.metadata?.purpose === "primary_sale") {
+          await handlePrimaryPaymentIntentSucceeded(intent);
+        }
+        break;
+      }
     }
   } catch (err) {
     console.error("[stripe webhook] handler error", err);

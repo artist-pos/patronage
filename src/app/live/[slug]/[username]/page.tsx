@@ -71,10 +71,10 @@ export default async function LiveStorefrontPage({ params, searchParams }: PageP
     ...(cfg.selected_work_ids ?? []).filter(id => id !== cfg.hero_work_id),
   ];
 
-  // Fetch portfolio works referenced in the campaign config
+  // Fetch works referenced in the campaign config
   const works = allWorkIds.length > 0
     ? await admin
-        .from("portfolio_images")
+        .from("artworks")
         .select("id, url, caption, title, content_type, slug")
         .in("id", allWorkIds)
         .then(({ data }) => data ?? [])

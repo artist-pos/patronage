@@ -344,6 +344,7 @@ export function CampaignConfigPanel({
 
   async function handleSaveDetails() {
     setSaving(true);
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const result = await updateCampaignConfig(campaign.id, {
       title: title.trim() || campaign.title,
       campaign_start_date: startDate || null,
@@ -353,6 +354,7 @@ export function CampaignConfigPanel({
       venue_contact_email: venueContactEmail.trim() || null,
       venue_contact_phone: venueContactPhone.trim() || null,
       landing_page_config: buildConfig(),
+      hero_work_id: heroWorkId && UUID_RE.test(heroWorkId) ? heroWorkId : null,
     });
     setSaving(false);
     if (result.error) showToast(`Error: ${result.error}`);

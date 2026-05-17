@@ -275,14 +275,34 @@ export async function togglePublic(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { error } = await supabase
+  // Get the artwork_id so we can sync collection_visible
+  const { data: membership, error: fetchError } = await supabase
     .from("collection_membership")
-    .update({ is_public: isPublic })
+    .select("id, artwork_id")
     .eq("id", membershipId)
-    .eq("holder_id", user.id);
+    .eq("holder_id", user.id)
+    .maybeSingle();
 
-  if (error) return { error: error.message };
+  if (fetchError || !membership) return { error: fetchError?.message ?? "Not authorised." };
+
+  const admin = createAdminClient();
+  const [membershipResult, artworkResult] = await Promise.all([
+    supabase
+      .from("collection_membership")
+      .update({ is_public: isPublic })
+      .eq("id", membershipId)
+      .eq("holder_id", user.id),
+    admin
+      .from("artworks")
+      .update({ collection_visible: isPublic })
+      .eq("id", membership.artwork_id),
+  ]);
+
+  if (membershipResult.error) return { error: membershipResult.error.message };
+  if (artworkResult.error) return { error: artworkResult.error.message };
+
   revalidatePath("/dashboard/collection");
+  revalidatePath("/studio/collection");
   await revalidateHolderPublicSurfaces(user.id);
   return {};
 }

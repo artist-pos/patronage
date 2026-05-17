@@ -113,6 +113,7 @@ export async function updateCampaignConfig(
     venue_contact_phone?: string | null;
     production_specs?: string | null;
     landing_page_config?: Record<string, unknown>;
+    hero_work_id?: string | null;
     status?: string;
     production_status?: string;
   }
@@ -339,4 +340,43 @@ export async function deleteCampaign(campaignId: string): Promise<{ error?: stri
 
   revalidatePath("/studio?section=campaigns");
   return {};
+}
+
+/**
+ * Artist-initiated campaign creation from a pipeline selection.
+ * Returns the new campaign's id so the caller can redirect to /studio/campaigns/[id].
+ */
+export async function createCampaignFromSelection(opts: {
+  applicationId: string;
+  opportunityId: string;
+  opportunityTitle: string;
+  opportunityType: string;
+}): Promise<{ campaignId?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, username")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
+    return { error: "Not authorised" };
+  }
+
+  const result = await createCampaignForSelection({
+    artistProfileId: user.id,
+    artistUsername: profile.username,
+    opportunityId: opts.opportunityId,
+    opportunityTitle: opts.opportunityTitle,
+    opportunityType: opts.opportunityType,
+    applicationId: opts.applicationId,
+  });
+
+  if (result.campaignId) {
+    revalidatePath("/studio?section=campaigns");
+  }
+  return result;
 }

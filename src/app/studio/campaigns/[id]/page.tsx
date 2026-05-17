@@ -37,7 +37,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         location_address, location_lat, location_lng,
         venue_contact_name, venue_contact_email, venue_contact_phone,
         surface_type, production_specs, fee_amount,
-        qr_code_url, landing_page_slug, landing_page_config,
+        qr_code_url, landing_page_slug, landing_page_config, hero_work_id,
         created_at, updated_at,
         opportunity_id, application_id
       `)
@@ -50,7 +50,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       .eq("campaign_id", id)
       .order("created_at", { ascending: false }),
     supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("id, url, caption, title, content_type")
       .eq("profile_id", user.id)
       .order("position", { ascending: true })
@@ -79,7 +79,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     venue_contact_name: string | null; venue_contact_email: string | null; venue_contact_phone: string | null;
     surface_type: string | null; production_specs: string | null; fee_amount: number | null;
     qr_code_url: string | null; landing_page_slug: string | null;
-    landing_page_config: Record<string, unknown>;
+    landing_page_config: Record<string, unknown>; hero_work_id: string | null;
     created_at: string; updated_at: string;
     opportunity_id: string | null; application_id: string | null;
   };

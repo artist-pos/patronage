@@ -123,29 +123,7 @@ export async function createAndTransferWork(data: {
 
   const admin = createAdminClient();
 
-  // 1. Create portfolio_images record
-  const { data: portfolioImage, error: piError } = await admin
-    .from("portfolio_images")
-    .insert({
-      profile_id: user.id,
-      creator_id: user.id,
-      current_owner_id: user.id,
-      url: data.url,
-      caption: data.title,
-      title: data.title,
-      year: data.year,
-      medium: data.medium,
-      dimensions: data.dimensions,
-      description: data.description,
-      is_available: false,
-      position: 9999,
-    })
-    .select("id")
-    .single();
-
-  if (piError || !portfolioImage) return { error: piError?.message ?? "Failed to create work." };
-
-  // 2. Create artworks record (is_available: true so initiateDirectTransfer can pick it up)
+  // 1. Create artworks record (is_available: true so initiateDirectTransfer can pick it up)
   const { data: artwork, error: artworkError } = await admin
     .from("artworks")
     .insert({
@@ -167,25 +145,19 @@ export async function createAndTransferWork(data: {
       is_available: true,
       hide_available: false,
       hide_price: false,
-      price: null,
       price_currency: data.originalEdition.currency,
       position: 0,
+      source: 'self_registered',
     })
     .select("id")
     .single();
 
   if (artworkError || !artwork) return { error: artworkError?.message ?? "Failed to create artwork record." };
 
-  // 3. Link portfolio_images → artworks
-  await admin
-    .from("portfolio_images")
-    .update({ linked_artwork_id: artwork.id })
-    .eq("id", portfolioImage.id);
-
-  // 4. Create editions
+  // 2. Create editions
   const editionRows = [
     {
-      work_id: portfolioImage.id,
+      work_id: artwork.id,
       type: "original" as const,
       label: "Original",
       price_cents: data.originalEdition.poa ? null : data.originalEdition.price_cents,
@@ -196,7 +168,7 @@ export async function createAndTransferWork(data: {
       sort_order: 0,
     },
     ...data.extraEditions.map((e, i) => ({
-      work_id: portfolioImage.id,
+      work_id: artwork.id,
       type: e.type,
       label: e.label,
       price_cents: e.poa ? null : e.price_cents,
@@ -220,5 +192,5 @@ export async function createAndTransferWork(data: {
     data.notes?.trim() || null,
   );
 
-  return { ...result, workId: portfolioImage.id };
+  return { ...result, workId: artwork.id };
 }

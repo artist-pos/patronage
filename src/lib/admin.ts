@@ -170,7 +170,7 @@ export async function getArtistQualityMetrics(): Promise<ArtistQuality> {
     .select(`
       id, avatar_url, featured_image_url, bio, disciplines, country,
       career_stage, website_url, instagram_handle, cv_url, created_at, verified_at,
-      portfolio_images(count), artworks(count)
+      artworks(count)
     `)
     .in("role", ["artist", "owner"]);
 
@@ -186,8 +186,6 @@ export async function getArtistQualityMetrics(): Promise<ArtistQuality> {
 
   for (const row of rows) {
     const portfolioCount =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((row.portfolio_images as any)?.[0]?.count ?? 0) +
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ((row.artworks as any)?.[0]?.count ?? 0);
 
@@ -262,7 +260,6 @@ export async function getRetentionMetrics(): Promise<RetentionMetrics> {
   const sources: [string, string][] = [
     ["user_saved_opportunities", "user_id"],
     ["artworks", "profile_id"],
-    ["portfolio_images", "profile_id"],
     ["project_updates", "artist_id"],
     ["messages", "sender_id"],
     ["opportunity_applications", "artist_id"],

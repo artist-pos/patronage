@@ -5,39 +5,30 @@ import { ledgerContentHash, HASH_VERSION } from "@/lib/content-hash";
 import { sendPurchaseConfirmation } from "@/lib/email";
 
 /**
- * Webhook handler for `checkout.session.completed` with purpose=primary_sale.
- * Mirrors the resale handler minus the royalty hold — artist IS the seller.
- *
- * Idempotent on stripe_session_id.
+ * Shared completion logic for primary sales — called by both the legacy
+ * Hosted Checkout handler and the new PaymentIntent (embedded) handler.
  */
-export async function handlePrimarySaleCompleted(
-  session: Stripe.Checkout.Session,
-): Promise<void> {
-  const saleId = session.metadata?.primary_sale_id;
-  if (!saleId) {
-    console.warn("[primary sale handler] missing primary_sale_id");
-    return;
-  }
-
+async function completePrimarySale(params: {
+  saleId: string;
+  buyerEmail: string;
+  buyerName: string | null;
+  paymentIntentId: string | null;
+  sessionId: string | null;
+}): Promise<void> {
   const admin = createAdminClient();
   const { data: sale } = await admin
     .from("primary_sale_transactions")
     .select("*")
-    .eq("id", saleId)
+    .eq("id", params.saleId)
     .maybeSingle();
   if (!sale) {
-    console.warn(`[primary sale handler] sale ${saleId} not found`);
+    console.warn(`[primary sale handler] sale ${params.saleId} not found`);
     return;
   }
   if (sale.status === "paid") return;
 
   const paidAt = new Date().toISOString();
-  const paymentIntent =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id ?? null;
-
-  const buyerEmail = (session.customer_details?.email ?? sale.buyer_email).toLowerCase();
+  const buyerEmail = params.buyerEmail.toLowerCase();
   let buyerProfileId: string | null = sale.buyer_id;
 
   if (!buyerProfileId) {
@@ -53,7 +44,7 @@ export async function handlePrimarySaleCompleted(
           {
             id: buyerProfileId,
             username: `buyer-${buyerProfileId.slice(0, 8)}`,
-            full_name: session.customer_details?.name ?? null,
+            full_name: params.buyerName,
             role: "patron",
             account_status: "shadow",
           },
@@ -66,9 +57,6 @@ export async function handlePrimarySaleCompleted(
     throw new Error("Couldn't resolve a buyer profile id for the primary sale");
   }
 
-  // Append a 'transferred' ledger entry. The artwork already has a 'created'
-  // entry from when the artist registered it; this is the first owner change.
-  const createdAt = new Date();
   const { data: artwork } = await admin
     .from("artworks")
     .select("ledger_id")
@@ -78,6 +66,7 @@ export async function handlePrimarySaleCompleted(
     throw new Error(`Artwork ${sale.artwork_id} has no ledger_id; cannot append transferred entry`);
   }
 
+  const createdAt = new Date();
   const contentHash = ledgerContentHash({
     artwork_id: sale.artwork_id,
     entry_type: "transferred",
@@ -95,20 +84,18 @@ export async function handlePrimarySaleCompleted(
     from_owner_id: sale.artist_id,
     to_owner_id: buyerProfileId,
     transfer_method: "stripe",
-    transaction_ref: paymentIntent,
+    transaction_ref: params.paymentIntentId,
     price: sale.sale_price_cents / 100,
     transferred_at: createdAt.toISOString(),
     content_hash: contentHash,
     hash_version: HASH_VERSION,
   });
 
-  // Flip ownership and mark the artwork unavailable.
   await admin
     .from("artworks")
     .update({ current_owner_id: buyerProfileId, is_available: false })
     .eq("id", sale.artwork_id);
 
-  // Mint a claim token for the buyer and read it back for the email.
   const { data: provenanceLink } = await admin.from("provenance_links").insert({
     artwork_id: sale.artwork_id,
     artist_id: sale.artist_id,
@@ -117,8 +104,6 @@ export async function handlePrimarySaleCompleted(
     status: "invited",
   }).select("claim_token").single();
 
-  // Upsert collection_membership so the work appears in the buyer's dashboard
-  // immediately — even for shadow accounts (they'll see it the moment they claim).
   const { data: lastPosition } = await admin
     .from("collection_membership")
     .select("position")
@@ -138,16 +123,15 @@ export async function handlePrimarySaleCompleted(
     { onConflict: "holder_id,artwork_id", ignoreDuplicates: true },
   );
 
-  // Fetch artist name + ledger_id for the confirmation email.
   const [{ data: artistProfile }, { data: artworkForEmail }] = await Promise.all([
     admin.from("profiles").select("full_name, username").eq("id", sale.artist_id).maybeSingle(),
     admin.from("artworks").select("ledger_id, url, caption").eq("id", sale.artwork_id).maybeSingle(),
   ]);
   const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
-  const isGuest = sale.buyer_id === null; // was null before webhook resolved it
+  const isGuest = sale.buyer_id === null;
   sendPurchaseConfirmation({
     toEmail: buyerEmail,
-    buyerName: session.customer_details?.name ?? null,
+    buyerName: params.buyerName,
     workTitle: artworkForEmail?.caption ?? "Untitled",
     artistName,
     workImageUrl: artworkForEmail?.url ?? null,
@@ -163,9 +147,52 @@ export async function handlePrimarySaleCompleted(
       status: "paid",
       buyer_id: buyerProfileId,
       buyer_email: buyerEmail,
-      stripe_session_id: session.id,
-      stripe_payment_intent: paymentIntent,
+      stripe_session_id: params.sessionId,
+      stripe_payment_intent: params.paymentIntentId,
       paid_at: paidAt,
     })
     .eq("id", sale.id);
+}
+
+/** Webhook handler for `payment_intent.succeeded` from embedded PaymentElement. */
+export async function handlePrimaryPaymentIntentSucceeded(
+  intent: Stripe.PaymentIntent,
+): Promise<void> {
+  const saleId = intent.metadata?.primary_sale_id;
+  if (!saleId) {
+    console.warn("[primary sale handler] payment_intent missing primary_sale_id");
+    return;
+  }
+  await completePrimarySale({
+    saleId,
+    buyerEmail: intent.metadata?.buyer_email ?? intent.receipt_email ?? "",
+    buyerName: null,
+    paymentIntentId: intent.id,
+    sessionId: null,
+  });
+}
+
+/**
+ * Webhook handler for `checkout.session.completed` with purpose=primary_sale.
+ * Delegates to shared completePrimarySale — idempotent on sale status.
+ */
+export async function handlePrimarySaleCompleted(
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const saleId = session.metadata?.primary_sale_id;
+  if (!saleId) {
+    console.warn("[primary sale handler] missing primary_sale_id");
+    return;
+  }
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+  await completePrimarySale({
+    saleId,
+    buyerEmail: session.customer_details?.email ?? "",
+    buyerName: session.customer_details?.name ?? null,
+    paymentIntentId,
+    sessionId: session.id,
+  });
 }

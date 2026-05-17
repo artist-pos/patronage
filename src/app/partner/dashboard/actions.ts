@@ -3,9 +3,48 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { sendHighResRequest } from "@/lib/email";
-import { createCampaignForSelection } from "@/lib/campaigns";
+import { sendHighResRequest, sendCampaignSelectedNotification } from "@/lib/email";
 import { ensureLedgerId } from "@/lib/provenance";
+import type { PostSelectionConfig, PipelineConfig } from "@/types/database";
+
+export async function savePostSelectionConfig(
+  opportunityId: string,
+  postSelection: PostSelectionConfig
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const [{ data: profileData }, { data: opp }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("opportunities").select("id, profile_id, pipeline_config").eq("id", opportunityId).single(),
+  ]);
+
+  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
+  if (!opp) return { error: "Opportunity not found" };
+  if (opp.profile_id !== user.id && !isAdminUser) {
+    const { data: collab } = await supabase
+      .from("opportunity_collaborators")
+      .select("role")
+      .eq("opportunity_id", opportunityId)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  }
+
+  const existing = (opp.pipeline_config ?? {}) as PipelineConfig;
+  const updated: PipelineConfig = { ...existing, post_selection: postSelection };
+
+  const { error } = await supabase
+    .from("opportunities")
+    .update({ pipeline_config: updated })
+    .eq("id", opportunityId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  return {};
+}
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -94,24 +133,7 @@ export async function updateApplicationStatus(
         { onConflict: "profile_id,opportunity_id" }
       );
 
-    // Auto-create campaign + QR when first selected (fire-and-forget — idempotent)
     if (status === "selected") {
-      const { data: artistProfile } = await admin
-        .from("profiles")
-        .select("username")
-        .eq("id", app.artist_id as string)
-        .single();
-      if (artistProfile?.username) {
-        createCampaignForSelection({
-          artistProfileId: app.artist_id as string,
-          artistUsername: artistProfile.username,
-          opportunityId: app.opportunity_id as string,
-          opportunityTitle: opp.title,
-          opportunityType: opp.type ?? "other",
-          applicationId: applicationId,
-        }).catch(console.error);
-      }
-
       // Upsert a project for this artist+opportunity — active only after migration 052
       // adds opportunity_id + artwork_id columns and the unique constraint.
       const { data: project } = await admin
@@ -148,6 +170,26 @@ export async function updateApplicationStatus(
           })
         ).catch(console.error);
       }
+
+      // Notify the artist they've been selected — fire-and-forget
+      void (async () => {
+        const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
+        const artistEmail = authData?.user?.email;
+        if (artistEmail) {
+          const { data: artistProfile } = await admin
+            .from("profiles")
+            .select("full_name, username")
+            .eq("id", app.artist_id as string)
+            .single();
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+          sendCampaignSelectedNotification({
+            artistEmail,
+            artistName: artistProfile?.full_name ?? artistProfile?.username ?? "Artist",
+            opportunityTitle: opp.title,
+            studioUrl: `${siteUrl}/studio?section=campaigns`,
+          }).catch(console.error);
+        }
+      })().catch(console.error);
     }
 
     // Email artist when approved (requesting high-res file)

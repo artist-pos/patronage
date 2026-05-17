@@ -13,7 +13,7 @@ async function resolveUniqueSlug(
 ): Promise<string> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("slug")
     .eq("profile_id", profileId)
     .neq("id", excludeId)
@@ -57,9 +57,8 @@ export async function createPortfolioWork(data: {
   const baseSlug = generateWorkSlug(data.title, data.year);
   let slug: string | null = null;
   if (baseSlug) {
-    // Temp placeholder ID for exclude — we use a fake ID; no conflict since work doesn't exist yet
     const { data: existing } = await supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("slug")
       .eq("profile_id", user.id)
       .like("slug", `${baseSlug}%`);
@@ -71,7 +70,7 @@ export async function createPortfolioWork(data: {
   }
 
   const { data: row, error } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .insert({
       profile_id: user.id,
       creator_id: user.id,
@@ -87,6 +86,12 @@ export async function createPortfolioWork(data: {
       dimensions: data.dimensions || null,
       description: data.description || null,
       slug,
+      is_available: false,
+      hide_from_archive: false,
+      hide_available: false,
+      hide_price: false,
+      collection_visible: true,
+      source: 'self_registered',
       ...(data.contentType && data.contentType !== "image" && { content_type: data.contentType }),
       ...(data.audioUrl && { audio_url: data.audioUrl }),
       ...(data.videoUrl && { video_url: data.videoUrl }),
@@ -108,7 +113,6 @@ export async function createPortfolioWork(data: {
 
 export async function updateWorkMetadata(
   workId: string,
-  table: "portfolio_images" | "artworks",
   data: {
     title?: string;
     year?: number | null;
@@ -129,9 +133,8 @@ export async function updateWorkMetadata(
     ...(data.description !== undefined && { description: data.description || null }),
   };
 
-  // Regenerate slug for portfolio_images when title changes
   let newSlug: string | undefined;
-  if (table === "portfolio_images" && data.title !== undefined) {
+  if (data.title !== undefined) {
     const base = generateWorkSlug(data.title, data.year ?? null);
     if (base) {
       newSlug = await resolveUniqueSlug(user.id, base, workId);
@@ -140,7 +143,7 @@ export async function updateWorkMetadata(
   }
 
   const { error } = await supabase
-    .from(table)
+    .from("artworks")
     .update(updates)
     .eq("id", workId)
     .eq("creator_id", user.id);
@@ -161,79 +164,30 @@ export async function publishPortfolioWorkAsAvailable(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const { data: portfolio, error: fetchError } = await supabase
-    .from("portfolio_images")
-    .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id")
+  const updatePayload: Record<string, unknown> = {
+    price_cents: data.is_poa ? null : data.price_cents,
+    is_poa: data.is_poa,
+    price_currency: data.currency,
+    is_available: true,
+  };
+  if (data.listingMode) updatePayload.listing_mode = data.listingMode;
+
+  const { error } = await supabase
+    .from("artworks")
+    .update(updatePayload)
     .eq("id", workId)
-    .eq("creator_id", user.id)
-    .single();
+    .eq("creator_id", user.id);
 
-  if (fetchError || !portfolio) return { error: "Work not found" };
-
-  if (portfolio.linked_artwork_id) {
-    const updatePayload: Record<string, unknown> = {
-      price_cents: data.is_poa ? null : data.price_cents,
-      is_poa: data.is_poa,
-      price_currency: data.currency,
-      edition: data.edition || null,
-      is_available: true,
-    };
-    if (data.listingMode) updatePayload.listing_mode = data.listingMode;
-    const { error: updateError } = await supabase
-      .from("artworks")
-      .update(updatePayload)
-      .eq("id", portfolio.linked_artwork_id)
-      .eq("creator_id", user.id);
-    if (updateError) return { error: updateError.message };
-  } else {
-    const { data: newArtwork, error: insertError } = await supabase
-      .from("artworks")
-      .insert({
-        profile_id: portfolio.creator_id,
-        creator_id: portfolio.creator_id,
-        current_owner_id: portfolio.creator_id,
-        url: portfolio.url,
-        caption: portfolio.caption,
-        description: portfolio.description,
-        title: portfolio.title,
-        year: portfolio.year,
-        medium: portfolio.medium,
-        dimensions: portfolio.dimensions,
-        edition: data.edition || null,
-        price_cents: data.is_poa ? null : data.price_cents,
-        is_poa: data.is_poa,
-        price_currency: data.currency,
-        listing_mode: data.listingMode ?? "direct_sale",
-        is_available: true,
-        hide_available: false,
-        hide_from_archive: false,
-        hide_price: false,
-        collection_visible: true,
-        hidden_from_artist: false,
-        position: 0,
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !newArtwork) return { error: insertError?.message ?? "Insert failed" };
-
-    const { error: linkError } = await supabase
-      .from("portfolio_images")
-      .update({ linked_artwork_id: newArtwork.id })
-      .eq("id", workId)
-      .eq("creator_id", user.id);
-
-    if (linkError) return { error: linkError.message };
-  }
+  if (error) return { error: error.message };
 
   revalidatePath("/studio");
   return {};
 }
 
-// ── Set primary image (cascades to portfolio_images.url + artworks.url) ──────
+// ── Set primary image ─────────────────────────────────────────────────────────
 
 export async function setPrimaryWorkImageUrl(
-  portfolioImageId: string,
+  artworkId: string,
   newPrimaryUrl: string,
   dimensions?: { naturalWidth: number; naturalHeight: number },
 ): Promise<{ error?: string }> {
@@ -241,24 +195,9 @@ export async function setPrimaryWorkImageUrl(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Fetch linked_artwork_id to cascade + username for profile revalidation
-  const [workResult, profileResult] = await Promise.all([
+  const [updateResult, profileResult] = await Promise.all([
     supabase
-      .from("portfolio_images")
-      .select("linked_artwork_id")
-      .eq("id", portfolioImageId)
-      .eq("creator_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single(),
-  ]);
-
-  await Promise.all([
-    supabase
-      .from("portfolio_images")
+      .from("artworks")
       .update({
         url: newPrimaryUrl,
         ...(dimensions && {
@@ -266,16 +205,16 @@ export async function setPrimaryWorkImageUrl(
           natural_height: dimensions.naturalHeight,
         }),
       })
-      .eq("id", portfolioImageId)
+      .eq("id", artworkId)
       .eq("creator_id", user.id),
-    workResult.data?.linked_artwork_id
-      ? supabase
-          .from("artworks")
-          .update({ url: newPrimaryUrl })
-          .eq("id", workResult.data.linked_artwork_id)
-          .eq("creator_id", user.id)
-      : null,
+    supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single(),
   ]);
+
+  if (updateResult.error) return { error: updateResult.error.message };
 
   revalidatePath("/studio");
   if (profileResult.data?.username) {
@@ -291,19 +230,10 @@ export async function unpublishPortfolioWork(workId: string): Promise<{ error?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const { data: portfolio } = await supabase
-    .from("portfolio_images")
-    .select("linked_artwork_id")
-    .eq("id", workId)
-    .eq("creator_id", user.id)
-    .single();
-
-  if (!portfolio?.linked_artwork_id) return {};
-
   const { error } = await supabase
     .from("artworks")
     .update({ is_available: false })
-    .eq("id", portfolio.linked_artwork_id)
+    .eq("id", workId)
     .eq("creator_id", user.id);
 
   if (error) return { error: error.message };

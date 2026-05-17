@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Trash2, X } from "lucide-react";
 import type { Edition, EditionType, EditionListingMode } from "@/types/database";
 import {
   saveEdition,
@@ -16,9 +16,24 @@ const TYPE_LABELS: Record<EditionType, string> = {
   product: "Product",
 };
 
+type AcquisitionMode = "buy_now" | "make_offer" | "enquire_first";
+
+const HOW_TO_BUY: { value: AcquisitionMode; label: string; listingMode: EditionListingMode }[] = [
+  { value: "buy_now",       label: "Buy now",       listingMode: "direct"  },
+  { value: "make_offer",    label: "Make an offer", listingMode: "enquire" },
+  { value: "enquire_first", label: "Enquire first", listingMode: "enquire" },
+];
+
 const CURRENCIES = ["NZD", "AUD"];
 
-// ── Draft ─────────────────────────────────────────────────────────────────────
+const ALL_EDITION_TYPES: { value: EditionType; label: string }[] = [
+  { value: "original",        label: "Original"       },
+  { value: "limited_edition", label: "Limited Edition" },
+  { value: "open_edition",    label: "Open Edition"   },
+  { value: "product",         label: "Product"        },
+];
+
+// ── Existing edition draft (for editing saved editions) ────────────────────────
 
 interface EditionDraft {
   id?: string;
@@ -30,30 +45,15 @@ interface EditionDraft {
   price: string;
   currency: string;
   poa: boolean;
-  listing_mode: EditionListingMode;
+  acquisitionMode: AcquisitionMode;
   listed: boolean;
   inventory: string;
   sort_order: number;
 }
 
-function blankDraft(type: EditionType, sortOrder: number): EditionDraft {
-  return {
-    type,
-    label: type === "original" ? "Original" : "",
-    edition_size: "",
-    dimensions: "",
-    substrate: "",
-    price: "",
-    currency: "NZD",
-    poa: false,
-    listing_mode: "enquire",
-    listed: false,
-    inventory: "",
-    sort_order: sortOrder,
-  };
-}
-
 function editionToDraft(e: Edition): EditionDraft {
+  const acqMode: AcquisitionMode =
+    e.listing_mode === "direct" ? "buy_now" : "enquire_first";
   return {
     id: e.id,
     type: e.type,
@@ -64,7 +64,7 @@ function editionToDraft(e: Edition): EditionDraft {
     price: e.price_cents != null ? String(e.price_cents / 100) : "",
     currency: e.currency,
     poa: e.poa,
-    listing_mode: e.listing_mode,
+    acquisitionMode: acqMode,
     listed: e.listed,
     inventory: e.inventory != null ? String(e.inventory) : "",
     sort_order: e.sort_order,
@@ -72,12 +72,11 @@ function editionToDraft(e: Edition): EditionDraft {
 }
 
 function draftToInput(d: EditionDraft) {
-  const priceCents = d.poa
-    ? null
-    : (() => {
-        const v = parseFloat(d.price);
-        return Number.isFinite(v) ? Math.round(v * 100) : null;
-      })();
+  const priceCents = d.poa ? null : (() => {
+    const v = parseFloat(d.price);
+    return Number.isFinite(v) ? Math.round(v * 100) : null;
+  })();
+  const howToBuy = HOW_TO_BUY.find((h) => h.value === d.acquisitionMode);
   return {
     id: d.id,
     type: d.type,
@@ -88,17 +87,179 @@ function draftToInput(d: EditionDraft) {
     price_cents: priceCents,
     currency: d.currency,
     poa: d.poa,
-    listing_mode: d.listing_mode,
+    listing_mode: howToBuy?.listingMode ?? "enquire",
+    acquisitionMode: d.acquisitionMode,
     listed: d.listed,
     inventory: d.inventory ? parseInt(d.inventory, 10) : null,
     sort_order: d.sort_order,
   };
 }
 
+// ── Pending new edition draft ─────────────────────────────────────────────────
+
+interface PendingDraft {
+  tempId: string;
+  type: EditionType;
+  label: string;
+  netReceive: string;
+  currency: "NZD" | "AUD";
+  poa: boolean;
+  acquisitionMode: AcquisitionMode;
+  listed: boolean;
+  editionSize: string;
+  printSize: string;
+  substrate: string;
+}
+
+function blankPending(type: EditionType): PendingDraft {
+  return {
+    tempId: Math.random().toString(36).slice(2),
+    type,
+    label: type === "original" ? "Original" : "",
+    netReceive: "",
+    currency: "NZD",
+    poa: false,
+    acquisitionMode: "enquire_first",
+    listed: true,
+    editionSize: "",
+    printSize: "",
+    substrate: "",
+  };
+}
+
+function computeListingPrice(netReceive: string): number | null {
+  const net = parseFloat(netReceive);
+  if (!Number.isFinite(net) || net <= 0) return null;
+  return net / 0.9;
+}
+
 function formatPrice(edition: Edition): string {
   if (edition.poa) return "POA";
   if (edition.price_cents == null) return "—";
-  return `${edition.currency} ${(edition.price_cents / 100).toLocaleString()}`;
+  return `${edition.currency} ${(edition.price_cents / 100).toLocaleString()}`;
+}
+
+// ── Pricing calculator ────────────────────────────────────────────────────────
+
+function PricingCalculator({
+  currency,
+  focusedLabel,
+  onUsePrice,
+}: {
+  currency: string;
+  focusedLabel: string | null;
+  onUsePrice: (net: number) => void;
+}) {
+  const [calcMode, setCalcMode] = useState<"original" | "print" | "manual">("print");
+  const [hours, setHours] = useState("8");
+  const [rate, setRate] = useState("35");
+  const [materials, setMaterials] = useState("");
+  const [origMarkup, setOrigMarkup] = useState("");
+  const [printCost, setPrintCost] = useState("");
+  const [shipCost, setShipCost] = useState("");
+  const [printMarkup, setPrintMarkup] = useState("");
+  const [manualNet, setManualNet] = useState("");
+
+  function getNet(): number {
+    if (calcMode === "original")
+      return (parseFloat(hours) || 0) * (parseFloat(rate) || 0) + (parseFloat(materials) || 0) + (parseFloat(origMarkup) || 0);
+    if (calcMode === "print")
+      return (parseFloat(printCost) || 0) + (parseFloat(shipCost) || 0) + (parseFloat(printMarkup) || 0);
+    return parseFloat(manualNet) || 0;
+  }
+
+  const net = getNet();
+  const p = net > 0 ? (() => {
+    const listedPrice = net / 0.9;
+    const commission = listedPrice * 0.1;
+    const stripeProcessing = listedPrice * 0.029 + 0.30;
+    return { listedPrice, commission, stripeProcessing, buyerPays: listedPrice + stripeProcessing };
+  })() : null;
+
+  const fmtN = (n: number) => n.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const ci = "w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground";
+  const sl = "text-xs text-muted-foreground";
+  const tabCls = (active: boolean) =>
+    `flex-1 py-1.5 text-xs border-b-2 transition-colors ${active ? "border-foreground text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`;
+
+  return (
+    <div className="border border-border bg-background p-4 space-y-4">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Pricing calculator</p>
+      <div className="flex border-b border-border">
+        {(["original", "print", "manual"] as const).map((m) => (
+          <button key={m} type="button" onClick={() => setCalcMode(m)} className={tabCls(calcMode === m)}>
+            {m === "original" ? "Original work" : m === "print" ? "Print / edition" : "I know my price"}
+          </button>
+        ))}
+      </div>
+
+      {calcMode === "original" && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><label className={sl}>Hours spent</label>
+              <input type="number" value={hours} onChange={(e) => setHours(e.target.value)} min={0} step={0.5} className={ci} /></div>
+            <div className="space-y-1.5"><label className={sl}>Hourly rate ({currency})</label>
+              <input type="number" value={rate} onChange={(e) => setRate(e.target.value)} min={0} className={ci} /></div>
+            <div className="space-y-1.5"><label className={sl}>Material costs</label>
+              <input type="number" value={materials} onChange={(e) => setMaterials(e.target.value)} min={0} placeholder="0.00" className={ci} /></div>
+            <div className="space-y-1.5"><label className={sl}>Markup</label>
+              <input type="number" value={origMarkup} onChange={(e) => setOrigMarkup(e.target.value)} min={0} placeholder="0.00" className={ci} /></div>
+          </div>
+        </div>
+      )}
+      {calcMode === "print" && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><label className={sl}>Printing cost</label>
+              <input type="number" value={printCost} onChange={(e) => setPrintCost(e.target.value)} min={0} placeholder="0.00" className={ci} /></div>
+            <div className="space-y-1.5"><label className={sl}>Shipping cost</label>
+              <input type="number" value={shipCost} onChange={(e) => setShipCost(e.target.value)} min={0} placeholder="0.00" className={ci} /></div>
+          </div>
+          <div className="space-y-1.5"><label className={sl}>Your markup</label>
+            <input type="number" value={printMarkup} onChange={(e) => setPrintMarkup(e.target.value)} min={0} placeholder="0.00" className={ci} /></div>
+        </div>
+      )}
+      {calcMode === "manual" && (
+        <div className="space-y-1.5">
+          <label className={sl}>What you want to receive ({currency})</label>
+          <input type="number" value={manualNet} onChange={(e) => setManualNet(e.target.value)} min={0} placeholder="100.00" className={ci} />
+        </div>
+      )}
+
+      {p ? (
+        <div className="bg-muted/30 border border-border px-4 py-3 space-y-1.5">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">You receive</span>
+            <span className="font-medium text-emerald-700">{currency} {fmtN(net)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Patronage commission (10%)</span><span>+ {currency} {fmtN(p.commission)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Listed price</span><span>{currency} {fmtN(p.listedPrice)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Stripe processing (2.9% + 30¢)</span><span>+ {currency} {fmtN(p.stripeProcessing)}</span>
+          </div>
+          <div className="border-t border-border pt-2 flex justify-between">
+            <span className="text-xs font-medium">Buyer pays</span>
+            <span className="text-xs font-semibold">{currency} {fmtN(p.buyerPays)}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Enter values above to see the breakdown.</p>
+      )}
+
+      <button
+        type="button"
+        disabled={!p || !focusedLabel}
+        onClick={() => p && onUsePrice(net)}
+        className="w-full py-2 text-xs font-medium bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-30"
+      >
+        {focusedLabel ? `Apply to "${focusedLabel}"` : "Select a price field to target an edition"}
+      </button>
+    </div>
+  );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -110,16 +271,13 @@ interface Props {
 
 export function EditionsSection({ workId, initialEditions }: Props) {
   const [editions, setEditions] = useState<Edition[]>(
-    [...initialEditions].sort(
-      (a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at)
-    )
+    [...initialEditions].sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, EditionDraft>>({});
-  const [addingNew, setAddingNew] = useState(false);
-  const [newDraft, setNewDraft] = useState<EditionDraft>(() =>
-    blankDraft("limited_edition", initialEditions.length)
-  );
+  const [pendingDrafts, setPendingDrafts] = useState<PendingDraft[]>([]);
+  const [focusedDraftId, setFocusedDraftId] = useState<string | null>(null);
+  const [calcOpen, setCalcOpen] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
@@ -148,227 +306,419 @@ export function EditionsSection({ workId, initialEditions }: Props) {
   }
 
   function clearDraft(id: string) {
-    setDrafts((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
+    setDrafts((prev) => { const next = { ...prev }; delete next[id]; return next; });
   }
 
-  // ── Toggle listed (immediate) ──────────────────────────────────────────────
+  function addPendingDraft(type: EditionType) {
+    if (type === "original" && (editions.some((e) => e.type === "original") || pendingDrafts.some((d) => d.type === "original"))) return;
+    setPendingDrafts((prev) => [...prev, blankPending(type)]);
+  }
+
+  function updatePending(tempId: string, updates: Partial<PendingDraft>) {
+    setPendingDrafts((prev) => prev.map((d) => d.tempId === tempId ? { ...d, ...updates } : d));
+  }
+
+  function removePending(tempId: string) {
+    setPendingDrafts((prev) => prev.filter((d) => d.tempId !== tempId));
+    if (focusedDraftId === tempId) setFocusedDraftId(null);
+  }
 
   async function handleToggle(edition: Edition) {
     const next = !edition.listed;
     markBusy(edition.id, true);
-    setEditions((prev) =>
-      prev.map((e) => (e.id === edition.id ? { ...e, listed: next } : e))
-    );
+    setEditions((prev) => prev.map((e) => e.id === edition.id ? { ...e, listed: next } : e));
     const result = await toggleEditionListed(edition.id, workId, next);
     if (result.error) {
       showError(result.error);
-      setEditions((prev) =>
-        prev.map((e) => (e.id === edition.id ? { ...e, listed: !next } : e))
-      );
+      setEditions((prev) => prev.map((e) => e.id === edition.id ? { ...e, listed: !next } : e));
     }
     markBusy(edition.id, false);
   }
 
-  // ── Save edition ───────────────────────────────────────────────────────────
-
-  async function handleSave(draft: EditionDraft) {
-    const busyKey = draft.id ?? "new";
-    markBusy(busyKey, true);
-
+  async function handleSaveExisting(draft: EditionDraft) {
+    markBusy(draft.id!, true);
     const result = await saveEdition(workId, draftToInput(draft));
-
-    if (result.error) {
-      showError(result.error);
-      markBusy(busyKey, false);
-      return;
-    }
-
-    if (draft.id) {
-      const input = draftToInput(draft);
-      setEditions((prev) =>
-        prev.map((e) =>
-          e.id === draft.id
-            ? {
-                ...e,
-                type: input.type,
-                label: input.label,
-                edition_size: input.edition_size ?? null,
-                dimensions: input.dimensions,
-                substrate: input.substrate,
-                price_cents: input.price_cents,
-                currency: input.currency,
-                poa: input.poa,
-                listing_mode: input.listing_mode,
-                listed: input.listed,
-                inventory: input.inventory ?? null,
-              }
-            : e
-        )
-      );
-      clearDraft(draft.id);
-      setExpandedId(null);
-    } else {
-      const input = draftToInput(draft);
-      const newEdition: Edition = {
-        id: result.id!,
-        work_id: workId,
-        type: input.type,
-        label: input.label,
-        edition_size: input.edition_size ?? null,
-        edition_number: null,
-        dimensions: input.dimensions,
-        substrate: input.substrate,
-        price_cents: input.price_cents,
-        currency: input.currency,
-        poa: input.poa,
-        listing_mode: input.listing_mode,
-        listed: input.listed,
-        inventory: input.inventory ?? null,
-        sort_order: input.sort_order,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setEditions((prev) => [...prev, newEdition]);
-      setAddingNew(false);
-      setNewDraft(blankDraft("limited_edition", editions.length + 1));
-    }
-
-    markBusy(busyKey, false);
+    if (result.error) { showError(result.error); markBusy(draft.id!, false); return; }
+    const input = draftToInput(draft);
+    setEditions((prev) =>
+      prev.map((e) => e.id === draft.id
+        ? { ...e, type: input.type, label: input.label, edition_size: input.edition_size ?? null, dimensions: input.dimensions, substrate: input.substrate, price_cents: input.price_cents, currency: input.currency, poa: input.poa, listing_mode: input.listing_mode, listed: input.listed, inventory: input.inventory ?? null }
+        : e)
+    );
+    clearDraft(draft.id!);
+    setExpandedId(null);
+    markBusy(draft.id!, false);
   }
 
-  // ── Delete edition ─────────────────────────────────────────────────────────
+  async function handleSavePending(draft: PendingDraft) {
+    markBusy(draft.tempId, true);
+    const listedPrice = computeListingPrice(draft.netReceive);
+    const priceCents = draft.poa ? null : (listedPrice != null ? Math.round(listedPrice * 100) : null);
+    const howToBuy = HOW_TO_BUY.find((h) => h.value === draft.acquisitionMode);
+    const result = await saveEdition(workId, {
+      type: draft.type,
+      label: draft.label || TYPE_LABELS[draft.type],
+      edition_size: draft.editionSize ? parseInt(draft.editionSize, 10) : null,
+      dimensions: draft.printSize || null,
+      substrate: draft.substrate || null,
+      price_cents: priceCents,
+      currency: draft.currency,
+      poa: draft.poa,
+      listing_mode: howToBuy?.listingMode ?? "enquire",
+      acquisitionMode: draft.acquisitionMode,
+      listed: draft.listed,
+      sort_order: editions.length + pendingDrafts.findIndex((d) => d.tempId === draft.tempId),
+    });
+    if (result.error) { showError(result.error); markBusy(draft.tempId, false); return; }
+    const newEdition: Edition = {
+      id: result.id!,
+      work_id: workId,
+      type: draft.type,
+      label: draft.label || TYPE_LABELS[draft.type],
+      edition_size: draft.editionSize ? parseInt(draft.editionSize, 10) : null,
+      edition_number: null,
+      dimensions: draft.printSize || null,
+      substrate: draft.substrate || null,
+      price_cents: priceCents,
+      currency: draft.currency,
+      poa: draft.poa,
+      listing_mode: howToBuy?.listingMode ?? "enquire",
+      listed: draft.listed,
+      inventory: null,
+      sort_order: editions.length,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setEditions((prev) => [...prev, newEdition]);
+    removePending(draft.tempId);
+    markBusy(draft.tempId, false);
+  }
 
   async function handleDelete(edition: Edition) {
     if (!confirm(`Delete "${edition.label}"? This cannot be undone.`)) return;
     markBusy(edition.id, true);
     const result = await deleteEdition(edition.id, workId);
-    if (result.error) {
-      showError(result.error);
-      markBusy(edition.id, false);
-      return;
-    }
+    if (result.error) { showError(result.error); markBusy(edition.id, false); return; }
     setEditions((prev) => prev.filter((e) => e.id !== edition.id));
     if (expandedId === edition.id) setExpandedId(null);
   }
 
   const canDelete = editions.length > 1;
+  const focusedPending = pendingDrafts.find((d) => d.tempId === focusedDraftId) ?? null;
+  const focusedLabel = focusedPending ? (focusedPending.label || TYPE_LABELS[focusedPending.type]) : null;
+  const hasOriginal = editions.some((e) => e.type === "original") || pendingDrafts.some((d) => d.type === "original");
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Editions
-        </h2>
-        {!addingNew && (
+    <div className="flex gap-8 items-start">
+      {/* Left — editions content */}
+      <div className="flex-1 min-w-0 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Editions
+          </h2>
           <button
-            onClick={() => {
-              setAddingNew(true);
-              setNewDraft(blankDraft("limited_edition", editions.length));
-            }}
+            type="button"
+            onClick={() => setCalcOpen((o) => !o)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add edition
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${calcOpen ? "rotate-180" : ""}`} />
+            Pricing calculator
           </button>
-        )}
-      </div>
+        </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div className="border border-border">
-        {editions.map((edition) => {
-          const isExpanded = expandedId === edition.id;
-          const draft = getDraft(edition);
-          const isBusy = busy.has(edition.id);
+        {/* Type picker — add new edition cards */}
+        <div className="flex gap-2 flex-wrap">
+          {ALL_EDITION_TYPES.map(({ value, label }) => {
+            const disabled = value === "original" && hasOriginal;
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={disabled}
+                onClick={() => addPendingDraft(value)}
+                className={`flex items-center gap-1 text-xs px-3 py-1.5 border transition-colors ${
+                  disabled
+                    ? "border-border text-muted-foreground/30 cursor-not-allowed"
+                    : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                }`}
+              >
+                <Plus className="w-3 h-3" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
-          return (
-            <div key={edition.id} className="border-b border-border last:border-b-0">
-              {/* Summary row */}
-              <div className="flex items-center gap-2 px-3 py-2.5">
+      {/* Existing editions — collapse/expand */}
+      {editions.length > 0 && (
+        <div className="border border-border">
+          {editions.map((edition) => {
+            const isExpanded = expandedId === edition.id;
+            const draft = getDraft(edition);
+            const isBusy = busy.has(edition.id);
+            return (
+              <div key={edition.id} className="border-b border-border last:border-b-0">
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : edition.id)}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
+                      {TYPE_LABELS[edition.type]}
+                    </span>
+                    <span className="text-sm font-medium truncate">{edition.label}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-auto mr-3">
+                      {formatPrice(edition)}
+                    </span>
+                  </button>
+                  <button
+                    disabled={isBusy}
+                    onClick={() => handleToggle(edition)}
+                    className={`shrink-0 text-xs px-2.5 py-1 border transition-colors disabled:opacity-40 ${
+                      edition.listed
+                        ? "border-black bg-black text-white"
+                        : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {edition.listed ? "Listed" : "Unlisted"}
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-3 bg-muted/10 border-t border-border">
+                    <ExistingEditionForm
+                      draft={draft}
+                      onChange={(u) => setDraft(edition.id, u)}
+                      onSave={() => handleSaveExisting(draft)}
+                      onCancel={() => { setExpandedId(null); clearDraft(edition.id); }}
+                      onDelete={canDelete ? () => handleDelete(edition) : undefined}
+                      busy={isBusy}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pending new edition cards */}
+      {pendingDrafts.map((draft) => {
+        const isBusy = busy.has(draft.tempId);
+        const isOriginal = draft.type === "original";
+        const listedPrice = computeListingPrice(draft.netReceive);
+        const commission = listedPrice != null ? listedPrice * 0.1 : null;
+        const takehome = listedPrice != null ? listedPrice * 0.9 : null;
+
+        return (
+          <div key={draft.tempId} className="border border-border p-4 space-y-4">
+            {/* Card header */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide">
+                {TYPE_LABELS[draft.type]}
+              </span>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draft.listed}
+                    onChange={(e) => updatePending(draft.tempId, { listed: e.target.checked })}
+                    className="accent-black"
+                  />
+                  <span className="text-sm">Listed for sale</span>
+                </label>
                 <button
-                  onClick={() =>
-                    setExpandedId(isExpanded ? null : edition.id)
-                  }
-                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  type="button"
+                  onClick={() => removePending(draft.tempId)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Remove"
                 >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  )}
-                  <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
-                    {TYPE_LABELS[edition.type]}
-                  </span>
-                  <span className="text-sm font-medium truncate">{edition.label}</span>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-auto mr-3">
-                    {formatPrice(edition)}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0 mr-2 hidden sm:block">
-                    {edition.listing_mode === "direct" ? "Direct sale" : "Enquire first"}
-                  </span>
-                </button>
-                <button
-                  disabled={isBusy}
-                  onClick={() => handleToggle(edition)}
-                  className={`shrink-0 text-xs px-2.5 py-1 border transition-colors disabled:opacity-40 ${
-                    edition.listed
-                      ? "border-black bg-black text-white"
-                      : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-                  }`}
-                >
-                  {edition.listed ? "Listed" : "Unlisted"}
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
+            </div>
 
-              {/* Expanded form */}
-              {isExpanded && (
-                <div className="px-4 pb-4 pt-3 bg-muted/10 border-t border-border">
-                  <EditionForm
-                    draft={draft}
-                    onChange={(u) => setDraft(edition.id, u)}
-                    onSave={() => handleSave(draft)}
-                    onCancel={() => {
-                      setExpandedId(null);
-                      clearDraft(edition.id);
-                    }}
-                    onDelete={canDelete ? () => handleDelete(edition) : undefined}
-                    busy={isBusy}
-                  />
+            {/* Label + print size + edition size */}
+            <div className={`grid gap-3 ${isOriginal ? "grid-cols-1" : "grid-cols-3"}`}>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Label</label>
+                <input
+                  type="text"
+                  value={draft.label}
+                  onChange={(e) => updatePending(draft.tempId, { label: e.target.value })}
+                  placeholder={TYPE_LABELS[draft.type]}
+                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+              {!isOriginal && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Print size</label>
+                    <input
+                      type="text"
+                      value={draft.printSize}
+                      onChange={(e) => updatePending(draft.tempId, { printSize: e.target.value })}
+                      placeholder="e.g. A2, 50×70 cm"
+                      className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Edition size</label>
+                    <input
+                      type="number"
+                      value={draft.editionSize}
+                      onChange={(e) => updatePending(draft.tempId, { editionSize: e.target.value })}
+                      placeholder="50"
+                      min={1}
+                      className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {!isOriginal && (
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Substrate</label>
+                <input
+                  type="text"
+                  value={draft.substrate}
+                  onChange={(e) => updatePending(draft.tempId, { substrate: e.target.value })}
+                  placeholder="e.g. Hahnemühle Photo Rag 308gsm"
+                  className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+            )}
+
+            {/* Pricing */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={draft.poa}
+                  onChange={(e) => updatePending(draft.tempId, { poa: e.target.checked, ...(e.target.checked && { netReceive: "" }) })}
+                  className="accent-black"
+                />
+                <span className="text-sm text-muted-foreground">Price on application</span>
+              </label>
+              {!draft.poa && (
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">
+                    {isOriginal ? "You want to receive" : "You want to receive per unit"}
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={draft.currency}
+                      onChange={(e) => updatePending(draft.tempId, { currency: e.target.value as "NZD" | "AUD" })}
+                      className="border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground w-24"
+                    >
+                      {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={draft.netReceive}
+                      onChange={(e) => updatePending(draft.tempId, { netReceive: e.target.value })}
+                      onFocus={() => setFocusedDraftId(draft.tempId)}
+                      placeholder={isOriginal ? "900.00" : "180.00"}
+                      className="flex-1 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  {listedPrice != null && (
+                    <div className="border border-border px-3 py-2 space-y-0.5 text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">You receive</span>
+                        <span className="font-mono text-emerald-700">{draft.currency} {takehome!.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Patronage commission (10%)</span>
+                        <span className="font-mono">+ {draft.currency} {commission!.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-border pt-1 mt-1">
+                        <span className="font-medium">Listing price</span>
+                        <span className="font-mono font-medium">{draft.currency} {listedPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          );
-        })}
 
-        {/* New edition form */}
-        {addingNew && (
-          <div className="px-4 py-4 bg-muted/10 border-t border-border">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
-              New edition
-            </p>
-            <EditionForm
-              draft={newDraft}
-              onChange={(u) => setNewDraft((prev) => ({ ...prev, ...u }))}
-              onSave={() => handleSave(newDraft)}
-              onCancel={() => setAddingNew(false)}
-              busy={busy.has("new")}
-            />
+            {/* How collectors buy */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">How collectors buy</label>
+              <div className="flex gap-2 flex-wrap">
+                {HOW_TO_BUY.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => updatePending(draft.tempId, { acquisitionMode: value })}
+                    className={`text-xs px-3 py-1.5 border transition-colors ${
+                      draft.acquisitionMode === value
+                        ? "border-black bg-black text-white"
+                        : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {draft.acquisitionMode === "buy_now" && "Shows price and a Buy button. Enables direct checkout."}
+                {draft.acquisitionMode === "make_offer" && "Shows price and an offer button. Buyer proposes a price."}
+                {draft.acquisitionMode === "enquire_first" && "Price is hidden. Buyer contacts you to start a conversation."}
+              </p>
+            </div>
+
+            {/* Save actions */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => handleSavePending(draft)}
+                disabled={isBusy}
+                className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
+              >
+                {isBusy ? "Saving…" : "Save edition"}
+              </button>
+              <button
+                onClick={() => removePending(draft.tempId)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        )}
+        );
+      })}
+
+        <p className="text-xs text-muted-foreground">
+          Listing makes the edition visible to buyers. Toggle individually per edition.
+        </p>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Listing makes the edition visible to buyers. Toggle individually per edition.
-      </p>
+      {/* Right — sticky pricing calculator */}
+      {calcOpen && (
+        <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-[72px]">
+          <PricingCalculator
+            currency={focusedPending?.currency ?? "NZD"}
+            focusedLabel={focusedLabel}
+            onUsePrice={(net) => {
+              if (focusedPending) updatePending(focusedPending.tempId, { netReceive: net.toFixed(2) });
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Edition form (shared for new + expand-edit) ───────────────────────────────
+// ── Existing edition form (edit only) ─────────────────────────────────────────
 
 interface FormProps {
   draft: EditionDraft;
@@ -379,182 +729,141 @@ interface FormProps {
   busy: boolean;
 }
 
-function EditionForm({ draft, onChange, onSave, onCancel, onDelete, busy }: FormProps) {
+const EDITION_TYPES_EDIT: { value: EditionType; label: string }[] = [
+  { value: "original",        label: "Original"       },
+  { value: "limited_edition", label: "Limited Edition" },
+  { value: "open_edition",    label: "Open Edition"   },
+  { value: "product",         label: "Product"        },
+];
+
+function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy }: FormProps) {
   const showEditionSize = draft.type === "limited_edition";
-  const showInventory =
-    draft.type === "open_edition" || draft.type === "product";
+  const showInventory   = draft.type === "open_edition" || draft.type === "product";
+  const priceNum = parseFloat(draft.price);
+  const hasPrice = !draft.poa && Number.isFinite(priceNum) && priceNum > 0;
 
   return (
     <div className="space-y-4">
-      {/* Type + Label */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Type</label>
-          <select
-            value={draft.type}
-            onChange={(e) => {
-              const t = e.target.value as EditionType;
-              onChange({
-                type: t,
-                label: t === "original" ? "Original" : draft.label === "Original" ? "" : draft.label,
-              });
-            }}
-            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground"
-          >
-            <option value="original">Original</option>
-            <option value="limited_edition">Limited Edition</option>
-            <option value="open_edition">Open Edition</option>
-            <option value="product">Product</option>
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Label</label>
-          <input
-            type="text"
-            value={draft.label}
-            onChange={(e) => onChange({ label: e.target.value })}
-            placeholder={TYPE_LABELS[draft.type]}
-            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-          />
+      {/* Edition type */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-muted-foreground">Type</label>
+        <div className="flex flex-wrap gap-2">
+          {EDITION_TYPES_EDIT.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onChange({ type: value, label: value === "original" ? "Original" : draft.label === "Original" ? "" : draft.label })}
+              className={`text-xs px-3 py-1.5 border transition-colors ${
+                draft.type === value ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Edition-type specific */}
+      {/* Label */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-muted-foreground">Label</label>
+        <input
+          type="text"
+          value={draft.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder={TYPE_LABELS[draft.type]}
+          className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
+        />
+      </div>
+
       {showEditionSize && (
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Edition size</label>
-          <input
-            type="number"
-            min={1}
-            value={draft.edition_size}
-            onChange={(e) => onChange({ edition_size: e.target.value })}
-            placeholder="e.g. 10"
-            className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-          />
+          <input type="number" min={1} value={draft.edition_size} onChange={(e) => onChange({ edition_size: e.target.value })} placeholder="e.g. 10"
+            className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
       )}
       {showInventory && (
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Inventory (in stock)</label>
-          <input
-            type="number"
-            min={0}
-            value={draft.inventory}
-            onChange={(e) => onChange({ inventory: e.target.value })}
-            placeholder="e.g. 24"
-            className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-          />
+          <input type="number" min={0} value={draft.inventory} onChange={(e) => onChange({ inventory: e.target.value })} placeholder="e.g. 24"
+            className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
       )}
 
-      {/* Dimensions + Substrate */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Dimensions (override)</label>
-          <input
-            type="text"
-            value={draft.dimensions}
-            onChange={(e) => onChange({ dimensions: e.target.value })}
-            placeholder="e.g. 594 × 420 mm"
-            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-          />
+          <input type="text" value={draft.dimensions} onChange={(e) => onChange({ dimensions: e.target.value })} placeholder="e.g. 594 × 420 mm"
+            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Substrate</label>
-          <input
-            type="text"
-            value={draft.substrate}
-            onChange={(e) => onChange({ substrate: e.target.value })}
-            placeholder="e.g. Hahnemühle Photo Rag 308gsm"
-            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-          />
+          <input type="text" value={draft.substrate} onChange={(e) => onChange({ substrate: e.target.value })} placeholder="e.g. Hahnemühle Photo Rag 308gsm"
+            className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
       </div>
 
       {/* Price */}
       <div className="space-y-2">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={draft.poa}
-            onChange={(e) =>
-              onChange({ poa: e.target.checked, ...(e.target.checked && { price: "" }) })
-            }
-            className="accent-black"
-          />
+          <input type="checkbox" checked={draft.poa} onChange={(e) => onChange({ poa: e.target.checked, ...(e.target.checked && { price: "" }) })} className="accent-black" />
           <span className="text-sm text-muted-foreground">Price on application</span>
         </label>
         {!draft.poa && (
           <div className="flex gap-2">
-            <select
-              value={draft.currency}
-              onChange={(e) => onChange({ currency: e.target.value })}
-              className="border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground w-24"
-            >
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+            <select value={draft.currency} onChange={(e) => onChange({ currency: e.target.value })}
+              className="border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground w-24">
+              {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft.price}
-              onChange={(e) => onChange({ price: e.target.value })}
-              placeholder="1200"
-              className="w-32 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
-            />
+            <input type="text" inputMode="decimal" value={draft.price} onChange={(e) => onChange({ price: e.target.value })} placeholder="1200"
+              className="w-32 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
+          </div>
+        )}
+        {hasPrice && (
+          <div className="border border-border px-3 py-2 space-y-0.5 text-[11px]">
+            <div className="flex justify-between"><span className="text-muted-foreground">Listing price</span><span className="font-mono">{draft.currency} {priceNum.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Patronage commission (10%)</span><span className="font-mono">−{draft.currency} {(priceNum * 0.10).toFixed(2)}</span></div>
+            <div className="flex justify-between border-t border-border pt-1 mt-1"><span className="font-medium">Your take-home</span><span className="font-mono font-medium">{draft.currency} {(priceNum * 0.90).toFixed(2)}</span></div>
           </div>
         )}
       </div>
 
-      {/* Listing mode */}
+      {/* How collectors buy */}
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Listing mode</label>
-        <select
-          value={draft.listing_mode}
-          onChange={(e) => onChange({ listing_mode: e.target.value as EditionListingMode })}
-          className="border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground"
-        >
-          <option value="enquire">Enquire first</option>
-          <option value="direct">Direct sale</option>
-        </select>
+        <label className="text-xs text-muted-foreground">How collectors buy</label>
+        <div className="flex gap-2">
+          {HOW_TO_BUY.map(({ value, label }) => (
+            <button key={value} type="button" onClick={() => onChange({ acquisitionMode: value })}
+              className={`text-xs px-3 py-1.5 border transition-colors ${draft.acquisitionMode === value ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {draft.acquisitionMode === "buy_now" && "Shows price and a Buy button. Enables direct checkout."}
+          {draft.acquisitionMode === "make_offer" && "Shows price and an offer button. Buyer proposes a price."}
+          {draft.acquisitionMode === "enquire_first" && "Price is hidden. Buyer contacts you to start a conversation."}
+        </p>
       </div>
 
       {/* Listed */}
       <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={draft.listed}
-          onChange={(e) => onChange({ listed: e.target.checked })}
-          className="accent-black"
-        />
+        <input type="checkbox" checked={draft.listed} onChange={(e) => onChange({ listed: e.target.checked })} className="accent-black" />
         <span className="text-sm">Listed</span>
         <span className="text-xs text-muted-foreground">(visible to buyers)</span>
       </label>
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-1">
-        <button
-          onClick={onSave}
-          disabled={busy}
-          className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40"
-        >
+        <button onClick={onSave} disabled={busy}
+          className="text-sm bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40">
           {busy ? "Saving…" : "Save edition"}
         </button>
-        <button
-          onClick={onCancel}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3"
-        >
-          Cancel
-        </button>
+        <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3">Cancel</button>
         {onDelete && (
-          <button
-            onClick={onDelete}
-            disabled={busy}
-            className="ml-auto flex items-center gap-1.5 text-xs text-destructive hover:opacity-70 transition-opacity disabled:opacity-40"
-          >
-            <Trash2 className="w-3 h-3" />
-            Delete
+          <button onClick={onDelete} disabled={busy}
+            className="ml-auto flex items-center gap-1.5 text-xs text-destructive hover:opacity-70 transition-opacity disabled:opacity-40">
+            <Trash2 className="w-3 h-3" />Delete
           </button>
         )}
       </div>

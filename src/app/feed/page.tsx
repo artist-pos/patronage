@@ -9,7 +9,7 @@ import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { InfiniteFeed } from "@/components/feed/InfiniteFeed";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import { WorksControls } from "@/components/feed/WorksControls";
-import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
+import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 
 export const metadata: Metadata = {
   title: "Feed | Patronage",
@@ -99,7 +99,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
             let q = supabase
               .from("artworks")
               .select(
-                "id, url, title, caption, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
+                "id, url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
               )
               .eq("is_available", true)
               .eq("hide_available", false);
@@ -128,6 +128,40 @@ export default async function FeedPage({ searchParams }: PageProps) {
                 .not("medium_category", "is", null),
             ]);
 
+            const artworkRows = artworksRes.data ?? [];
+            const artworkIds = artworkRows.map((a: { id: string }) => a.id);
+
+            const editionsRes = artworkIds.length > 0
+              ? await supabase
+                  .from("editions")
+                  .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
+                  .in("work_id", artworkIds)
+                  .eq("listed", true)
+              : { data: [] };
+
+            const editionsByWork = new Map<string, EditionOption[]>();
+            for (const ed of editionsRes.data ?? []) {
+              const key = (ed as { work_id: string }).work_id;
+              if (!editionsByWork.has(key)) editionsByWork.set(key, []);
+              editionsByWork.get(key)!.push({
+                id: (ed as { id: string }).id,
+                label: (ed as { label: string | null }).label ?? "",
+                type: (ed as { type: string | null }).type ?? "",
+                price_cents: (ed as { price_cents: number | null }).price_cents,
+                currency: ((ed as { currency: string | null }).currency) ?? "NZD",
+                poa: (ed as { poa: boolean | null }).poa ?? false,
+                listing_mode: (ed as { listing_mode: string | null }).listing_mode ?? "",
+                listed: (ed as { listed: boolean | null }).listed ?? false,
+                sort_order: (ed as { sort_order: number | null }).sort_order ?? 0,
+                dimensions: (ed as { dimensions: string | null }).dimensions,
+              });
+            }
+
+            const artworks = artworkRows.map((a: Record<string, unknown>) => ({
+              ...a,
+              editions: editionsByWork.get(a.id as string) ?? [],
+            })) as unknown as ArtworkForGrid[];
+
             const mediumOptions = [
               ...new Set(
                 (mediumsRes.data ?? [])
@@ -136,10 +170,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
               ),
             ].sort();
 
-            return {
-              artworks: (artworksRes.data ?? []) as unknown as ArtworkForGrid[],
-              mediumOptions,
-            };
+            return { artworks, mediumOptions };
           })()
         : Promise.resolve(null),
       worksLayoutPromise,

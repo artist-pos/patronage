@@ -71,6 +71,23 @@ export interface PipelineConfig {
   questions: PipelineQuestion[];
   artist_documents: ('cv' | 'bio' | 'portfolio' | 'available_works')[];
   terms_pdf_url: string | null;
+  post_selection?: PostSelectionConfig | null;
+}
+
+export interface PostSelectionDocField {
+  id: string;
+  label: string;
+  type: 'file' | 'link' | 'text' | 'rich_text';
+  required: boolean;
+  description?: string;
+}
+
+export interface PostSelectionConfig {
+  requires_campaign: boolean;
+  requires_studio_updates: boolean;
+  update_frequency_days: 7 | 14 | 30 | 90 | null;
+  requires_documentation: boolean;
+  doc_fields: PostSelectionDocField[];
 }
 
 export interface Opportunity {
@@ -309,40 +326,8 @@ export interface ArtistFollowup {
 
 export type ImageOrientation = 'landscape' | 'portrait' | 'square';
 
-export interface PortfolioImage {
-  id: string;
-  profile_id: string;
-  url: string;
-  caption: string | null;
-  description: string | null;
-  position: number;
-  is_available: boolean;
-  price: string | null;
-  creator_id: string;
-  current_owner_id: string;
-  hide_from_archive: boolean;
-  hide_price: boolean;
-  collection_visible: boolean;
-  hide_available: boolean;
-  is_featured: boolean;
-  orientation: ImageOrientation | null;
-  natural_width: number | null;
-  natural_height: number | null;
-  content_type: ContentTypeEnum;
-  audio_url: string | null;
-  video_url: string | null;
-  text_content: string | null;
-  embed_url: string | null;
-  embed_provider: string | null;
-  title: string | null;
-  year: number | null;
-  medium: string | null;
-  dimensions: string | null;
-  linked_artwork_id: string | null;
-  slug: string | null;
-  collaborator_ids: string[];
-  created_at: string;
-}
+/** @deprecated — use Artwork. Kept as an alias during the migration 135 sweep. */
+export type PortfolioImage = Artwork;
 
 export type SupportTierType = "one_off" | "recurring" | "service" | "project";
 
@@ -441,6 +426,21 @@ export interface Artwork {
   // Migration 052: physical dimensions for justified grid aspect-ratio calculation
   width_mm: number | null;
   height_mm: number | null;
+  // Migration 135: unified from portfolio_images
+  slug: string | null;
+  collaborator_ids: string[];
+  content_type: ContentTypeEnum;
+  audio_url: string | null;
+  video_url: string | null;
+  text_content: string | null;
+  embed_url: string | null;
+  embed_provider: string | null;
+  is_featured: boolean;
+  orientation: ImageOrientation | null;
+  natural_width: number | null;
+  natural_height: number | null;
+  location_text: string | null;
+  show_location_publicly: boolean;
   created_at: string;
 }
 

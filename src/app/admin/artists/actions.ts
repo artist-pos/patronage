@@ -28,9 +28,9 @@ export async function togglePatronageSupported(id: string, current: boolean) {
 export async function deleteArtist(id: string) {
   await guard();
   const supabase = await createClient();
-  // Delete portfolio images from storage first
+  // Delete artwork images from storage first
   const { data: imgs } = await supabase
-    .from("portfolio_images")
+    .from("artworks")
     .select("url")
     .eq("profile_id", id);
   if (imgs && imgs.length > 0) {

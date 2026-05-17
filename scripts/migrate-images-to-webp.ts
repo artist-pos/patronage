@@ -103,20 +103,6 @@ const TABLES: TableConfig[] = [
     },
   },
   {
-    table: "portfolio_images",
-    column: "url",
-    query: async () => {
-      const { data } = await admin
-        .from("portfolio_images")
-        .select("id, url")
-        .not("url", "is", null);
-      return (data ?? []).map((r) => ({ id: r.id, url: r.url }));
-    },
-    update: async (id, newUrl) => {
-      await admin.from("portfolio_images").update({ url: newUrl }).eq("id", id);
-    },
-  },
-  {
     table: "artworks",
     column: "url",
     query: async () => {

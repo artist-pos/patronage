@@ -18,7 +18,6 @@ interface Props {
 export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
-  const [open, setOpen] = useState(false);
 
   const [type, setType] = useState<PriorHistoryType>("exhibited");
   const [description, setDescription] = useState("");
@@ -58,31 +57,12 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
   }
 
   return (
-    <section className="border border-stone-200 rounded-xl">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center justify-between w-full px-5 py-4 text-left"
-        aria-expanded={open}
-      >
-        <div>
-          <p className="text-sm font-medium text-stone-900">Prior history</p>
-          <p className="text-xs text-stone-500 mt-0.5">
-            Exhibitions, sales, commissions and other events from before the work was registered on Patronage.{" "}
-            <span className="text-stone-700">{entries.length} {entries.length === 1 ? "entry" : "entries"}</span>
-          </p>
-        </div>
-        <svg
-          className={`w-4 h-4 text-stone-400 transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="border-t border-stone-100 px-5 py-5 space-y-5">
+    <div className="space-y-5">
+      <p className="text-xs text-muted-foreground">
+        Exhibitions, sales, commissions and other events from before the work was registered on Patronage.
+        {entries.length > 0 && <span> {entries.length} {entries.length === 1 ? "entry" : "entries"}.</span>}
+      </p>
+      <div className="space-y-5">
           {entries.length > 0 && (
             <ul className="space-y-2">
               {entries.map(e => (
@@ -158,8 +138,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
               {submitting ? "Adding…" : "Add entry"}
             </button>
           </form>
-        </div>
-      )}
-    </section>
+      </div>
+    </div>
   );
 }

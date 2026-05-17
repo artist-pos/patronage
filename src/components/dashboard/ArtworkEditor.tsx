@@ -22,6 +22,7 @@ import { GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/upload-image";
 import { updateWorkMetadata, setPrimaryWorkImageUrl } from "@/app/dashboard/works/actions";
+import { linkProjectToArtwork, unlinkProjectFromArtwork } from "@/actions/projects";
 import type { WorkImage } from "@/types/database";
 
 export interface EditableWork {
@@ -42,6 +43,9 @@ interface Props {
   onCancel: () => void;
   onSaved: (updated: Partial<EditableWork>) => void;
   onThumbnailChange?: (url: string) => void;
+  linkedProject?: { id: string; title: string } | null;
+  unlinkableProjects?: { id: string; title: string; update_count: number }[];
+  onProjectChanged?: () => void;
 }
 
 // ── Sortable gallery thumbnail ───────────────────────────────────────────────
@@ -122,7 +126,7 @@ function detectImageDimensions(url: string): Promise<{ naturalWidth: number; nat
   });
 }
 
-export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailChange }: Props) {
+export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailChange, linkedProject, unlinkableProjects, onProjectChanged }: Props) {
   // Metadata form
   const [title, setTitle] = useState(work.title ?? "");
   const [year, setYear] = useState(work.year ? String(work.year) : "");
@@ -140,6 +144,8 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
   // UI
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projectBusy, setProjectBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -153,7 +159,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
     supabase
       .from("work_images")
       .select("*")
-      .eq("portfolio_image_id", work.id)
+      .eq("artwork_id", work.id)
       .order("position", { ascending: true })
       .then(({ data }) => {
         const rows = data ?? [];
@@ -267,7 +273,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
       const { data: newRow, error: insertError } = await supabase
         .from("work_images")
         .insert({
-          portfolio_image_id: work.id,
+          artwork_id: work.id,
           url: uploadedUrl,
           position: images.length,
           is_primary: isPrimary,
@@ -299,7 +305,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
   async function handleSave() {
     setSaving(true);
     setError(null);
-    const result = await updateWorkMetadata(work.id, "portfolio_images", {
+    const result = await updateWorkMetadata(work.id, {
       title,
       year: year ? parseInt(year) : null,
       medium,
@@ -515,6 +521,72 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
               className={`${inputCls} resize-none`}
             />
           </div>
+
+          {/* Project Thread */}
+          {(linkedProject !== undefined) && (
+            <div className="space-y-1 pt-2 border-t border-border">
+              <label className="text-[11px] text-muted-foreground">Project Thread</label>
+              {linkedProject ? (
+                <div className="flex items-center justify-between gap-3 text-sm border border-border px-3 py-2 bg-background">
+                  <span className="truncate">{linkedProject.title}</span>
+                  <button
+                    type="button"
+                    disabled={projectBusy}
+                    onClick={async () => {
+                      setProjectBusy(true);
+                      await unlinkProjectFromArtwork(linkedProject.id, work.id);
+                      onProjectChanged?.();
+                      setProjectBusy(false);
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-40"
+                  >
+                    Unlink
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  {(unlinkableProjects?.length ?? 0) === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No unlinked projects — create one in{" "}
+                      <a href="/studio?section=feed&ft=projects" className="underline underline-offset-2 hover:text-foreground">
+                        Studio Feed
+                      </a>
+                      .
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        value={selectedProjectId}
+                        onChange={e => setSelectedProjectId(e.target.value)}
+                        className={`${inputCls} flex-1`}
+                      >
+                        <option value="">Select a project…</option>
+                        {unlinkableProjects!.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}{p.update_count > 0 ? ` (${p.update_count})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!selectedProjectId || projectBusy}
+                        onClick={async () => {
+                          if (!selectedProjectId) return;
+                          setProjectBusy(true);
+                          await linkProjectToArtwork(selectedProjectId, work.id);
+                          onProjectChanged?.();
+                          setProjectBusy(false);
+                        }}
+                        className="text-sm border border-border px-3 py-2 hover:bg-muted/40 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        {projectBusy ? "…" : "Link"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

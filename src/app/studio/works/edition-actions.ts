@@ -18,107 +18,11 @@ export interface EditionInput {
   currency?: string;
   poa?: boolean;
   listing_mode?: EditionListingMode;
+  acquisitionMode?: AcquisitionMode | null;
   listed?: boolean;
   inventory?: number | null;
   sort_order?: number;
 }
-
-// ── Auth helper ───────────────────────────────────────────────────────────────
-
-async function getWork(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  workId: string,
-  userId: string
-) {
-  const { data } = await supabase
-    .from("portfolio_images")
-    .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
-    .eq("id", workId)
-    .eq("profile_id", userId)
-    .single();
-  return data;
-}
-
-type AcquisitionMode = 'buy_now' | 'make_offer' | 'enquire_first';
-
-interface ArtworkExtra {
-  acquisitionMode?: AcquisitionMode | null;
-  mediumCategory?: string[] | null;
-  surfaceOrSubstrate?: string | null;
-  widthMm?: number | null;
-  heightMm?: number | null;
-}
-
-// ── Artworks sync ─────────────────────────────────────────────────────────────
-// Keeps the artworks table in sync with the original edition until steps 4–7
-// migrate the display code to read from editions directly.
-
-async function syncArtworks(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  work: NonNullable<Awaited<ReturnType<typeof getWork>>>,
-  edition: Pick<EditionInput, 'price_cents' | 'currency' | 'poa' | 'listing_mode' | 'listed'>,
-  extra?: ArtworkExtra,
-) {
-  const admin = createAdminClient();
-  const isListed = edition.listed ?? false;
-  const mode = extra?.acquisitionMode ?? null;
-  const artworkPayload: Record<string, unknown> = {
-    price_cents: edition.poa ? null : (edition.price_cents ?? null),
-    is_poa: edition.poa ?? false,
-    price_currency: edition.currency ?? 'NZD',
-    listing_mode: edition.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
-    acquisition_mode: mode ?? (edition.listing_mode === 'direct' ? 'buy_now' : 'enquire_first'),
-    is_available: isListed,
-  };
-
-  if (work.linked_artwork_id) {
-    await admin
-      .from("artworks")
-      .update(artworkPayload)
-      .eq("id", work.linked_artwork_id)
-      .eq("creator_id", work.creator_id);
-  } else if (isListed) {
-    const { data: newArtwork, error: insertError } = await admin
-      .from("artworks")
-      .insert({
-        profile_id: work.creator_id,
-        creator_id: work.creator_id,
-        current_owner_id: work.creator_id,
-        url: work.url,
-        caption: work.caption,
-        description: work.description,
-        title: work.title,
-        year: work.year,
-        medium: work.medium,
-        dimensions: work.dimensions,
-        medium_category: extra?.mediumCategory ?? null,
-        surface_or_substrate: extra?.surfaceOrSubstrate ?? null,
-        width_mm: extra?.widthMm ?? null,
-        height_mm: extra?.heightMm ?? null,
-        ...artworkPayload,
-        hide_available: false,
-        hide_from_archive: false,
-        hide_price: false,
-        collection_visible: true,
-        hidden_from_artist: false,
-        position: 0,
-      })
-      .select("id")
-      .single();
-
-    if (insertError) console.error("[syncArtworks] insert failed:", insertError.message);
-
-    if (newArtwork) {
-      await admin
-        .from("portfolio_images")
-        .update({ linked_artwork_id: newArtwork.id })
-        .eq("id", work.id)
-        .eq("creator_id", work.creator_id);
-    }
-  }
-}
-
-// ── Create work with initial edition (used by NewWorkClient) ──────────────────
 
 export interface ExtraEditionInput {
   type: EditionType;
@@ -132,6 +36,74 @@ export interface ExtraEditionInput {
   dimensions?: string | null;
   substrate?: string | null;
 }
+
+type AcquisitionMode = 'buy_now' | 'make_offer' | 'enquire_first';
+
+// ── Auth helper ───────────────────────────────────────────────────────────────
+
+async function getArtwork(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  artworkId: string,
+  userId: string
+) {
+  const { data } = await supabase
+    .from("artworks")
+    .select("id, url, caption, description, title, year, medium, dimensions, creator_id, profile_id, is_available, acquisition_mode")
+    .eq("id", artworkId)
+    .eq("profile_id", userId)
+    .single();
+  return data;
+}
+
+// Re-sync the artworks row from ALL listed editions.
+// is_available = true if any edition is listed.
+// price_cents = minimum price across listed editions (for "From X" display).
+// listing_mode / acquisition_mode taken from original edition if listed, else first listed.
+async function resyncArtworkFromAllEditions(artworkId: string, creatorId: string) {
+  const admin = createAdminClient();
+  const { data: listedEditions } = await admin
+    .from("editions")
+    .select("type, price_cents, currency, poa, listing_mode")
+    .eq("work_id", artworkId)
+    .eq("listed", true)
+    .order("sort_order", { ascending: true });
+
+  if (!listedEditions?.length) {
+    await admin.from("artworks")
+      .update({ is_available: false })
+      .eq("id", artworkId)
+      .eq("creator_id", creatorId);
+    return;
+  }
+
+  const prices = listedEditions
+    .filter(e => !e.poa && e.price_cents != null)
+    .map(e => e.price_cents as number);
+  const minPrice = prices.length ? Math.min(...prices) : null;
+  const leadEdition = listedEditions.find(e => e.type === 'original') ?? listedEditions[0];
+  const mode = leadEdition.listing_mode === 'direct' ? 'buy_now' : 'enquire_first';
+
+  await admin.from("artworks").update({
+    is_available: true,
+    price_cents: minPrice,
+    is_poa: minPrice == null && listedEditions.some(e => e.poa),
+    price_currency: (leadEdition.currency ?? 'NZD') as 'NZD' | 'AUD',
+    listing_mode: leadEdition.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+    acquisition_mode: mode,
+  }).eq("id", artworkId).eq("creator_id", creatorId);
+}
+
+// Kept for backward compat — delegates to the full re-sync.
+async function syncArtworkFromEdition(
+  artworkId: string,
+  creatorId: string,
+  _edition: unknown,
+  _extra?: unknown,
+) {
+  await resyncArtworkFromAllEditions(artworkId, creatorId);
+}
+
+// ── Create work with initial edition ─────────────────────────────────────────
 
 export async function createWorkWithEdition(data: {
   url: string;
@@ -163,9 +135,13 @@ export async function createWorkWithEdition(data: {
   if (!user) return { error: "Not authenticated" };
 
   const admin = createAdminClient();
+  const firstEd = data.edition;
+  const isListed = firstEd.listed || (data.extraEditions?.some(e => e.listed) ?? false);
+  const mode = data.acquisitionMode
+    ?? (firstEd.listing_mode === 'direct' ? 'buy_now' : 'enquire_first');
 
-  const { data: work, error: workError } = await admin
-    .from("portfolio_images")
+  const { data: artwork, error: artworkError } = await admin
+    .from("artworks")
     .insert({
       profile_id: user.id,
       creator_id: user.id,
@@ -177,27 +153,41 @@ export async function createWorkWithEdition(data: {
       medium: data.medium,
       dimensions: data.dimensions,
       description: data.description,
-      is_available: false,
+      medium_category: data.mediumCategory ?? null,
+      surface_or_substrate: data.surfaceOrSubstrate ?? null,
+      width_mm: data.widthMm ?? null,
+      height_mm: data.heightMm ?? null,
+      price_cents: firstEd.poa ? null : firstEd.price_cents,
+      is_poa: firstEd.poa ?? false,
+      price_currency: firstEd.currency ?? 'NZD',
+      listing_mode: firstEd.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+      acquisition_mode: mode,
+      is_available: data.forSale ? isListed : false,
+      hide_available: false,
       hide_from_archive: false,
+      hide_price: false,
+      collection_visible: true,
+      hidden_from_artist: false,
       position: 9999,
+      source: 'self_registered',
     })
-    .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
+    .select("id, creator_id")
     .single();
 
-  if (workError || !work) return { error: workError?.message ?? "Failed to create work" };
+  if (artworkError || !artwork) return { error: artworkError?.message ?? "Failed to create work" };
 
   const { error: editionError } = await admin.from("editions").insert({
-    work_id: work.id,
+    work_id: artwork.id,
     type: 'original',
     label: 'Original',
-    price_cents: data.edition.poa ? null : data.edition.price_cents,
-    currency: data.edition.currency,
-    poa: data.edition.poa,
-    listing_mode: data.edition.listing_mode,
-    listed: data.edition.listed,
-    edition_size: data.edition.edition_size ?? null,
-    substrate: data.edition.substrate ?? null,
-    inventory: data.edition.edition_size ?? null,
+    price_cents: firstEd.poa ? null : firstEd.price_cents,
+    currency: firstEd.currency,
+    poa: firstEd.poa,
+    listing_mode: firstEd.listing_mode,
+    listed: firstEd.listed,
+    edition_size: firstEd.edition_size ?? null,
+    substrate: firstEd.substrate ?? null,
+    inventory: firstEd.edition_size ?? null,
     sort_order: 0,
   });
 
@@ -206,7 +196,7 @@ export async function createWorkWithEdition(data: {
   if (data.extraEditions && data.extraEditions.length > 0) {
     const { error: extrasError } = await admin.from("editions").insert(
       data.extraEditions.map((e, i) => ({
-        work_id: work.id,
+        work_id: artwork.id,
         type: e.type,
         label: e.label,
         price_cents: e.poa ? null : e.price_cents,
@@ -224,87 +214,26 @@ export async function createWorkWithEdition(data: {
     if (extrasError) return { error: extrasError.message };
   }
 
-  // For sale mode: always create the artworks row using the first listed edition
-  if (data.forSale) {
-    const firstListed =
-      (data.edition.listed ? data.edition : null) ??
-      data.extraEditions?.find((e) => e.listed);
-
-    if (firstListed) {
-      const { data: newArtwork, error: artErr } = await admin
-        .from("artworks")
-        .insert({
-          profile_id: user.id,
-          creator_id: user.id,
-          current_owner_id: user.id,
-          url: work.url,
-          caption: work.caption,
-          description: work.description,
-          title: work.title,
-          year: work.year,
-          medium: work.medium,
-          dimensions: work.dimensions,
-          medium_category: data.mediumCategory ?? null,
-          surface_or_substrate: data.surfaceOrSubstrate ?? null,
-          width_mm: data.widthMm ?? null,
-          height_mm: data.heightMm ?? null,
-          price_cents: firstListed.poa ? null : firstListed.price_cents,
-          is_poa: firstListed.poa ?? false,
-          price_currency: firstListed.currency ?? 'NZD',
-          listing_mode: firstListed.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
-          acquisition_mode: data.acquisitionMode ?? (firstListed.listing_mode === 'direct' ? 'buy_now' : 'enquire_first'),
-          is_available: true,
-          hide_available: false,
-          hide_from_archive: false,
-          hide_price: false,
-          collection_visible: true,
-          hidden_from_artist: false,
-          position: 0,
-        })
-        .select("id")
-        .single();
-
-      if (artErr) return { error: artErr.message };
-
-      if (newArtwork) {
-        await admin
-          .from("portfolio_images")
-          .update({ linked_artwork_id: newArtwork.id })
-          .eq("id", work.id);
-      }
-    }
-  } else {
-    const meta = {
-      acquisitionMode: data.acquisitionMode ?? null,
-      mediumCategory: data.mediumCategory,
-      surfaceOrSubstrate: data.surfaceOrSubstrate,
-      widthMm: data.widthMm ?? null,
-      heightMm: data.heightMm ?? null,
-    };
-    if (data.edition.listed) {
-      await syncArtworks(supabase, work, data.edition, meta);
-    }
-  }
-
   revalidatePath("/studio");
-  return { id: work.id };
+  return { id: artwork.id };
 }
 
 // ── Save edition (create or update) ──────────────────────────────────────────
 
 export async function saveEdition(
-  workId: string,
+  artworkId: string,
   input: EditionInput
 ): Promise<{ id?: string; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const work = await getWork(supabase, workId, user.id);
-  if (!work) return { error: "Work not found" };
+  const artwork = await getArtwork(supabase, artworkId, user.id);
+  if (!artwork) return { error: "Work not found" };
 
+  const admin = createAdminClient();
   const payload = {
-    work_id: workId,
+    work_id: artworkId,
     type: input.type,
     label: input.label,
     edition_size: input.edition_size ?? null,
@@ -322,14 +251,14 @@ export async function saveEdition(
   let id = input.id;
 
   if (id) {
-    const { error } = await supabase
+    const { error } = await admin
       .from("editions")
       .update(payload)
       .eq("id", id)
-      .eq("work_id", workId);
+      .eq("work_id", artworkId);
     if (error) return { error: error.message };
   } else {
-    const { data: row, error } = await supabase
+    const { data: row, error } = await admin
       .from("editions")
       .insert(payload)
       .select("id")
@@ -338,48 +267,43 @@ export async function saveEdition(
     id = row.id;
   }
 
-  if (input.type === 'original') {
-    await syncArtworks(supabase, work, payload);
-  }
+  // Re-sync artwork availability/price from all listed editions
+  await resyncArtworkFromAllEditions(artworkId, artwork.creator_id);
 
   revalidatePath("/studio");
   return { id };
 }
 
-// ── Toggle listed (immediate, no full form save) ──────────────────────────────
+// ── Toggle listed ─────────────────────────────────────────────────────────────
 
 export async function toggleEditionListed(
   editionId: string,
-  workId: string,
+  artworkId: string,
   listed: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const work = await getWork(supabase, workId, user.id);
-  if (!work) return { error: "Work not found" };
+  const artwork = await getArtwork(supabase, artworkId, user.id);
+  if (!artwork) return { error: "Work not found" };
 
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("editions")
     .update({ listed })
     .eq("id", editionId)
-    .eq("work_id", workId);
+    .eq("work_id", artworkId);
 
   if (error) return { error: error.message };
 
-  const { data: edition } = await supabase
+  const { data: edition } = await admin
     .from("editions")
     .select("type, price_cents, currency, poa, listing_mode")
     .eq("id", editionId)
     .single();
 
-  if (edition?.type === 'original') {
-    await syncArtworks(supabase, work, { ...edition, listed });
-  } else if (edition && listed && !work.linked_artwork_id) {
-    // Non-original edition being listed for the first time — create the artworks row
-    await syncArtworks(supabase, work, { ...edition, listed });
-  }
+  await resyncArtworkFromAllEditions(artworkId, artwork.creator_id);
 
   revalidatePath("/studio");
   return {};
@@ -389,49 +313,50 @@ export async function toggleEditionListed(
 
 export async function deleteEdition(
   editionId: string,
-  workId: string
+  artworkId: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const work = await getWork(supabase, workId, user.id);
-  if (!work) return { error: "Work not found" };
+  const artwork = await getArtwork(supabase, artworkId, user.id);
+  if (!artwork) return { error: "Work not found" };
 
-  const { data: edition } = await supabase
+  const admin = createAdminClient();
+  const { data: edition } = await admin
     .from("editions")
     .select("type")
     .eq("id", editionId)
-    .eq("work_id", workId)
+    .eq("work_id", artworkId)
     .single();
 
   if (!edition) return { error: "Edition not found" };
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("editions")
     .delete()
     .eq("id", editionId)
-    .eq("work_id", workId);
+    .eq("work_id", artworkId);
 
   if (error) return { error: error.message };
 
-  // Unlist the artworks row when the original edition is deleted
-  if (edition.type === 'original' && work.linked_artwork_id) {
-    await supabase
+  // Unlist the artwork when its original edition is deleted
+  if (edition.type === 'original') {
+    await admin
       .from("artworks")
       .update({ is_available: false })
-      .eq("id", work.linked_artwork_id)
-      .eq("creator_id", work.creator_id);
+      .eq("id", artworkId)
+      .eq("creator_id", artwork.creator_id);
   }
 
   revalidatePath("/studio");
   return {};
 }
 
-// ── Publish work to For Sale (bypasses RLS entirely via admin client) ──────────
+// ── Publish work to For Sale ──────────────────────────────────────────────────
 
 export async function publishWorkToForSale(
-  workId: string
+  artworkId: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -439,70 +364,38 @@ export async function publishWorkToForSale(
 
   const admin = createAdminClient();
 
-  const { data: work } = await admin
-    .from("portfolio_images")
-    .select("id, url, caption, description, title, year, medium, dimensions, linked_artwork_id, creator_id, profile_id")
-    .eq("id", workId)
+  const { data: artwork } = await admin
+    .from("artworks")
+    .select("id, creator_id, profile_id")
+    .eq("id", artworkId)
     .eq("profile_id", user.id)
     .single();
 
-  if (!work) return { error: "Work not found" };
+  if (!artwork) return { error: "Work not found" };
 
   const { data: editions } = await admin
     .from("editions")
     .select("*")
-    .eq("work_id", workId)
+    .eq("work_id", artworkId)
     .neq("type", "original")
     .order("sort_order", { ascending: true });
 
   const ed = editions?.[0];
   if (!ed) return { error: "No non-original editions found on this work." };
 
-  if (work.linked_artwork_id) {
-    const { error } = await admin
-      .from("artworks")
-      .update({ is_available: true })
-      .eq("id", work.linked_artwork_id);
-    if (error) return { error: error.message };
-  } else {
-    const { data: newArtwork, error: insertError } = await admin
-      .from("artworks")
-      .insert({
-        profile_id: work.creator_id,
-        creator_id: work.creator_id,
-        current_owner_id: work.creator_id,
-        url: work.url,
-        caption: work.caption,
-        description: work.description,
-        title: work.title,
-        year: work.year,
-        medium: work.medium,
-        dimensions: work.dimensions,
-        price_cents: ed.poa ? null : ed.price_cents,
-        is_poa: ed.poa ?? false,
-        price_currency: ed.currency ?? 'NZD',
-        listing_mode: ed.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
-        acquisition_mode: ed.listing_mode === 'direct' ? 'buy_now' : 'enquire_first',
-        is_available: true,
-        hide_available: false,
-        hide_from_archive: false,
-        hide_price: false,
-        collection_visible: true,
-        hidden_from_artist: false,
-        position: 0,
-      })
-      .select("id")
-      .single();
+  const { error } = await admin
+    .from("artworks")
+    .update({
+      is_available: true,
+      price_cents: ed.poa ? null : ed.price_cents,
+      is_poa: ed.poa ?? false,
+      price_currency: ed.currency ?? 'NZD',
+      listing_mode: ed.listing_mode === 'direct' ? 'direct_sale' : 'enquire_first',
+      acquisition_mode: ed.listing_mode === 'direct' ? 'buy_now' : 'enquire_first',
+    })
+    .eq("id", artworkId);
 
-    if (insertError) return { error: insertError.message };
-
-    if (newArtwork) {
-      await admin
-        .from("portfolio_images")
-        .update({ linked_artwork_id: newArtwork.id })
-        .eq("id", work.id);
-    }
-  }
+  if (error) return { error: error.message };
 
   revalidatePath("/studio");
   return {};

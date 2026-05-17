@@ -2,16 +2,22 @@ import Link from "next/link";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import { AvailableWorksSection } from "@/components/profile/AvailableWorksSection";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
+import { CollectionSection } from "@/components/profile/CollectionSection";
 import type { PortfolioImage, Artwork } from "@/types/database";
 
 interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
 }
 
+interface CollectionWork extends Artwork {
+  creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null;
+}
+
 interface Props {
   portfolioImages: PortfolioImage[];
   availableWorks: Artwork[];
   soldWorks: SoldWork[];
+  collectionWorks: CollectionWork[];
   profileId: string;
   username: string;
   artistName: string;
@@ -32,6 +38,7 @@ export function WorkTab({
   portfolioImages,
   availableWorks,
   soldWorks,
+  collectionWorks,
   profileId,
   username,
   artistName,
@@ -69,7 +76,13 @@ export function WorkTab({
       )}
 
       {/* ── Work — full body of work ── */}
-      {(isOwner || portfolioImages.length > 0) && (
+      {(isOwner || portfolioImages.length > 0) && (() => {
+        const sortedImages = [...portfolioImages].sort((a, b) => {
+          if (a.is_featured && !b.is_featured) return -1;
+          if (!a.is_featured && b.is_featured) return 1;
+          return (a.position ?? 0) - (b.position ?? 0);
+        });
+        return (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
@@ -92,9 +105,9 @@ export function WorkTab({
               </div>
             )}
           </div>
-          {portfolioImages.length > 0 ? (
+          {sortedImages.length > 0 ? (
             <GalleryWithControls
-              images={portfolioImages}
+              images={sortedImages}
               username={username}
               viewerRole={viewerRole}
               profileId={isOwner ? undefined : profileId}
@@ -109,7 +122,8 @@ export function WorkTab({
             </p>
           )}
         </section>
-      )}
+        );
+      })()}
 
       {/* ── Sold / In collection (market proof at the bottom) ── */}
       <SoldWorksSection
@@ -117,6 +131,15 @@ export function WorkTab({
         isOwner={isOwner}
         hideSoldSection={hideSoldSection}
       />
+
+      {/* ── Collection — works owned but not created by this artist ── */}
+      {(isOwner || collectionWorks.some(w => w.collection_visible)) && (
+        <CollectionSection
+          initialWorks={collectionWorks}
+          isOwner={isOwner}
+          collectionPublic={true}
+        />
+      )}
 
     </div>
   );

@@ -73,7 +73,7 @@ export async function getProfileStats(
       .eq("user_id", profileId),
 
     supabase
-      .from("portfolio_images")
+      .from("artworks")
       .select("id", { count: "exact", head: true })
       .eq("profile_id", profileId)
       .gte("created_at", sinceMain),

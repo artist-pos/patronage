@@ -38,6 +38,7 @@ interface Application {
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
   submitted_image_url: string | null;
+  documentation: Record<string, string> | null;
   artist: Artist | null;
   artwork: Artwork | null;
 }
@@ -399,6 +400,50 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
               )}
             </div>
           )}
+
+          {/* Submitted documentation */}
+          {opportunity.pipeline_config?.post_selection?.requires_documentation &&
+            (opportunity.pipeline_config.post_selection.doc_fields?.length ?? 0) > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest">Documentation</p>
+                {application.documentation && Object.keys(application.documentation).length > 0 ? (
+                  <div className="space-y-2">
+                    {opportunity.pipeline_config.post_selection.doc_fields.map((field) => {
+                      const value = application.documentation?.[field.id];
+                      if (!value) return null;
+                      return (
+                        <div key={field.id} className="space-y-0.5">
+                          <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                          {field.type === "file" ? (
+                            <a
+                              href={value}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity"
+                            >
+                              Download file →
+                            </a>
+                          ) : field.type === "link" ? (
+                            <a
+                              href={value}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm underline underline-offset-2 break-all hover:opacity-70 transition-opacity"
+                            >
+                              {value}
+                            </a>
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{value}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No documentation submitted yet.</p>
+                )}
+              </div>
+            )}
 
           {/* Status actions */}
           <div className="space-y-3 border-t border-black pt-4">

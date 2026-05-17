@@ -45,7 +45,7 @@ export function getSectionHref(id: string): string {
   if (id === "provenance")  return "/studio/provenance";
   if (id === "rooms")       return "/studio/rooms";
   if (id === "earnings")    return "/studio/earnings";
-  if (id === "collection")  return "/dashboard/collection";
+  if (id === "collection")  return "/studio/collection";
   if (id === "messages")    return "/messages";
   return `/studio?section=${id}`;
 }
