@@ -67,6 +67,11 @@ export async function requestArtworkDeletion(
   const ownerId = artwork.current_owner_id;
   if (!ownerId || ownerId === user.id) {
     // Artist owns it themselves — delete directly
+    await Promise.all([
+      admin.from("primary_sale_transactions").delete().eq("artwork_id", artworkId),
+      admin.from("resale_transactions").delete().eq("artwork_id", artworkId),
+      admin.from("negotiated_sale_transactions").delete().eq("artwork_id", artworkId),
+    ]);
     const { error } = await admin.from("artworks").delete().eq("id", artworkId);
     if (error) return { error: error.message };
     const { data: profile } = await supabase
@@ -143,7 +148,12 @@ export async function approveDeletionRequest(
   if (!artwork) return { error: "Artwork not found or already deleted." };
   if (artwork.current_owner_id !== user.id) return { error: "Not authorised." };
 
-  // Delete artwork — messages.work_id cascades to null
+  // Delete artwork — clear RESTRICT FK tables first, messages.work_id cascades to null
+  await Promise.all([
+    admin.from("primary_sale_transactions").delete().eq("artwork_id", message.work_id),
+    admin.from("resale_transactions").delete().eq("artwork_id", message.work_id),
+    admin.from("negotiated_sale_transactions").delete().eq("artwork_id", message.work_id),
+  ]);
   const { error: delErr } = await admin.from("artworks").delete().eq("id", message.work_id);
   if (delErr) return { error: delErr.message };
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function unlistWork(workId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
@@ -80,7 +81,15 @@ export async function deletePortfolioWork(workId: string): Promise<{ error?: str
     await supabase.storage.from("portfolio").remove([decodeURIComponent(match[1])]);
   }
 
-  const { error } = await supabase.from("artworks").delete().eq("id", workId);
+  // Delete sale transaction rows that block deletion (RESTRICT FKs)
+  const admin = createAdminClient();
+  await Promise.all([
+    admin.from("primary_sale_transactions").delete().eq("artwork_id", workId),
+    admin.from("resale_transactions").delete().eq("artwork_id", workId),
+    admin.from("negotiated_sale_transactions").delete().eq("artwork_id", workId),
+  ]);
+
+  const { error } = await admin.from("artworks").delete().eq("id", workId);
   if (error) return { error: error.message };
   return {};
 }
