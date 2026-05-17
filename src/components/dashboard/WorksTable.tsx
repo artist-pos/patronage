@@ -4,12 +4,30 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   toggleFeaturedWork,
   toggleHidePortfolioWork,
   toggleHideAvailable,
   deletePortfolioWork,
   unlistWork,
   archiveWork,
+  reorderPortfolioWorks,
 } from "@/app/profile/available-work-actions";
 import {
   requestArtworkDeletion,
@@ -122,6 +140,115 @@ function MoreMenu({ items }: { items: { label: string; onClick: () => void; dest
   );
 }
 
+function SortablePortfolioRow({
+  work,
+  busy,
+  featuredCount,
+  engagementMap,
+  onToggleFeatured,
+  onToggleHide,
+  onDelete,
+}: {
+  work: PortfolioRow;
+  busy: string | null;
+  featuredCount: number;
+  engagementMap: Record<string, { view: number; play: number }>;
+  onToggleFeatured: (id: string, current: boolean) => void;
+  onToggleHide: (id: string, current: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: work.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const stats = engagementMap[work.id];
+  const isMedia = work.content_type === "audio" || work.content_type === "video";
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 py-3">
+      {/* Drag handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="w-5 h-7 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing shrink-0"
+        aria-label="Drag to reorder"
+      >
+        <svg width="10" height="14" viewBox="0 0 10 16" fill="currentColor">
+          <circle cx="3" cy="3" r="1.5" /><circle cx="7" cy="3" r="1.5" />
+          <circle cx="3" cy="8" r="1.5" /><circle cx="7" cy="8" r="1.5" />
+          <circle cx="3" cy="13" r="1.5" /><circle cx="7" cy="13" r="1.5" />
+        </svg>
+      </button>
+
+      <Thumb url={work.url} caption={work.caption} type={work.content_type} />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">
+          {work.title ?? work.caption ?? "Untitled"}
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          {work.year ?? new Date(work.created_at).getFullYear()}
+          {work.medium ? ` · ${work.medium}` : ""}
+        </p>
+      </div>
+
+      {stats && (
+        <div className="hidden sm:flex items-center gap-2 shrink-0 text-[10px] text-muted-foreground">
+          {stats.view > 0 && <span>👁 {stats.view}</span>}
+          {isMedia && stats.play > 0 && <span>▶ {stats.play}</span>}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {work.is_featured && <Badge>★</Badge>}
+        {work.hide_from_archive && <Badge muted>Hidden</Badge>}
+        {work.is_available && <Badge muted>For sale</Badge>}
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={() => onToggleFeatured(work.id, work.is_featured)}
+          disabled={busy === work.id}
+          title={work.is_featured ? "Remove from featured" : "Mark as featured"}
+          className={`w-7 h-7 flex items-center justify-center transition-colors disabled:opacity-40 ${
+            work.is_featured ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill={work.is_featured ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+            <path d="M8 1l1.854 3.756L14 5.528l-3 2.924.708 4.128L8 10.57l-3.708 1.98.708-4.128L2 5.528l4.146-.772z" />
+          </svg>
+        </button>
+        <Link
+          href={`/studio/works/${work.id}`}
+          className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          title="Edit work"
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M11.5 2.5a1.5 1.5 0 012.121 2.121l-8.5 8.5L2 14l.879-3.121 8.621-8.379z" />
+          </svg>
+        </Link>
+        <MoreMenu
+          items={[
+            {
+              label: work.hide_from_archive ? "Show in archive" : "Hide from archive",
+              onClick: () => onToggleHide(work.id, work.hide_from_archive),
+              disabled: busy === work.id,
+            },
+            {
+              label: "Delete",
+              onClick: () => onDelete(work.id),
+              destructive: true,
+              disabled: busy === work.id,
+            },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function WorksTable({
   section,
   portfolioWorks,
@@ -137,6 +264,21 @@ export function WorksTable({
   const [sold, setSold] = useState<SoldRow[]>(soldWorks);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = portfolio.findIndex(w => w.id === active.id);
+    const newIndex = portfolio.findIndex(w => w.id === over.id);
+    const reordered = arrayMove(portfolio, oldIndex, newIndex);
+    setPortfolio(reordered);
+    await reorderPortfolioWorks(reordered.map(w => w.id));
+  }
 
   function showError(msg: string) {
     setError(msg);
@@ -230,85 +372,24 @@ export function WorksTable({
         portfolio.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8">No portfolio works yet. Upload below.</p>
         ) : (
-          <div className="divide-y divide-border border-t border-border">
-            {portfolio.map(work => (
-              <div key={work.id} className="flex items-center gap-3 py-3">
-                <Thumb url={work.url} caption={work.caption} type={work.content_type} />
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {work.title ?? work.caption ?? "Untitled"}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {work.year ?? new Date(work.created_at).getFullYear()}
-                    {work.medium ? ` · ${work.medium}` : ""}
-                  </p>
-                </div>
-
-                {(() => {
-                  const stats = engagementMap[work.id];
-                  if (!stats) return null;
-                  const isMedia = work.content_type === "audio" || work.content_type === "video";
-                  return (
-                    <div className="hidden sm:flex items-center gap-2 shrink-0 text-[10px] text-muted-foreground">
-                      {stats.view > 0 && <span>👁 {stats.view}</span>}
-                      {isMedia && stats.play > 0 && <span>▶ {stats.play}</span>}
-                    </div>
-                  );
-                })()}
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {work.is_featured && <Badge>★</Badge>}
-                  {work.hide_from_archive && <Badge muted>Hidden</Badge>}
-                  {work.is_available && <Badge muted>For sale</Badge>}
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  {/* Star — featured toggle */}
-                  <button
-                    onClick={() => toggleFeatured(work.id, work.is_featured)}
-                    disabled={busy === work.id}
-                    title={work.is_featured ? "Remove from featured" : "Mark as featured"}
-                    className={`w-7 h-7 flex items-center justify-center transition-colors disabled:opacity-40 ${
-                      work.is_featured ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill={work.is_featured ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
-                      <path d="M8 1l1.854 3.756L14 5.528l-3 2.924.708 4.128L8 10.57l-3.708 1.98.708-4.128L2 5.528l4.146-.772z" />
-                    </svg>
-                  </button>
-
-                  {/* Edit */}
-                  <Link
-                    href={`/studio/works/${work.id}`}
-                    className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit work"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M11.5 2.5a1.5 1.5 0 012.121 2.121l-8.5 8.5L2 14l.879-3.121 8.621-8.379z" />
-                    </svg>
-                  </Link>
-
-                  {/* More menu */}
-                  <MoreMenu
-                    items={[
-                      {
-                        label: work.hide_from_archive ? "Show in archive" : "Hide from archive",
-                        onClick: () => toggleHidePortfolio(work.id, work.hide_from_archive),
-                        disabled: busy === work.id,
-                      },
-                      {
-                        label: "Delete",
-                        onClick: () => handleDeletePortfolio(work.id),
-                        destructive: true,
-                        disabled: busy === work.id,
-                      },
-                    ]}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={portfolio.map(w => w.id)} strategy={verticalListSortingStrategy}>
+              <div className="divide-y divide-border border-t border-border">
+                {portfolio.map(work => (
+                  <SortablePortfolioRow
+                    key={work.id}
+                    work={work}
+                    busy={busy}
+                    featuredCount={featuredCount}
+                    engagementMap={engagementMap}
+                    onToggleFeatured={toggleFeatured}
+                    onToggleHide={toggleHidePortfolio}
+                    onDelete={handleDeletePortfolio}
                   />
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )
       )}
 

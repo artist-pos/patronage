@@ -138,6 +138,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .select("id, url, caption, description, hide_from_archive, is_available, position, created_at, content_type, title, year, medium, dimensions")
             .eq("profile_id", user.id)
             .eq("creator_id", user.id)
+            .eq("current_owner_id", user.id)
             .eq("is_available", false)
             .neq("source", "holder_uploaded")
             .order("position", { ascending: true }),

@@ -116,6 +116,29 @@ export async function archiveWork(workId: string): Promise<{ error?: string }> {
   return {};
 }
 
+export async function reorderPortfolioWorks(
+  orderedIds: string[]
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const results = await Promise.all(
+    orderedIds.map((id, position) =>
+      supabase
+        .from("artworks")
+        .update({ position })
+        .eq("id", id)
+        .eq("creator_id", user.id)
+        .eq("current_owner_id", user.id)
+    )
+  );
+
+  const firstError = results.find(r => r.error)?.error;
+  if (firstError) return { error: firstError.message };
+  return {};
+}
+
 export async function toggleFeaturedWork(
   workId: string,
   featured: boolean,
