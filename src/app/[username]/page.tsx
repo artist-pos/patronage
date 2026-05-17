@@ -149,6 +149,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     profileOpportunities,
     profileCampaigns,
     viewerRoleResult,
+    sharePortfolioImages,
   ] = await Promise.all([
     // Available works: always needed for "X works available" badge
     isArtistProfile
@@ -234,6 +235,19 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     user && !isOwner
       ? supabase.from("profiles").select("role").eq("id", user.id).single().then(r => r.data?.role ?? null)
       : Promise.resolve(null as string | null),
+    // Portfolio images for share picker (artist's own works, any availability, position-ordered)
+    isArtistProfile
+      ? supabase
+          .from("artworks")
+          .select("id, url")
+          .eq("creator_id", profile.id)
+          .eq("current_owner_id", profile.id)
+          .eq("hide_from_archive", false)
+          .not("url", "is", null)
+          .order("position", { ascending: true })
+          .limit(3)
+          .then(({ data }) => (data ?? []) as { id: string; url: string }[])
+      : Promise.resolve([] as { id: string; url: string }[]),
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
@@ -685,9 +699,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             {isArtistProfile && (() => {
               const shareImageOptions = [
                 ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
-                ...(publicAvailableWorks as Artwork[])
-                  .filter(w => !!w.url)
-                  .slice(0, 3)
+                ...sharePortfolioImages.slice(0, 3)
                   .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
               ];
               return (
