@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getProfileById } from "@/lib/profiles";
@@ -58,6 +59,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   const currentUserName = currentUserProfile?.full_name ?? currentUserProfile?.username;
   const currentUserUsername = currentUserProfile?.username;
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
+  const isAdmin = currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner";
 
   const canNote = !!user;
 
@@ -129,6 +131,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
               isFirst={i === 0}
               projectSlug={thread.project.slug ?? thread.project.id}
               artistName={artistName}
+              isAdmin={isAdmin}
               canNote={canNote}
               currentUserId={user?.id}
               currentUserName={currentUserName}
@@ -149,6 +152,7 @@ function ThreadPostItem({
   isFirst,
   projectSlug,
   artistName,
+  isAdmin,
   canNote,
   currentUserId,
   currentUserName,
@@ -159,6 +163,7 @@ function ThreadPostItem({
   isFirst: boolean;
   projectSlug: string;
   artistName: string;
+  isAdmin: boolean;
   canNote: boolean;
   currentUserId?: string;
   currentUserName?: string;
@@ -185,25 +190,34 @@ function ThreadPostItem({
 
       {/* Post content */}
       <div className="space-y-4">
-        {/* Timestamp + share */}
+        {/* Timestamp + admin edit + share */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <p className="text-[11px] font-mono text-muted-foreground">
             {formatTimestamp(post.created_at)}
           </p>
-          <ShareTrigger
-            variant="icon"
-            className="w-6 h-6 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0"
-            payload={{
-              type: "update",
-              title: post.title ?? post.caption?.slice(0, 60) ?? "Studio Update",
-              sub: post.tldr ?? `${artistName} · ${formatTimestamp(post.created_at)}`,
-              price: null,
-              tag: "STUDIO UPDATE",
-              handle: `@${post.artist_username}`,
-              imageUrl: post.image_url ?? null,
-              shareUrl: `${SITE_URL}/threads/${projectSlug}?scroll=${post.id}`,
-            }}
-          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isAdmin && (
+              <EditUpdateModal
+                updateId={post.id}
+                initialTitle={post.title}
+                initialTldr={post.tldr ?? null}
+              />
+            )}
+            <ShareTrigger
+              variant="icon"
+              className="w-6 h-6 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0"
+              payload={{
+                type: "update",
+                title: post.title ?? post.caption?.slice(0, 60) ?? "Studio Update",
+                sub: post.tldr ?? `${artistName} · ${formatTimestamp(post.created_at)}`,
+                price: null,
+                tag: "STUDIO UPDATE",
+                handle: `@${post.artist_username}`,
+                imageUrl: post.image_url ?? null,
+                shareUrl: `${SITE_URL}/threads/${projectSlug}?scroll=${post.id}`,
+              }}
+            />
+          </div>
         </div>
 
         {/* Media */}
