@@ -77,7 +77,7 @@ export function WorkTab({
           artistAvatarUrl={artistAvatarUrl}
           viewerRole={viewerRole}
           isOwner={isOwner}
-          initialRowH={worksRowH}
+          initialRowH={galleryRowHeight ?? worksRowH}
           initialHGap={worksHGap}
           initialVGap={worksVGap}
           initialLastRowAlign={worksLastRowAlign}

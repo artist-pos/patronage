@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Music, Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -151,11 +152,23 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
     return null;
   })();
 
+  const sharePayload = {
+    type: "update" as const,
+    title: u.caption?.slice(0, 60) ?? "Studio Update",
+    sub: `${name} · ${formatTimestamp(u.created_at)}`,
+    price: null,
+    tag: "STUDIO UPDATE",
+    handle: `@${u.artist_username}`,
+    imageUrl: u.content_type === "image" ? u.image_url : null,
+    shareUrl: `https://patronage.nz/${u.artist_username}`,
+  };
+
   return (
+    <div className="break-inside-avoid mb-2">
     <Link
       href={href}
       scroll={false}
-      className="group block break-inside-avoid mb-2 border border-border bg-background"
+      className="group block border border-border bg-background border-b-0"
     >
       {mediaSection}
 
@@ -208,5 +221,9 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
         )}
       </div>
     </Link>
+    <div className="flex justify-end border border-border border-t-0 px-2 py-1.5 bg-background">
+      <ShareTrigger payload={sharePayload} variant="icon" className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground" />
+    </div>
+    </div>
   );
 });

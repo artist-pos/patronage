@@ -16,6 +16,7 @@ import { FollowButton } from "@/components/profile/FollowButton";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 import dynamic from "next/dynamic";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
@@ -629,6 +630,20 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                     <MessageButton otherUserId={profile.id} />
                   </>
                 )}
+                <ShareTrigger
+                  variant="icon"
+                  className="p-2 border border-border hover:bg-muted transition-colors"
+                  payload={{
+                    type: "profile",
+                    title: profile.full_name ?? profile.username,
+                    sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+                    price: null,
+                    tag: "ARTIST",
+                    handle: `@${profile.username}`,
+                    imageUrl: profile.avatar_url,
+                    shareUrl: `https://patronage.nz/${profile.username}`,
+                  }}
+                />
                 {profile.website_url && (
                   <TrackedLink
                     href={profile.website_url}

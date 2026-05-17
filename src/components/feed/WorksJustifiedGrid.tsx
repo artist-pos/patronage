@@ -7,6 +7,8 @@ import Image from "next/image";
 import { X, Bookmark, BookmarkCheck } from "lucide-react";
 import { saveWorksLayout } from "@/app/feed/works-layout-actions";
 import { formatPrice } from "@/lib/format-price";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { formatSharePrice } from "@/lib/share-canvas";
 
 function ExpandableDescription({ text, clamp = 4 }: { text: string; clamp?: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -351,12 +353,12 @@ function WorksLightbox({
 
         {/* Modal card */}
         <div
-          className="flex overflow-hidden shadow-2xl"
+          className="flex flex-col overflow-y-auto sm:flex-row sm:overflow-hidden w-[calc(100vw-2rem)] sm:w-auto shadow-2xl"
           style={{ maxHeight: "90vh" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Image panel */}
-          <div className="relative flex-shrink-0 self-stretch flex items-center">
+          <div className="relative flex-shrink-0 flex items-center justify-center bg-stone-950 h-[50vh] sm:h-[90vh] sm:self-stretch">
             <button
               type="button"
               onClick={() => onToggleSave(artwork.id)}
@@ -373,14 +375,13 @@ function WorksLightbox({
             <img
               src={artwork.url}
               alt={title}
-              style={{ height: "90vh", width: "auto", maxWidth: "70vw", display: "block" }}
+              className="h-full w-auto max-w-full block sm:max-w-[70vw]"
             />
           </div>
 
           {/* Info panel */}
           <div
-            className="bg-white flex flex-col"
-            style={{ width: 280, overflowY: "auto" }}
+            className="bg-white flex flex-col w-full sm:w-[280px] overflow-y-auto"
           >
             <div className="flex-1 p-6 space-y-4">
 
@@ -1185,35 +1186,56 @@ export function WorksJustifiedGrid({
                         )}
                       </div>
 
-                      {/* Bookmark icon — top-right, hover only */}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); toggleSave(artwork.id); }}
+                      {/* Top-right actions — share + bookmark, hover only */}
+                      <div
                         style={{
                           position: "absolute",
                           top: 6,
                           right: 6,
                           opacity: isHovered ? 1 : 0,
                           transition: "opacity 0.2s ease",
-                          background: "rgba(255,255,255,0.85)",
-                          border: "none",
-                          borderRadius: "50%",
-                          width: 28,
-                          height: 28,
                           display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          backdropFilter: "blur(2px)",
+                          gap: 4,
                         }}
-                        aria-label={isSaved ? "Remove bookmark" : "Bookmark"}
                       >
-                        {isSaved ? (
-                          <BookmarkCheck className="w-3.5 h-3.5 text-black" />
-                        ) : (
-                          <Bookmark className="w-3.5 h-3.5 text-stone-600" />
-                        )}
-                      </button>
+                        <ShareTrigger
+                          payload={{
+                            type: "work",
+                            title: artwork.title ?? artwork.caption ?? "Untitled",
+                            sub: [artwork.medium, artwork.year].filter(Boolean).join(" · "),
+                            price: formatSharePrice(artwork.price_cents, artwork.price_currency, artwork.is_poa, artwork.acquisition_mode ?? undefined),
+                            tag: "FOR SALE",
+                            handle: `@${artwork.profile?.username ?? ""}`,
+                            imageUrl: artwork.url,
+                            shareUrl: `https://patronage.nz/${artwork.profile?.username ?? ""}?tab=work&artwork=${artwork.id}`,
+                            editionCount: artwork.editions?.length ?? null,
+                          }}
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-white/85 hover:bg-white transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleSave(artwork.id); }}
+                          style={{
+                            background: "rgba(255,255,255,0.85)",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 28,
+                            height: 28,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            backdropFilter: "blur(2px)",
+                          }}
+                          aria-label={isSaved ? "Remove bookmark" : "Bookmark"}
+                        >
+                          {isSaved ? (
+                            <BookmarkCheck className="w-3.5 h-3.5 text-black" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5 text-stone-600" />
+                          )}
+                        </button>
+                      </div>
 
                       {/* Hidden badge */}
                       {isHidden && (
