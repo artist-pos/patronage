@@ -740,43 +740,41 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
               };
               return (
-                <>
-                  {/* Mobile: share sits in the action row — rendered here as a portal-like sibling
-                      but actually injected via the data attribute trick isn't possible in RSC,
-                      so we use a hidden desktop copy here and a visible mobile copy in the action row */}
-                  <div className="hidden lg:flex flex-col justify-between items-end shrink-0">
+                <div className="flex flex-col justify-between items-end shrink-0 gap-3">
+                  {/* Desktop-only share button — mobile version lives in the action row */}
+                  <div className="hidden lg:block">
                     <ShareTrigger
                       variant="icon"
                       className="p-2 border border-border hover:bg-muted transition-colors"
                       payload={sharePayload}
                     />
-                    {featuredBlogPost && (
-                      <Link
-                        href={`/blog/${featuredBlogPost.slug}`}
-                        className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
-                      >
-                        {featuredBlogPost.image_url && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={featuredBlogPost.image_url}
-                            alt=""
-                            className="shrink-0 block w-auto"
-                            style={{ height: "48px" }}
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                            Featured on Patronage
-                          </p>
-                          <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-                            {featuredBlogPost.title}
-                          </p>
-                        </div>
-                        <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-                      </Link>
-                    )}
                   </div>
-                </>
+                  {featuredBlogPost && (
+                    <Link
+                      href={`/blog/${featuredBlogPost.slug}`}
+                      className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
+                    >
+                      {featuredBlogPost.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={featuredBlogPost.image_url}
+                          alt=""
+                          className="shrink-0 block w-auto"
+                          style={{ height: "48px" }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                          Featured on Patronage
+                        </p>
+                        <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
+                          {featuredBlogPost.title}
+                        </p>
+                      </div>
+                      <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
+                    </Link>
+                  )}
+                </div>
               );
             })()}
           </div>
