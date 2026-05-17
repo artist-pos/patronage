@@ -47,6 +47,21 @@ export default async function ProvenancePage({ params }: PageProps) {
 
   const { artwork, entries, priorHistory, artist, owners } = data;
 
+  // Edition provenance: fetch parent artwork info for the edition pill
+  let parentArtworkInfo: { ledger_id: string; caption: string | null; title: string | null } | null = null;
+  let editionNumber: number | null = null;
+  if (artwork.parent_artwork_id) {
+    const { data: parent } = await supabase
+      .from("artworks")
+      .select("ledger_id, caption, title")
+      .eq("id", artwork.parent_artwork_id)
+      .maybeSingle();
+    parentArtworkInfo = parent ?? null;
+    // Derive edition number from the ledger_id suffix e.g. PTRN-2026-AB12-CD34-0003 → 3
+    const suffixMatch = artwork.ledger_id.match(/-(\d{4})$/);
+    if (suffixMatch) editionNumber = parseInt(suffixMatch[1], 10);
+  }
+
   const selectedOppIds = entries
     .filter(e => e.entry_type === "selected" && e.source_opportunity_id)
     .map(e => e.source_opportunity_id as string);
@@ -155,6 +170,20 @@ export default async function ProvenancePage({ params }: PageProps) {
             </Link>
           </div>
         </div>
+
+        {/* Edition provenance pill */}
+        {parentArtworkInfo && editionNumber && (
+          <div className="flex items-center gap-2 text-sm text-stone-600 border border-stone-200 rounded-lg px-4 py-3 bg-white">
+            <span className="font-medium">Edition {editionNumber}</span>
+            <span className="text-stone-300">·</span>
+            <Link
+              href={`/provenance/${parentArtworkInfo.ledger_id}`}
+              className="text-stone-500 hover:text-stone-800 transition-colors underline underline-offset-2"
+            >
+              View series provenance ({parentArtworkInfo.title ?? parentArtworkInfo.caption ?? "Parent work"})
+            </Link>
+          </div>
+        )}
 
         {/* 3. Trust banner — never say "Verified by Patronage" or "Self-attested" */}
         {trustCopy && (

@@ -9,6 +9,7 @@ import {
   toggleHideAvailable,
   deletePortfolioWork,
   unlistWork,
+  archiveWork,
 } from "@/app/profile/available-work-actions";
 import {
   requestArtworkDeletion,
@@ -188,10 +189,10 @@ export function WorksTable({
     setBusy(null);
   }
 
-  async function handleDeleteAvailable(id: string) {
-    if (!confirm("Permanently delete this work? This cannot be undone.")) return;
+  async function handleArchiveAvailable(id: string) {
+    if (!confirm("Archive this work? It will be removed from your listings and archive, but provenance records are preserved.")) return;
     setBusy(id);
-    const result = await requestArtworkDeletion(id);
+    const result = await archiveWork(id);
     if (result.error) showError(result.error);
     else setAvailable(prev => prev.filter(w => w.id !== id));
     setBusy(null);
@@ -357,8 +358,8 @@ export function WorksTable({
                         disabled: busy === work.id,
                       },
                       {
-                        label: "Delete",
-                        onClick: () => handleDeleteAvailable(work.id),
+                        label: "Archive",
+                        onClick: () => handleArchiveAvailable(work.id),
                         destructive: true,
                         disabled: busy === work.id,
                       },

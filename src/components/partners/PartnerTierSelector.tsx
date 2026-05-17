@@ -222,6 +222,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                 </p>
               </div>
               <OpportunitySubmissionForm
+                key={selectedTier}
                 isLoggedIn={isLoggedIn}
                 partnerName={partnerName}
                 initialTier={selectedTier}

@@ -133,10 +133,11 @@ export async function initiatePrimarySale(
 }
 
 /**
- * Create a Stripe PaymentIntent for an in-modal embedded checkout.
- * Returns the client secret for use with @stripe/react-stripe-js.
+ * Create an embedded Checkout Session for in-modal payment.
+ * Uses ui_mode:"custom" so we keep our own UI while Stripe handles PCI scope.
+ * Fires checkout.session.completed on completion — same webhook as the redirect flow.
  */
-export async function createPrimaryPaymentIntent(input: {
+export async function createPrimaryEmbeddedCheckout(input: {
   artworkId: string;
   editionId?: string | null;
   buyerEmail: string;
@@ -183,20 +184,12 @@ export async function createPrimaryPaymentIntent(input: {
   const fees = calculateFees("primary_sale", priceCents);
   const currency = (artwork.price_currency ?? "NZD").toUpperCase();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const [artistProfileResult] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("stripe_account_id, stripe_connect_status")
-      .eq("id", artwork.creator_id)
-      .maybeSingle(),
+  const [{ data: { user } }, artistProfileResult] = await Promise.all([
+    supabase.auth.getUser(),
+    admin.from("profiles").select("stripe_account_id, stripe_connect_status").eq("id", artwork.creator_id).maybeSingle(),
   ]);
   const artistProfile = artistProfileResult.data;
-
-  const useConnect =
-    artistProfile?.stripe_connect_status === "enabled" &&
-    !!artistProfile?.stripe_account_id;
+  const useConnect = artistProfile?.stripe_connect_status === "enabled" && !!artistProfile?.stripe_account_id;
 
   const { data: row, error: insertError } = await admin
     .from("primary_sale_transactions")
@@ -210,6 +203,7 @@ export async function createPrimaryPaymentIntent(input: {
       patronage_commission_cents: fees.patronageRevenueCents,
       buyer_paid_total_cents: fees.buyerPaidTotalCents,
       payout_method: useConnect ? "stripe_connect" : "manual",
+      edition_id: input.editionId ?? null,
     })
     .select("id")
     .single();
@@ -218,12 +212,39 @@ export async function createPrimaryPaymentIntent(input: {
     return { error: insertError?.message ?? "Couldn't create sale record." };
   }
 
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
   try {
     const stripe = getStripe();
-    const intentParams: Parameters<typeof stripe.paymentIntents.create>[0] = {
-      amount: fees.buyerPaidTotalCents,
-      currency: currency.toLowerCase(),
-      receipt_email: buyerEmail,
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: "elements",
+      mode: "payment",
+      customer_email: buyerEmail,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: fees.buyerPaidTotalCents - fees.stripeFeeCents,
+            product_data: {
+              name: artwork.title ?? artwork.caption ?? "Artwork",
+              images: artwork.url ? [artwork.url] : undefined,
+              description: "Primary sale via Patronage. Includes 10% commission.",
+            },
+          },
+        },
+        {
+          quantity: 1,
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: fees.stripeFeeCents,
+            product_data: {
+              name: "Processing fee",
+              description: "Covers third-party card processing. Required so the artist receives the full sale price.",
+            },
+          },
+        },
+      ],
       metadata: {
         purpose: "primary_sale",
         primary_sale_id: row.id,
@@ -232,21 +253,28 @@ export async function createPrimaryPaymentIntent(input: {
         edition_label: editionLabel ?? "",
         buyer_email: buyerEmail,
       },
-      ...(useConnect && artistProfile?.stripe_account_id
-        ? {
-            application_fee_amount: fees.stripeFeeCents + fees.patronageRevenueCents,
-            transfer_data: { destination: artistProfile.stripe_account_id },
-          }
-        : {}),
-    };
-    const intent = await stripe.paymentIntents.create(intentParams);
+      payment_intent_data: {
+        metadata: {
+          purpose: "primary_sale",
+          primary_sale_id: row.id,
+          artwork_id: artwork.id,
+        },
+        ...(useConnect && artistProfile?.stripe_account_id
+          ? {
+              application_fee_amount: fees.stripeFeeCents + fees.patronageRevenueCents,
+              transfer_data: { destination: artistProfile.stripe_account_id },
+            }
+          : {}),
+      },
+      return_url: `${SITE_URL}/sale/success?session_id={CHECKOUT_SESSION_ID}`,
+    });
 
     await admin
       .from("primary_sale_transactions")
-      .update({ stripe_payment_intent: intent.id })
+      .update({ stripe_session_id: session.id })
       .eq("id", row.id);
 
-    return { clientSecret: intent.client_secret ?? undefined, fees };
+    return { clientSecret: session.client_secret ?? undefined, fees };
   } catch (err) {
     await admin.from("primary_sale_transactions").delete().eq("id", row.id);
     return { error: err instanceof Error ? err.message : "Stripe error." };

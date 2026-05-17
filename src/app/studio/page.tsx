@@ -86,7 +86,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (activeSection === "collection") redirect("/dashboard/collection");
 
   // Sub-tab initial values — read once for SSR; client components manage subsequent switches
-  const WORKS_TABS = ["archival", "for-sale", "sold"] as const;
+  const WORKS_TABS = ["archival", "for-sale", "sold", "series"] as const;
   type WorksTab = typeof WORKS_TABS[number];
   const initialWorksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
     ? (params.wt as WorksTab)
@@ -129,8 +129,8 @@ export default async function StudioPage({ searchParams }: PageProps) {
 
   const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
 
-  // Works: portfolio, available, sold, confirmations, collected — all in one round
-  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount] =
+  // Works: portfolio, available, sold, confirmations, collected, series — all in one round
+  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult] =
     needsWorks
       ? await Promise.all([
           supabase
@@ -175,8 +175,13 @@ export default async function StudioPage({ searchParams }: PageProps) {
                 .in("work_id", ids);
             }),
           getPendingConfirmationCount(user.id),
+          supabase
+            .from("series")
+            .select("id, title, slug, hero_image_url, series_artworks(count)")
+            .eq("artist_id", user.id)
+            .order("created_at", { ascending: false }),
         ])
-      : [null, null, null, null, null, 0];
+      : [null, null, null, null, null, 0, null];
 
   const featuredIds = new Set(
     ((featuredRows as { data: { id: string }[] | null } | null)?.data ?? []).map((r) => r.id)
@@ -187,6 +192,14 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const availableWorks = (availableResult as { data: unknown[] | null } | null)?.data ?? [];
   const soldWorks = (soldResult as { data: unknown[] | null } | null)?.data ?? [];
   const featuredCount = featuredIds.size;
+
+  const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
+    id: s.id,
+    title: s.title,
+    slug: s.slug,
+    hero_image_url: s.hero_image_url,
+    artworkCount: (s.series_artworks as unknown as [{ count: number }])?.[0]?.count ?? 0,
+  }));
 
   const engagementMap: Record<string, { view: number; play: number }> = {};
   for (const row of ((engagementRows as { data: { work_id: string; event_type: string }[] | null } | null)?.data ?? [])) {
@@ -469,6 +482,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             featuredCount={featuredCount}
             engagementMap={engagementMap}
             pendingConfirmationCount={pendingConfirmationCount}
+            seriesList={seriesList}
           />
         )}
 

@@ -94,6 +94,28 @@ export async function deletePortfolioWork(workId: string): Promise<{ error?: str
   return {};
 }
 
+export async function archiveWork(workId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: artwork } = await supabase
+    .from("artworks")
+    .select("creator_id")
+    .eq("id", workId)
+    .single();
+
+  if (!artwork || artwork.creator_id !== user.id) return { error: "Not authorised" };
+
+  const { error } = await supabase
+    .from("artworks")
+    .update({ is_available: false, hide_from_archive: true })
+    .eq("id", workId);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function toggleFeaturedWork(
   workId: string,
   featured: boolean,

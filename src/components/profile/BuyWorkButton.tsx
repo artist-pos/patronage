@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import dynamic from "next/dynamic";
-import { createPrimaryPaymentIntent } from "@/app/sale/actions";
+import { createPrimaryEmbeddedCheckout } from "@/app/sale/actions";
 import { calculateFees, formatCents } from "@/lib/commerce-fee";
 import type { ResolvedFees } from "@/lib/commerce-fee";
 import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
@@ -87,7 +87,7 @@ export function BuyWorkButton({
     if (!email.trim()) return;
     setError(null);
     startTransition(async () => {
-      const result = await createPrimaryPaymentIntent({
+      const result = await createPrimaryEmbeddedCheckout({
         artworkId,
         editionId: selectedEditionId,
         buyerEmail: email,

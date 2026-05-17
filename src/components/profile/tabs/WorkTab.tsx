@@ -5,6 +5,14 @@ import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { CollectionSection } from "@/components/profile/CollectionSection";
 import type { PortfolioImage, Artwork } from "@/types/database";
 
+interface SeriesCard {
+  id: string;
+  title: string;
+  slug: string;
+  hero_image_url: string | null;
+  artworkCount: number;
+}
+
 interface SoldWork extends Artwork {
   owner_profile: { username: string; full_name: string | null } | null;
 }
@@ -32,6 +40,7 @@ interface Props {
   worksHGap?: number;
   worksVGap?: number;
   worksLastRowAlign?: "left" | "center" | "right";
+  seriesList?: SeriesCard[];
 }
 
 export function WorkTab({
@@ -53,6 +62,7 @@ export function WorkTab({
   worksHGap,
   worksVGap,
   worksLastRowAlign,
+  seriesList = [],
 }: Props) {
   return (
     <div className="space-y-16 py-8">
@@ -73,6 +83,39 @@ export function WorkTab({
           initialLastRowAlign={worksLastRowAlign}
           noBorder
         />
+      )}
+
+      {/* ── Series ── */}
+      {seriesList.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Series</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+            {seriesList.map(s => (
+              <Link
+                key={s.id}
+                href={`/${username}/series/${s.slug}`}
+                className="shrink-0 group"
+              >
+                <div className="w-[160px] space-y-1.5">
+                  <div className="w-[160px] h-[120px] overflow-hidden bg-stone-100">
+                    {s.hero_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.hero_image_url}
+                        alt={s.title}
+                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-stone-200" />
+                    )}
+                  </div>
+                  <p className="text-sm font-medium truncate group-hover:underline underline-offset-2">{s.title}</p>
+                  <p className="text-[11px] text-muted-foreground">{s.artworkCount} {s.artworkCount === 1 ? "work" : "works"}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ── Work — full body of work ── */}

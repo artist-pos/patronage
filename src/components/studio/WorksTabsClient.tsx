@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { WorksTable } from "@/components/dashboard/WorksTable";
+import { SeriesTab } from "@/components/studio/SeriesTab";
 
-type WorksTab = "archival" | "for-sale" | "sold";
+type WorksTab = "archival" | "for-sale" | "sold" | "series";
 
 interface Props {
   initialTab: WorksTab;
@@ -17,12 +18,13 @@ interface Props {
   featuredCount: number;
   engagementMap: Record<string, { view: number; play: number }>;
   pendingConfirmationCount: number;
+  seriesList: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number }>;
 }
 
 export function WorksTabsClient({
   initialTab, profileId, profileComplete, missingFields,
   portfolioWorks, availableWorks, soldWorks, featuredCount,
-  engagementMap, pendingConfirmationCount,
+  engagementMap, pendingConfirmationCount, seriesList,
 }: Props) {
   const [tab, setTab] = useState<WorksTab>(initialTab);
 
@@ -45,7 +47,7 @@ export function WorksTabsClient({
       )}
 
       <div className="flex gap-0 border-b border-border">
-        {(["archival", "for-sale", "sold"] as const).map((t) => (
+        {(["archival", "for-sale", "sold", "series"] as const).map((t) => (
           <button
             key={t}
             onClick={() => switchTab(t)}
@@ -55,7 +57,7 @@ export function WorksTabsClient({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "archival" ? "Archival" : t === "for-sale" ? "Sell" : "Sold"}
+            {t === "archival" ? "Archival" : t === "for-sale" ? "Sell" : t === "sold" ? "Sold" : "Series"}
           </button>
         ))}
       </div>
@@ -157,6 +159,10 @@ export function WorksTabsClient({
             profileId={profileId}
           />
         </div>
+      )}
+
+      {tab === "series" && (
+        <SeriesTab series={seriesList} />
       )}
 
     </div>

@@ -57,18 +57,115 @@ async function completePrimarySale(params: {
     throw new Error("Couldn't resolve a buyer profile id for the primary sale");
   }
 
-  const { data: artwork } = await admin
+  const { data: parentArtwork } = await admin
     .from("artworks")
-    .select("ledger_id")
+    .select("ledger_id, url, caption, title, year, medium, dimensions, description, content_type, profile_id, width_mm, height_mm, natural_width, natural_height, orientation")
     .eq("id", sale.artwork_id)
     .maybeSingle();
-  if (!artwork?.ledger_id) {
+  if (!parentArtwork?.ledger_id) {
     throw new Error(`Artwork ${sale.artwork_id} has no ledger_id; cannot append transferred entry`);
+  }
+
+  // Determine the artwork ID to use for provenance, collection, and email.
+  // For edition sales: clone the parent into a per-collector instance.
+  // For non-edition sales: use the parent directly (existing behaviour).
+  let provenanceArtworkId = sale.artwork_id;
+  let provenanceLedgerId = parentArtwork.ledger_id;
+
+  if (sale.edition_id) {
+    // Fetch edition to get current inventory + size
+    const { data: edition } = await admin
+      .from("editions")
+      .select("inventory, edition_size, label")
+      .eq("id", sale.edition_id)
+      .maybeSingle();
+
+    if (edition && edition.edition_size != null) {
+      const currentInventory = edition.inventory ?? edition.edition_size;
+      const newInventory = Math.max(0, currentInventory - 1);
+      const editionNumber = edition.edition_size - newInventory;
+
+      // Decrement inventory
+      await admin
+        .from("editions")
+        .update({ inventory: newInventory })
+        .eq("id", sale.edition_id);
+
+      const suffix = String(editionNumber).padStart(4, "0");
+      const cloneLedgerId = `${parentArtwork.ledger_id}-${suffix}`;
+
+      // Clone parent artwork row for this collector's instance
+      const { data: clone } = await admin
+        .from("artworks")
+        .insert({
+          profile_id: parentArtwork.profile_id,
+          creator_id: sale.artist_id,
+          current_owner_id: buyerProfileId,
+          url: parentArtwork.url,
+          caption: parentArtwork.caption,
+          title: parentArtwork.title,
+          year: parentArtwork.year,
+          medium: parentArtwork.medium,
+          dimensions: parentArtwork.dimensions,
+          description: parentArtwork.description,
+          content_type: parentArtwork.content_type,
+          width_mm: parentArtwork.width_mm,
+          height_mm: parentArtwork.height_mm,
+          natural_width: parentArtwork.natural_width,
+          natural_height: parentArtwork.natural_height,
+          orientation: parentArtwork.orientation,
+          ledger_id: cloneLedgerId,
+          parent_artwork_id: sale.artwork_id,
+          is_available: false,
+          hide_available: false,
+          hide_from_archive: false,
+          hide_price: false,
+          collection_visible: true,
+          hidden_from_artist: false,
+          position: 0,
+          source: "self_registered",
+        })
+        .select("id")
+        .single();
+
+      if (clone) {
+        provenanceArtworkId = clone.id;
+        provenanceLedgerId = cloneLedgerId;
+
+        // Insert "created" ledger entry on the clone (records artwork's existence)
+        const cloneCreatedAt = new Date();
+        const createHash = ledgerContentHash({
+          artwork_id: clone.id,
+          entry_type: "created",
+          from_owner_id: null,
+          to_owner_id: sale.artist_id,
+          transfer_method: "stripe",
+          campaign_id: null,
+          created_at: cloneCreatedAt,
+        });
+        await admin.from("artwork_provenance_ledger").insert({
+          artwork_id: clone.id,
+          ledger_id: cloneLedgerId,
+          entry_type: "created",
+          from_owner_id: null,
+          to_owner_id: sale.artist_id,
+          transfer_method: "stripe",
+          transferred_at: cloneCreatedAt.toISOString(),
+          content_hash: createHash,
+          hash_version: HASH_VERSION,
+        });
+      }
+
+      // Set parent is_available = false when inventory exhausted
+      if (newInventory <= 0) {
+        await admin.from("artworks").update({ is_available: false }).eq("id", sale.artwork_id);
+      }
+    }
   }
 
   const createdAt = new Date();
   const contentHash = ledgerContentHash({
-    artwork_id: sale.artwork_id,
+    artwork_id: provenanceArtworkId,
     entry_type: "transferred",
     from_owner_id: sale.artist_id,
     to_owner_id: buyerProfileId,
@@ -78,8 +175,8 @@ async function completePrimarySale(params: {
   });
 
   await admin.from("artwork_provenance_ledger").insert({
-    artwork_id: sale.artwork_id,
-    ledger_id: artwork.ledger_id,
+    artwork_id: provenanceArtworkId,
+    ledger_id: provenanceLedgerId,
     entry_type: "transferred",
     from_owner_id: sale.artist_id,
     to_owner_id: buyerProfileId,
@@ -91,13 +188,16 @@ async function completePrimarySale(params: {
     hash_version: HASH_VERSION,
   });
 
-  await admin
-    .from("artworks")
-    .update({ current_owner_id: buyerProfileId, is_available: false })
-    .eq("id", sale.artwork_id);
+  // For non-edition sales, transfer ownership on the parent artwork
+  if (!sale.edition_id) {
+    await admin
+      .from("artworks")
+      .update({ current_owner_id: buyerProfileId, is_available: false })
+      .eq("id", sale.artwork_id);
+  }
 
   const { data: provenanceLink } = await admin.from("provenance_links").insert({
-    artwork_id: sale.artwork_id,
+    artwork_id: provenanceArtworkId,
     artist_id: sale.artist_id,
     patron_id: buyerProfileId,
     patron_email: buyerEmail,
@@ -114,7 +214,7 @@ async function completePrimarySale(params: {
   await admin.from("collection_membership").upsert(
     {
       holder_id: buyerProfileId,
-      artwork_id: sale.artwork_id,
+      artwork_id: provenanceArtworkId,
       position: (lastPosition?.position ?? -1) + 1,
       source_type: "directly_from_artist",
       price_paid_amount: sale.sale_price_cents / 100,
@@ -125,7 +225,7 @@ async function completePrimarySale(params: {
 
   const [{ data: artistProfile }, { data: artworkForEmail }] = await Promise.all([
     admin.from("profiles").select("full_name, username").eq("id", sale.artist_id).maybeSingle(),
-    admin.from("artworks").select("ledger_id, url, caption").eq("id", sale.artwork_id).maybeSingle(),
+    admin.from("artworks").select("ledger_id, url, caption").eq("id", provenanceArtworkId).maybeSingle(),
   ]);
   const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
   const isGuest = sale.buyer_id === null;

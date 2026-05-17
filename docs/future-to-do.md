@@ -22,6 +22,34 @@ A "Selected Artists" tab on `/partner/dashboard/[opportunityId]` showing only se
 
 Surface the project thread on the campaign's live landing page (`/live/[slug]/[username]`). Reads `campaigns.hero_work_id`, fetches the linked project and its updates, renders the thread as a timeline section. Closes the loop between the artist's studio narrative and what the public sees.
 
+## #17 · Edition provenance
+
+When an edition (limited print, open edition) is sold, each physical copy needs its own provenance chain and ledger ID rather than sharing the parent artwork row. 
+
+**Model:** Parent `artworks` row = the series/template record with base ledger ID `PTRN-2026-XXXX-XXXX`. At sale time, clone parent → new child `artworks` row with `parent_artwork_id`, `edition_number = N`, suffixed ledger ID `PTRN-2026-XXXX-XXXX-0002`. Originals (inventory = 1) keep existing flow — parent row IS the instance.
+
+**Migrations needed:** `artworks.parent_artwork_id uuid REFERENCES artworks(id) ON DELETE SET NULL`; `primary_sale_transactions.edition_id uuid REFERENCES editions(id) ON DELETE SET NULL`; `ensureLedgerId` called on parent at artwork creation time.
+
+**Sale flow changes:** `completePrimarySale` reads `edition_id` from sale record → fetches edition (`edition_size`, `inventory`) → decrements inventory → calculates instance number → clones parent → generates suffixed ledger ID → inserts `created` + `transferred` ledger entries on clone → sets parent `is_available = false` when inventory hits 0.
+
+**Provenance page:** if artwork has `parent_artwork_id`, show "Edition N of M" pill + link to parent. Race condition on concurrent purchases: use atomic inventory decrement with optimistic locking.
+
+## #18 · Artwork series
+
+A series groups related but distinct artworks (e.g. "Coastal Series") under a single hub page, without affecting each work's independence, price, or provenance.
+
+**Studio UX:** `/studio?section=works` gets two entry points — "Add Series" (new) alongside the existing "Add Artwork" (unchanged). Creating a series: upload a hero image, write title/description, then pick existing artworks from the artist's catalogue and drag to order.
+
+**Data model:** `series` table (`id`, `artist_id`, `title`, `slug`, `hero_image_url`, `description`, `created_at`); `series_artworks` junction (`series_id`, `artwork_id`, `position`). An artwork can belong to multiple series.
+
+**Public series page** at `/[username]/series/[slug]`: hero image, title, description, grid of all works each with their own for-sale pill and buy modal. Each work retains its own detail page and `PTRN-XXXX` provenance certificate. Lightbulb tip on setup: "A series groups related works under one URL. Each piece keeps its own page, price, and provenance certificate."
+
+Note: supporting images on individual artwork detail pages (multiple angles, documentation photos) are a separate system and remain unchanged.
+
+## #19 · Stripe Adaptive Pricing
+
+Enable Adaptive Pricing so buyers outside NZD/AUD see prices in their local currency, with Stripe handling conversion and settling in the artist's currency. Already on the Checkout Sessions API — just add `adaptivePricing: { allowed: true }` to `CheckoutElementsProvider` options in `src/components/profile/StripeCheckoutPanel.tsx`. No backend changes needed.
+
 ## #11 · Analytics dashboard
 
 **Trigger:** Build when there are 50+ artists with at least 10 completed sales across the platform. Below that threshold, the earnings dashboard is sufficient and a chart with 3 data points is noise, not signal.

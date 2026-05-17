@@ -171,6 +171,7 @@ export interface ProvenancePageData {
     current_owner_id: string;
     ledger_id: string;
     created_at: string;
+    parent_artwork_id: string | null;
   };
   entries: LedgerEntry[];
   priorHistory: PriorHistoryEntry[];
@@ -195,7 +196,7 @@ export const getLedgerByLedgerId = cache(async function getLedgerByLedgerId(ledg
 
   const { data: artwork } = await admin
     .from("artworks")
-    .select("id, title, caption, url, year, medium, dimensions, edition, certificate_note, creator_id, current_owner_id, ledger_id, created_at, is_available")
+    .select("id, title, caption, url, year, medium, dimensions, edition, certificate_note, creator_id, current_owner_id, ledger_id, created_at, is_available, parent_artwork_id")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EditionType, EditionListingMode } from "@/types/database";
+import { mintUniqueLedgerId } from "@/lib/ledger";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,6 +176,10 @@ export async function createWorkWithEdition(data: {
     .single();
 
   if (artworkError || !artwork) return { error: artworkError?.message ?? "Failed to create work" };
+
+  // Mint ledger ID immediately so edition-provenance cloning has a base ID at sale time
+  const ledgerId = await mintUniqueLedgerId(admin);
+  await admin.from("artworks").update({ ledger_id: ledgerId }).eq("id", artwork.id);
 
   const { error: editionError } = await admin.from("editions").insert({
     work_id: artwork.id,

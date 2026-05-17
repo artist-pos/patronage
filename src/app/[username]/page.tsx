@@ -288,8 +288,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
   const needsArtistCollection = isArtistProfile && tab === "work";
+  const needsSeries           = isArtistProfile && tab === "work";
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw] = await Promise.all([
     needsPortfolio
       ? supabase
           .from("artworks")
@@ -382,6 +383,23 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("position", { ascending: true })
           .then(({ data }) => (data ?? []).map((m) => m.artwork).filter(Boolean))
       : Promise.resolve([]),
+    // Series — for the Work tab series row
+    needsSeries
+      ? supabase
+          .from("series")
+          .select("id, title, slug, hero_image_url, series_artworks(count)")
+          .eq("artist_id", profile.id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => (data ?? []).map(s => ({
+            id: s.id,
+            title: s.title,
+            slug: s.slug,
+            hero_image_url: s.hero_image_url as string | null,
+            artworkCount: Array.isArray(s.series_artworks)
+              ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
+              : 0,
+          })))
+      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number }>),
   ]);
 
   // Build map: artworks.id → listed editions sorted by sort_order
@@ -722,6 +740,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
                   collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
+                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number }>}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}

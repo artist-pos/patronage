@@ -429,6 +429,8 @@ export interface Artwork {
   // Migration 135: unified from portfolio_images
   slug: string | null;
   collaborator_ids: string[];
+  // Edition provenance — clone of parent artwork at sale time
+  parent_artwork_id: string | null;
   content_type: ContentTypeEnum;
   audio_url: string | null;
   video_url: string | null;
@@ -703,6 +705,7 @@ export interface PrimarySaleTransaction {
   reverted_at: string | null;
   reverted_reason: string | null;
   reverted_by: string | null;
+  edition_id: string | null;
   created_at: string;
 }
 
@@ -993,3 +996,66 @@ export const DEFAULT_EMBED_CONFIG: PatronEmbedConfig = {
   theme: 'light',
   bg_color: '#fafaf8',
 };
+
+// ── Artwork Series ────────────────────────────────────────────────────────────
+
+export interface Series {
+  id: string;
+  artist_id: string;
+  title: string;
+  slug: string;
+  hero_image_url: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+export interface SeriesArtwork {
+  series_id: string;
+  artwork_id: string;
+  position: number;
+}
+
+export interface SeriesListItem {
+  id: string;
+  title: string;
+  slug: string;
+  hero_image_url: string | null;
+  artworkCount: number;
+}
+
+export interface SeriesWork {
+  id: string;
+  url: string;
+  caption: string | null;
+  title: string | null;
+  medium: string | null;
+  year: number | null;
+  dimensions: string | null;
+  slug: string | null;
+  is_available: boolean;
+  price_cents: number | null;
+  is_poa: boolean;
+  price_currency: 'NZD' | 'AUD';
+  hide_price: boolean;
+  acquisition_mode: 'buy_now' | 'make_offer' | 'enquire_first' | null;
+  listing_mode: 'direct_sale' | 'enquire_first' | null;
+  position: number;
+  editions: SeriesEditionOption[];
+}
+
+export interface SeriesEditionOption {
+  id: string;
+  label: string;
+  type: EditionType;
+  price_cents: number | null;
+  currency: string;
+  poa: boolean;
+  listing_mode: EditionListingMode;
+  listed: boolean;
+  dimensions: string | null;
+  sort_order: number;
+}
+
+export interface SeriesWithWorks extends Series {
+  artworks: SeriesWork[];
+}

@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import {
-  Elements,
+  CheckoutElementsProvider,
   PaymentElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
+  useCheckoutElements,
+} from "@stripe/react-stripe-js/checkout";
 import { loadStripe } from "@stripe/stripe-js";
 import { formatCents } from "@/lib/commerce-fee";
 import type { ResolvedFees } from "@/lib/commerce-fee";
@@ -33,30 +32,32 @@ function CheckoutForm({
   onBack,
   onSuccess,
 }: Pick<PanelProps, "fees" | "currency" | "onBack" | "onSuccess">) {
-  const stripe = useStripe();
-  const elements = useElements();
+  const result = useCheckoutElements();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (result.type !== "success") return;
     setProcessing(true);
     setError(null);
 
-    const { error: confirmError } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
+    const confirmResult = await result.checkout.confirm();
 
-    if (confirmError) {
-      setError(confirmError.message ?? "Payment failed. Please try again.");
+    if (confirmResult.type === "error") {
+      setError(confirmResult.error.message ?? "Payment failed. Please try again.");
       setProcessing(false);
       return;
     }
 
     onSuccess();
   }
+
+  if (result.type === "error") {
+    return <p className="text-sm text-destructive">Failed to load payment form: {result.error.message}</p>;
+  }
+
+  const loading = result.type === "loading";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -95,7 +96,7 @@ function CheckoutForm({
         </button>
         <button
           type="submit"
-          disabled={processing || !stripe}
+          disabled={processing || loading}
           className="flex-1 text-sm py-2.5 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
         >
           {processing ? "Processing…" : `Pay ${formatCents(fees.buyerPaidTotalCents, currency)}`}
@@ -121,19 +122,21 @@ export function StripeCheckoutPanel({
   onSuccess,
 }: PanelProps) {
   return (
-    <Elements
+    <CheckoutElementsProvider
       stripe={stripePromise}
       options={{
         clientSecret,
-        fonts: [
-          { cssSrc: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" },
-        ],
-        appearance: {
-          theme: "stripe",
-          variables: {
-            fontFamily: "'Geist', system-ui, sans-serif",
-            borderRadius: "0px",
-            colorBackground: "#FAFAF9",
+        elementsOptions: {
+          fonts: [
+            { cssSrc: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" },
+          ],
+          appearance: {
+            theme: "stripe",
+            variables: {
+              fontFamily: "'Geist', system-ui, sans-serif",
+              borderRadius: "0px",
+              colorBackground: "#FAFAF9",
+            },
           },
         },
       }}
@@ -167,6 +170,6 @@ export function StripeCheckoutPanel({
           onSuccess={onSuccess}
         />
       </div>
-    </Elements>
+    </CheckoutElementsProvider>
   );
 }
