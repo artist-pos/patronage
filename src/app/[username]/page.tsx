@@ -692,59 +692,91 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                     Support
                   </a>
                 )}
+                {/* Mobile-only share button — hidden on desktop where it lives top-right */}
+                {isArtistProfile && (
+                  <div className="lg:hidden">
+                    <ShareTrigger
+                      variant="icon"
+                      className="p-2 border border-border hover:bg-muted transition-colors"
+                      payload={{
+                        type: "profile",
+                        title: profile.full_name ?? profile.username,
+                        sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+                        price: null,
+                        tag: "ARTIST",
+                        handle: `@${profile.username}`,
+                        imageUrl: profile.avatar_url,
+                        shareUrl: `https://patronage.nz/${profile.username}`,
+                        imageOptions: (() => {
+                          const opts = [
+                            ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
+                            ...sharePortfolioImages.slice(0, 3).map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
+                          ];
+                          return opts.length > 1 ? opts : undefined;
+                        })(),
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Right: share button + optional featured blog post card */}
+            {/* Right: share button (desktop) + optional featured blog post card */}
             {isArtistProfile && (() => {
               const shareImageOptions = [
                 ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
                 ...sharePortfolioImages.slice(0, 3)
                   .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
               ];
+              const sharePayload = {
+                type: "profile" as const,
+                title: profile.full_name ?? profile.username,
+                sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+                price: null,
+                tag: "ARTIST",
+                handle: `@${profile.username}`,
+                imageUrl: profile.avatar_url,
+                shareUrl: `https://patronage.nz/${profile.username}`,
+                imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
+              };
               return (
-                <div className="flex flex-col justify-between items-end shrink-0">
-                  <ShareTrigger
-                    variant="icon"
-                    className="p-2 border border-border hover:bg-muted transition-colors"
-                    payload={{
-                      type: "profile",
-                      title: profile.full_name ?? profile.username,
-                      sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
-                      price: null,
-                      tag: "ARTIST",
-                      handle: `@${profile.username}`,
-                      imageUrl: profile.avatar_url,
-                      shareUrl: `https://patronage.nz/${profile.username}`,
-                      imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
-                    }}
-                  />
-                  {featuredBlogPost && (
-                    <Link
-                      href={`/blog/${featuredBlogPost.slug}`}
-                      className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
-                    >
-                      {featuredBlogPost.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={featuredBlogPost.image_url}
-                          alt=""
-                          className="shrink-0 block w-auto"
-                          style={{ height: "48px" }}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                          Featured on Patronage
-                        </p>
-                        <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-                          {featuredBlogPost.title}
-                        </p>
-                      </div>
-                      <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-                    </Link>
-                  )}
-                </div>
+                <>
+                  {/* Mobile: share sits in the action row — rendered here as a portal-like sibling
+                      but actually injected via the data attribute trick isn't possible in RSC,
+                      so we use a hidden desktop copy here and a visible mobile copy in the action row */}
+                  <div className="hidden lg:flex flex-col justify-between items-end shrink-0">
+                    <ShareTrigger
+                      variant="icon"
+                      className="p-2 border border-border hover:bg-muted transition-colors"
+                      payload={sharePayload}
+                    />
+                    {featuredBlogPost && (
+                      <Link
+                        href={`/blog/${featuredBlogPost.slug}`}
+                        className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
+                      >
+                        {featuredBlogPost.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={featuredBlogPost.image_url}
+                            alt=""
+                            className="shrink-0 block w-auto"
+                            style={{ height: "48px" }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                            Featured on Patronage
+                          </p>
+                          <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
+                            {featuredBlogPost.title}
+                          </p>
+                        </div>
+                        <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
+                      </Link>
+                    )}
+                  </div>
+                </>
               );
             })()}
           </div>
