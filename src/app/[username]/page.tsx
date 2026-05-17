@@ -530,7 +530,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             </div>
           )}
 
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8">
 
             {/* Left: name, meta line, bio, action row */}
             <div className="space-y-3 max-w-3xl lg:flex-1">
@@ -691,7 +691,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
               ];
               return (
-                <div className="flex flex-col items-end gap-3 shrink-0">
+                <div className="flex flex-col justify-between items-end shrink-0">
                   <ShareTrigger
                     variant="icon"
                     className="p-2 border border-border hover:bg-muted transition-colors"
