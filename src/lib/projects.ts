@@ -65,6 +65,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
       image_height,
       collaborator_ids,
       title,
+      tldr,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -156,7 +157,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
     collaborators: (u.collaborator_ids ?? []).map((id: string) => collaboratorMap.get(id)).filter(Boolean) as CollaboratorProfile[],
     notes: notesByUpdate[u.id] ?? [],
     title: u.title ?? null,
-    tldr: null,
+    tldr: u.tldr ?? null,
     update_tag: u.update_tag ?? "update",
   }));
 

@@ -19,6 +19,7 @@ const UPDATE_SELECT = `
   image_height,
   collaborator_ids,
   title,
+  tldr,
   update_tag,
   created_at,
   profiles!project_updates_artist_id_fkey (
@@ -51,7 +52,7 @@ function mapRow(row: any): Omit<ProjectUpdateWithArtist, "collaborators"> {
     artist_avatar_url: row.profiles?.avatar_url ?? null,
     collaborator_ids: row.collaborator_ids ?? [],
     title: row.title ?? null,
-    tldr: null,
+    tldr: row.tldr ?? null,
     update_tag: row.update_tag ?? "update",
   };
 }
