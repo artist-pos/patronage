@@ -16,7 +16,25 @@ import { createClient } from "@/lib/supabase/server";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 
 
-const FUNDING_TYPES = new Set(["Grant", "Prize", "Commission"]);
+function schemaTypeForOpp(type: string): string {
+  switch (type) {
+    case "Grant":
+    case "Commission":
+    case "Prize":
+    case "Public Art":
+      return "MonetaryGrant";
+    case "Residency":
+      return "EducationalOccupationalProgram";
+    case "Job / Employment":
+      return "JobPosting";
+    case "Studio / Space":
+      return "Place";
+    case "Open Call":
+    case "Display":
+    default:
+      return "Event";
+  }
+}
 
 const RECURRENCE_LABELS: Record<RecurrencePattern, string> = {
   monthly:   "Monthly",
@@ -309,8 +327,60 @@ export default async function OpportunityPage({ params }: Props) {
   const isPipeline = opp.routing_type === "pipeline";
 
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
-  const schemaType = FUNDING_TYPES.has(opp.type) ? "Grant" : "Event";
+  const schemaType = schemaTypeForOpp(opp.type);
   const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
+  const orgNode = { "@type": "Organization", name: opp.organiser };
+  const locationNode = (opp.city || opp.country) ? {
+    "@type": "Place",
+    name: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
+    address: {
+      "@type": "PostalAddress",
+      ...(opp.city && { addressLocality: opp.city }),
+      addressCountry: opp.country,
+    },
+  } : undefined;
+
+  const typeFields: Record<string, unknown> =
+    schemaType === "Event" ? {
+      startDate: opp.opens_at ?? opp.deadline,
+      ...(opp.deadline && { endDate: opp.deadline }),
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+      organizer: orgNode,
+      offers: {
+        "@type": "Offer",
+        url: opp.url ?? canonicalUrl,
+        price: opp.entry_fee ?? "0",
+        priceCurrency: opp.entry_fee_currency ?? "NZD",
+        availability: "https://schema.org/InStock",
+        ...(opp.deadline && { validThrough: opp.deadline }),
+      },
+    }
+    : schemaType === "MonetaryGrant" ? {
+      funder: orgNode,
+      ...(opp.deadline && { applicationDeadline: opp.deadline }),
+      ...(opp.funding_amount != null && {
+        amount: { "@type": "MonetaryAmount", value: opp.funding_amount },
+      }),
+      ...(locationNode && { locationCreated: locationNode }),
+    }
+    : schemaType === "EducationalOccupationalProgram" ? {
+      provider: orgNode,
+      ...(opp.opens_at && { startDate: opp.opens_at }),
+      ...(opp.deadline && { applicationDeadline: opp.deadline }),
+      ...(locationNode && { location: locationNode }),
+      educationalProgramMode: "https://schema.org/OnlineOrOffline",
+    }
+    : schemaType === "JobPosting" ? {
+      hiringOrganization: orgNode,
+      datePosted: opp.created_at.slice(0, 10),
+      ...(opp.deadline && { validThrough: opp.deadline }),
+      ...(locationNode && { jobLocation: locationNode }),
+      employmentType: "CONTRACT",
+      directApply: false,
+    }
+    : {};
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -318,43 +388,10 @@ export default async function OpportunityPage({ params }: Props) {
         "@type": schemaType,
         "@id": canonicalUrl,
         name: opp.title,
-        url: canonicalUrl,
-        organizer: { "@type": "Organization", name: opp.organiser, url: canonicalUrl },
-        // startDate required by Google for Event; fall back to deadline if opens_at absent
-        ...(schemaType === "Event" && {
-          startDate: opp.opens_at ?? opp.deadline,
-          eventStatus: "https://schema.org/EventScheduled",
-          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
-          performer: { "@type": "Organization", name: opp.organiser },
-          offers: {
-            "@type": "Offer",
-            url: canonicalUrl,
-            price: "0",
-            priceCurrency: "NZD",
-            availability: "https://schema.org/InStock",
-            ...(opp.deadline && { validThrough: opp.deadline }),
-          },
-        }),
-        ...(opp.opens_at && { startDate: opp.opens_at }),
-        ...(opp.deadline && { endDate: opp.deadline }),
-        ...(schemaType === "Grant" && opp.deadline && { applicationDeadline: opp.deadline }),
+        url: opp.url ?? canonicalUrl,
         ...(oppDescription && { description: oppDescription }),
         ...(opp.featured_image_url && { image: opp.featured_image_url }),
-        ...((opp.city || opp.country) && {
-          location: {
-            "@type": "Place",
-            name: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
-            address: {
-              "@type": "PostalAddress",
-              ...(opp.city && { addressLocality: opp.city }),
-              addressCountry: opp.country,
-            },
-          },
-        }),
-        ...(opp.funding_amount != null && {
-          funder: { "@type": "Organization", name: opp.organiser },
-          amount: { "@type": "MonetaryAmount", value: opp.funding_amount },
-        }),
+        ...typeFields,
       },
       {
         "@type": "BreadcrumbList",

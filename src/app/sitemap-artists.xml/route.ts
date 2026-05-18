@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const revalidate = 3600;
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 export async function GET() {
@@ -8,7 +10,8 @@ export async function GET() {
   const { data: profiles } = await supabase
     .from("profiles")
     .select("username, created_at")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .in("role", ["artist", "owner"]);
 
   const urls = (profiles ?? []).map((p) => ({
     loc: `${BASE_URL}/${p.username}`,
