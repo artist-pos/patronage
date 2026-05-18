@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Blog — Patronage",
   description:
     "Insights, news, and stories from the Patronage team — connecting artists with opportunity in Aotearoa and beyond.",
+  alternates: { canonical: "https://patronage.nz/blog" },
 };
 
 function formatDate(dateStr: string | null): string {

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -285,6 +285,11 @@ export default async function OpportunityPage({ params }: Props) {
   // This keeps the page shell fully static for PPR pre-rendering.
   const opp = await getOpportunityById(id);
   if (!opp) notFound();
+
+  // Redirect UUID-based URLs to the canonical slug URL.
+  // Prevents Google from indexing the same page at two different URLs.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  if (isUuid && opp.slug) redirect(`/opportunities/${opp.slug}`);
 
   const fundingLabel =
     opp.funding_range?.trim() ||

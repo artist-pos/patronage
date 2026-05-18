@@ -12,6 +12,9 @@ export const metadata = {
   title: "Art Grants & Opportunities for NZ & Australian Artists",
   description:
     "Browse art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Updated regularly with the latest arts funding opportunities.",
+  alternates: {
+    canonical: "https://patronage.nz/opportunities",
+  },
   openGraph: {
     title: "Art Grants & Opportunities for NZ & Australian Artists | Patronage",
     description:

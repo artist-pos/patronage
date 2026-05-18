@@ -4,13 +4,17 @@ import { sources } from "./sources/index.js";
 import {
   fetchPageContent,
   fetchWithBrowser,
+  fetchPaginatedWithBrowser,
   fetchRssFeed,
-  resolveOrgImage,
+  pickOutboundLink,
   closeBrowser,
   sleep,
 } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
-import { upsertOpportunity, loadDedupeCache, normalizeUrl, type DedupeCache } from "./lib/upsert.js";
+import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, type DedupeCache } from "./lib/upsert.js";
+import { fetchSitemap, resolveSitemapUrl } from "./lib/sitemap.js";
+import { fetchWpPosts } from "./lib/wp.js";
+import { isAllowedByRobots } from "./lib/robots.js";
 import { filterLinks } from "./lib/filter-links.js";
 import type { Source, ScrapedOpportunity } from "./types.js";
 
@@ -66,7 +70,20 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
     else skipped++;
   }
 
-  if (source.isRss) {
+  if (source.feedUrl) {
+    // ── WordPress REST API ───────────────────────────────────────────────────
+    const posts = await fetchWpPosts(source.url, { feedPath: source.feedUrl });
+    console.log(`  ↳ ${posts.length} WP posts`);
+    for (const post of posts) {
+      const opps = await extractFromPage(post.content, post.link, source.country);
+      for (const opp of opps) {
+        if (!opp.url) opp.url = post.link;
+        if (!opp.featured_image_url && post.featuredImageUrl) opp.featured_image_url = post.featuredImageUrl;
+        const enriched = applySourceMeta(opp, source);
+        await upsert(enriched, enriched.featured_image_url ?? null);
+      }
+    }
+  } else if (source.isRss) {
     const items = await fetchRssFeed(source.url);
     console.log(`  ↳ ${items.length} RSS items`);
     for (const item of items) {
@@ -74,24 +91,130 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       for (const opp of opps) {
         if (!opp.url && item.link) opp.url = item.link;
         const enriched = applySourceMeta(opp, source);
-        const image = enriched.featured_image_url ?? (await resolveOrgImage(enriched.url, source.url));
-        await upsert(enriched, image);
+        await upsert(enriched, enriched.featured_image_url ?? null);
       }
     }
-  } else {
-    const { text, ogImage: mainOgImage, links: page1Links } = source.needsBrowser
-      ? await fetchWithBrowser(source.url)
-      : await fetchPageContent(source.url);
+  } else if (source.sitemapUrl) {
+    // ── Sitemap-first discovery ──────────────────────────────────────────────
+    const sitemapAbsUrl = resolveSitemapUrl(source.sitemapUrl, source.url);
+    const entries = await fetchSitemap(sitemapAbsUrl);
 
-    // Collect links from additional pages when pagination is configured
+    // Filter by linkPattern if provided, then apply dedup cache
+    const filtered = entries.filter(({ loc }) => {
+      if (source.linkPattern) {
+        const pat = typeof source.linkPattern === "string" ? new RegExp(source.linkPattern) : source.linkPattern;
+        if (!pat.test(loc)) return false;
+      }
+      return true;
+    });
+
+    const DETAIL_BUDGET = parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
+
+    // Partition into new vs known
+    const toFetch: typeof filtered = [];
+    let sitemapSkipped = 0;
+    for (const entry of filtered) {
+      const norm = normalizeUrl(entry.loc);
+      const meta = cache.urls.get(norm);
+      if (!meta) {
+        toFetch.push(entry);
+        continue;
+      }
+      // If lastmod-only and last_seen_at >= lastmod, skip without fetching
+      if (source.sitemapLastmodOnly && entry.lastmod && meta.last_seen_at && meta.last_seen_at >= entry.lastmod) {
+        sitemapSkipped++;
+        skipped++;
+        continue;
+      }
+      toFetch.push(entry);
+    }
+
+    const budgeted = toFetch.slice(0, DETAIL_BUDGET);
+    console.log(`  ↳ ${filtered.length} sitemap URLs; ${budgeted.length} to fetch, ${sitemapSkipped} skipped by lastmod`);
+
+    for (const entry of budgeted) {
+      try {
+        if (!await isAllowedByRobots(entry.loc)) {
+          console.log(`    ⊘ robots.txt disallows ${entry.loc}`);
+          skipped++;
+          continue;
+        }
+
+        const norm = normalizeUrl(entry.loc);
+        const meta = cache.urls.get(norm);
+
+        const fetchResult = await fetchPageContent(entry.loc, {
+          ifNoneMatch: meta?.etag ?? null,
+          ifModifiedSince: meta?.last_seen_at ?? null,
+        });
+
+        if (fetchResult.notModified) {
+          await touchOpportunity(entry.loc, { etag: fetchResult.etag });
+          skipped++;
+          await sleep(RATE_LIMIT_MS);
+          continue;
+        }
+
+        // Content-hash check — skip Claude if page is unchanged
+        const contentHash = hashContent(fetchResult.text);
+        if (meta?.hash && meta.hash === contentHash) {
+          await touchOpportunity(entry.loc, { etag: fetchResult.etag, hash: contentHash });
+          skipped++;
+          await sleep(RATE_LIMIT_MS);
+          continue;
+        }
+
+        const opps = await extractFromPage(fetchResult.text, entry.loc, source.country);
+        const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, entry.loc) : null;
+        for (const opp of opps) {
+          if (outbound) opp.url = outbound;
+          else if (!opp.url) opp.url = entry.loc;
+          const enriched = applySourceMeta(opp, source);
+          await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? null);
+        }
+        // Store hash for next run (update the in-memory cache entry too)
+        if (norm && cache.urls.has(norm)) {
+          cache.urls.set(norm, { last_seen_at: new Date().toISOString(), etag: fetchResult.etag, hash: contentHash });
+        }
+      } catch (err) {
+        console.error(`    ✗ ${entry.loc}: ${err instanceof Error ? err.message : String(err)}`);
+        errors++;
+      }
+      await sleep(RATE_LIMIT_MS);
+    }
+  } else {
+    let text: string;
+    let mainOgImage: string | null;
+    let page1Links: string[];
+
+    if (source.needsBrowser && source.pages && source.pages > 1 && source.paginationUrl) {
+      // Reuse a single browser context across all paginated pages (cheaper than one context per page)
+      const pageUrls = [source.url];
+      for (let p = 2; p <= source.pages; p++) {
+        pageUrls.push(source.paginationUrl.replace("{page}", String(p)));
+      }
+      const pageResults = await fetchPaginatedWithBrowser(pageUrls);
+      text = pageResults[0]?.text ?? "";
+      mainOgImage = pageResults[0]?.ogImage ?? null;
+      const allPageLinks = pageResults.flatMap((r) => r.links);
+      page1Links = allPageLinks;
+      // Early-stop detection not needed here; we fetched everything at once
+    } else {
+      const mainFetch = source.needsBrowser
+        ? await fetchWithBrowser(source.url)
+        : await fetchPageContent(source.url);
+      text = mainFetch.text;
+      mainOgImage = mainFetch.ogImage;
+      page1Links = mainFetch.links;
+    }
+
+    // Collect links from additional pages (non-browser paginated sources only)
     let allLinks = [...page1Links];
-    if (source.pages && source.pages > 1 && source.paginationUrl) {
+    if (!source.needsBrowser && source.pages && source.pages > 1 && source.paginationUrl) {
       for (let p = 2; p <= source.pages; p++) {
         const pageUrl = source.paginationUrl.replace("{page}", String(p));
         try {
-          const { links: pageLinks } = source.needsBrowser
-            ? await fetchWithBrowser(pageUrl)
-            : await fetchPageContent(pageUrl);
+          const { links: pageLinks } = await fetchPageContent(pageUrl);
           // Stop paginating early if this page returned no new links
           if (pageLinks.length === 0) {
             console.log(`  ↳ pagination stopped at page ${p} (no links found)`);
@@ -120,19 +243,50 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       const newLinks = detailLinks.filter(link => !cache.urls.has(normalizeUrl(link)));
       const cachedCount = detailLinks.length - newLinks.length;
 
-      const pageNote = source.pages && source.pages > 1 ? `, across ${source.pages} pages` : "";
-      console.log(`  ↳ ${detailLinks.length} links found${pageNote}; ${newLinks.length} new, ${cachedCount} already known`);
+      const DETAIL_BUDGET = parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
+      const budgeted = newLinks.slice(0, DETAIL_BUDGET);
 
-      for (const link of newLinks) {
+      const pageNote = source.pages && source.pages > 1 ? `, across ${source.pages} pages` : "";
+      console.log(`  ↳ ${detailLinks.length} links found${pageNote}; ${budgeted.length} new (capped at ${DETAIL_BUDGET}), ${cachedCount} already known`);
+
+      for (const link of budgeted) {
         try {
-          const { text: dText, ogImage: dOg } = await fetchPageContent(link);
-          const opps = await extractFromPage(dText, link, source.country);
+          if (!await isAllowedByRobots(link)) {
+            console.log(`    ⊘ robots.txt disallows ${link}`);
+            skipped++;
+            continue;
+          }
+
+          const norm = normalizeUrl(link);
+          const meta = cache.urls.get(norm);
+          const fetchResult = await fetchPageContent(link, {
+            ifNoneMatch: meta?.etag ?? null,
+            ifModifiedSince: meta?.last_seen_at ?? null,
+          });
+
+          if (fetchResult.notModified) {
+            await touchOpportunity(link, { etag: fetchResult.etag });
+            skipped++;
+            await sleep(RATE_LIMIT_MS);
+            continue;
+          }
+
+          const contentHash = hashContent(fetchResult.text);
+          if (meta?.hash && meta.hash === contentHash) {
+            await touchOpportunity(link, { etag: fetchResult.etag, hash: contentHash });
+            skipped++;
+            await sleep(RATE_LIMIT_MS);
+            continue;
+          }
+
+          const opps = await extractFromPage(fetchResult.text, link, source.country);
+          // For aggregator sources, prefer the outbound provider link over the aggregator URL
+          const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, link) : null;
           for (const opp of opps) {
-            if (!opp.url) opp.url = link;
+            if (outbound) opp.url = outbound;
+            else if (!opp.url) opp.url = link;
             const enriched = applySourceMeta(opp, source);
-            const image = enriched.featured_image_url ?? dOg ?? ogImage
-              ?? (await resolveOrgImage(enriched.url, source.url));
-            await upsert(enriched, image);
+            await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? ogImage ?? null);
           }
         } catch (err) {
           console.error(`    ✗ ${link}: ${err instanceof Error ? err.message : String(err)}`);
@@ -145,9 +299,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       console.log(`  ↳ ${opps.length} opportunities extracted`);
       for (const opp of opps) {
         const enriched = applySourceMeta(opp, source);
-        const image = enriched.featured_image_url ?? ogImage
-          ?? (await resolveOrgImage(enriched.url, source.url));
-        await upsert(enriched, image);
+        await upsert(enriched, enriched.featured_image_url ?? ogImage ?? null);
       }
     }
   }

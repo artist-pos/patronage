@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
 import type { ScrapedOpportunity } from "../types.js";
 
 const supabase = createClient(
@@ -18,9 +19,20 @@ export interface SourceMeta {
 // Loaded once at startup; updated on every insert. Prevents duplicate DB
 // round-trips and catches cross-source duplicates within the same run.
 
+export interface DedupeMeta {
+    last_seen_at: string | null;
+    etag: string | null;
+    hash: string | null;
+}
+
 export interface DedupeCache {
-    urls: Set<string>;       // normalised canonical URLs
-    titleKeys: Set<string>;  // normalised "title||organiser" keys
+    urls: Map<string, DedupeMeta>; // normalised URL → scraper metadata
+    titleKeys: Set<string>;        // normalised "title||organiser" keys
+}
+
+/** Compute sha256 of page content for change detection. */
+export function hashContent(text: string): string {
+    return createHash("sha256").update(text).digest("hex");
 }
 
 /**
@@ -78,7 +90,7 @@ function makeTitleKey(title: string, organiser: string): string {
  * Call once at scraper startup; pass the result to every upsertOpportunity call.
  */
 export async function loadDedupeCache(): Promise<DedupeCache> {
-    const urls = new Set<string>();
+    const urls = new Map<string, DedupeMeta>();
     const titleKeys = new Set<string>();
 
     // Paginate through all rows (Supabase default limit is 1000)
@@ -87,7 +99,7 @@ export async function loadDedupeCache(): Promise<DedupeCache> {
     while (true) {
         const { data, error } = await supabase
             .from("opportunities")
-            .select("url, title, organiser")
+            .select("url, title, organiser, last_seen_at, source_etag, source_content_hash")
             .range(from, from + PAGE - 1);
 
         if (error) {
@@ -97,7 +109,13 @@ export async function loadDedupeCache(): Promise<DedupeCache> {
         if (!data || data.length === 0) break;
 
         for (const row of data) {
-            if (row.url) urls.add(normalizeUrl(row.url));
+            if (row.url) {
+                urls.set(normalizeUrl(row.url), {
+                    last_seen_at: row.last_seen_at ?? null,
+                    etag: row.source_etag ?? null,
+                    hash: row.source_content_hash ?? null,
+                });
+            }
             titleKeys.add(makeTitleKey(row.title, row.organiser));
         }
 
@@ -120,6 +138,12 @@ export async function upsertOpportunity(
     const country = mapCountry(opp.country);
     if (!ALLOWED_COUNTRIES.has(country)) return "skipped";
 
+    // Deadline filter — skip opportunities with a past deadline (undated opps stay)
+    if (opp.deadline) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (opp.deadline < today) return "skipped";
+    }
+
     const normalisedUrl = opp.url ? normalizeUrl(opp.url) : null;
     const titleKey = makeTitleKey(opp.title, opp.organiser);
 
@@ -128,6 +152,8 @@ export async function upsertOpportunity(
         if (normalisedUrl && cache.urls.has(normalisedUrl)) return "skipped";
         if (cache.titleKeys.has(titleKey)) return "skipped";
     }
+
+    const emptyMeta: DedupeMeta = { last_seen_at: null, etag: null, hash: null };
 
     // ── DB check (slow path — catches pre-existing records) ──────────────────
     if (normalisedUrl) {
@@ -138,12 +164,16 @@ export async function upsertOpportunity(
             .maybeSingle();
 
         if (byUrl) {
-            cache?.urls.add(normalisedUrl);
+            if (normalisedUrl) cache?.urls.set(normalisedUrl, emptyMeta);
             cache?.titleKeys.add(titleKey);
             if (byUrl.status === "published" || byUrl.status === "rejected") return "skipped";
+            const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
+            // Archive rows whose deadline has now passed
+            const today = new Date().toISOString().slice(0, 10);
+            const isLapsed = record.deadline && record.deadline < today;
             await supabase
                 .from("opportunities")
-                .update(buildRecord(opp, sourceUrl, ogImage, sourceMeta))
+                .update({ ...record, last_seen_at: new Date().toISOString(), ...(isLapsed ? { is_active: false } : {}) })
                 .eq("id", byUrl.id);
             return "updated";
         }
@@ -158,9 +188,12 @@ export async function upsertOpportunity(
         if (byTitle) {
             cache?.titleKeys.add(titleKey);
             if (byTitle.status === "published" || byTitle.status === "rejected") return "skipped";
+            const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
+            const today = new Date().toISOString().slice(0, 10);
+            const isLapsed = record.deadline && record.deadline < today;
             await supabase
                 .from("opportunities")
-                .update(buildRecord(opp, sourceUrl, ogImage, sourceMeta))
+                .update({ ...record, last_seen_at: new Date().toISOString(), ...(isLapsed ? { is_active: false } : {}) })
                 .eq("id", byTitle.id);
             return "updated";
         }
@@ -181,13 +214,31 @@ export async function upsertOpportunity(
 
     if (inserted?.id) {
         const slug = toSlug(record.title, record.deadline ?? null);
-        await supabase.from("opportunities").update({ slug }).eq("id", inserted.id);
+        await supabase.from("opportunities").update({ slug, last_seen_at: new Date().toISOString() }).eq("id", inserted.id);
         // Update cache so subsequent sources don't re-insert this
-        if (normalisedUrl) cache?.urls.add(normalisedUrl);
+        if (normalisedUrl) cache?.urls.set(normalisedUrl, emptyMeta);
         cache?.titleKeys.add(titleKey);
     }
 
     return "inserted";
+}
+
+/**
+ * Touch last_seen_at (and optionally etag/hash) on an existing row identified by URL.
+ * Called when a page hasn't changed — we still want to record that we checked it.
+ */
+export async function touchOpportunity(
+    url: string,
+    { etag, hash }: { etag?: string | null; hash?: string | null } = {}
+): Promise<void> {
+    await supabase
+        .from("opportunities")
+        .update({
+            last_seen_at: new Date().toISOString(),
+            ...(etag !== undefined ? { source_etag: etag } : {}),
+            ...(hash !== undefined ? { source_content_hash: hash } : {}),
+        })
+        .eq("url", url);
 }
 
 function toSlug(title: string, deadline: string | null): string {

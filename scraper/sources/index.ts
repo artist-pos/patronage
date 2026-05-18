@@ -5,40 +5,41 @@ export const sources: Source[] = [
   // ── Tier 1: International Aggregators (highest yield per scrape) ──────────
   // One good aggregator > 50 individual gallery pages.
 
-  { name: "NAVA Opportunities", url: "https://visualarts.net.au/opportunities/", country: "AUS", isListPage: true, followLinks: true, maxLinks: 20 },
-  { name: "ResArtis Open Calls", url: "https://resartis.org/open-calls/", country: "Global", isListPage: true, followLinks: true },
-  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "A-N Opportunities", url: "https://www.a-n.co.uk/opportunities/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10 },
-  { name: "Artquest Opportunities", url: "https://www.artquest.org.uk/opportunities/", country: "Global", isListPage: true, followLinks: true },
-  { name: "Trans Artists", url: "https://www.transartists.org/en/air", country: "Global", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Open Calls", url: "https://opencalls.net/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Art Deadline List", url: "https://artdeadline.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 1000, pages: 10, paginationUrl: "https://artdeadline.com/page/{page}/" },
-  { name: "Apply For Art", url: "https://www.applyforart.com/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "Open Call for Artists", url: "https://opencallforartists.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "ArtInfoLand", url: "https://artinfoland.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 1000, pages: 40, paginationUrl: "https://artinfoland.com/page/{page}/" },
-  { name: "Contemporary Performance", url: "https://contemporaryperformance.com/category/opportunities/", country: "Global", disciplines: ["performance"], isListPage: true, followLinks: true, maxLinks: 1000, pages: 40, paginationUrl: "https://contemporaryperformance.com/category/opportunities/page/{page}/" },
-  { name: "ArtConnect Open Calls", url: "https://www.artconnect.com/open-calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "ArtRabbit Opportunities", url: "https://www.artrabbit.com/artist-opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "On the Move", url: "https://www.on-the-move.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "ArtJobs", url: "https://www.artjobs.com/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "e-flux Announcements", url: "https://www.e-flux.com/announcements/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10 },
-  { name: "CuratorSpace", url: "https://curatorspace.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 15 },
+  // WP REST replaces the old list-page crawl — full catalogue, no Playwright, no pagination
+  { name: "NAVA Opportunities", url: "https://visualarts.net.au", country: "AUS", feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
+  { name: "Contemporary Performance", url: "https://contemporaryperformance.com", country: "Global", disciplines: ["performance"], feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
+  { name: "A-N Opportunities", url: "https://www.a-n.co.uk", country: "Global", feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
+  { name: "Artquest Opportunities", url: "https://www.artquest.org.uk", country: "Global", feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
+  { name: "Aesthetica Magazine", url: "https://aestheticamagazine.com", country: "Global", feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
+  { name: "Art Guide Australia", url: "https://www.artguide.com.au", country: "AUS", feedUrl: "/wp-json/wp/v2/posts" },
+  { name: "ANAT Opportunities", url: "https://anat.org.au", country: "AUS", feedUrl: "/wp-json/wp/v2/posts" },
+  { name: "ResArtis Open Calls", url: "https://resartis.org/open-calls/", country: "Global", isListPage: true, followLinks: true, isAggregator: true },
+  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "Trans Artists", url: "https://www.transartists.org/en/air", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, isAggregator: true },
+  { name: "Open Calls", url: "https://opencalls.net/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, isAggregator: true },
+  { name: "Art Deadline List", url: "https://artdeadline.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 1000, pages: 10, paginationUrl: "https://artdeadline.com/page/{page}/", isAggregator: true },
+  { name: "Apply For Art", url: "https://www.applyforart.com/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "Open Call for Artists", url: "https://opencallforartists.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "ArtInfoLand", url: "https://artinfoland.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 1000, pages: 40, paginationUrl: "https://artinfoland.com/page/{page}/", isAggregator: true },
+  { name: "ArtConnect Open Calls", url: "https://www.artconnect.com/open-calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "ArtRabbit Opportunities", url: "https://www.artrabbit.com/artist-opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "On the Move", url: "https://www.on-the-move.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "ArtJobs", url: "https://www.artjobs.com/", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "e-flux Announcements", url: "https://www.e-flux.com/announcements/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10, isAggregator: true },
+  { name: "CuratorSpace", url: "https://curatorspace.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
   { name: "Alliance of Artists Communities", url: "https://www.artistcommunities.org/", country: "Global", isListPage: true, followLinks: true },
 
   // ── Tier 1: RSS Feeds ────────────────────────────────────────────────────
 
+  // Creative NZ + Artshub kept as RSS — CNZ doesn't expose WP REST, Artshub blocks it
   { name: "Creative NZ RSS", url: "https://www.creativenz.govt.nz/news-and-posts?format=rss", country: "NZ", isRss: true },
   { name: "Artshub AU RSS", url: "https://www.artshub.com.au/feed/", country: "AUS", isRss: true },
-  { name: "Art Guide Australia RSS", url: "https://www.artguide.com.au/feed/", country: "AUS", isRss: true },
-  { name: "Aesthetica Magazine RSS", url: "https://aestheticamagazine.com/feed/", country: "Global", isRss: true },
-  { name: "A-N RSS", url: "https://www.a-n.co.uk/feed/", country: "Global", isRss: true },
-  { name: "Artquest RSS", url: "https://www.artquest.org.uk/feed/", country: "Global", isRss: true },
 
   // ── Tier 2: NZ Government & Funded Bodies ───────────────────────────────
 
-  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25 },
-  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true },
-  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25, sitemapUrl: "https://www.creativenz.govt.nz/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzonair.govt.nz/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzfilm.co.nz/sitemap.xml", sitemapLastmodOnly: true },
   { name: "Foundation North", url: "https://foundationnorth.org.nz/", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true },
   { name: "Trust Waikato", url: "https://www.trustwaikato.co.nz/apply/", country: "NZ" },
   { name: "Lion Foundation", url: "https://www.lionfoundation.org.nz/", country: "NZ" },
@@ -56,18 +57,17 @@ export const sources: Source[] = [
   // Note: Australia Council rebranded → Creative Australia (creative.gov.au).
   // All old australiacouncil.gov.au subpaths are dead.
 
-  { name: "Creative Australia", url: "https://creative.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20 },
-  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Creative Australia", url: "https://creative.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, sitemapUrl: "https://creative.gov.au/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.screenaustralia.gov.au/sitemap.xml", sitemapLastmodOnly: true },
   { name: "National Gallery of Australia", url: "https://nga.gov.au/prizes-and-commissions/", country: "AUS", isListPage: true, followLinks: true },
-  { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, sitemapUrl: "https://www.create.nsw.gov.au/sitemap.xml", sitemapLastmodOnly: true },
   { name: "Creative Victoria", url: "https://creative.vic.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, sitemapUrl: "https://www.arts.qld.gov.au/sitemap.xml", sitemapLastmodOnly: true },
   { name: "DLGSC Western Australia", url: "https://www.dlgsc.wa.gov.au/arts", country: "AUS", isListPage: true, followLinks: true },
   { name: "Arts South Australia", url: "https://www.arts.sa.gov.au/funding/", country: "AUS", isListPage: true, followLinks: true },
   { name: "ArtsACT", url: "https://www.arts.act.gov.au/funding", country: "AUS", isListPage: true, followLinks: true },
-  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "https://www.arts.tas.gov.au/sitemap.xml", sitemapLastmodOnly: true },
   { name: "Northern Territory Arts", url: "https://arts.nt.gov.au/grants", country: "AUS", isListPage: true, followLinks: true },
-  { name: "ANAT Opportunities", url: "https://anat.org.au/opportunities/", country: "AUS", isListPage: true, followLinks: true },
   { name: "Artlink Australia", url: "https://www.artlink.com.au/", country: "AUS" },
 
   // ── Tier 3: Australian Prizes ─────────────────────────────────────────────

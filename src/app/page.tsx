@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtistCard } from "@/components/artists/ArtistCard";
@@ -10,6 +11,20 @@ import { getClosingSoonOpportunities } from "@/lib/opportunities";
 import { getLatestUpdates } from "@/lib/feed";
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity } from "@/types/database";
+
+export const metadata: Metadata = {
+  title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+  description:
+    "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Browse 500+ live opportunities updated weekly.",
+  alternates: { canonical: "https://patronage.nz" },
+  openGraph: {
+    title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+    description:
+      "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Browse 500+ live opportunities updated weekly.",
+    url: "https://patronage.nz",
+    type: "website",
+  },
+};
 
 function daysUntil(deadline: string | null): number | null {
   if (!deadline) return null;

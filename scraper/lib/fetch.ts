@@ -53,9 +53,48 @@ export function extractLinksFromHtml(html: string, baseUrl: string): string[] {
     return links;
 }
 
+// ── Outbound link picker (aggregator sources) ────────────────────────────────
+// For detail pages on aggregator sites (ArtInfoLand, e-flux, etc.), pick the
+// most likely outbound link to the actual opportunity provider.
+
+export function pickOutboundLink(html: string, currentUrl: string): string | null {
+    const $ = cheerio.load(html);
+    const here = new URL(currentUrl);
+    const candidates: { href: string; score: number }[] = [];
+
+    $("a[href]").each((_, el) => {
+        const raw = $(el).attr("href");
+        if (!raw) return;
+        let u: URL;
+        try { u = new URL(raw, currentUrl); } catch { return; }
+        if (u.hostname === here.hostname) return;
+        if (/(facebook|twitter|x\.com|instagram|youtube|linkedin|tiktok)\./.test(u.hostname)) return;
+        const text = ($(el).text() || "").trim().toLowerCase();
+        let score = 0;
+        if (/^https?:\/\//.test(raw)) score += 1;
+        if (/apply|submit|enter|website|more info|learn more|details|official/.test(text)) score += 3;
+        if ($(el).closest("p, .entry-content, article, main").length) score += 1;
+        candidates.push({ href: u.toString(), score });
+    });
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0]?.href ?? null;
+}
+
 // ── Static HTML fetch (axios + cheerio) ─────────────────────────────────────
 
-export async function fetchPageContent(url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
+export interface FetchResult {
+    text: string;
+    ogImage: string | null;
+    links: string[];
+    etag: string | null;
+    notModified: boolean;
+}
+
+export async function fetchPageContent(
+    url: string,
+    opts: { ifNoneMatch?: string | null; ifModifiedSince?: string | null } = {}
+): Promise<FetchResult> {
     // Build headers — add cookies for authenticated sites
     const headers: Record<string, string> = { ...REALISTIC_HEADERS };
     const authSite = needsCookieAuth(url);
@@ -65,11 +104,24 @@ export async function fetchPageContent(url: string): Promise<{ text: string; ogI
             headers["Cookie"] = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
         }
     }
+    if (opts.ifNoneMatch) headers["If-None-Match"] = opts.ifNoneMatch;
+    if (opts.ifModifiedSince) headers["If-Modified-Since"] = opts.ifModifiedSince;
 
-    const response = await http.get(url, {
-        responseType: "text",
-        headers,
-    });
+    let response;
+    try {
+        response = await http.get(url, { responseType: "text", headers, validateStatus: (s) => s < 400 || s === 304 });
+    } catch (err: any) {
+        // Some servers send 304 as an error — treat it gracefully
+        if (err?.response?.status === 304) {
+            return { text: "", ogImage: null, links: [], etag: err.response.headers["etag"] ?? null, notModified: true };
+        }
+        throw err;
+    }
+
+    if (response.status === 304) {
+        return { text: "", ogImage: null, links: [], etag: response.headers["etag"] ?? null, notModified: true };
+    }
+
     const rawHtml = response.data as string;
     const $ = cheerio.load(rawHtml);
     const links = extractLinksFromHtml(rawHtml, url);
@@ -80,8 +132,9 @@ export async function fetchPageContent(url: string): Promise<{ text: string; ogI
         null;
 
     const text = trimHtml(rawHtml);
+    const etag = (response.headers["etag"] as string | undefined) ?? null;
 
-    return { text, ogImage, links };
+    return { text, ogImage, links, etag, notModified: false };
 }
 
 // ── Browser fetch (Playwright — for JS-rendered pages) ───────────────────────
@@ -102,24 +155,17 @@ export async function closeBrowser(): Promise<void> {
     }
 }
 
-export async function fetchWithBrowser(url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
-    const browser = await getBrowser();
-
-    // Create context with realistic browser fingerprint
+async function buildContext(browser: Browser, url: string) {
     const context = await browser.newContext({
         userAgent: REALISTIC_HEADERS["User-Agent"],
         locale: "en-NZ",
-        extraHTTPHeaders: {
-            "Accept-Language": REALISTIC_HEADERS["Accept-Language"],
-        },
+        extraHTTPHeaders: { "Accept-Language": REALISTIC_HEADERS["Accept-Language"] },
     });
-
-    // Inject cookies for authenticated sites
     const authSite = needsCookieAuth(url);
     if (authSite?.needsCookies) {
         const cookies = await loadCookiesWithAutoLogin(authSite.domain);
         if (cookies) {
-            const playwrightCookies = cookies.map((c) => ({
+            await context.addCookies(cookies.map((c) => ({
                 name: c.name,
                 value: c.value,
                 domain: c.domain,
@@ -128,30 +174,55 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
                 httpOnly: c.httpOnly || false,
                 secure: c.secure || false,
                 sameSite: (c.sameSite || "Lax") as "Strict" | "Lax" | "None",
-            }));
-            await context.addCookies(playwrightCookies);
+            })));
         }
     }
+    return context;
+}
 
+async function fetchPageWithContext(context: import("playwright").BrowserContext, url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
     const page = await context.newPage();
     try {
         await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
-
         const ogImage = await page
-            .$eval('meta[property="og:image"], meta[name="twitter:image"]', (el) =>
-                el.getAttribute("content")
-            )
+            .$eval('meta[property="og:image"], meta[name="twitter:image"]', (el) => el.getAttribute("content"))
             .catch(() => null);
-
         const rawHtml = await page.content();
         const links = extractLinksFromHtml(rawHtml, url);
         const text = trimHtml(rawHtml);
-
         return { text, ogImage, links };
     } finally {
         await page.close();
+    }
+}
+
+export async function fetchWithBrowser(url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
+    const browser = await getBrowser();
+    const context = await buildContext(browser, url);
+    try {
+        return await fetchPageWithContext(context, url);
+    } finally {
         await context.close();
     }
+}
+
+/**
+ * Fetch multiple pages with a single shared Playwright context (cheaper for paginated sources).
+ * Caller is responsible for calling closePaginatedContext when done.
+ */
+export async function fetchPaginatedWithBrowser(urls: string[]): Promise<{ text: string; ogImage: string | null; links: string[] }[]> {
+    if (urls.length === 0) return [];
+    const browser = await getBrowser();
+    const context = await buildContext(browser, urls[0]);
+    const results: { text: string; ogImage: string | null; links: string[] }[] = [];
+    try {
+        for (const url of urls) {
+            results.push(await fetchPageWithContext(context, url));
+        }
+    } finally {
+        await context.close();
+    }
+    return results;
 }
 
 // ── RSS fetch ────────────────────────────────────────────────────────────────
@@ -173,34 +244,6 @@ export async function fetchRssFeed(url: string): Promise<RssItem[]> {
         link: item.link ?? "",
         pubDate: item.pubDate ?? "",
     }));
-}
-
-// ── Org image resolution ─────────────────────────────────────────────────────
-
-function extractDomain(url: string): string | null {
-    try {
-        return new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-        return null;
-    }
-}
-
-export async function resolveOrgImage(
-    opportunityUrl: string | null,
-    sourceUrl: string
-): Promise<string | null> {
-    const domain = extractDomain(opportunityUrl ?? sourceUrl);
-    if (!domain) return null;
-
-    const clearbitUrl = `https://logo.clearbit.com/${domain}`;
-    try {
-        const res = await http.get(clearbitUrl, { timeout: 5000, responseType: "arraybuffer" });
-        if (res.status === 200) return clearbitUrl;
-    } catch {
-        // not found — fall through
-    }
-
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
 // ── Utility ──────────────────────────────────────────────────────────────────

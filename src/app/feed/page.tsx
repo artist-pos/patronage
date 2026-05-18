@@ -14,6 +14,7 @@ import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJusti
 export const metadata: Metadata = {
   title: "Feed | Patronage",
   description: "Work in progress and available artworks from the Patronage community.",
+  alternates: { canonical: "https://patronage.nz/feed" },
 };
 
 const INITIAL_COUNT = 10;

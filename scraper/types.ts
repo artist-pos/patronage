@@ -13,6 +13,10 @@ export interface Source {
   linkPattern?: string | RegExp; // only follow links whose path/URL matches this pattern
   pages?: number;           // number of paginated list pages to scrape (default 1)
   paginationUrl?: string;   // URL template for pages 2+, with {page} placeholder e.g. "https://example.com/page/{page}/"
+  isAggregator?: boolean;   // detail pages link out to the real provider — store outbound URL instead of aggregator URL
+  sitemapUrl?: string;      // sitemap.xml URL (absolute or path) — overrides list-page discovery
+  sitemapLastmodOnly?: boolean; // skip URLs whose <lastmod> is not newer than last_seen_at
+  feedUrl?: string;         // WordPress REST endpoint path e.g. "/wp-json/wp/v2/posts"
 }
 
 export interface ScrapedOpportunity {

@@ -10,6 +10,7 @@ import type { CountryEnum, CareerStageEnum } from "@/types/database";
 export const metadata = {
   title: "Artists — Patronage",
   description: "Browse verified New Zealand and Australian artists.",
+  alternates: { canonical: "https://patronage.nz/artists" },
 };
 
 interface PageProps {
