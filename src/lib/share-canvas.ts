@@ -14,7 +14,7 @@ const FORMATS = {
 
 const GF = "'Geist', 'Inter', system-ui, sans-serif"
 
-// Cached logo element — loaded once, reused across draws
+// Cached logo elements — loaded once, reused across draws
 let _logoEl: HTMLImageElement | null = null
 let _logoLoading = false
 function getLogoEl(): Promise<HTMLImageElement | null> {
@@ -30,6 +30,24 @@ function getLogoEl(): Promise<HTMLImageElement | null> {
     img.onload = () => { _logoEl = img; _logoLoading = false; resolve(img) }
     img.onerror = () => { _logoLoading = false; resolve(null) }
     img.src = '/Favicon_Bleed_512.png'
+  })
+}
+
+let _logoWhiteEl: HTMLImageElement | null = null
+let _logoWhiteLoading = false
+function getWhiteLogoEl(): Promise<HTMLImageElement | null> {
+  if (_logoWhiteEl) return Promise.resolve(_logoWhiteEl)
+  if (_logoWhiteLoading) return new Promise(resolve => {
+    const check = setInterval(() => {
+      if (_logoWhiteEl !== null || !_logoWhiteLoading) { clearInterval(check); resolve(_logoWhiteEl) }
+    }, 50)
+  })
+  _logoWhiteLoading = true
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => { _logoWhiteEl = img; _logoWhiteLoading = false; resolve(img) }
+    img.onerror = () => { _logoWhiteLoading = false; resolve(null) }
+    img.src = '/favicon_white_512.png'
   })
 }
 
@@ -118,8 +136,7 @@ function drawFooter(
     if (isLight) {
       ctx.globalCompositeOperation = 'multiply'
     } else {
-      ctx.filter = 'invert(1)'
-      ctx.globalCompositeOperation = 'screen'
+      ctx.globalAlpha = 0.45
     }
     ctx.drawImage(logoEl, leftX, midY - iconSize / 2, iconSize, iconSize)
     ctx.restore()
@@ -235,7 +252,8 @@ export async function drawShareCanvas(
 
   // Sticker + footer (story only)
   if (isStory) {
-    const logoEl = await getLogoEl()
+    const [logoEl, logoWhiteEl] = await Promise.all([getLogoEl(), getWhiteLogoEl()])
+    const footerLogo = t.light ? logoEl : logoWhiteEl
 
     const shW = Math.round(W * 0.27)
     const shH = Math.round(W * 0.078)
@@ -255,7 +273,7 @@ export async function drawShareCanvas(
     ctx.setLineDash([])
 
     const fY = shY + shH / 2
-    drawFooter(ctx, m, fY, payload.handle, t.light, W, logoEl)
+    drawFooter(ctx, m, fY, payload.handle, t.light, W, footerLogo)
   }
 }
 

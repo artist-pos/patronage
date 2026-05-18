@@ -358,7 +358,7 @@ function WorksLightbox({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Image panel */}
-          <div className="relative flex-shrink-0 flex items-center justify-center bg-stone-950 h-[50vh] sm:h-[90vh] sm:self-stretch">
+          <div className="relative flex-shrink-0 flex items-center justify-center bg-[#FAFAF9] h-[50vh] sm:h-[90vh] sm:self-stretch">
             <button
               type="button"
               onClick={() => onToggleSave(artwork.id)}
@@ -381,7 +381,7 @@ function WorksLightbox({
 
           {/* Info panel */}
           <div
-            className="bg-white flex flex-col w-full sm:w-[280px] overflow-y-auto"
+            className="bg-white flex flex-col w-full sm:w-[280px] sm:overflow-y-auto"
           >
             <div className="flex-1 p-6 space-y-4">
 

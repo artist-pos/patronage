@@ -161,17 +161,18 @@ function SoldLightbox({
 
       {/* Modal card */}
       <div
-        className="flex overflow-hidden shadow-2xl"
+        className="flex flex-col overflow-y-auto sm:flex-row sm:overflow-hidden shadow-2xl w-[calc(100vw-2rem)] sm:w-auto"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image — full colour in lightbox */}
-        <div className="relative flex-shrink-0 self-stretch flex items-center bg-[#FAFAF9]">
+        <div className="relative flex-shrink-0 flex items-center justify-center bg-[#FAFAF9] h-[50vh] sm:h-[90vh] sm:self-stretch">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={work.url}
             alt={title}
-            style={{ height: "90vh", width: "auto", maxWidth: "70vw", display: "block", objectFit: "contain" }}
+            className="h-full w-auto max-w-full block sm:max-w-[70vw]"
+            style={{ objectFit: "contain" }}
           />
           {/* Sold badge */}
           <div className="absolute top-3 left-3">
@@ -183,7 +184,7 @@ function SoldLightbox({
         </div>
 
         {/* Info panel */}
-        <div className="bg-white flex flex-col" style={{ width: 300, overflowY: "auto" }}>
+        <div className="bg-white flex flex-col w-full sm:w-[300px] sm:overflow-y-auto">
           <div className="flex-1 p-6 space-y-5">
 
             {/* Title */}
