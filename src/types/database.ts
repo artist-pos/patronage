@@ -568,6 +568,20 @@ export interface HolderAttributionClaim {
   created_at: string;
 }
 
+export interface Grant {
+  id: string;
+  profile_id: string;
+  title: string;
+  organiser: string | null;
+  amount_cents: number | null;
+  currency: string;
+  year: number | null;
+  notes: string | null;
+  opportunity_id: string | null;
+  project_id: string | null;
+  created_at: string;
+}
+
 export type ResaleStatus = 'pending' | 'paid' | 'reverted';
 export type ResalePayoutStatus = 'owed' | 'paid' | 'cancelled';
 export type ResaleRoyaltyStatus = 'pending' | 'paid_to_artist' | 'held' | 'refunded_to_seller';

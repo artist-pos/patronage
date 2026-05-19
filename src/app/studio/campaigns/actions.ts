@@ -21,6 +21,7 @@ export async function createSelfManagedCampaign(formData: {
   campaign_end_date?: string;
   location_address?: string;
   production_specs?: string;
+  project_id?: string;
 }): Promise<{ campaignId?: string; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -69,6 +70,7 @@ export async function createSelfManagedCampaign(formData: {
       campaign_end_date: formData.campaign_end_date || null,
       location_address: formData.location_address || null,
       production_specs: formData.production_specs || null,
+      project_id: formData.project_id || null,
       status: "configuring",
       production_status: "pending",
     })

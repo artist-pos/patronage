@@ -19,7 +19,7 @@ const ARTIST_CAMPAIGN_TYPES = [
 type ArtistTypeValue = typeof ARTIST_CAMPAIGN_TYPES[number]["value"];
 type CreateableType = Exclude<ArtistTypeValue, "custom_live">;
 
-export function NewCampaignForm({ username }: { username: string }) {
+export function NewCampaignForm({ username, projects = [] }: { username: string; projects?: { id: string; title: string }[] }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   void startTransition;
@@ -34,6 +34,7 @@ export function NewCampaignForm({ username }: { username: string }) {
   const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [linkedProjectId, setLinkedProjectId] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export function NewCampaignForm({ username }: { username: string }) {
       campaign_end_date: endDate || undefined,
       location_address: location.trim() || undefined,
       production_specs: notes.trim() || undefined,
+      project_id: linkedProjectId || undefined,
     });
     setCreating(false);
     if (result.error) { setError(result.error); return; }
@@ -264,6 +266,25 @@ export function NewCampaignForm({ username }: { username: string }) {
             className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
           />
         </div>
+
+        {projects.length > 0 && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Link to project</label>
+            <select
+              value={linkedProjectId}
+              onChange={e => setLinkedProjectId(e.target.value)}
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black bg-background"
+            >
+              <option value="">No project link</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground">
+              Optionally connect this campaign to a Studio project.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium">Notes</label>

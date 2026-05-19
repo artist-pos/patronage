@@ -12,15 +12,18 @@ export default async function NewCampaignPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, username")
-    .eq("id", user.id)
-    .single();
+  const [profileResult, projectsResult] = await Promise.all([
+    supabase.from("profiles").select("role, username").eq("id", user.id).single(),
+    supabase.from("projects").select("id, title").eq("artist_id", user.id).order("created_at", { ascending: false }),
+  ]);
+
+  const profile = profileResult.data;
 
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
     redirect("/dashboard");
   }
+
+  const projects = (projectsResult.data ?? []) as { id: string; title: string }[];
 
   return (
     <StudioPageShell username={profile.username ?? ""} activeSection="campaigns">
@@ -40,7 +43,7 @@ export default async function NewCampaignPage() {
         </p>
       </div>
 
-      <NewCampaignForm username={profile.username ?? ""} />
+      <NewCampaignForm username={profile.username ?? ""} projects={projects} />
     </StudioPageShell>
   );
 }

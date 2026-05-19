@@ -19,6 +19,7 @@ import { TerminateAccountButton } from "@/components/profile/TerminateAccountBut
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
+import { StructuredGrantsManager } from "@/components/profile/StructuredGrantsManager";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { DigestToggle } from "@/components/profile/DigestToggle";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
@@ -34,7 +35,7 @@ import { WorksTabsClient } from "@/components/studio/WorksTabsClient";
 import { FeedTabsClient } from "@/components/studio/FeedTabsClient";
 import { OpportunitiesFilterClient } from "@/components/studio/OpportunitiesFilterClient";
 import type { Metadata } from "next";
-import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project } from "@/types/database";
+import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project, Grant } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Studio — Patronage",
@@ -67,7 +68,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
     fetchCompletionProfile(user.id),
   ]);
 
-  if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
+  if (!profileRow || !["artist", "owner", "admin"].includes(profileRow.role)) {
     redirect("/dashboard");
   }
 
@@ -128,6 +129,12 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : [null, null];
 
   const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
+
+  // Structured grants (profile-cv section only)
+  const structuredGrantsResult = activeSection === "profile-cv"
+    ? await supabase.from("grants").select("*").eq("profile_id", user.id).order("created_at", { ascending: false })
+    : { data: [] };
+  const structuredGrants = (structuredGrantsResult.data ?? []) as Grant[];
 
   // Works: portfolio, available, sold, confirmations, collected, series — all in one round
   const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult] =
@@ -418,12 +425,18 @@ export default async function StudioPage({ searchParams }: PageProps) {
               <div className="space-y-1">
                 <h2 className="text-base font-semibold">Grants Received</h2>
                 <p className="text-xs text-muted-foreground">
-                  List grants, awards, or funding you have received. These appear as trust signals on your profile.
+                  Log grants, awards, or funding you have received. You can link each grant to a Studio project and generate QR codes for installations.
                 </p>
               </div>
-              <GrantsSection
-                initialGrants={(fullProfile as unknown as { received_grants?: string[] }).received_grants ?? []}
-              />
+              <StructuredGrantsManager initialGrants={structuredGrants} />
+              {((fullProfile as unknown as { received_grants?: string[] }).received_grants ?? []).length > 0 && (
+                <div className="pt-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Legacy tags</p>
+                  <GrantsSection
+                    initialGrants={(fullProfile as unknown as { received_grants?: string[] }).received_grants ?? []}
+                  />
+                </div>
+              )}
             </section>
 
             {/* Press */}

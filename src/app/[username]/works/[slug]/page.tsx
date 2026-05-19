@@ -7,7 +7,10 @@ import { WorkDetailViewer } from "@/components/profile/WorkDetailViewer";
 import { AvailableWorkPill } from "@/components/profile/AvailableWorkPill";
 import { WorkEngagementTracker } from "@/components/profile/WorkEngagementTracker";
 import { ProjectThread } from "@/components/works/ProjectThread";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 import type { WorkImage } from "@/types/database";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 interface Props {
   params: Promise<{ username: string; slug: string }>;
@@ -218,8 +221,21 @@ export default async function WorkDetailPage({ params }: Props) {
           <div className="pb-5 border-b border-border">
             <div className="flex items-start justify-between gap-3 mb-2">
               <h1 className="text-2xl font-bold leading-snug">{displayTitle}</h1>
-              {isAvailable && (
-                <div className="shrink-0 pt-0.5">
+              <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                <ShareTrigger
+                  variant="icon"
+                  payload={{
+                    type: "work",
+                    title: displayTitle,
+                    sub: work.caption ?? work.medium ?? "",
+                    price: null,
+                    tag: work.medium ?? "",
+                    handle: username,
+                    imageUrl: work.url,
+                    shareUrl: `${SITE_URL}/${username}/works/${work.slug ?? work.id}`,
+                  }}
+                />
+                {isAvailable && (
                   <AvailableWorkPill
                     artistId={profile.id}
                     artistName={artistName}
@@ -239,8 +255,8 @@ export default async function WorkDetailPage({ params }: Props) {
                     metaLine={metaLine || null}
                     editions={editions}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
             {metaLine && (
               <p className="text-sm text-muted-foreground font-normal">{metaLine}</p>
