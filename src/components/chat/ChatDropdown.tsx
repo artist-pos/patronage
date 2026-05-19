@@ -141,19 +141,28 @@ export function ChatDropdown({ userId, username }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Load channels once
-  useEffect(() => {
+  // Load channels — called on mount and retried when panel opens if empty
+  const loadChannels = useCallback(() => {
     supabase
       .from("chat_channels")
       .select("id, slug, name, description")
       .order("sort_order")
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error("chat_channels fetch failed:", error); return; }
         const ch = (data ?? []) as Channel[];
         setChannels(ch);
-        if (ch.length > 0) setActiveChannelId(ch[0].id);
+        if (ch.length > 0) setActiveChannelId((prev) => prev ?? ch[0].id);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => { loadChannels(); }, [loadChannels]);
+
+  // Retry if channels didn't load (e.g. session wasn't ready on first mount)
+  useEffect(() => {
+    if (open && channels.length === 0) loadChannels();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Scroll to bottom when messages change or panel opens
   useEffect(() => {
@@ -342,7 +351,7 @@ export function ChatDropdown({ userId, username }: Props) {
   }, [userId]);
 
   async function doSend() {
-    if (!userId || (!input.trim() && !attachment)) return;
+    if (!userId || !activeChannelId || (!input.trim() && !attachment)) return;
     setSending(true);
 
     const body = input.trim() || null;

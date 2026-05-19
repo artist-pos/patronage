@@ -13,7 +13,29 @@ import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
 import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
+
+type RelatedOpp = Pick<Opportunity,
+  "id" | "slug" | "title" | "organiser" | "type" | "country" |
+  "deadline" | "featured_image_url" | "caption" | "funding_range" | "sub_categories"
+>;
+
+function scoreRelated(c: RelatedOpp, opp: Opportunity): number {
+  let s = 0;
+  if (c.type === opp.type) s += 3;
+  if (c.country === opp.country) s += 2;
+  const overlap = (c.sub_categories ?? []).filter(
+    (d) => (opp.sub_categories ?? []).includes(d)
+  ).length;
+  if (overlap > 0) s += 1;
+  if (c.deadline) {
+    const days = Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000);
+    if (days > 0 && days <= 7) s += 1;
+  }
+  return s;
+}
 
 
 function schemaTypeForOpp(type: string): string {
@@ -304,6 +326,29 @@ export default async function OpportunityPage({ params }: Props) {
   const opp = await getOpportunityById(id);
   if (!opp) notFound();
 
+  // Fetch related opportunities in parallel — admin client avoids cookies() so PPR stays intact.
+  const adminDb = createAdminClient();
+  const RELATED_SELECT = "id, slug, title, organiser, type, country, deadline, featured_image_url, caption, funding_range, sub_categories";
+  const [byTypeRes, byCountryRes] = await Promise.all([
+    adminDb.from("opportunities").select(RELATED_SELECT)
+      .eq("is_active", true).eq("status", "published")
+      .eq("type", opp.type).neq("id", opp.id)
+      .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
+    adminDb.from("opportunities").select(RELATED_SELECT)
+      .eq("is_active", true).eq("status", "published")
+      .eq("country", opp.country).neq("id", opp.id)
+      .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
+  ]);
+  const seen = new Set<string>();
+  const candidates: RelatedOpp[] = [];
+  for (const row of [...(byTypeRes.data ?? []), ...(byCountryRes.data ?? [])]) {
+    if (!seen.has(row.id)) { seen.add(row.id); candidates.push(row as RelatedOpp); }
+  }
+  const related = candidates
+    .map((r) => ({ ...r, _score: scoreRelated(r, opp) }))
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 6);
+
   // Redirect UUID-based URLs to the canonical slug URL.
   // Prevents Google from indexing the same page at two different URLs.
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -404,13 +449,16 @@ export default async function OpportunityPage({ params }: Props) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+    <div className="max-w-[1600px] mx-auto px-6 py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* ViewTracker fires client-side after idle — does not affect pre-render */}
       <ViewTracker opportunityId={opp.id} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-12 lg:gap-16 items-start">
+      <div className="space-y-8 min-w-0">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       {/* ✕ close is static. Admin controls + save button stream in. */}
@@ -627,6 +675,28 @@ export default async function OpportunityPage({ params }: Props) {
           ← Back to opportunities
         </Link>
       </div>
+      </div>{/* end main column */}
+
+      {/* ── Related opportunities sidebar ───────────────────────────────── */}
+      {related.length > 0 && (
+        <aside className="lg:sticky lg:top-6 lg:self-start space-y-5">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+            Related opportunities
+          </p>
+          <div className="space-y-3">
+            {related.map((r) => (
+              <OpportunityMiniCard key={r.id} opp={r as unknown as Opportunity} />
+            ))}
+          </div>
+          <Link
+            href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
+            className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            More {opp.type.toLowerCase()} opportunities →
+          </Link>
+        </aside>
+      )}
+      </div>{/* end grid */}
     </div>
   );
 }

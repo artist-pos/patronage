@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
@@ -32,6 +33,7 @@ interface Results {
 }
 
 export function SearchCommand() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Results>({ opportunities: [], artists: [] });
   const [open, setOpen] = useState(false);
@@ -58,6 +60,12 @@ export function SearchCommand() {
         setQuery("");
         setMobileSearchOpen(false);
         inputRef.current?.blur();
+      }
+      if (e.key === "Enter" && e.target === inputRef.current && query.trim().length >= 2) {
+        e.preventDefault();
+        router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+        setOpen(false);
+        setMobileSearchOpen(false);
       }
     }
     document.addEventListener("keydown", onKeyDown);
@@ -210,6 +218,20 @@ export function SearchCommand() {
                   )}
                 </Link>
               ))}
+            </div>
+          )}
+          {hasResults && (
+            <div className="border-t border-border">
+              <button
+                onClick={() => {
+                  router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+                  setOpen(false);
+                  setMobileSearchOpen(false);
+                }}
+                className="w-full px-4 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors text-left"
+              >
+                See all results for &ldquo;{query}&rdquo; →
+              </button>
             </div>
           )}
         </>

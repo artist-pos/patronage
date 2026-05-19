@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { HUB_CONTENT } from "@/lib/hub-content";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
@@ -19,12 +20,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/works`,         lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
     { url: `${BASE_URL}/feed`,          lastModified: new Date(), changeFrequency: "daily",   priority: 0.7 },
     { url: `${BASE_URL}/blog`,          lastModified: new Date(), changeFrequency: "weekly",  priority: 0.7 },
+    { url: `${BASE_URL}/resources`,     lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/partner`,       lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     ...CATEGORY_SLUGS.map((slug) => ({
       url: `${BASE_URL}/artists/${slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.8,
+    })),
+    ...Object.keys(HUB_CONTENT).map((slug) => ({
+      url: `${BASE_URL}/opportunities/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.9,
     })),
   ];
 }
