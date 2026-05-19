@@ -70,6 +70,38 @@ Private and institution-run residencies include those at major galleries (AGNSW,
 
 Residency durations in Australia typically run 2 weeks to 3 months. When applying, clarity about your project, how the residency environment serves your practice, and plans for community or public engagement are consistently valued by selection panels.`,
   },
+
+  "open-calls/new-zealand": {
+    title: "Open Calls for Artists — New Zealand",
+    metaTitle: "Open Calls for Artists New Zealand 2026 | Patronage",
+    metaDescription: "Browse open calls, submission opportunities, and calls for entry for New Zealand artists. Exhibitions, prizes, publications, and public art commissions. Updated weekly.",
+    intro: "New Zealand's open call landscape is active year-round, with galleries, festivals, public art bodies, and independent publishers regularly inviting submissions from local and international artists.",
+    body: `Open calls in New Zealand cover a wide range of opportunities: exhibition proposals, works for sale at art fairs, entries for prizes and awards, submissions for artist-run publications, and expressions of interest for public art commissions.
+
+Gallery-run open submissions are common at artist-run spaces and smaller commercial galleries throughout the country. The International Art Show at Objectspace, the Parkin Drawing Prize, and the Wallace Arts Trust awards are among the most visible annual open calls for visual artists. Craft and object-based artists have strong representation through galleries like Objectspace, Masterworks Gallery, and the New Zealand Society of Artists in Glass.
+
+Public art commissions are increasingly listed as open calls, particularly through Auckland Council's Public Art team, Wellington's Public Art Programme, and Ōtautahi Creative Spaces in Christchurch. These tend to be site-specific and come with detailed community engagement requirements.
+
+Artist-run spaces — particularly in Auckland, Wellington, and Dunedin — run their own open calls for residency exhibitions and group shows. Following these spaces on social media remains the most reliable way to catch short-notice opportunities.
+
+Most open calls are free or low-cost to enter. Where entry fees apply, they typically support prizes or event costs. When submitting, read selection criteria carefully: many NZ open calls value work that responds to local contexts, landscapes, or communities.`,
+  },
+
+  "open-calls/australia": {
+    title: "Open Calls for Artists — Australia",
+    metaTitle: "Open Calls for Artists Australia 2026 | Patronage",
+    metaDescription: "Browse open calls, submission opportunities, and calls for entry for Australian artists. Exhibitions, prizes, publications, and public art. Updated weekly.",
+    intro: "Australia has one of the most active open call ecosystems in the Asia-Pacific, driven by a dense network of artist-run spaces, state galleries, festivals, and public art programmes.",
+    body: `Open calls in Australia span submission-based exhibitions, artist residencies by expression of interest, public art commissions, festival participation, and entries for some of the country's most significant prizes.
+
+The Archibald, Wynne, and Sulman Prizes (Art Gallery of NSW) and the National Works on Paper Prize are among the highest-profile annual open calls for Australian artists. The Ramsay Art Prize (Art Gallery of SA) and the National Aboriginal and Torres Strait Islander Art Awards offer significant prize money and exhibition opportunities. Most major state galleries run at least one open submission competition per year.
+
+Artist-run initiatives (ARIs) across Australia run frequent open calls for group shows, residencies, and collaborative projects. Outre Gallery, Bus Projects, Alaska Projects, and TCB Art Inc are examples of organisations that regularly invite submissions through open calls. Following ARI networks in each state is essential for staying across emerging opportunities.
+
+Public art commissions are increasingly offered as open expressions of interest, with budgets ranging from $10,000 for small installations to $1,000,000+ for major infrastructure projects. The National Capital Authority, state transport departments, and local councils all list these opportunities, though they are often time-sensitive and require demonstrated experience with large-scale fabrication.
+
+When entering Australian open calls, applications typically require a project proposal or artist statement, a portfolio of relevant work (usually 5–10 images), a CV, and sometimes a budget. Many open calls are now submitted through online portals such as Submittable, Slideroom, or Arts Hub.`,
+  },
 };
 
 export const HUB_TYPE_MAP: Record<string, string> = {

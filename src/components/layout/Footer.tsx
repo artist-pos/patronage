@@ -19,6 +19,10 @@ export function Footer() {
             Blog
           </Link>
           <span className="hidden sm:inline">·</span>
+          <Link href="/resources" className="hover:opacity-100 transition-opacity">
+            Resources
+          </Link>
+          <span className="hidden sm:inline">·</span>
           <Link href="/terms" className="hover:opacity-100 transition-opacity">
             Terms of Service
           </Link>

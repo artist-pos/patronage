@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isAdmin } from "@/lib/admin";
 
 export const metadata: Metadata = {
   title: "Resources for Artists | Patronage",
@@ -83,9 +84,19 @@ const SECTIONS: Section[] = [
   },
 ];
 
-export default function ResourcesPage() {
+export default async function ResourcesPage() {
+  const adminUser = await isAdmin();
+
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-12">
+    <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-12">
+      {!adminUser && (
+        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-background/70 flex flex-col items-center justify-start pt-24 gap-3 rounded-sm">
+          <p className="text-sm font-semibold tracking-tight">Coming soon</p>
+          <p className="text-xs text-muted-foreground text-center max-w-xs leading-relaxed">
+            We&rsquo;re putting the finishing touches on our resources for artists.
+          </p>
+        </div>
+      )}
 
       {/* Header */}
       <div className="space-y-2 max-w-2xl">

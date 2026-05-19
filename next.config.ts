@@ -32,9 +32,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
-    remotePatterns: supabaseHostname
-      ? [{ protocol: "https", hostname: supabaseHostname }]
-      : [],
+    remotePatterns: [
+      ...(supabaseHostname ? [{ protocol: "https" as const, hostname: supabaseHostname }] : []),
+      { protocol: "https", hostname: "*.cloudfront.net" },
+    ],
   },
   async rewrites() {
     return [

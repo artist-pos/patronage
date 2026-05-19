@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getOpportunities } from "@/lib/opportunities";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
+import { isAdmin } from "@/lib/admin";
 import {
   HUB_CONTENT,
   HUB_TYPE_MAP,
@@ -40,7 +41,7 @@ export function generateHubMetadata(typeSlug: string, countrySlug?: string): Met
 }
 
 export async function HubPage({ typeSlug, countrySlug }: Props) {
-  const oppType = HUB_TYPE_MAP[typeSlug];
+  const [oppType, adminUser] = [HUB_TYPE_MAP[typeSlug], await isAdmin()];
   if (!oppType) notFound();
   if (countrySlug && !HUB_COUNTRY_MAP[countrySlug]) notFound();
 
@@ -80,7 +81,15 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-10">
+    <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-10">
+      {!adminUser && (
+        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-background/70 flex flex-col items-center justify-start pt-24 gap-3 rounded-sm">
+          <p className="text-sm font-semibold tracking-tight">Coming soon</p>
+          <p className="text-xs text-muted-foreground text-center max-w-xs leading-relaxed">
+            We&rsquo;re finishing this section. Check back soon.
+          </p>
+        </div>
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Breadcrumb */}
