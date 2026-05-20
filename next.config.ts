@@ -35,6 +35,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       ...(supabaseHostname ? [{ protocol: "https" as const, hostname: supabaseHostname }] : []),
       { protocol: "https", hostname: "*.cloudfront.net" },
+      // Opportunity hero images come from 50+ scraped external domains — allow
+      // all HTTPS origins so Next.js can convert to WebP/AVIF and cache them.
+      { protocol: "https", hostname: "**" },
     ],
   },
   async rewrites() {

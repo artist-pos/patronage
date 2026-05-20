@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -11,16 +12,21 @@ interface Props {
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
+// Deduplicates DB fetch between generateMetadata and the page component.
+const getPost = cache(async (slug: string) => {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  return supabase
+    .from("blog_posts")
+    .select("*, featured_profile:profiles(id, username, full_name, bio, avatar_url)")
+    .eq("slug", slug)
+    .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
+    .single();
+});
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
-  const metaNow = new Date().toISOString();
-  const { data: post } = await supabase
-    .from("blog_posts")
-    .select("title, image_url, body, published_at, updated_at, created_at")
-    .eq("slug", slug)
-    .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${metaNow})`)
-    .single();
+  const { data: post } = await getPost(slug);
 
   if (!post) return { title: "Post not found — Patronage" };
 
@@ -74,19 +80,14 @@ export default async function BlogPostPage({ params }: Props) {
   const now = new Date().toISOString();
 
   const [{ data: post }, { data: otherPosts }] = await Promise.all([
-    supabase
-      .from("blog_posts")
-      .select("*, featured_profile:profiles(id, username, full_name, bio, avatar_url)")
-      .eq("slug", slug)
-      .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
-      .single(),
+    getPost(slug),
     supabase
       .from("blog_posts")
       .select("slug, title, image_url, published_at, created_at")
       .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
       .neq("slug", slug)
       .order("published_at", { ascending: false })
-      .limit(20),
+      .limit(6),
   ]);
 
   if (!post) notFound();

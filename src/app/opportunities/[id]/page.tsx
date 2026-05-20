@@ -503,18 +503,13 @@ export default async function OpportunityPage({ params }: Props) {
       {/* ── Featured image — STATIC ─────────────────────────────────────── */}
       {opp.featured_image_url ? (
         <div className="relative w-full border border-black overflow-hidden bg-white">
-          <div
-            className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-20"
-            style={{ backgroundImage: `url(${opp.featured_image_url})` }}
-          />
           <Image
             src={opp.featured_image_url}
             alt={opp.title}
             width={1200}
             height={630}
-            unoptimized
             priority
-            className="relative z-10 w-full h-auto max-h-[360px] object-contain"
+            className="w-full h-auto max-h-[360px] object-contain"
           />
         </div>
       ) : (

@@ -1,7 +1,11 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ProfileFilters, ProfileWithImage, PortfolioImage } from "@/types/database";
 
-export async function getProfile(username: string): Promise<Profile | null> {
+// React.cache deduplicates calls with the same args within a single request,
+// eliminating the double DB fetch that occurs when generateMetadata and the
+// page component both call getProfile for the same username.
+export const getProfile = cache(async (username: string): Promise<Profile | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -9,9 +13,9 @@ export async function getProfile(username: string): Promise<Profile | null> {
     .eq("username", username)
     .single();
   return data as Profile | null;
-}
+});
 
-export async function getProfileById(id: string): Promise<Profile | null> {
+export const getProfileById = cache(async (id: string): Promise<Profile | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -19,7 +23,7 @@ export async function getProfileById(id: string): Promise<Profile | null> {
     .eq("id", id)
     .single();
   return data as Profile | null;
-}
+});
 
 export async function getProfiles(
   filters: ProfileFilters = {},
