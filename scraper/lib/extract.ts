@@ -2,6 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedOpportunity, RssItem } from "../types.js";
 import { withRateLimit, estimateTokens } from "./rate-limiter.js";
 
+export class InsufficientCreditsError extends Error {
+  constructor() {
+    super("Anthropic API credits exhausted — add credits and re-run");
+    this.name = "InsufficientCreditsError";
+  }
+}
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ============================================================
@@ -83,7 +90,7 @@ export async function extractFromPage(
         const response = await withRateLimit(
             () =>
                 client.messages.create({
-                    model: "claude-sonnet-4-20250514",
+                    model: "claude-haiku-4-5-20251001",
                     max_tokens: 4096,
                     system: SYSTEM,
                     messages: [{ role: "user", content: prompt }],
@@ -117,8 +124,13 @@ export async function extractFromPage(
                 // Ensure caption doesn't exceed DB limit
                 caption: o.caption?.slice(0, 400) ?? null,
             }));
-    } catch (err) {
-        console.error(`  Extract error for ${sourceUrl}:`, err instanceof Error ? err.message : err);
+    } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Credit exhaustion is fatal for the whole run — propagate immediately
+        if (msg.includes("credit balance is too low")) {
+            throw new InsufficientCreditsError();
+        }
+        console.error(`  Extract error for ${sourceUrl}:`, msg);
         return [];
     }
 }

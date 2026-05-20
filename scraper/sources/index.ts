@@ -37,9 +37,9 @@ export const sources: Source[] = [
 
   // ── Tier 2: NZ Government & Funded Bodies ───────────────────────────────
 
-  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25, sitemapUrl: "https://www.creativenz.govt.nz/sitemap.xml", sitemapLastmodOnly: true },
-  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/", country: "NZ", disciplines: ["music"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzonair.govt.nz/sitemap.xml", sitemapLastmodOnly: true },
-  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzfilm.co.nz/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Creative NZ All Opportunities", url: "https://www.creativenz.govt.nz/funding-and-support/all-opportunities", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 25, sitemapUrl: "https://www.creativenz.govt.nz/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/funding-and-support\/(early-career-artists|artists-and-practitioners|arts-organisations-and-groups|all-opportunities)\//, detailBudget: 60 },
+  { name: "NZ On Air", url: "https://www.nzonair.govt.nz/funding/", country: "NZ", disciplines: ["music", "film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzonair.govt.nz/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/funding\//, detailBudget: 40 },
+  { name: "NZ Film Commission", url: "https://www.nzfilm.co.nz/funding-support-nz-filmmakers/funding", country: "NZ", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.nzfilm.co.nz/sitemaps-1-section-pages-1-sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/funding-support-nz-filmmakers\//, detailBudget: 30 },
   { name: "Foundation North", url: "https://foundationnorth.org.nz/", country: "NZ", isListPage: true, needsBrowser: true, followLinks: true },
   { name: "Trust Waikato", url: "https://www.trustwaikato.co.nz/apply/", country: "NZ" },
   { name: "Lion Foundation", url: "https://www.lionfoundation.org.nz/", country: "NZ" },
@@ -57,16 +57,16 @@ export const sources: Source[] = [
   // Note: Australia Council rebranded → Creative Australia (creative.gov.au).
   // All old australiacouncil.gov.au subpaths are dead.
 
-  { name: "Creative Australia", url: "https://creative.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, sitemapUrl: "https://creative.gov.au/sitemap.xml", sitemapLastmodOnly: true },
-  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.screenaustralia.gov.au/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Creative Australia", url: "https://creative.gov.au/investments-opportunities/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, sitemapUrl: "https://creative.gov.au/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/(investments-opportunities|first-nations-arts)\//, detailBudget: 60 },
+  { name: "Screen Australia", url: "https://www.screenaustralia.gov.au/funding-and-support", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, sitemapUrl: "https://www.screenaustralia.gov.au/fund-sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/fund\//, detailBudget: 40 },
   { name: "National Gallery of Australia", url: "https://nga.gov.au/prizes-and-commissions/", country: "AUS", isListPage: true, followLinks: true },
-  { name: "Create NSW", url: "https://www.create.nsw.gov.au/funding-and-support/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, sitemapUrl: "https://www.create.nsw.gov.au/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Create NSW", url: "https://www.nsw.gov.au/arts-and-culture/engage-nsw-arts-and-culture/get-funding-and-support", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, linkPattern: /\/(arts-and-culture|grants-and-funding)\// },
   { name: "Creative Victoria", url: "https://creative.vic.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, sitemapUrl: "https://www.arts.qld.gov.au/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Arts Queensland", url: "https://www.arts.qld.gov.au/", country: "AUS", isListPage: true, needsBrowser: true, followLinks: true, sitemapUrl: "https://www.arts.qld.gov.au/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/(funding-opportunities|regional-arts|projects-and-partnerships)\//, detailBudget: 40 },
   { name: "DLGSC Western Australia", url: "https://www.dlgsc.wa.gov.au/arts", country: "AUS", isListPage: true, followLinks: true },
   { name: "Arts South Australia", url: "https://www.arts.sa.gov.au/funding/", country: "AUS", isListPage: true, followLinks: true },
   { name: "ArtsACT", url: "https://www.arts.act.gov.au/funding", country: "AUS", isListPage: true, followLinks: true },
-  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "https://www.arts.tas.gov.au/sitemap.xml", sitemapLastmodOnly: true },
+  { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "https://www.arts.tas.gov.au/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/grants/, detailBudget: 30 },
   { name: "Northern Territory Arts", url: "https://arts.nt.gov.au/grants", country: "AUS", isListPage: true, followLinks: true },
   { name: "Artlink Australia", url: "https://www.artlink.com.au/", country: "AUS" },
 
@@ -176,7 +176,7 @@ export const sources: Source[] = [
   { name: "Queensland Writers Centre", url: "https://qwc.com.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
   { name: "Varuna Writers House", url: "https://varuna.com.au/residencies/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
   { name: "Emerging Writers Festival", url: "https://emergingwritersfestival.org.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
-  { name: "Poets & Writers", url: "https://www.pw.org/grants", country: "Global", disciplines: ["writing", "poetry"], isListPage: true, followLinks: true, maxLinks: 15 },
+  { name: "Poets & Writers", url: "https://www.pw.org/grants", country: "Global", disciplines: ["writing", "poetry"], isListPage: true, followLinks: true, maxLinks: 15, linkPattern: /\/grants/ },
 
   // ── Dance & Performance ───────────────────────────────────────────────────
 
@@ -187,8 +187,8 @@ export const sources: Source[] = [
   // ── Film ──────────────────────────────────────────────────────────────────
 
   { name: "NZ International Film Festival", url: "https://www.nziff.co.nz/", country: "NZ", disciplines: ["film"] },
-  { name: "Film Victoria", url: "https://www.film.vic.gov.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
-  { name: "Screenwest", url: "https://www.screenwest.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
-  { name: "South Australian Film Corporation", url: "https://www.safilm.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true },
+  { name: "Film Victoria", url: "https://www.film.vic.gov.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, linkPattern: /\/funding\// },
+  { name: "Screenwest", url: "https://www.screenwest.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, linkPattern: /\/funding/ },
+  { name: "South Australian Film Corporation", url: "https://www.safilm.com.au/funding/", country: "AUS", disciplines: ["film"], isListPage: true, followLinks: true, linkPattern: /\/funding\// },
 
 ];

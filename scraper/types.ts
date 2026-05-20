@@ -16,6 +16,7 @@ export interface Source {
   isAggregator?: boolean;   // detail pages link out to the real provider — store outbound URL instead of aggregator URL
   sitemapUrl?: string;      // sitemap.xml URL (absolute or path) — overrides list-page discovery
   sitemapLastmodOnly?: boolean; // skip URLs whose <lastmod> is not newer than last_seen_at
+  detailBudget?: number;    // per-source cap on detail pages (overrides SOURCE_DETAIL_BUDGET env var)
   feedUrl?: string;         // WordPress REST endpoint path e.g. "/wp-json/wp/v2/posts"
 }
 

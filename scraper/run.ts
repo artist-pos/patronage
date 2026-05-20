@@ -10,7 +10,7 @@ import {
   closeBrowser,
   sleep,
 } from "./lib/fetch.js";
-import { extractFromPage, extractFromRssItem } from "./lib/extract.js";
+import { extractFromPage, extractFromRssItem, InsufficientCreditsError } from "./lib/extract.js";
 import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, type DedupeCache } from "./lib/upsert.js";
 import { fetchSitemap, resolveSitemapUrl } from "./lib/sitemap.js";
 import { fetchWpPosts } from "./lib/wp.js";
@@ -108,7 +108,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       return true;
     });
 
-    const DETAIL_BUDGET = parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
+    const DETAIL_BUDGET = source.detailBudget ?? parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
 
     // Partition into new vs known
     const toFetch: typeof filtered = [];
@@ -177,6 +177,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           cache.urls.set(norm, { last_seen_at: new Date().toISOString(), etag: fetchResult.etag, hash: contentHash });
         }
       } catch (err) {
+        if (err instanceof InsufficientCreditsError) throw err;
         console.error(`    ✗ ${entry.loc}: ${err instanceof Error ? err.message : String(err)}`);
         errors++;
       }
@@ -243,7 +244,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       const newLinks = detailLinks.filter(link => !cache.urls.has(normalizeUrl(link)));
       const cachedCount = detailLinks.length - newLinks.length;
 
-      const DETAIL_BUDGET = parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
+      const DETAIL_BUDGET = source.detailBudget ?? parseInt(process.env.SOURCE_DETAIL_BUDGET ?? "200", 10);
       const budgeted = newLinks.slice(0, DETAIL_BUDGET);
 
       const pageNote = source.pages && source.pages > 1 ? `, across ${source.pages} pages` : "";
@@ -289,6 +290,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
             await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? ogImage ?? null);
           }
         } catch (err) {
+          if (err instanceof InsufficientCreditsError) throw err;
           console.error(`    ✗ ${link}: ${err instanceof Error ? err.message : String(err)}`);
           errors++;
         }
@@ -338,6 +340,11 @@ async function main() {
       skipped  += result.skipped;
       errors   += result.errors;
     } catch (err) {
+      if (err instanceof InsufficientCreditsError) {
+        console.error(`\n💳 ${err.message}`);
+        console.error("   Stopping immediately — no point continuing without credits.\n");
+        break;
+      }
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.startsWith("Timed out")) {
         console.warn(`  ⏱ ${source.name} — timed out, skipping`);
