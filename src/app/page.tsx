@@ -1,14 +1,91 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { Button } from "@/components/ui/button";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { StudioFeedCard } from "@/components/feed/StudioFeedCard";
 import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
-import { getProfiles } from "@/lib/profiles";
-import { getClosingSoonOpportunities } from "@/lib/opportunities";
-import { getLatestUpdates } from "@/lib/feed";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import type { Profile, ProfileWithImage, Opportunity } from "@/types/database";
+import type { ProjectUpdateWithArtist } from "@/types/database";
+
+// ── Cached public data — shared across all visitors, revalidated every 5 min ──
+
+const UPDATE_SELECT = `
+  id, artist_id, project_id, image_url, caption, content_type, discipline,
+  audio_url, video_url, text_content, embed_url, embed_provider,
+  orientation, image_width, image_height, collaborator_ids,
+  title, tldr, update_tag, created_at,
+  profiles!project_updates_artist_id_fkey (username, full_name, avatar_url)
+`;
+
+const getCachedHomeData = unstable_cache(
+  async (today: string) => {
+    const supabase = createPublicClient();
+    const [artistsRes, oppsRes, updatesRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, username, full_name, bio, avatar_url, featured_image_url, medium, career_stage, country, role, created_at, is_active")
+        .eq("is_active", true)
+        .in("role", ["artist", "owner"])
+        .order("created_at", { ascending: false })
+        .limit(4),
+      supabase
+        .from("opportunities")
+        .select("id, slug, title, organiser, caption, type, country, city, deadline, opens_at, featured_image_url, is_featured, sub_categories, funding_range, funding_amount, entry_fee, grant_type, recipients_count, is_recurring, recurrence_pattern")
+        .eq("is_active", true)
+        .eq("status", "published")
+        .or(`deadline.gte.${today},deadline.is.null`)
+        .order("deadline", { ascending: true, nullsFirst: false })
+        .limit(4),
+      supabase
+        .from("project_updates")
+        .select(UPDATE_SELECT)
+        .order("created_at", { ascending: false })
+        .limit(8),
+    ]);
+
+    const artists: ProfileWithImage[] = (artistsRes.data ?? []).map((p: any) => ({
+      ...p,
+      primary_image_url: p.featured_image_url ?? null,
+    }));
+
+    const opportunities = (oppsRes.data ?? []) as Opportunity[];
+
+    const updates: ProjectUpdateWithArtist[] = (updatesRes.data ?? []).map((row: any) => ({
+      id: row.id,
+      artist_id: row.artist_id,
+      project_id: row.project_id ?? null,
+      image_url: row.image_url ?? null,
+      caption: row.caption ?? null,
+      content_type: row.content_type ?? "image",
+      discipline: row.discipline ?? null,
+      audio_url: row.audio_url ?? null,
+      video_url: row.video_url ?? null,
+      text_content: row.text_content ?? null,
+      embed_url: row.embed_url ?? null,
+      embed_provider: row.embed_provider ?? null,
+      orientation: row.orientation ?? null,
+      image_width: row.image_width ?? null,
+      image_height: row.image_height ?? null,
+      created_at: row.created_at,
+      artist_username: row.profiles?.username ?? "",
+      artist_full_name: row.profiles?.full_name ?? null,
+      artist_avatar_url: row.profiles?.avatar_url ?? null,
+      collaborator_ids: row.collaborator_ids ?? [],
+      title: row.title ?? null,
+      tldr: row.tldr ?? null,
+      update_tag: row.update_tag ?? "update",
+      collaborators: [],
+    }));
+
+    return { artists, opportunities, updates };
+  },
+  ["home-data"],
+  { revalidate: 300 }
+);
 
 export const metadata: Metadata = {
   title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
@@ -26,11 +103,10 @@ export const metadata: Metadata = {
 
 
 export default async function Home() {
-  const [supabase, artists, opportunities, updates] = await Promise.all([
+  const today = new Date().toISOString().split("T")[0];
+  const [supabase, { artists, opportunities, updates }] = await Promise.all([
     createClient(),
-    getProfiles({}, 4),
-    getClosingSoonOpportunities(4),
-    getLatestUpdates(8),
+    getCachedHomeData(today),
   ]);
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
