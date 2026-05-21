@@ -30,7 +30,9 @@ type ClaimStatus = "none" | "scheduled" | "sent" | "opened" | "claimed";
 type ClaimFilter = "all" | ClaimStatus;
 
 function getClaimStatus(o: Opportunity): ClaimStatus {
-  if (o.profile_id) return "claimed";
+  // "claimed" only when an org went through the claim-link flow
+  // (profile_id set by a partner submission alone doesn't count)
+  if (o.profile_id && o.claim_token) return "claimed";
   if (o.claim_link_opened_at) return "opened";
   if (o.claim_invite_sent_at) return "sent";
   if (o.claim_invite_scheduled_for) return "scheduled";
@@ -472,6 +474,16 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       {claim.loading ? "Generating…" : "Regenerate"}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClaimTargetId(null);
+                      setInviteTargetId(claimOpp.id);
+                    }}
+                    className="w-full text-xs bg-black text-white px-3 py-2 hover:bg-black/80 transition-colors"
+                  >
+                    Send email invite →
+                  </button>
                 </>
               ) : (
                 <div className="space-y-2">

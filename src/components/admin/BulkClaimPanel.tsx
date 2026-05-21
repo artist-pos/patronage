@@ -82,6 +82,7 @@ export function BulkClaimPanel({ opps, onClose, onDone }: Props) {
           opportunityId: o.id,
           recipientEmail: email,
           recipientName: o.organiser ?? "",
+          organiserName: o.organiser ?? "",
           opportunityTitle: o.title,
           claimToken: o.claim_token,
           claimTokenExpiresAt: o.claim_token_expires_at,

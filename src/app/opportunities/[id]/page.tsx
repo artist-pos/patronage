@@ -323,7 +323,34 @@ export default async function OpportunityPage({ params }: Props) {
 
   // getOpportunityById uses createPublicClient() — no cookies() call.
   // This keeps the page shell fully static for PPR pre-rendering.
-  const opp = await getOpportunityById(id);
+  let opp = await getOpportunityById(id);
+  let isAdminPreview = false;
+
+  if (!opp) {
+    // Fallback: check if this is an admin previewing a pending/draft opp.
+    // Admin client is cookie-free; auth check happens inside the Suspense island.
+    const adminDb2 = createAdminClient();
+    const isUuidFallback = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const { data: unpublished } = await adminDb2
+      .from("opportunities")
+      .select("*")
+      .eq(isUuidFallback ? "id" : "slug", id)
+      .single();
+
+    if (!unpublished) notFound();
+
+    // Auth check — verify the requester is admin before serving the unpublished opp.
+    const supabaseAuth = await createClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) notFound();
+    const { data: prof } = await supabaseAuth.from("profiles").select("role").eq("id", user.id).single();
+    if (prof?.role !== "admin" && prof?.role !== "owner") notFound();
+
+    opp = unpublished as NonNullable<typeof opp>;
+    isAdminPreview = true;
+  }
+
+  // All null paths above call notFound() which throws — opp is always set here
   if (!opp) notFound();
 
   // Fetch related opportunities in parallel — admin client avoids cookies() so PPR stays intact.
@@ -350,7 +377,7 @@ export default async function OpportunityPage({ params }: Props) {
   const related = candidates
     .map((r) => ({ ...r, _score: scoreRelated(r, opp) }))
     .sort((a, b) => b._score - a._score)
-    .slice(0, 6);
+    .slice(0, 4);
 
   // Redirect UUID-based URLs to the canonical slug URL.
   // Prevents Google from indexing the same page at two different URLs.
@@ -459,6 +486,15 @@ export default async function OpportunityPage({ params }: Props) {
       />
       {/* ViewTracker fires client-side after idle — does not affect pre-render */}
       <ViewTracker opportunityId={opp.id} />
+
+      {/* Admin preview banner — only shown when accessing a non-published opp */}
+      {isAdminPreview && (
+        <div className="mb-6 bg-amber-50 border border-amber-300 px-4 py-3 text-xs text-amber-800 flex items-center gap-2">
+          <span className="font-semibold">Admin preview</span>
+          <span>·</span>
+          <span>This opportunity has status <strong>{opp.status}</strong> and is not yet visible to the public.</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-12 lg:gap-16 items-start">
       <div className="space-y-8 min-w-0">

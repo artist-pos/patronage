@@ -9,7 +9,7 @@ export const metadata = { title: "Opportunities — Admin — Patronage" };
 function computeFunnel(opps: Opportunity[]) {
   const sent = opps.filter(o => o.claim_invite_sent_at).length;
   const opened = opps.filter(o => o.claim_link_opened_at).length;
-  const claimed = opps.filter(o => o.profile_id).length;
+  const claimed = opps.filter(o => o.profile_id && o.claim_token).length;
   const pipelineActivated = opps.filter(o => o.profile_id && o.routing_type === "pipeline").length;
   return { sent, opened, claimed, pipelineActivated };
 }

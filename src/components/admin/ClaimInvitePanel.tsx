@@ -24,6 +24,8 @@ interface Props {
 export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
   const claimToken = opp.claim_token;
   const claimUrl = claimToken ? buildClaimUrl(claimToken) : `${SITE_URL}/claim-listing/(token pending)`;
+  const listingUrl = `${SITE_URL}/opportunities/${opp.id}`;
+  const organiserName = opp.organiser ?? "";
 
   const [template, setTemplate] = useState<Template>("claim_only");
   const [recipientEmail, setRecipientEmail] = useState(opp.claim_invite_email ?? opp.claim_email ?? "");
@@ -36,7 +38,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
 
   // Build initial body on mount
   useEffect(() => {
-    const vars = { recipientName: recipientName || "there", opportunityTitle: opp.title, claimUrl };
+    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl };
     setBody(buildClaimOnlyBody(vars));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -45,7 +47,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
     if (bodyDirty) {
       if (!confirm("Switching template will replace your edits. Continue?")) return;
     }
-    const vars = { recipientName: recipientName || "there", opportunityTitle: opp.title, claimUrl };
+    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl };
     const newBody = t === "claim_only" ? buildClaimOnlyBody(vars) : buildClaimPipelineBody(vars);
     setTemplate(t);
     setSubject(buildTemplateSubject(t, opp.title));
@@ -57,7 +59,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
   function handleNameChange(name: string) {
     setRecipientName(name);
     if (!bodyDirty) {
-      const vars = { recipientName: name || "there", opportunityTitle: opp.title, claimUrl };
+      const vars = { recipientName: name || "there", organiserName, opportunityTitle: opp.title, claimUrl };
       const newBody = template === "claim_only" ? buildClaimOnlyBody(vars) : buildClaimPipelineBody(vars);
       setBody(newBody);
     }
@@ -135,12 +137,12 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">Recipient name</label>
+              <label className="text-xs font-medium">Contact name</label>
               <input
                 type="text"
                 value={recipientName}
                 onChange={e => handleNameChange(e.target.value)}
-                placeholder="Organisation name"
+                placeholder="Contact or org name"
                 className="w-full border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-black"
               />
             </div>

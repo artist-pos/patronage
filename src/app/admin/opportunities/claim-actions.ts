@@ -39,18 +39,31 @@ function getNext9amNZST(): string {
 
 // ── Plain-text → HTML conversion ─────────────────────────────────────────────
 
-function bodyToHtml(text: string): string {
+function bodyToHtml(text: string, claimUrl?: string, listingUrl?: string): string {
   const escaped = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  const linked = escaped.replace(
-    /(https?:\/\/[^\s]+)/g,
-    (url) => `<a href="${url}" style="color:#000;text-decoration:underline;">${url}</a>`
+  // Replace the bare claim URL line with a styled CTA button
+  let processed = escaped;
+  if (claimUrl) {
+    const escapedUrl = claimUrl.replace(/&/g, "&amp;");
+    const button = `<div style="margin:24px 0"><a href="${escapedUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;font-size:14px;font-family:sans-serif;letter-spacing:0.01em">Claim listing →</a></div>`;
+    processed = processed.replace(escapedUrl, button);
+  }
+
+  // Auto-link any remaining URLs
+  const linked = processed.replace(
+    /(https?:\/\/[^\s<"]+)/g,
+    (url) => `<a href="${url}" style="color:#000;text-decoration:underline">${url}</a>`
   );
 
-  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;font-size:14px;line-height:1.7;">${linked.replace(/\n/g, "<br>")}</body></html>`;
+  const footer = listingUrl
+    ? `<br><p style="margin:16px 0 0;font-size:12px;color:#888"><a href="${listingUrl}" style="color:#888;text-decoration:underline">View listing on Patronage →</a></p>`
+    : "";
+
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;font-size:14px;line-height:1.7">${linked.replace(/\n/g, "<br>")}${footer}</body></html>`;
 }
 
 // ── Track claim link open ─────────────────────────────────────────────────────
@@ -112,6 +125,9 @@ export async function sendClaimInvite(
       .eq("id", opp.id);
   }
 
+  const claimUrl = buildClaimUrl(claimToken);
+  const listingUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/opportunities/${opp.id}`;
+
   const resend = getResend();
   const scheduledAt = input.scheduleFor9am ? getNext9amNZST() : undefined;
 
@@ -119,7 +135,7 @@ export async function sendClaimInvite(
     from: FROM,
     to: input.recipientEmail,
     subject: input.subject,
-    html: bodyToHtml(input.body),
+    html: bodyToHtml(input.body, claimUrl, listingUrl),
     ...(scheduledAt ? { scheduledAt } : {}),
   });
 
@@ -145,6 +161,7 @@ export interface BulkSendItem {
   opportunityId: string;
   recipientEmail: string;
   recipientName: string;
+  organiserName: string;
   opportunityTitle: string;
   claimToken: string | null;
   claimTokenExpiresAt: string | null;
@@ -173,8 +190,10 @@ export async function sendSingleBulkInvite(
   }
 
   const claimUrl = buildClaimUrl(claimToken);
+  const listingUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/opportunities/${item.opportunityId}`;
   const vars: TemplateVars = {
-    recipientName: item.recipientName || item.recipientEmail.split("@")[0],
+    recipientName: item.recipientName || item.organiserName || item.recipientEmail.split("@")[0],
+    organiserName: item.organiserName || item.opportunityTitle,
     opportunityTitle: item.opportunityTitle,
     claimUrl,
   };
@@ -188,7 +207,7 @@ export async function sendSingleBulkInvite(
     from: FROM,
     to: item.recipientEmail,
     subject,
-    html: bodyToHtml(body),
+    html: bodyToHtml(body, claimUrl, listingUrl),
     ...(scheduledAt ? { scheduledAt } : {}),
   });
 

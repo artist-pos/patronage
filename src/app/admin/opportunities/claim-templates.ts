@@ -2,53 +2,45 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 export interface TemplateVars {
   recipientName: string;
+  organiserName: string;
   opportunityTitle: string;
   claimUrl: string;
+  listingUrl?: string;
 }
 
 export function buildClaimOnlyBody(vars: TemplateVars): string {
   return `Kia ora ${vars.recipientName},
 
-My name's Blake. I'm an artist and the founder of Patronage, a career infrastructure platform for New Zealand creatives.
+I've added ${vars.organiserName}'s ${vars.opportunityTitle} to Patronage, a platform connecting NZ and Australian creatives with funding opportunities. Creatives are already finding it.
 
-Your ${vars.opportunityTitle} is already live on our directory to help drive visibility. Listing opportunities on Patronage is always completely free.
+If you'd like to take ownership of the listing, the link below lets you claim it. You'll be able to edit details, update the deadline, and see how many creatives are viewing it. The listing stays live either way.
 
-Claim your listing here:
 ${vars.claimUrl}
 
-Feel free to get in touch if you have any questions.
-
-patronage.nz/partners
-Blake Aitken · patronage.nz/blakeaitken · +64 27 536 4850`;
+Blake
+Patronage · patronage.nz`;
 }
 
 export function buildClaimPipelineBody(vars: TemplateVars): string {
   return `Kia ora ${vars.recipientName},
 
-My name's Blake. I'm an artist and the founder of Patronage, a career infrastructure platform for New Zealand creatives.
+I've added ${vars.organiserName}'s ${vars.opportunityTitle} to Patronage, a platform connecting NZ and Australian creatives with funding opportunities. Creatives are already finding it.
 
-Your ${vars.opportunityTitle} is already live on our directory to help drive visibility. Listing opportunities on Patronage is always completely free. Claim your listing and open your free Partner account here:
+If you'd like to take ownership of the listing, the link below lets you claim it. You'll be able to edit details, update the deadline, and see how many creatives are viewing it. The listing stays live either way.
 
 ${vars.claimUrl}
 
-I noticed your submission process currently runs through manual channels. That administrative friction — downloading forms, organising folders, matching emails to applications — is exactly what our Pipeline tool was built to address.
+One other thing: Patronage has a pipeline tool that lets creatives apply directly through the platform. You'd receive applications in a structured dashboard. Shortlist, request assets, download files, instead of managing submissions through email or a form. Happy to set that up at no cost while we're in early access.
 
-For now, all you need to do is claim your listing. But when you're ready to streamline applications, you can run your next round through our Pipeline dashboard completely free of charge. Artists apply with one click — CVs, portfolios, and answers to your questions arrive standardised in one secure dashboard.
-
-Feel free to claim the listing today, and keep us in mind for your next round.
-
-patronage.nz/partners
-Blake Aitken · patronage.nz/blakeaitken · +64 27 536 4850`;
+Blake
+Patronage · patronage.nz`;
 }
 
 export function buildTemplateSubject(
-  template: "claim_only" | "claim_pipeline",
-  opportunityTitle: string
+  _template: "claim_only" | "claim_pipeline",
+  _opportunityTitle: string
 ): string {
-  if (template === "claim_only") {
-    return `${opportunityTitle} is live on Patronage`;
-  }
-  return `${opportunityTitle} is live on Patronage — streamline your next round`;
+  return "Your opportunity is live on Patronage";
 }
 
 export function buildClaimUrl(token: string): string {

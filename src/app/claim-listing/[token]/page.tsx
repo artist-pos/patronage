@@ -1,9 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { claimListing } from "./actions";
 import { TrackClaimOpen } from "./TrackClaimOpen";
+import { formatFunding } from "@/components/opportunities/OpportunityCard";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -15,7 +18,18 @@ export default async function ClaimListingPage({ params }: Props) {
 
   const { data: opp } = await admin
     .from("opportunities")
-    .select("id, title, organiser, type, featured_image_url, status, profile_id, claim_token_expires_at")
+    .select(`
+      id, title, organiser, type, country, city,
+      featured_image_url, slug,
+      deadline, opens_at,
+      funding_range, funding_amount,
+      entry_fee, entry_fee_currency, entry_fee_local,
+      description, caption, full_description,
+      sub_categories, career_stage,
+      artist_payment_type, travel_support, travel_support_details,
+      grant_type, recipients_count,
+      status, profile_id, claim_token_expires_at
+    `)
     .eq("claim_token", token)
     .single();
 
@@ -95,51 +109,199 @@ export default async function ClaimListingPage({ params }: Props) {
   }
 
   const claimPath = `/claim-listing/${token}`;
-  const heading = `${opp.organiser || "Your organisation"}, this listing is live on Patronage. Create a partner account to manage it.`;
+  const signupHref = `/auth/signup?role=partner&next=${encodeURIComponent(claimPath)}`;
+  const signinHref = `/auth/login?next=${encodeURIComponent(claimPath)}`;
+
+  // Derived display values
+  const fundingLabel =
+    opp.funding_range?.trim() ||
+    (opp.funding_amount != null ? formatFunding(opp.funding_amount) : null);
+
+  const deadline = opp.deadline
+    ? new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : null;
+
+  const opensAt = opp.opens_at
+    ? new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : null;
+
+  const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+  const location = rawLocation === "Global" ? "Open to all countries" : rawLocation;
+
+  const hasStats = !!(fundingLabel || deadline || opensAt || opp.entry_fee != null || opp.artist_payment_type || opp.travel_support != null);
+  const bodyText = opp.caption ?? opp.description ?? opp.full_description ?? null;
+  const hasExpandedDesc = opp.full_description && opp.full_description !== bodyText;
+
+  const bannerHeading = `${opp.organiser || "Your organisation"}, this is your listing on Patronage. Claim it to edit details and track engagement.`;
 
   return (
-    <div className="max-w-sm mx-auto px-6 py-20 space-y-8">
-      {/* Fire-and-forget: track that the claim link was opened */}
+    <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
       <TrackClaimOpen token={token} />
 
-      {/* Listing preview card */}
-      <div className="border border-black overflow-hidden">
-        {opp.featured_image_url && (
-          <div className="w-full bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={opp.featured_image_url}
-              alt={opp.title}
-              className="w-full h-40 object-contain"
-            />
-          </div>
-        )}
-        <div className="px-4 py-3 border-t border-black/10">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">{opp.type}</p>
-          <p className="text-sm font-semibold">{opp.title}</p>
-          {opp.organiser && (
-            <p className="text-xs text-muted-foreground">{opp.organiser}</p>
-          )}
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="space-y-3">
-        <h1 className="text-base font-semibold leading-snug">{heading}</h1>
-        <div className="flex flex-col gap-2 pt-1">
+      {/* ── Claim banner ──────────────────────────────────────────────── */}
+      <div className="bg-black text-white px-6 py-6 space-y-4">
+        <p className="text-base font-semibold leading-snug">{bannerHeading}</p>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Link
-            href={`/auth/signup?role=partner&next=${encodeURIComponent(claimPath)}`}
-            className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
+            href={signupHref}
+            className="inline-block bg-white text-black text-sm font-semibold px-5 py-2.5 text-center hover:bg-stone-100 transition-colors"
           >
-            Create partner account →
+            Claim listing →
           </Link>
           <Link
-            href={`/auth/login?next=${encodeURIComponent(claimPath)}`}
-            className="w-full border border-border text-sm py-2.5 px-4 text-center hover:bg-muted transition-colors"
+            href={signinHref}
+            className="inline-block border border-white/40 text-white text-sm px-5 py-2.5 text-center hover:border-white transition-colors"
           >
             Sign in
           </Link>
         </div>
+      </div>
+
+      {/* ── Featured image ────────────────────────────────────────────── */}
+      {opp.featured_image_url && (
+        <div className="border border-black overflow-hidden bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={opp.featured_image_url}
+            alt={opp.title}
+            className="w-full max-h-64 object-contain"
+          />
+        </div>
+      )}
+
+      {/* ── Type / country / sub-category badges ─────────────────────── */}
+      <div className="flex flex-wrap gap-1.5">
+        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.type}</span>
+        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.country}</span>
+        {opp.grant_type && (
+          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.grant_type}</span>
+        )}
+        {opp.recipients_count != null && (
+          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+            {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
+          </span>
+        )}
+        {(opp.sub_categories ?? []).map((cat: string) => (
+          <span
+            key={cat}
+            className="text-xs border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none"
+          >
+            {cat}
+          </span>
+        ))}
+      </div>
+
+      {/* ── Title + organiser ─────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight">{opp.title}</h1>
+        {opp.organiser && (
+          <p className="text-sm text-muted-foreground font-mono">{opp.organiser}</p>
+        )}
+      </div>
+
+      {/* ── Vital stats grid ─────────────────────────────────────────── */}
+      {hasStats && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border border-black p-5">
+          {fundingLabel && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Funding</p>
+              <p className="font-mono font-bold text-sm">{fundingLabel}</p>
+            </div>
+          )}
+          {opensAt && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Opens</p>
+              <p className="font-mono text-sm">{opensAt}</p>
+            </div>
+          )}
+          {deadline && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Deadline</p>
+              <p className="font-mono text-sm">{deadline}</p>
+            </div>
+          )}
+          {location && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Location</p>
+              <p className="font-mono text-sm">{location}</p>
+            </div>
+          )}
+          {opp.entry_fee != null && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Entry Fee</p>
+              <p className="font-mono text-sm">
+                {opp.entry_fee === 0
+                  ? "Free"
+                  : opp.entry_fee_currency && opp.entry_fee_local != null
+                    ? `NZD ~${Math.round(opp.entry_fee)} (${opp.entry_fee_currency} ${opp.entry_fee_local})`
+                    : `NZD ${opp.entry_fee}`}
+              </p>
+            </div>
+          )}
+          {opp.artist_payment_type && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Artist Payment</p>
+              <p className="font-mono text-sm">{opp.artist_payment_type}</p>
+            </div>
+          )}
+          {opp.travel_support != null && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Travel Support</p>
+              <p className="font-mono text-sm">
+                {opp.travel_support ? "Yes" : "No"}
+                {opp.travel_support && opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Description ──────────────────────────────────────────────── */}
+      {bodyText && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">About</h2>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+          {hasExpandedDesc && (
+            <details className="group">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none list-none flex items-center gap-1">
+                <span className="group-open:hidden">Read more ↓</span>
+                <span className="hidden group-open:inline">Read less ↑</span>
+              </summary>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{opp.full_description}</p>
+            </details>
+          )}
+        </div>
+      )}
+
+      {/* ── Bottom CTA (repeat) ───────────────────────────────────────── */}
+      <div className="border-t border-border pt-8 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Claim this listing to edit details, update the deadline, and see engagement data. The listing stays live either way.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Link
+            href={signupHref}
+            className="inline-block bg-black text-white text-sm font-semibold px-5 py-2.5 text-center hover:bg-black/80 transition-colors"
+          >
+            Claim listing →
+          </Link>
+          <Link
+            href={signinHref}
+            className="inline-block border border-black text-sm px-5 py-2.5 text-center hover:bg-muted transition-colors"
+          >
+            Sign in
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Questions?{" "}
+          <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">
+            hello@patronage.nz
+          </a>
+        </p>
       </div>
     </div>
   );
