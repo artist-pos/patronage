@@ -353,11 +353,11 @@ export default async function OpportunityPage({ params }: Props) {
   // All null paths above call notFound() which throws — opp is always set here
   if (!opp) notFound();
 
-  // Fetch related opportunities in parallel — admin client avoids cookies() so PPR stays intact.
+  // Fetch related opportunities + claimed partner profile in parallel — admin client avoids cookies() so PPR stays intact.
   const adminDb = createAdminClient();
   const RELATED_SELECT = "id, slug, title, organiser, type, country, deadline, featured_image_url, caption, funding_range, sub_categories";
   const today = new Date().toISOString().slice(0, 10);
-  const [byTypeRes, byCountryRes] = await Promise.all([
+  const [byTypeRes, byCountryRes, partnerProfileRes] = await Promise.all([
     adminDb.from("opportunities").select(RELATED_SELECT)
       .eq("is_active", true).eq("status", "published")
       .eq("type", opp.type).neq("id", opp.id)
@@ -368,7 +368,11 @@ export default async function OpportunityPage({ params }: Props) {
       .eq("country", opp.country).neq("id", opp.id)
       .or(`opens_at.is.null,opens_at.lte.${today}`)
       .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
+    opp.profile_id
+      ? adminDb.from("profiles").select("username, full_name, avatar_url").eq("id", opp.profile_id).single()
+      : Promise.resolve({ data: null }),
   ]);
+  const partnerProfile = partnerProfileRes.data as { username: string; full_name: string | null; avatar_url: string | null } | null;
   const seen = new Set<string>();
   const candidates: RelatedOpp[] = [];
   for (const row of [...(byTypeRes.data ?? []), ...(byCountryRes.data ?? [])]) {
@@ -583,7 +587,27 @@ export default async function OpportunityPage({ params }: Props) {
       {/* ── Title + organiser — STATIC ──────────────────────────────────── */}
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">{opp.title}</h1>
-        <p className="text-sm text-muted-foreground font-mono">{opp.organiser}</p>
+        {partnerProfile ? (
+          <Link
+            href={`/${partnerProfile.username}`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground font-mono hover:text-foreground transition-colors"
+          >
+            {partnerProfile.avatar_url && (
+              <div className="relative w-5 h-5 shrink-0 border border-black overflow-hidden">
+                <Image
+                  src={partnerProfile.avatar_url}
+                  alt={opp.organiser}
+                  fill
+                  className="object-cover"
+                  sizes="20px"
+                />
+              </div>
+            )}
+            {opp.organiser}
+          </Link>
+        ) : (
+          <p className="text-sm text-muted-foreground font-mono">{opp.organiser}</p>
+        )}
       </div>
 
       {/* ── Vital stats — STATIC ────────────────────────────────────────── */}
