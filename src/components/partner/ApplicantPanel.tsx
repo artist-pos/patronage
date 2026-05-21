@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
-import { updateApplicationStatus, getSignedAssetUrl } from "@/app/partner/dashboard/actions";
+import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
 import type { CustomField, PipelineConfig } from "@/types/database";
 
 interface Artist {
@@ -31,6 +31,14 @@ interface Artwork {
   caption: string | null;
 }
 
+interface StatusLogEntry {
+  id: string;
+  old_status: string;
+  new_status: string;
+  changed_at: string;
+  changed_by_name: string | null;
+}
+
 interface Application {
   id: string;
   status: string;
@@ -41,6 +49,10 @@ interface Application {
   documentation: Record<string, string> | null;
   artist: Artist | null;
   artwork: Artwork | null;
+  invoice_requested_at: string | null;
+  invoice_amount: number | null;
+  invoice_paid_at: string | null;
+  status_log?: StatusLogEntry[];
 }
 
 interface Opportunity {
@@ -97,6 +109,9 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingDownload, setLoadingDownload] = useState(false);
   const [confirmAction, setConfirmAction] = useState<typeof STATUS_OPTIONS[number] | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const artist = application.artist;
   const displayName = artist?.full_name ?? artist?.username ?? "Unknown";
@@ -116,10 +131,10 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
       )
     : null;
 
-  async function applyStatusChange(newStatus: typeof STATUS_OPTIONS[number]["val"]) {
+  async function applyStatusChange(newStatus: typeof STATUS_OPTIONS[number]["val"], reason?: string) {
     const previousStatus = status;
     setSaving(true);
-    const result = await updateApplicationStatus(application.id, newStatus);
+    const result = await updateApplicationStatus(application.id, newStatus, reason || undefined);
     setSaving(false);
     if (result.error) {
       setToast("Error: " + result.error);
@@ -401,6 +416,48 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
             </div>
           )}
 
+          {/* Invoice / payment — production_ready */}
+          {status === "production_ready" && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest">Payment</p>
+              {application.invoice_paid_at ? (
+                <p className="text-xs text-muted-foreground">
+                  Payment confirmed {new Date(application.invoice_paid_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              ) : application.invoice_requested_at ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Invoice received {new Date(application.invoice_requested_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}
+                    {application.invoice_amount ? ` — NZD ${application.invoice_amount.toFixed(2)}` : ""}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={markingPaid}
+                    onClick={async () => {
+                      setMarkingPaid(true);
+                      const result = await markInvoicePaid(application.id);
+                      setMarkingPaid(false);
+                      if (result.error) {
+                        setToast("Error: " + result.error);
+                        setToastIsUndo(false);
+                        setTimeout(() => setToast(null), 3000);
+                      } else {
+                        setToast("Payment marked as confirmed");
+                        setToastIsUndo(false);
+                        setTimeout(() => setToast(null), 4000);
+                      }
+                    }}
+                    className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    {markingPaid ? "Saving…" : "Mark as paid →"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Awaiting invoice from artist.</p>
+              )}
+            </div>
+          )}
+
           {/* Submitted documentation */}
           {opportunity.pipeline_config?.post_selection?.requires_documentation &&
             (opportunity.pipeline_config.post_selection.doc_fields?.length ?? 0) > 0 && (
@@ -487,6 +544,38 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
                 )}
               </div>
             )}
+
+            {/* Status history */}
+            {(application.status_log ?? []).length > 0 && (
+              <div className="pt-2 border-t border-black/10">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors cursor-pointer"
+                >
+                  {showHistory ? "Hide history" : "Show history"}
+                </button>
+                {showHistory && (
+                  <div className="mt-3 space-y-2">
+                    {(application.status_log ?? []).map((entry) => (
+                      <div key={entry.id} className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <span className="shrink-0 tabular-nums">
+                          {new Date(entry.changed_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+                        </span>
+                        <span>
+                          {STATUS_LABELS[entry.old_status] ?? entry.old_status}
+                          {" → "}
+                          {STATUS_LABELS[entry.new_status] ?? entry.new_status}
+                        </span>
+                        {entry.changed_by_name && (
+                          <span className="text-muted-foreground/60">by {entry.changed_by_name}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -508,10 +597,29 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
                 ? "You can reverse this at any time by changing their status."
                 : "This will create a verified achievement on their Patronage profile. You can reverse this at any time."}
             </p>
+            {confirmAction.val === "rejected" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Reason for not selecting (sent to artist — optional)
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g. We had more applications than places available…"
+                  rows={3}
+                  className="w-full text-xs border border-black/30 px-3 py-2 resize-none focus:outline-none focus:border-black"
+                />
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => { setConfirmAction(null); applyStatusChange(confirmAction.val); }}
+                onClick={() => {
+                  const reason = confirmAction.val === "rejected" ? rejectionReason : undefined;
+                  setConfirmAction(null);
+                  setRejectionReason("");
+                  applyStatusChange(confirmAction.val, reason || undefined);
+                }}
                 disabled={saving}
                 className="flex-1 text-xs px-4 py-2 bg-black text-white hover:bg-black/80 transition-colors disabled:opacity-50 cursor-pointer"
               >
@@ -519,7 +627,7 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
               </button>
               <button
                 type="button"
-                onClick={() => setConfirmAction(null)}
+                onClick={() => { setConfirmAction(null); setRejectionReason(""); }}
                 className="flex-1 text-xs px-4 py-2 border border-black hover:bg-muted transition-colors cursor-pointer"
               >
                 Cancel

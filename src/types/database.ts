@@ -183,6 +183,11 @@ export interface OpportunityApplication {
   submitted_image_url: string | null;
   highres_asset_url: string | null;
   created_at: string;
+  rejection_reason: string | null;
+  rejection_reply_sent_at: string | null;
+  invoice_requested_at: string | null;
+  invoice_amount: number | null;
+  invoice_paid_at: string | null;
 }
 
 // Looser insert type — new optional fields need not be specified for CSV imports
@@ -303,6 +308,9 @@ export interface Profile {
   // Stripe Connect — added by migration 120 (Phase 1)
   stripe_account_id: string | null;
   stripe_connect_status: 'pending' | 'enabled' | 'restricted' | null;
+  // Payment profile (migration 053)
+  gst_registered: boolean;
+  gst_number: string | null;
 }
 
 export interface ArtistFollowup {

@@ -17,11 +17,15 @@ interface Props {
   expired: SavedWithOpportunity[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   applications: any[];
+  artistName?: string | null;
+  artistGstRegistered?: boolean;
+  artistGstNumber?: string | null;
 }
 
 export function OpportunitiesFilterClient({
   initialFilter, userId,
   savedList, closingSoon, applied, expired, applications,
+  artistName, artistGstRegistered = false, artistGstNumber = null,
 }: Props) {
   const [filter, setFilter] = useState<OppFilter>(initialFilter);
 
@@ -72,7 +76,13 @@ export function OpportunitiesFilterClient({
       {(filter === "applied" || (filter === "all" && applications.length > 0)) && (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pipeline Applications</p>
-          <ApplicationsTab initialApplications={applications} userId={userId} />
+          <ApplicationsTab
+            initialApplications={applications}
+            userId={userId}
+            artistName={artistName}
+            artistGstRegistered={artistGstRegistered}
+            artistGstNumber={artistGstNumber}
+          />
         </div>
       )}
 

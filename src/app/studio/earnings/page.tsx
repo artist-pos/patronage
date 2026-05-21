@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { formatCents } from "@/lib/commerce-fee";
+import { PaymentsSection } from "@/components/studio/PaymentsSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default async function EarningsPage() {
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("role, username, stripe_connect_status")
+    .select("role, username, stripe_connect_status, gst_registered, gst_number")
     .eq("id", user.id)
     .single();
 
@@ -253,6 +254,15 @@ export default async function EarningsPage() {
             </div>
           </section>
         )}
+
+        {/* GST / Payment profile */}
+        <section className="space-y-3 border-t border-stone-100 pt-8">
+          <PaymentsSection
+            profileId={user.id}
+            initialGstRegistered={(profileRow as { gst_registered?: boolean } | null)?.gst_registered ?? false}
+            initialGstNumber={(profileRow as { gst_number?: string | null } | null)?.gst_number ?? null}
+          />
+        </section>
 
         {/* Support */}
         <section className="space-y-3">

@@ -222,8 +222,9 @@ export async function drawShareCanvas(
   ctx.font = `${ss}px ${GF}`
   ctx.fillStyle = t.sub
   ctx.textBaseline = 'top'
-  ctx.fillText(payload.sub, m, ty)
-  ty += ss * 1.9
+  const subLines = wrapText(ctx, payload.sub, W - m * 2, 3)
+  subLines.forEach(l => { ctx.fillText(l, m, ty); ty += ss * 1.42 })
+  ty += ss * 0.5
 
   // Caption
   const cap = caption.trim()

@@ -656,6 +656,222 @@ function buildMessageNotificationHtml({
 </html>`;
 }
 
+// ── Pipeline application notifications ───────────────────────────────────────
+
+export async function sendShortlistNotification({
+  artistEmail,
+  artistName,
+  opportunityTitle,
+}: {
+  artistEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Update on your application for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> is under active review. We&apos;ll be in touch soon.</p>
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+export async function sendRejectionNotification({
+  artistEmail,
+  artistName,
+  opportunityTitle,
+  reason,
+}: {
+  artistEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+  reason?: string | null;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  const feedbackBlock = reason
+    ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Feedback from the organiser</p>
+        <p style="margin:0;white-space:pre-wrap;">${esc(reason)}</p>
+       </div>`
+    : "";
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Your application for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Thank you for applying for <strong>${esc(opportunityTitle)}</strong>. Unfortunately you weren&apos;t selected this time.</p>
+      ${feedbackBlock}
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+export async function sendRejectionReply({
+  partnerEmail,
+  artistName,
+  opportunityTitle,
+  message,
+}: {
+  partnerEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+  message: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  await getResend().emails.send({
+    from: FROM,
+    to: partnerEmail,
+    subject: `Re: ${opportunityTitle} — ${artistName}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application reply from artist</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#555;"><strong>${esc(artistName)}</strong> replied to your feedback on <strong>${esc(opportunityTitle)}</strong>:</p>
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;white-space:pre-wrap;">${esc(message)}</blockquote>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+export async function sendPaymentRequest({
+  partnerEmail,
+  artistEmail,
+  artistName,
+  opportunityTitle,
+  params,
+}: {
+  partnerEmail: string;
+  artistEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+  params: {
+    accountHolder: string;
+    bankAccount: string;
+    gstRegistered: boolean;
+    gstNumber: string | null;
+    amount: number;
+    description: string;
+  };
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const gstRow = params.gstRegistered && params.gstNumber
+    ? `<tr><td style="padding:6px 0;font-size:13px;color:#555;width:160px;">GST Number</td><td style="padding:6px 0;font-size:13px;">${esc(params.gstNumber)}</td></tr>`
+    : params.gstRegistered
+    ? `<tr><td style="padding:6px 0;font-size:13px;color:#555;width:160px;">GST registered</td><td style="padding:6px 0;font-size:13px;">Yes</td></tr>`
+    : "";
+  const body = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Payment request</p>
+      <p style="margin:0 0 16px;font-size:15px;"><strong>${esc(artistName)}</strong> has submitted a payment request for <strong>${esc(opportunityTitle)}</strong>.</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:16px 0;margin:0 0 24px;">
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;width:160px;">Account holder</td><td style="padding:6px 0;font-size:13px;">${esc(params.accountHolder)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Bank account</td><td style="padding:6px 0;font-size:13px;font-family:monospace;">${esc(params.bankAccount)}</td></tr>
+        ${gstRow}
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Amount</td><td style="padding:6px 0;font-size:15px;font-weight:600;">NZD ${params.amount.toFixed(2)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Description</td><td style="padding:6px 0;font-size:13px;">${esc(params.description)}</td></tr>
+      </table>
+      <p style="color:#888;font-size:12px;margin:0;">Please process this payment directly. Once paid, mark it as complete in your <a href="${SITE_URL}/partner/dashboard" style="color:#888;">partner dashboard</a>.</p>
+      <p style="color:#888;font-size:12px;margin:16px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  const resend = getResend();
+  await Promise.all([
+    resend.emails.send({
+      from: FROM,
+      to: partnerEmail,
+      subject: `Payment request from ${artistName} — ${opportunityTitle}`,
+      html: body,
+    }),
+    resend.emails.send({
+      from: FROM,
+      to: artistEmail,
+      subject: `Payment request sent — ${opportunityTitle}`,
+      html: body.replace(
+        "<p style=\"color:#888;font-size:12px;margin:0;\">Please process this payment directly. Once paid, mark it as complete in your <a href=\"" + SITE_URL + "/partner/dashboard\" style=\"color:#888;\">partner dashboard</a>.</p>",
+        "<p style=\"color:#888;font-size:12px;margin:0;\">This is a copy of the payment request sent to the organiser. Keep it for your records.</p>"
+      ),
+    }),
+  ]);
+}
+
+export async function sendPaymentConfirmed({
+  artistEmail,
+  artistName,
+  opportunityTitle,
+  amount,
+}: {
+  artistEmail: string;
+  artistName: string;
+  opportunityTitle: string;
+  amount: number;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  await getResend().emails.send({
+    from: FROM,
+    to: artistEmail,
+    subject: `Payment confirmed — ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Payment confirmed</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">The organiser has marked your payment of <strong>NZD ${amount.toFixed(2)}</strong> for <strong>${esc(opportunityTitle)}</strong> as sent. Please allow a few days for it to appear in your account.</p>
+      <a href="${SITE_URL}/dashboard?tab=applications" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 // ── Campaign notifications ────────────────────────────────────────────────────
 
 /**

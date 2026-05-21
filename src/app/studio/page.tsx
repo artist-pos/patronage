@@ -64,7 +64,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (!user) redirect("/auth/login");
 
   const [{ data: profileRow }, completionProfile] = await Promise.all([
-    supabase.from("profiles").select("role, username").eq("id", user.id).single(),
+    supabase.from("profiles").select("role, username, full_name, gst_registered, gst_number").eq("id", user.id).single(),
     fetchCompletionProfile(user.id),
   ]);
 
@@ -785,6 +785,9 @@ export default async function StudioPage({ searchParams }: PageProps) {
               applied={applied}
               expired={expired}
               applications={applications}
+              artistName={(profileRow as { full_name?: string | null } | null)?.full_name}
+              artistGstRegistered={(profileRow as { gst_registered?: boolean } | null)?.gst_registered ?? false}
+              artistGstNumber={(profileRow as { gst_number?: string | null } | null)?.gst_number ?? null}
             />
           </div>
         )}

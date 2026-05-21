@@ -9,6 +9,7 @@ import { computeBadges } from "@/lib/badges";
 import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, PipelineConfig } from "@/types/database";
 import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
 import { UploadHighResButton } from "./UploadHighResButton";
+import { sendRejectionReplyAction } from "@/app/dashboard/payment-actions";
 
 const DocumentationSubmitter = dynamic(
   () => import("@/components/studio/DocumentationSubmitter").then((m) => m.DocumentationSubmitter),
@@ -16,6 +17,11 @@ const DocumentationSubmitter = dynamic(
 );
 
 const ApplyModal = dynamic(() => import("@/components/opportunities/ApplyModal").then((m) => m.ApplyModal), { ssr: false });
+
+const PaymentRequestModal = dynamic(
+  () => import("@/components/dashboard/PaymentRequestModal").then((m) => m.PaymentRequestModal),
+  { ssr: false }
+);
 
 interface ApplicationWithOpportunity extends OpportunityApplication {
   documentation?: Record<string, string> | null;
@@ -54,17 +60,30 @@ interface ModalState {
   professionalCvUrl: string | null;
 }
 
+interface PaymentModalState {
+  applicationId: string;
+  prefillName: string;
+  prefillGstRegistered: boolean;
+  prefillGstNumber: string | null;
+}
+
 interface Props {
   initialApplications: ApplicationWithOpportunity[];
   userId: string;
   initialDrafts?: DraftWithOpportunity[];
+  artistName?: string | null;
+  artistGstRegistered?: boolean;
+  artistGstNumber?: string | null;
 }
 
-export function ApplicationsTab({ initialApplications, userId, initialDrafts = [] }: Props) {
+export function ApplicationsTab({ initialApplications, userId, initialDrafts = [], artistName, artistGstRegistered = false, artistGstNumber = null }: Props) {
   const [applications, setApplications] = useState(initialApplications);
   const [drafts, setDrafts] = useState(initialDrafts);
   const [loadingDraftId, setLoadingDraftId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<ModalState | null>(null);
+  const [paymentModal, setPaymentModal] = useState<PaymentModalState | null>(null);
+  // Per-application reply state: appId → { text, confirming, sending, sent }
+  const [replyState, setReplyState] = useState<Record<string, { text: string; confirming: boolean; sending: boolean; sent: boolean }>>({});
 
   // Realtime subscription
   useEffect(() => {
@@ -265,6 +284,107 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                   <UploadHighResButton applicationId={app.id} />
                 )}
 
+                {/* Rejection reason + artist reply */}
+                {app.status === "rejected" && (() => {
+                  const reason = (app as unknown as { rejection_reason?: string | null }).rejection_reason;
+                  const replySentAt = (app as unknown as { rejection_reply_sent_at?: string | null }).rejection_reply_sent_at;
+                  const rs = replyState[app.id] ?? { text: "", confirming: false, sending: false, sent: false };
+                  return (
+                    <div className="mt-2 space-y-2">
+                      {reason && (
+                        <div className="p-3 bg-stone-50 border border-stone-200 space-y-1">
+                          <p className="text-[11px] font-medium uppercase tracking-widest text-stone-500">Feedback from organiser</p>
+                          <p className="text-xs text-stone-700 whitespace-pre-wrap">{reason}</p>
+                        </div>
+                      )}
+                      {(replySentAt || rs.sent) ? (
+                        <p className="text-xs text-muted-foreground">Reply sent.</p>
+                      ) : !rs.confirming ? (
+                        <button
+                          type="button"
+                          onClick={() => setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, confirming: true } }))}
+                          className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Send a reply →
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                          <textarea
+                            value={rs.text}
+                            onChange={(e) => setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, text: e.target.value } }))}
+                            placeholder="Thank you for considering my application…"
+                            rows={3}
+                            className="w-full text-xs border border-black/30 px-3 py-2 resize-none focus:outline-none focus:border-black"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={rs.sending || !rs.text.trim()}
+                              onClick={async () => {
+                                setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, sending: true } }));
+                                const result = await sendRejectionReplyAction({ applicationId: app.id, message: rs.text });
+                                if (result.error) {
+                                  setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, sending: false } }));
+                                } else {
+                                  setReplyState((prev) => ({ ...prev, [app.id]: { text: "", confirming: false, sending: false, sent: true } }));
+                                }
+                              }}
+                              className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                            >
+                              {rs.sending ? "Sending…" : "Send reply →"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setReplyState((prev) => ({ ...prev, [app.id]: { text: "", confirming: false, sending: false, sent: false } }))}
+                              className="text-xs border border-black/30 px-3 py-1.5 hover:bg-muted transition-colors text-muted-foreground"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Payment request — production_ready */}
+                {app.status === "production_ready" && (() => {
+                  const invoicePaidAt = (app as unknown as { invoice_paid_at?: string | null }).invoice_paid_at;
+                  const invoiceRequestedAt = (app as unknown as { invoice_requested_at?: string | null }).invoice_requested_at;
+                  const invoiceAmount = (app as unknown as { invoice_amount?: number | null }).invoice_amount;
+                  return (
+                    <div className="mt-2 pt-2 border-t border-stone-100">
+                      {invoicePaidAt ? (
+                        <p className="text-xs text-green-700">
+                          Payment confirmed {new Date(invoicePaidAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      ) : invoiceRequestedAt ? (
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <p className="text-xs text-muted-foreground">
+                            Payment request sent {new Date(invoiceRequestedAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}
+                            {invoiceAmount ? ` — NZD ${invoiceAmount.toFixed(2)}` : ""}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentModal({ applicationId: app.id, prefillName: artistName ?? "", prefillGstRegistered: artistGstRegistered, prefillGstNumber: artistGstNumber })}
+                            className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Re-send →
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentModal({ applicationId: app.id, prefillName: artistName ?? "", prefillGstRegistered: artistGstRegistered, prefillGstNumber: artistGstNumber })}
+                          className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+                        >
+                          Request payment →
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Documentation submission — shown when partner requires it and app is selected/approved */}
                 {(app.status === "selected" || app.status === "approved_pending_assets" || app.status === "production_ready") &&
                   opp?.pipeline_config?.post_selection?.requires_documentation &&
@@ -298,6 +418,27 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
           onSuccess={() => {
             setModalState(null);
             setDrafts((prev) => prev.filter((d) => d.opportunity_id !== modalState.draft.opportunity_id));
+          }}
+        />
+      )}
+
+      {/* Payment request modal */}
+      {paymentModal && (
+        <PaymentRequestModal
+          applicationId={paymentModal.applicationId}
+          prefillName={paymentModal.prefillName}
+          prefillGstRegistered={paymentModal.prefillGstRegistered}
+          prefillGstNumber={paymentModal.prefillGstNumber}
+          onClose={() => setPaymentModal(null)}
+          onSuccess={() => {
+            setPaymentModal(null);
+            setApplications((prev) =>
+              prev.map((app) =>
+                app.id === paymentModal.applicationId
+                  ? { ...app, invoice_requested_at: new Date().toISOString() }
+                  : app
+              )
+            );
           }}
         />
       )}
