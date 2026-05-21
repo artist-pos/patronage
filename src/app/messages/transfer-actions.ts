@@ -203,7 +203,7 @@ export async function acceptTransfer(
   const admin = createAdminClient();
   const { error: updateError } = await admin
     .from("artworks")
-    .update({ current_owner_id: user.id, is_available: false })
+    .update({ current_owner_id: user.id, is_available: false, price_cents: null, is_poa: false })
     .eq("id", message.work_id);
 
   if (updateError) return { error: updateError.message };

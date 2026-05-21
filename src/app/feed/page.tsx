@@ -220,12 +220,22 @@ export default async function FeedPage({ searchParams }: PageProps) {
           isLoggedIn={!!user}
           rightSlot={
             profile ? (
-              <CreateUpdateModal
-                profileId={profile.id}
-                label="New update +"
-                className="shrink-0 px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
-                projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
-              />
+              <div className="flex items-center gap-3">
+                {isAdmin && (
+                  <Link
+                    href="/studio?section=feed"
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors shrink-0"
+                  >
+                    Manage feed →
+                  </Link>
+                )}
+                <CreateUpdateModal
+                  profileId={profile.id}
+                  label="New update +"
+                  className="shrink-0 px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
+                  projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+                />
+              </div>
             ) : undefined
           }
         />

@@ -100,15 +100,25 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
 
   if (content_type === "embed" && embed_url) {
     return (
-      <div className="border border-black overflow-hidden">
-        <iframe
-          src={embed_url}
-          title={update.caption ?? `Embed by ${name}`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full"
-          style={{ height: 400 }}
-        />
+      <div className="space-y-2">
+        <a
+          href={embed_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {embed_provider ?? embed_url} ↗
+        </a>
+        <div className="border border-black overflow-hidden">
+          <iframe
+            src={embed_url}
+            title={update.caption ?? `Embed by ${name}`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full"
+            style={{ height: 400 }}
+          />
+        </div>
       </div>
     );
   }

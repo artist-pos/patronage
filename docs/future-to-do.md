@@ -50,6 +50,24 @@ Note: supporting images on individual artwork detail pages (multiple angles, doc
 
 Enable Adaptive Pricing so buyers outside NZD/AUD see prices in their local currency, with Stripe handling conversion and settling in the artist's currency. Already on the Checkout Sessions API — just add `adaptivePricing: { allowed: true }` to `CheckoutElementsProvider` options in `src/components/profile/StripeCheckoutPanel.tsx`. No backend changes needed.
 
+## #20 · Secondary market (patron resale)
+
+Allow patrons to re-list and sell collected works to other patrons or collectors via Patronage.
+
+**Eligibility:** Only works acquired through Patronage's provenance system (`collection_membership.source_type = 'directly_from_artist'` or `'negotiated_sale'`) — not self-recorded collector uploads — since provenance integrity is required for the secondary ledger chain.
+
+**Model changes:** `artworks` needs a `resale_price_cents` + `resale_currency` + `is_resale_listed` flag; or create a separate `resale_listings` table referencing `artwork_id` + `current_owner_id`. Ledger entry type `resale` already exists in the schema.
+
+**Commerce flow:** mirrors the primary-sale flow — Stripe Checkout, commission taken at transaction, ledger entry on completion, `current_owner_id` flips to buyer, `collection_membership` row moves to new buyer.
+
+**UI surfaces:** "Re-list this work" CTA on `/dashboard/collection/[id]`; resale works surfaced on artist's public profile (so artist retains attribution / discovery benefit) with a "Secondary market" badge. Patron's public collection page shows resale price if listed.
+
+**Policy:** Patronage takes the same 10% commission as primary sales. Artist does not receive a royalty cut in MVP — add that in a future pass once artist contracts are formalised.
+
+**Build trigger:** After primary-sale commission is live and at least one patron has confirmed interest in reselling.
+
+---
+
 ## #11 · Analytics dashboard
 
 **Trigger:** Build when there are 50+ artists with at least 10 completed sales across the platform. Below that threshold, the earnings dashboard is sufficient and a chart with 3 data points is noise, not signal.

@@ -22,9 +22,15 @@ export default async function StudioCollectionPage() {
 
   const [entries, profileResult, groupsResult] = await Promise.all([
     getCollection(user.id),
-    supabase.from("profiles").select("username").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, role").eq("id", user.id).single(),
     supabase.from("collection_groups").select("*").eq("holder_id", user.id).order("position"),
   ]);
+
+  // Non-artist roles manage collection via /dashboard/collection
+  const role = profileResult.data?.role;
+  if (role && !["artist", "owner", "admin"].includes(role)) {
+    redirect("/dashboard/collection");
+  }
 
   const username = profileResult.data?.username ?? "";
   const groups = (groupsResult.data ?? []) as CollectionGroup[];

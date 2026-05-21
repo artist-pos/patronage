@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { claimListing } from "./actions";
 import { TrackClaimOpen } from "./TrackClaimOpen";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
+import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
@@ -264,14 +265,16 @@ export default async function ClaimListingPage({ params }: Props) {
       {bodyText && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">About</h2>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+          <StructuredDescription text={bodyText} />
           {hasExpandedDesc && (
             <details className="group">
               <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none list-none flex items-center gap-1">
                 <span className="group-open:hidden">Read more ↓</span>
                 <span className="hidden group-open:inline">Read less ↑</span>
               </summary>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap mt-3">{opp.full_description}</p>
+              <div className="mt-3">
+                <StructuredDescription text={opp.full_description!} />
+              </div>
             </details>
           )}
         </div>

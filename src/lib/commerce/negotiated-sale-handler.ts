@@ -48,7 +48,7 @@ export async function handleNegotiatedSaleCompleted(
   // Flip ownership.
   await admin
     .from("artworks")
-    .update({ current_owner_id: buyerProfileId, is_available: false })
+    .update({ current_owner_id: buyerProfileId, is_available: false, price_cents: null, is_poa: false })
     .eq("id", sale.artwork_id);
 
   // Ledger entry with negotiated_sale transfer method.

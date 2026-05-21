@@ -13,6 +13,14 @@ export default async function UploadPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/dashboard/collection/upload");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "partner") redirect("/dashboard");
+
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
       <div className="mb-8 space-y-2">

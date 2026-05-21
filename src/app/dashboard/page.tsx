@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
+import { getMyWrittenNotes } from "@/lib/notes";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import { ProvenanceBanner } from "@/components/dashboard/ProvenanceBanner";
 import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscriptionButton";
+import { ManageNotesList } from "@/components/profile/ManageNotesList";
 import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 
@@ -136,7 +138,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .eq("id", user.id)
     .single();
 
-  const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner";
+  const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner" || userProfile?.role === "admin";
   if (isArtist) redirect("/studio");
   const isPatron = userProfile?.role === "patron" || userProfile?.role === "partner";
 
@@ -151,7 +153,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   })();
 
   // ── Core data (always needed) ─────────────────────────────────────────────
-  const [saved, applicationsData, draftsData, provenanceData] = await Promise.all([
+  const [saved, applicationsData, draftsData, provenanceData, myNotes] = await Promise.all([
     getSavedOpportunities(),
     supabase
       .from("opportunity_applications")
@@ -171,6 +173,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           .eq("status", "pending")
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
+    getMyWrittenNotes(user.id),
   ]);
 
   const { closingSoon, saved: savedList, applied, expired } = categorizeSaved(saved);
@@ -465,6 +468,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     Browse Opportunities →
                   </Link>
                 </div>
+              )}
+
+              {/* Notes */}
+              {myNotes.length > 0 && (
+                <section className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Your Notes
+                  </p>
+                  <ManageNotesList initialNotes={myNotes} />
+                </section>
               )}
             </div>
           )}

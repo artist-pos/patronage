@@ -123,6 +123,18 @@ export async function submitApplication(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Eligibility check + opportunity data fetched together — reused for email below
+  const [{ data: pd }, { data: opp }] = await Promise.all([
+    supabase.from("profiles").select("role, full_name, username").eq("id", user.id).single(),
+    supabase.from("opportunities").select("type, routing_type, title, organiser, profile_id").eq("id", opportunityId).single(),
+  ]);
+
+  const isArtist = pd?.role === "artist" || pd?.role === "owner";
+  const isJobOpp = opp?.type === "Job / Employment";
+  if (!isArtist && !(pd?.role === "patron" && isJobOpp)) {
+    return { error: "You're not eligible to apply for this opportunity" };
+  }
+
   const { error } = await supabase
     .from("opportunity_applications")
     .insert({
@@ -143,24 +155,18 @@ export async function submitApplication(
     .eq("opportunity_id", opportunityId)
     .eq("artist_id", user.id);
 
-  // Send confirmation email fire-and-forget
+  // Send confirmation email fire-and-forget — reuse opp fetched above
   const admin = createAdminClient();
-  const [authResult, { data: opp }, { data: profile }] = await Promise.all([
-    admin.auth.admin.getUserById(user.id),
-    admin.from("opportunities").select("title, organiser, profile_id").eq("id", opportunityId).single(),
-    admin.from("profiles").select("full_name, username").eq("id", user.id).single(),
-  ]);
-
+  const authResult = await admin.auth.admin.getUserById(user.id);
   const authUser = authResult.data?.user ?? null;
   if (authUser?.email && opp) {
-    const artistName = profile?.full_name ?? profile?.username ?? "Artist";
-    const partnerName = opp.organiser;
+    const artistName = pd?.full_name ?? pd?.username ?? "Artist";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
     sendApplicationConfirmation(
       authUser.email,
       artistName,
       opp.title,
-      partnerName,
+      opp.organiser,
       `${siteUrl}/dashboard?tab=applications`
     ).catch(console.error);
   }
