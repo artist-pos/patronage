@@ -70,7 +70,8 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10 items-start">
+    <div className="space-y-8">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Basics</h2>
         <p className="text-sm text-stone-500">The core details of your opportunity.</p>
@@ -294,6 +295,77 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+
+    {/* Live preview */}
+    <div className="lg:sticky lg:top-[57px] space-y-2">
+      <p className="text-[11px] font-medium uppercase tracking-widest text-stone-400">Preview</p>
+      <BasicsPreview opp={opp} />
+    </div>
+    </div>
+  );
+}
+
+function BasicsPreview({ opp }: { opp: Opportunity }) {
+  const hasContent = opp.title || opp.organiser || opp.featured_image_url;
+  if (!hasContent) {
+    return (
+      <div className="border border-dashed border-black/20 p-6 text-center">
+        <p className="text-xs text-stone-400">Card preview will appear as you fill in the details.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-black overflow-hidden">
+      {opp.featured_image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={opp.featured_image_url}
+          alt=""
+          className="w-full h-36 object-cover"
+        />
+      )}
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {opp.type && (
+            <span className="text-[10px] font-medium uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-0.5">
+              {opp.type}
+            </span>
+          )}
+          {opp.country && (
+            <span className="text-[10px] text-stone-400">{opp.country}{opp.city ? ` · ${opp.city}` : ""}</span>
+          )}
+        </div>
+
+        <div className="space-y-0.5">
+          <p className="font-semibold text-sm leading-snug">
+            {opp.title || <span className="text-stone-300">Untitled opportunity</span>}
+          </p>
+          {opp.organiser && (
+            <p className="text-xs text-stone-500">{opp.organiser}</p>
+          )}
+        </div>
+
+        {opp.caption && (
+          <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{opp.caption}</p>
+        )}
+
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-400 pt-1 border-t border-black/10">
+          {opp.deadline && (
+            <span>Closes {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
+          )}
+          {opp.funding_range && <span>{opp.funding_range}</span>}
+        </div>
+
+        {(opp.sub_categories ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {(opp.sub_categories ?? []).slice(0, 4).map((d) => (
+              <span key={d} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5">{d}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle, Circle } from "lucide-react";
-import { submitDraftForReview } from "@/app/partner/opportunities/new/actions";
 import type { Opportunity } from "@/types/database";
 import type { LocalCriterion } from "./RubricBuilder";
 
@@ -11,35 +8,16 @@ interface Props {
   opp: Opportunity;
   criteria: LocalCriterion[];
   isPipeline: boolean;
+  submitError?: string | null;
 }
 
-export function StepReviewPublish({ opp, criteria, isPipeline }: Props) {
-  const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+export function StepReviewPublish({ opp, criteria, isPipeline, submitError }: Props) {
   const checks = [
     { label: "Title", ok: !!opp.title?.trim() },
     { label: "Organising body", ok: !!opp.organiser?.trim() },
     { label: "Description", ok: !!(opp.full_description?.trim() || opp.description?.trim()) },
     { label: "Country", ok: !!opp.country },
   ];
-
-  const allRequired = checks.every((c) => c.ok);
-
-  async function handleSubmit() {
-    setSubmitting(true);
-    setError(null);
-    const result = await submitDraftForReview(opp.id);
-    setSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    if (result.redirectTo) {
-      router.push(result.redirectTo);
-    }
-  }
 
   const questionCount =
     (opp.pipeline_config?.questions?.length ?? 0);
@@ -120,26 +98,13 @@ export function StepReviewPublish({ opp, criteria, isPipeline }: Props) {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {submitError && <p className="text-sm text-red-500">{submitError}</p>}
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!allRequired || submitting}
-        className="bg-black text-white text-sm px-6 py-2.5 hover:bg-black/80 transition-colors disabled:opacity-40"
-      >
-        {submitting
-          ? "Submitting…"
-          : isPipeline && !opp.pipeline_paid_at
-          ? "Submit & proceed to payment →"
-          : "Submit for review →"}
-      </button>
-
-      {!allRequired && (
-        <p className="text-xs text-stone-400">
-          Complete the required fields above before submitting.
-        </p>
-      )}
+      <p className="text-xs text-stone-400">
+        {isPipeline && !opp.pipeline_paid_at
+          ? "After submitting, you'll be taken to the payment page to activate your pipeline."
+          : "Once submitted, your listing will be reviewed within two business days."}
+      </p>
     </div>
   );
 }

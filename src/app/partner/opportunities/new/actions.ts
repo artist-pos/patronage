@@ -10,11 +10,19 @@ export async function createOpportunityDraft(type: "free" | "pipeline"): Promise
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, username")
+    .eq("id", user.id)
+    .single();
+
+  const organiser = profile?.full_name ?? profile?.username ?? "";
+
   const { data, error } = await supabase
     .from("opportunities")
     .insert({
       title: "",
-      organiser: "",
+      organiser,
       description: null,
       type: "Grant",
       country: "NZ",

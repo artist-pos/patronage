@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { WizardChrome } from "./WizardChrome";
 import { StepTemplate } from "./StepTemplate";
 import { StepBasics, type Patch as BasicsPatch } from "./StepBasics";
@@ -10,6 +11,7 @@ import { StepPostSelection } from "./StepPostSelection";
 import { StepReviewPublish } from "./StepReviewPublish";
 import { updateOpportunityPartner } from "@/app/partner/opportunities/[id]/edit/actions";
 import { saveRubricCriteria } from "@/app/partner/opportunities/[id]/new/actions";
+import { submitDraftForReview } from "@/app/partner/opportunities/new/actions";
 import type { Opportunity, PartnerDocument, PipelineConfig, PostSelectionConfig } from "@/types/database";
 import type { TemplateKey } from "@/lib/pipeline-templates";
 import type { LocalCriterion } from "./RubricBuilder";
@@ -75,6 +77,9 @@ export function WizardShell({
   const [criteria, setCriteria] = useState<LocalCriterion[]>(initialCriteria);
   const [documents, setDocuments] = useState<PartnerDocument[]>(initialDocuments);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Notification defaults with fallback to pipeline_config or defaults
   const [notificationDefaults, setNotificationDefaults] = useState<NotificationDefaults>(
@@ -159,19 +164,35 @@ export function WizardShell({
     });
   }
 
+  const allRequired = !!(
+    opp.title?.trim() &&
+    opp.organiser?.trim() &&
+    (opp.full_description?.trim() || (opp as { description?: string | null }).description?.trim()) &&
+    opp.country
+  );
+
   async function handleNext() {
-    // Save criteria to DB when leaving step 4
     if (step === 4 && isPipeline) {
       await saveRubricCriteria(opp.id, criteria);
     }
-    if (step < maxStep) setStep((s) => s + 1);
+    if (step === maxStep) {
+      if (!allRequired || submitting) return;
+      setSubmitting(true);
+      setSubmitError(null);
+      const result = await submitDraftForReview(opp.id);
+      setSubmitting(false);
+      if (result.error) { setSubmitError(result.error); return; }
+      if (result.redirectTo) router.push(result.redirectTo);
+      return;
+    }
+    setStep((s) => s + 1);
   }
 
   function handleBack() {
     if (step > minStep) setStep((s) => s - 1);
   }
 
-  const nextDisabled = step === 1 && !template;
+  const nextDisabled = (step === 1 && !template) || (step === maxStep && (!allRequired || submitting));
   const isLastStep = step === maxStep;
 
   return (
@@ -244,6 +265,7 @@ export function WizardShell({
             opp={opp}
             criteria={criteria}
             isPipeline={isPipeline}
+            submitError={submitError}
           />
         )}
       </main>
