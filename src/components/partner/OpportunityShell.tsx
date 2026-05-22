@@ -26,6 +26,15 @@ const STATUS_ORDER = ["pending", "shortlisted", "selected", "approved_pending_as
 type ViewMode = "kanban" | "table" | "triage";
 type TabId = "pipeline" | "analytics" | "impact" | "collaborators";
 
+const STATUS_DOTS: Record<string, string> = {
+  pending: "bg-stone-400",
+  shortlisted: "bg-amber-400",
+  selected: "bg-emerald-500",
+  approved_pending_assets: "bg-blue-400",
+  production_ready: "bg-violet-500",
+  rejected: "bg-red-400",
+};
+
 interface FollowupRow {
   id: string;
   profile_id: string;
@@ -126,18 +135,22 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
     { id: "collaborators", label: "Collaborators" },
   ];
 
+  const oppDeadline = (opp as unknown as { deadline?: string | null }).deadline;
+  const daysLeft = oppDeadline
+    ? Math.ceil((new Date(oppDeadline + "T00:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+
   return (
     <>
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-background border-b border-black">
+      <div className="sticky top-0 z-20 bg-background border-b border-black/10">
         <div className="max-w-[1600px] mx-auto px-6">
-          <div className="h-14 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <Link href="/partner/dashboard" className="text-xs text-stone-400 hover:text-foreground transition-colors shrink-0">
-                ← Dashboard
-              </Link>
-              <span className="text-stone-300 shrink-0">·</span>
-              <h1 className="text-sm font-semibold truncate">{opp.title}</h1>
+          {/* Top bar */}
+          <div className="h-12 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs text-stone-400">
+              <Link href="/partner/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+              <span>/</span>
+              <span className="text-foreground font-medium truncate max-w-[240px]">{opp.title}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {isPipeline && (
@@ -160,6 +173,24 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
               )}
             </div>
           </div>
+
+          {/* Title + meta */}
+          <div className="pb-3 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {opp.type && (
+                <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500 bg-stone-100 px-2 py-0.5">{opp.type}</span>
+              )}
+              {(opp as { country?: string }).country && (
+                <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500 bg-stone-100 px-2 py-0.5">{(opp as { country?: string }).country}</span>
+              )}
+              {daysLeft !== null && (
+                <span className={`text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 ${daysLeft < 7 ? "text-red-600 bg-red-50" : "text-stone-500 bg-stone-100"}`}>
+                  {daysLeft > 0 ? `${daysLeft} days left` : "Closed"}
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Tab nav */}
           <div className="flex items-center gap-0 -mb-px">
             {TABS.map((t) => (
@@ -167,7 +198,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`text-sm px-4 py-2.5 border-b-2 transition-colors ${
+                className={`text-sm px-4 py-2.5 border-b-2 transition-colors whitespace-nowrap ${
                   tab === t.id
                     ? "border-black text-foreground font-medium"
                     : "border-transparent text-stone-400 hover:text-foreground"
@@ -186,7 +217,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
           <div className="space-y-4">
             {/* Stage filter strip + view switcher */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setStatusFilter(null)}
@@ -201,10 +232,11 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
                     key={s}
                     type="button"
                     onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-                    className={`text-xs px-3 py-1.5 border transition-colors ${
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 border transition-colors ${
                       statusFilter === s ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"
                     }`}
                   >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusFilter === s ? "bg-white" : STATUS_DOTS[s]}`} />
                     {STATUS_LABELS[s]} ({counts[s]})
                   </button>
                 ))}
@@ -292,25 +324,31 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
         />
       )}
 
-      {/* Application detail overlay */}
+      {/* Application detail modal */}
       {openApp && (
-        <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpenAppId(null)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setOpenAppId(null)}
+        >
           <div
-            className="absolute right-0 top-0 h-full w-full max-w-3xl bg-background overflow-y-auto shadow-2xl"
+            className="relative w-full max-w-4xl bg-background shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <ApplicantPanel
-              application={{
-                ...openApp,
-                documentation: (openApp as { documentation?: Record<string, string> | null }).documentation ?? null,
-                invoice_requested_at: null,
-                invoice_amount: null,
-                invoice_paid_at: null,
-              }}
-              opportunity={opp}
-              closeUrl={`/partner/dashboard/${opportunityId}`}
-              onClose={() => setOpenAppId(null)}
-            />
+            <div className="overflow-y-auto flex-1">
+              <ApplicantPanel
+                application={{
+                  ...openApp,
+                  documentation: (openApp as { documentation?: Record<string, string> | null }).documentation ?? null,
+                  invoice_requested_at: null,
+                  invoice_amount: null,
+                  invoice_paid_at: null,
+                }}
+                opportunity={opp}
+                closeUrl={`/partner/dashboard/${opportunityId}`}
+                onClose={() => setOpenAppId(null)}
+              />
+            </div>
           </div>
         </div>
       )}
