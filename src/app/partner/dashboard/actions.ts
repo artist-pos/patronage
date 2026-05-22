@@ -528,3 +528,69 @@ export async function cancelNotification(id: string): Promise<{ error?: string }
   if (error) return { error: error.message };
   return {};
 }
+
+// ── Opportunity lifecycle actions ─────────────────────────────────────────────
+
+async function assertOpportunityOwner(opportunityId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" as string, supabase: null, user: null };
+
+  const [{ data: profile }, { data: opp }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("opportunities").select("id, profile_id, title").eq("id", opportunityId).single(),
+  ]);
+
+  const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
+  if (!opp) return { error: "Opportunity not found" as string, supabase: null, user: null };
+  if (opp.profile_id !== user.id && !isAdminUser) return { error: "Not authorised" as string, supabase: null, user: null };
+
+  return { error: null, supabase, user, opp };
+}
+
+export async function closeOpportunity(
+  opportunityId: string,
+  _intent: "capacity" | "round_end"
+): Promise<{ error?: string }> {
+  const { error, supabase } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase) return { error: error ?? "Unknown error" };
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ is_active: false, deadline: new Date().toISOString().split("T")[0] })
+    .eq("id", opportunityId);
+
+  if (updateError) return { error: updateError.message };
+  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  return {};
+}
+
+export async function delistOpportunity(opportunityId: string): Promise<{ error?: string }> {
+  const { error, supabase } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase) return { error: error ?? "Unknown error" };
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ status: "unlisted" })
+    .eq("id", opportunityId);
+
+  if (updateError) return { error: updateError.message };
+  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  revalidatePath("/partner/dashboard");
+  return {};
+}
+
+export async function relistOpportunity(opportunityId: string): Promise<{ error?: string }> {
+  const { error, supabase } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase) return { error: error ?? "Unknown error" };
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ status: "published", is_active: true })
+    .eq("id", opportunityId);
+
+  if (updateError) return { error: updateError.message };
+  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  revalidatePath("/partner/dashboard");
+  return {};
+}

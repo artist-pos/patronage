@@ -40,7 +40,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const [{ data: oppData }, adminUser] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, title, organiser, type, slug, profile_id, routing_type, status, custom_fields, show_badges_in_submission, pipeline_config, view_count")
+      .select("id, title, organiser, type, slug, profile_id, routing_type, status, custom_fields, show_badges_in_submission, pipeline_config, view_count, deadline, opens_at, country, city, funding_range, featured_image_url, caption, full_description, is_featured, pipeline_paid_at, is_active")
       .eq("id", opportunityId)
       .single(),
     isAdmin(),
@@ -67,7 +67,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const opp = {
     id: oppData.id as string,
     title: oppData.title as string,
-    organiser: oppData.organiser as string,
+    organiser: (oppData.organiser ?? "") as string,
     type: oppData.type as string,
     slug: (oppData.slug ?? null) as string | null,
     profile_id: oppData.profile_id as string,
@@ -77,6 +77,17 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     show_badges_in_submission: (oppData.show_badges_in_submission ?? true) as boolean,
     pipeline_config: (oppData.pipeline_config ?? null) as PipelineConfig | null,
     view_count: (oppData.view_count ?? 0) as number,
+    deadline: (oppData.deadline ?? null) as string | null,
+    opens_at: (oppData.opens_at ?? null) as string | null,
+    country: (oppData.country ?? null) as string | null,
+    city: (oppData.city ?? null) as string | null,
+    funding_range: (oppData.funding_range ?? null) as string | null,
+    featured_image_url: (oppData.featured_image_url ?? null) as string | null,
+    caption: (oppData.caption ?? null) as string | null,
+    full_description: (oppData.full_description ?? null) as string | null,
+    is_featured: (oppData.is_featured ?? false) as boolean,
+    pipeline_paid_at: (oppData.pipeline_paid_at ?? null) as string | null,
+    is_active: (oppData.is_active ?? true) as boolean,
   };
 
   // Parallel: apps, followups, collaborators

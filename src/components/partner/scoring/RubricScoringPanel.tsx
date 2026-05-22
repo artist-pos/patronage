@@ -7,9 +7,10 @@ import type { RubricCriterion, ApplicationScore } from "@/types/database";
 interface Props {
   opportunityId: string;
   applicationId: string;
+  compact?: boolean;
 }
 
-export function RubricScoringPanel({ opportunityId, applicationId }: Props) {
+export function RubricScoringPanel({ opportunityId, applicationId, compact }: Props) {
   const [criteria, setCriteria] = useState<RubricCriterion[]>([]);
   const [scores, setScores] = useState<ApplicationScore[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
@@ -70,15 +71,15 @@ export function RubricScoringPanel({ opportunityId, applicationId }: Props) {
         {criteria.map((c) => {
           const current = myScore(c.id);
           const isSaving = saving === c.id;
-          const steps = Array.from({ length: c.scale_max }, (_, i) => i + 1);
+          const steps = compact ? [1, 2, 3, 4, 5] : Array.from({ length: c.scale_max }, (_, i) => i + 1);
           return (
             <div key={c.id} className="space-y-1.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{c.label}</p>
-                  {c.helper && <p className="text-xs text-stone-400">{c.helper}</p>}
+                  <p className={`font-medium ${compact ? "text-xs" : "text-sm"}`}>{c.label}</p>
+                  {!compact && c.helper && <p className="text-xs text-stone-400">{c.helper}</p>}
                 </div>
-                <span className="text-[10px] text-stone-400 shrink-0 mt-0.5">×{c.weight}</span>
+                {!compact && <span className="text-[10px] text-stone-400 shrink-0 mt-0.5">×{c.weight}</span>}
               </div>
               <div className="flex gap-1">
                 {steps.map((n) => (
@@ -86,14 +87,18 @@ export function RubricScoringPanel({ opportunityId, applicationId }: Props) {
                     key={n}
                     type="button"
                     disabled={isSaving}
-                    onClick={() => handleScore(c.id, n)}
-                    className={`w-8 h-8 text-xs font-medium border transition-colors ${
-                      current === n
+                    onClick={() => handleScore(c.id, compact ? Math.round((n / 5) * c.scale_max) : n)}
+                    className={`${compact ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs"} font-medium border transition-colors ${
+                      compact
+                        ? current !== null && n <= Math.round((current / c.scale_max) * 5)
+                          ? "border-black bg-black text-white"
+                          : "border-stone-200 hover:border-black"
+                        : current === n
                         ? "border-black bg-black text-white"
                         : "border-stone-200 hover:border-black"
                     } disabled:opacity-50`}
                   >
-                    {n}
+                    {compact ? "★" : n}
                   </button>
                 ))}
               </div>
