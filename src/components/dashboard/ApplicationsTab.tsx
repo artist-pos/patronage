@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import { createRealtimeClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
-import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, PipelineConfig } from "@/types/database";
+import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, CreativeWork, PipelineConfig } from "@/types/database";
 import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
 import { UploadHighResButton } from "./UploadHighResButton";
 import { sendRejectionReplyAction } from "@/app/dashboard/payment-actions";
@@ -55,7 +55,7 @@ interface ModalState {
   opportunity: Opportunity;
   draft: OpportunityApplicationDraft;
   artistProfile: ApplyModalProps["artistProfile"];
-  artistArtworks: Artwork[];
+  artistWorks: CreativeWork[];
   badges: ApplyModalProps["badges"];
   professionalCvUrl: string | null;
 }
@@ -125,22 +125,26 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
 
     const isJob = draft.opportunity.type === "Job / Employment";
 
-    const [profileResult, artworksResult] = await Promise.all([
+    const [profileResult, worksResult, artworkBadgeResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       isJob
-        ? Promise.resolve({ data: [] as Artwork[] })
-        : supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
+        ? Promise.resolve({ data: [] as CreativeWork[] })
+        : supabase.from("creative_works").select("id, profile_id, content_type, title, caption, image_url, audio_url, video_url, text_content, embed_url, embed_provider, year_created, position").eq("profile_id", user.id).order("position", { ascending: true }),
+      isJob
+        ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
+        : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
     ]);
 
     const profile = profileResult.data;
-    const artworks = (artworksResult.data ?? []) as Artwork[];
+    const artistWorks = (worksResult.data ?? []) as CreativeWork[];
+    const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
 
     if (!profile) { setLoadingDraftId(null); return; }
 
     const badges = computeBadges(
       { ...profile, received_grants: profile.received_grants ?? [] },
-      artworks.length,
-      artworks.some((a: Artwork) => a.current_owner_id !== a.creator_id)
+      artistWorks.length,
+      artworksBadge.some((a) => a.current_owner_id !== a.creator_id)
     );
 
     setLoadingDraftId(null);
@@ -154,6 +158,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         submitted_image_url: draft.submitted_image_url,
         custom_answers: draft.custom_answers,
         updated_at: draft.updated_at,
+        creative_work_id: draft.creative_work_id ?? null,
       },
       artistProfile: {
         id: profile.id,
@@ -164,7 +169,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         medium: profile.medium,
         exhibition_history: profile.exhibition_history ?? [],
       },
-      artistArtworks: artworks,
+      artistWorks,
       badges,
       professionalCvUrl: profile.professional_cv_url ?? null,
     });
@@ -409,7 +414,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         <ApplyModal
           opportunity={modalState.opportunity}
           artistProfile={modalState.artistProfile}
-          artistArtworks={modalState.artistArtworks}
+          artistWorks={modalState.artistWorks}
           badges={modalState.badges}
           draft={modalState.draft}
           isJobOpportunity={modalState.opportunity.type === "Job / Employment"}

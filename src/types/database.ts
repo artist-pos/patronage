@@ -72,6 +72,13 @@ export interface PipelineConfig {
   artist_documents: ('cv' | 'bio' | 'portfolio' | 'available_works')[];
   terms_pdf_url: string | null;
   post_selection?: PostSelectionConfig | null;
+  notification_defaults?: {
+    shortlisted: 'send' | 'hold';
+    rejected: 'send' | 'hold';
+    selected: 'send' | 'hold';
+  };
+  anonymous_first_pass?: boolean;
+  template?: 'residency' | 'commission' | 'grant' | 'open_call' | 'prize' | 'display';
 }
 
 export interface PostSelectionDocField {
@@ -188,6 +195,54 @@ export interface OpportunityApplication {
   invoice_requested_at: string | null;
   invoice_amount: number | null;
   invoice_paid_at: string | null;
+  creative_work_id: string | null;
+}
+
+export interface RubricCriterion {
+  id: string;
+  opportunity_id: string;
+  label: string;
+  helper: string | null;
+  weight: number;
+  scale_max: 3 | 5 | 10;
+  position: number;
+  locked: boolean;
+  created_at: string;
+}
+
+export interface ApplicationScore {
+  id: string;
+  application_id: string;
+  criterion_id: string;
+  reviewer_id: string;
+  score: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationQueueItem {
+  id: string;
+  opportunity_id: string;
+  application_id: string;
+  recipient_id: string;
+  notification_type: 'shortlisted' | 'rejected' | 'selected' | 'approved_pending_assets';
+  email_subject: string | null;
+  email_body: string | null;
+  status: 'queued' | 'sent' | 'cancelled';
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export interface PartnerDocument {
+  id: string;
+  opportunity_id: string;
+  label: string;
+  storage_path: string;
+  file_size_kb: number | null;
+  uploaded_by: string | null;
+  created_at: string;
 }
 
 // Looser insert type — new optional fields need not be specified for CSV imports
@@ -217,6 +272,7 @@ export interface OpportunityApplicationDraft {
   submitted_image_url: string | null;
   custom_answers: Record<string, string>;
   updated_at: string;
+  creative_work_id: string | null;
 }
 
 export interface ProfileAchievement {

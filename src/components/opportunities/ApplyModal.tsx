@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Music, Play, FileText, Link } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
-import type { Artwork, OpportunityApplicationDraft } from "@/types/database";
+import type { CreativeWork, OpportunityApplicationDraft } from "@/types/database";
 import type { OpportunityForApply } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
 
@@ -22,7 +22,7 @@ interface ArtistProfile {
 export interface ApplyModalProps {
   opportunity: OpportunityForApply;
   artistProfile: ArtistProfile;
-  artistArtworks: Artwork[];
+  artistWorks: CreativeWork[];
   badges: BadgeSet | null;
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
@@ -57,8 +57,8 @@ function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
   }));
 }
 
-export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
-  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(draft?.artwork_id ?? null);
+export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
+  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(draft?.creative_work_id ?? null);
   const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [uploadingNewImage, setUploadingNewImage] = useState(false);
@@ -94,7 +94,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
     setSubmittedImageUrl(publicUrl);
     setSubmittedImagePreview(URL.createObjectURL(file));
-    setSelectedArtworkId(null);
+    setSelectedWorkId(null);
   }
 
   const FILE_CAP = 10;
@@ -157,12 +157,16 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     const encodedFiles: Record<string, string> = {};
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
-    const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
+    const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const effectiveImageUrl = isJobOpportunity
+      ? professionalCvUrl
+      : (submittedImageUrl ?? selectedWork?.image_url ?? null);
     await saveDraft(
       opportunity.id,
-      isJobOpportunity ? null : selectedArtworkId,
+      null,
       finalAnswers,
-      effectiveImageUrl
+      effectiveImageUrl,
+      isJobOpportunity ? null : selectedWorkId,
     );
     setSavingDraft(false);
     setDraftSaved(true);
@@ -176,9 +180,12 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
     const encodedFiles: Record<string, string> = {};
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
-    const effectiveImageUrl = isJobOpportunity ? professionalCvUrl : submittedImageUrl;
+    const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const effectiveImageUrl = isJobOpportunity
+      ? professionalCvUrl
+      : (submittedImageUrl ?? selectedWork?.image_url ?? null);
 
-    const result = await submitApplication(opportunity.id, isJobOpportunity ? null : selectedArtworkId, finalAnswers, effectiveImageUrl, marketingOptIn);
+    const result = await submitApplication(opportunity.id, null, finalAnswers, effectiveImageUrl, marketingOptIn, isJobOpportunity ? null : selectedWorkId);
     setSubmitting(false);
 
     if (result.error) {
@@ -300,9 +307,9 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                 {/* None tile */}
                 <button
                   type="button"
-                  onClick={() => { setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                  onClick={() => { setSelectedWorkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
                   className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
-                    selectedArtworkId === null && !submittedImageUrl
+                    selectedWorkId === null && !submittedImageUrl
                       ? "border-black bg-muted"
                       : "border-black/30 hover:border-black"
                   }`}
@@ -310,7 +317,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                   None
                 </button>
 
-                {/* Upload new tile */}
+                {/* Upload image tile */}
                 <button
                   type="button"
                   onClick={() => newImageRef.current?.click()}
@@ -328,7 +335,7 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                   ) : (
                     <>
                       <Upload className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground leading-tight text-center px-1">Upload new</span>
+                      <span className="text-[10px] text-muted-foreground leading-tight text-center px-1">Upload image</span>
                     </>
                   )}
                 </button>
@@ -340,33 +347,67 @@ export function ApplyModal({ opportunity, artistProfile, artistArtworks, badges,
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleNewImageUpload(f); }}
                 />
 
-                {/* Existing artworks */}
-                {artistArtworks.slice(0, 10).map((artwork) => (
-                  <button
-                    key={artwork.id}
-                    type="button"
-                    onClick={() => { setSelectedArtworkId(artwork.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
-                    className={`aspect-square border relative overflow-hidden transition-colors ${
-                      selectedArtworkId === artwork.id
-                        ? "border-black ring-2 ring-black"
-                        : "border-black/30 hover:border-black"
-                    }`}
-                  >
-                    <Image
-                      src={artwork.url}
-                      alt={artwork.caption ?? ""}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
-                  </button>
-                ))}
+                {/* Creative works — all media types */}
+                {artistWorks.slice(0, 10).map((work) => {
+                  const selected = selectedWorkId === work.id;
+                  const baseClass = `aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
+                    selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
+                  }`;
+                  return (
+                    <button
+                      key={work.id}
+                      type="button"
+                      onClick={() => { setSelectedWorkId(work.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                      className={baseClass}
+                    >
+                      {work.content_type === "image" && work.image_url ? (
+                        <Image src={work.image_url} alt={work.caption ?? ""} fill className="object-cover" sizes="80px" />
+                      ) : work.content_type === "audio" ? (
+                        <>
+                          {work.image_url && <Image src={work.image_url} alt="" fill className="object-cover opacity-30" sizes="80px" />}
+                          <Music className={`w-5 h-5 relative z-10 ${selected ? "text-white" : "text-stone-500"}`} />
+                          <span className={`text-[9px] leading-tight text-center px-1 relative z-10 line-clamp-2 ${selected ? "text-white" : "text-stone-500"}`}>
+                            {work.title ?? work.caption ?? "Audio"}
+                          </span>
+                        </>
+                      ) : work.content_type === "video" ? (
+                        <>
+                          {work.image_url && <Image src={work.image_url} alt="" fill className="object-cover opacity-30" sizes="80px" />}
+                          <Play className={`w-5 h-5 relative z-10 ${selected ? "text-white" : "text-stone-500"}`} />
+                          <span className={`text-[9px] leading-tight text-center px-1 relative z-10 line-clamp-2 ${selected ? "text-white" : "text-stone-500"}`}>
+                            {work.title ?? work.caption ?? "Video"}
+                          </span>
+                        </>
+                      ) : work.content_type === "text" ? (
+                        <>
+                          <FileText className={`w-5 h-5 ${selected ? "text-white" : "text-stone-500"}`} />
+                          <span className={`text-[9px] leading-tight text-center px-1 line-clamp-2 ${selected ? "text-white" : "text-stone-500"}`}>
+                            {work.title ?? work.caption ?? "Writing"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Link className={`w-5 h-5 ${selected ? "text-white" : "text-stone-500"}`} />
+                          <span className={`text-[9px] leading-tight text-center px-1 line-clamp-2 ${selected ? "text-white" : "text-stone-500"}`}>
+                            {work.title ?? work.embed_provider ?? "Embed"}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              {selectedArtworkId && (
-                <p className="text-xs text-muted-foreground">
-                  {artistArtworks.find((a) => a.id === selectedArtworkId)?.caption ?? ""}
-                </p>
-              )}
+              {selectedWorkId && (() => {
+                const w = artistWorks.find((a) => a.id === selectedWorkId);
+                return w ? (
+                  <p className="text-xs text-muted-foreground">
+                    {w.title ?? w.caption ?? ""}
+                    {w.content_type !== "image" && (
+                      <span className="ml-1 text-stone-400">({w.content_type})</span>
+                    )}
+                  </p>
+                ) : null;
+              })()}
               {submittedImageUrl && (
                 <p className="text-xs text-muted-foreground">New image uploaded.</p>
               )}

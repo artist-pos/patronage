@@ -50,7 +50,7 @@ interface FollowupRow {
   additional_notes: string | null;
 }
 
-interface OpportunityShape {
+export interface OpportunityShape {
   id: string;
   title: string;
   type?: string;

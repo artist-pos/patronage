@@ -10,10 +10,9 @@ import { computeBadges } from "@/lib/badges";
 import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
-import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum } from "@/types/database";
+import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, CreativeWork } from "@/types/database";
 
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
-import type { Artwork } from "@/types/database";
 
 export interface OpportunityForApply {
   id: string;
@@ -60,7 +59,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [lockedFields, setLockedFields] = useState<MissingField[] | null>(null);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
-    artworks: Artwork[];
+    artistWorks: CreativeWork[];
     badges: ApplyModalProps["badges"];
     draft: OpportunityApplicationDraft | null;
   } | null>(null);
@@ -75,10 +74,17 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       return;
     }
 
-    const [artworksResult, draft, profileResult] = await Promise.all([
+    const [worksResult, artworkBadgeResult, draft, profileResult] = await Promise.all([
       isJobOpportunity
-        ? Promise.resolve({ data: [] as Artwork[] })
-        : supabase.from("artworks").select("*").eq("profile_id", user.id).order("position", { ascending: true }),
+        ? Promise.resolve({ data: [] as CreativeWork[] })
+        : supabase
+            .from("creative_works")
+            .select("id, profile_id, content_type, title, caption, image_url, audio_url, video_url, text_content, embed_url, embed_provider, year_created, position")
+            .eq("profile_id", user.id)
+            .order("position", { ascending: true }),
+      isJobOpportunity
+        ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
+        : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
       opportunity.routing_type === "pipeline"
         ? getDraft(opportunity.id)
         : Promise.resolve(null),
@@ -87,7 +93,8 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
     ]);
 
-    const artworks = (artworksResult.data ?? []) as Artwork[];
+    const artistWorks = (worksResult.data ?? []) as CreativeWork[];
+    const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
     const profile = profileResult.data;
 
     if (profile) {
@@ -107,10 +114,10 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         }
       }
 
-      const collectedSet = artworks.some((a: Artwork) => a.current_owner_id !== a.creator_id);
+      const collectedSet = artworksBadge.some((a) => a.current_owner_id !== a.creator_id);
       const badges = computeBadges(
         { ...profile, received_grants: profile.received_grants ?? [] },
-        artworks.length,
+        artistWorks.length,
         collectedSet
       );
       setApplicantData({
@@ -123,7 +130,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
           medium: profile.medium,
           exhibition_history: profile.exhibition_history ?? [],
         },
-        artworks,
+        artistWorks,
         badges,
         draft: draft as OpportunityApplicationDraft | null,
       });
@@ -186,7 +193,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         <ApplyModal
           opportunity={opportunity}
           artistProfile={applicantData.profile}
-          artistArtworks={applicantData.artworks}
+          artistWorks={applicantData.artistWorks}
           badges={applicantData.badges}
           draft={applicantData.draft}
           isJobOpportunity={isJobOpportunity}

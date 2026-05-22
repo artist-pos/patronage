@@ -76,7 +76,8 @@ export async function saveDraft(
   opportunityId: string,
   artworkId: string | null,
   answers: Record<string, string>,
-  submittedImageUrl?: string | null
+  submittedImageUrl?: string | null,
+  creativeWorkId?: string | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -91,6 +92,7 @@ export async function saveDraft(
       submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
       updated_at: new Date().toISOString(),
+      creative_work_id: creativeWorkId || null,
     }, { onConflict: "opportunity_id,artist_id" });
 
   if (error) return { error: error.message };
@@ -117,7 +119,8 @@ export async function submitApplication(
   artworkId: string | null,
   answers: Record<string, string>,
   submittedImageUrl?: string | null,
-  partnerMarketingOptIn?: boolean
+  partnerMarketingOptIn?: boolean,
+  creativeWorkId?: string | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -144,6 +147,7 @@ export async function submitApplication(
       submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
       partner_marketing_opt_in: partnerMarketingOptIn ?? false,
+      creative_work_id: creativeWorkId || null,
     });
 
   if (error) return { error: error.message };

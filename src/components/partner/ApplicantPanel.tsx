@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
+import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
 
 interface Artist {
@@ -501,6 +502,16 @@ export function ApplicantPanel({ application, opportunity, closeUrl, onClose }: 
                 )}
               </div>
             )}
+
+          {/* Rubric scoring */}
+          {(opportunity.pipeline_config?.questions?.length ?? 0) > 0 && (
+            <div className="border-t border-black/10 pt-4">
+              <RubricScoringPanel
+                opportunityId={opportunity.id}
+                applicationId={application.id}
+              />
+            </div>
+          )}
 
           {/* Status actions */}
           <div className="space-y-3 border-t border-black pt-4">

@@ -1,12 +1,9 @@
 import { redirect, notFound } from "next/navigation";
-import { Suspense } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ApplicationsManager } from "@/components/partner/ApplicationsManager";
-import { PostSelectionSetup } from "@/components/partner/PostSelectionSetup";
+import { OpportunityShell } from "@/components/partner/OpportunityShell";
 import type { Metadata } from "next";
-import type { CustomField, PipelineConfig } from "@/types/database";
+import type { CustomField, PipelineConfig, OpportunityCollaborator } from "@/types/database";
 import { isAdmin } from "@/lib/admin";
 
 interface Props {
@@ -14,19 +11,6 @@ interface Props {
 }
 
 export const metadata: Metadata = { title: "Applications — Patronage" };
-
-interface AppRow {
-  id: string;
-  status: string;
-  created_at: string;
-  artwork_id: string | null;
-  submitted_image_url: string | null;
-  custom_answers: Record<string, string>;
-  highres_asset_url: string | null;
-  artist_id: string;
-  documentation: Record<string, string> | null;
-  artwork: { id: string; url: string; caption: string | null } | null;
-}
 
 interface ProfileRow {
   id: string;
@@ -39,7 +23,7 @@ interface ProfileRow {
   city: string | null;
   country: string | null;
   cv_url: string | null;
-  exhibition_history: Array<{ type: string; title: string; venue: string; location: string; year: number }> | null;
+  exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null;
   received_grants: string[] | null;
   is_patronage_supported: boolean;
   year_of_birth: number | null;
@@ -56,16 +40,18 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const [{ data: oppData }, adminUser] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, title, organiser, type, slug, profile_id, routing_type, custom_fields, show_badges_in_submission, pipeline_config, view_count")
+      .select("id, title, organiser, type, slug, profile_id, routing_type, status, custom_fields, show_badges_in_submission, pipeline_config, view_count")
       .eq("id", opportunityId)
       .single(),
     isAdmin(),
   ]);
 
-  // Access check: owner, admin, or collaborator
   if (!oppData) notFound();
-  if (oppData.profile_id !== user.id && !adminUser) {
-    // Check collaborator access
+
+  const isOwner = oppData.profile_id === user.id || !!adminUser;
+  let collaboratorRole: string | null = null;
+
+  if (!isOwner) {
     const { data: collab } = await supabase
       .from("opportunity_collaborators")
       .select("role")
@@ -73,7 +59,10 @@ export default async function PartnerOpportunityPage({ params }: Props) {
       .eq("profile_id", user.id)
       .maybeSingle();
     if (!collab) notFound();
+    collaboratorRole = collab.role;
   }
+
+  void collaboratorRole;
 
   const opp = {
     id: oppData.id as string,
@@ -83,60 +72,49 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     slug: (oppData.slug ?? null) as string | null,
     profile_id: oppData.profile_id as string,
     routing_type: (oppData.routing_type ?? "external") as string,
+    status: (oppData.status ?? "published") as string,
     custom_fields: (oppData.custom_fields ?? []) as CustomField[],
     show_badges_in_submission: (oppData.show_badges_in_submission ?? true) as boolean,
-    pipeline_config: (oppData.pipeline_config ?? null) as import("@/types/database").PipelineConfig | null,
+    pipeline_config: (oppData.pipeline_config ?? null) as PipelineConfig | null,
     view_count: (oppData.view_count ?? 0) as number,
   };
 
-  // Get applications with artwork
-  const { data: appsData } = await supabase
-    .from("opportunity_applications")
-    .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, artwork:artwork_id(id, url, caption)")
-    .eq("opportunity_id", opportunityId)
-    .order("created_at", { ascending: false });
-
-  const apps = (appsData ?? []) as unknown as AppRow[];
-
-  // Fetch profiles
-  const artistIds = [...new Set(apps.map((a) => a.artist_id))];
-  const [{ data: profilesData }, emailResults] = await Promise.all([
-    artistIds.length > 0
-      ? supabase
-          .from("profiles")
-          .select("id, username, full_name, avatar_url, bio, medium, career_stage, city, country, cv_url, exhibition_history, received_grants, is_patronage_supported, year_of_birth, identity_tags")
-          .in("id", artistIds)
-      : { data: [] },
-    artistIds.length > 0
-      ? (async () => {
-          const admin = createAdminClient();
-          const results = await Promise.all(
-            artistIds.map((id) => admin.auth.admin.getUserById(id))
-          );
-          return results;
-        })()
-      : Promise.resolve([]),
+  // Parallel: apps, followups, collaborators
+  const [appsResult, followupsResult, collaboratorsResult] = await Promise.all([
+    supabase
+      .from("opportunity_applications")
+      .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, invoice_requested_at, invoice_amount, invoice_paid_at, creative_work_id, artwork:artwork_id(id, url, caption)")
+      .eq("opportunity_id", opportunityId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("artist_followups")
+      .select("id, profile_id, followup_type, sent_at, completed_at, further_opportunities, exhibitions, press_coverage, income_from_practice, community_projects, testimonial, testimonial_consent, additional_notes")
+      .eq("opportunity_id", opportunityId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("opportunity_collaborators")
+      .select("id, opportunity_id, profile_id, role, created_at, profiles:profile_id(username, full_name, avatar_url)")
+      .eq("opportunity_id", opportunityId),
   ]);
 
-  const profileMap = new Map<string, ProfileRow>();
-  for (const p of (profilesData ?? []) as unknown as ProfileRow[]) {
-    profileMap.set(p.id, p);
-  }
+  const apps = (appsResult.data ?? []) as unknown as Array<{
+    id: string;
+    status: string;
+    created_at: string;
+    artwork_id: string | null;
+    submitted_image_url: string | null;
+    custom_answers: Record<string, string>;
+    highres_asset_url: string | null;
+    artist_id: string;
+    documentation: Record<string, string> | null;
+    invoice_requested_at: string | null;
+    invoice_amount: number | null;
+    invoice_paid_at: string | null;
+    creative_work_id: string | null;
+    artwork: { id: string; url: string; caption: string | null } | null;
+  }>;
 
-  const emailMap = new Map<string, string>();
-  for (let i = 0; i < artistIds.length; i++) {
-    const email = (emailResults as Array<{ data: { user: { email?: string } | null } }>)[i]?.data?.user?.email;
-    if (email) emailMap.set(artistIds[i], email);
-  }
-
-  // Fetch follow-ups for impact section
-  const { data: followupsData } = await supabase
-    .from("artist_followups")
-    .select("id, profile_id, followup_type, sent_at, completed_at, further_opportunities, exhibitions, press_coverage, income_from_practice, community_projects, testimonial, testimonial_consent, additional_notes")
-    .eq("opportunity_id", opportunityId)
-    .order("created_at", { ascending: false });
-
-  const followups = (followupsData ?? []) as Array<{
+  const followups = (followupsResult.data ?? []) as Array<{
     id: string;
     profile_id: string;
     followup_type: string;
@@ -152,7 +130,36 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     additional_notes: string | null;
   }>;
 
-  // Build enriched apps
+  const collaborators = (collaboratorsResult.data ?? []) as unknown as OpportunityCollaborator[];
+
+  // Fetch profiles for all applicants in parallel with email lookups
+  const artistIds = [...new Set(apps.map((a) => a.artist_id))];
+
+  const [profilesResult, emailResults] = await Promise.all([
+    artistIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("id, username, full_name, avatar_url, bio, medium, career_stage, city, country, cv_url, exhibition_history, received_grants, is_patronage_supported, year_of_birth, identity_tags")
+          .in("id", artistIds)
+      : Promise.resolve({ data: [] }),
+    artistIds.length > 0
+      ? Promise.all(
+          artistIds.map((id) => createAdminClient().auth.admin.getUserById(id))
+        )
+      : Promise.resolve([]),
+  ]);
+
+  const profileMap = new Map<string, ProfileRow>();
+  for (const p of (profilesResult.data ?? []) as unknown as ProfileRow[]) {
+    profileMap.set(p.id, p);
+  }
+
+  const emailMap = new Map<string, string>();
+  for (let i = 0; i < artistIds.length; i++) {
+    const email = (emailResults as Array<{ data: { user: { email?: string } | null } }>)[i]?.data?.user?.email;
+    if (email) emailMap.set(artistIds[i], email);
+  }
+
   const enrichedApps = apps.map((app) => {
     const profile = profileMap.get(app.artist_id) ?? null;
     return {
@@ -180,87 +187,16 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     };
   });
 
-  const isPipeline = opp.routing_type === "pipeline";
-  const postSelectionConfigured = isPipeline
-    ? (opp.pipeline_config as PipelineConfig | null)?.post_selection != null
-    : true;
-
-  const selectedArtists = enrichedApps.filter((a) =>
-    ["selected", "approved_pending_assets", "production_ready"].includes(a.status)
-  );
-
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-      {/* Header */}
-      <div className="space-y-0.5">
-        <Link href="/partner/dashboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-          ← Partner Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{opp.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {enrichedApps.length} application{enrichedApps.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
-      {/* Post-selection setup gate — shown once, before applications are accessible */}
-      {isPipeline && !postSelectionConfigured ? (
-        <PostSelectionSetup
-          opportunityId={opportunityId}
-          opportunityTitle={opp.title}
-        />
-      ) : (
-        <>
-          {/* Selected artists — simple grid shown once any are selected */}
-          {selectedArtists.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Selected Artists ({selectedArtists.length})
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {selectedArtists.map((app) => {
-                  const a = app.artist;
-                  if (!a) return null;
-                  return (
-                    <Link
-                      key={app.id}
-                      href={`/${a.username}`}
-                      target="_blank"
-                      className="flex items-center gap-3 border border-black/10 rounded-xl px-4 py-3 hover:border-black/30 transition-colors bg-white min-w-0"
-                    >
-                      {a.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={a.avatar_url}
-                          alt={a.full_name ?? a.username}
-                          className="w-8 h-8 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-stone-100 shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{a.full_name ?? a.username}</p>
-                        {(a.medium ?? []).length > 0 && (
-                          <p className="text-xs text-muted-foreground truncate">{(a.medium ?? []).slice(0, 2).join(", ")}</p>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Applications manager */}
-          <Suspense>
-            <ApplicationsManager
-              apps={enrichedApps}
-              opp={opp}
-              opportunityId={opportunityId}
-              followups={followups}
-            />
-          </Suspense>
-        </>
-      )}
+    <div className="min-h-screen bg-background">
+      <OpportunityShell
+        opp={opp}
+        apps={enrichedApps}
+        followups={followups}
+        collaborators={collaborators}
+        isOwner={isOwner}
+        opportunityId={opportunityId}
+      />
     </div>
   );
 }

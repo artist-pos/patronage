@@ -1318,3 +1318,88 @@ export async function sendSaleRevertedArtist({
   });
 }
 
+
+export async function sendNudgeEmail({
+  reviewerEmail,
+  opportunityTitle,
+  opportunityId,
+}: {
+  reviewerEmail: string;
+  opportunityTitle: string;
+  opportunityId: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const url = `${SITE_URL}/partner/dashboard/${opportunityId}`;
+  await getResend().emails.send({
+    from: FROM,
+    to: reviewerEmail,
+    subject: `Reminder: applications awaiting your scores — ${esc(opportunityTitle)}`,
+    html: `<html><body style="font-family:system-ui,sans-serif;background:#fff;color:#000;max-width:600px;margin:0 auto;padding:40px 24px;"><h1 style="font-size:20px;font-weight:600;margin:0 0 32px;">Patronage</h1><p style="margin:0 0 16px;">There are applications awaiting your scores for <strong>${esc(opportunityTitle)}</strong>.</p><a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Review applications &rarr;</a></body></html>`,
+  });
+}
+
+export async function sendGenericEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<void> {
+  await getResend().emails.send({ from: FROM, to, subject, html });
+}
+
+// ── Email content builders (return HTML without sending, for notification queue) ─
+
+export function buildShortlistEmailContent({ artistName, opportunityTitle }: { artistName: string; opportunityTitle: string }): { subject: string; html: string } {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  return {
+    subject: `Update on your application for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> is under active review. We&apos;ll be in touch soon.</p>
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard &rarr;</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  };
+}
+
+export function buildRejectionEmailContent({ artistName, opportunityTitle, reason }: { artistName: string; opportunityTitle: string; reason?: string | null }): { subject: string; html: string } {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  const feedbackBlock = reason
+    ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;"><p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Feedback from the organiser</p><p style="margin:0;white-space:pre-wrap;">${esc(reason)}</p></div>`
+    : "";
+  return {
+    subject: `Your application for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Thank you for applying for <strong>${esc(opportunityTitle)}</strong>. Unfortunately you weren&apos;t selected this time.</p>
+      ${feedbackBlock}
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard &rarr;</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  };
+}

@@ -8,6 +8,8 @@ import {
   sendCampaignSelectedNotification,
   sendShortlistNotification,
   sendRejectionNotification,
+  buildShortlistEmailContent,
+  buildRejectionEmailContent,
 } from "@/lib/email";
 import { createCampaignForSelection } from "@/lib/campaigns";
 import { ensureLedgerId } from "@/lib/provenance";
@@ -125,22 +127,42 @@ export async function updateApplicationStatus(
       changed_by: user.id,
     });
 
-  // Shortlist/rejection emails (fire-and-forget)
+  // Shortlist/rejection notifications — queue or send based on pipeline_config.notification_defaults
   if (status === "shortlisted" || status === "rejected") {
+    const notifDefaults = opp.pipeline_config?.notification_defaults as
+      | { shortlisted?: "send" | "hold"; rejected?: "send" | "hold" }
+      | undefined;
+    const defaultForStatus = notifDefaults?.[status] ?? "send";
+    const isPipelineOpp = !!opp.pipeline_config;
+
     void (async () => {
-      const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
+      const [{ data: authData }, { data: artistProfile }] = await Promise.all([
+        admin.auth.admin.getUserById(app.artist_id as string),
+        admin.from("profiles").select("full_name, username").eq("id", app.artist_id as string).single(),
+      ]);
       const artistEmail = authData?.user?.email;
       if (!artistEmail) return;
-      const { data: artistProfile } = await admin
-        .from("profiles")
-        .select("full_name, username")
-        .eq("id", app.artist_id as string)
-        .single();
       const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
-      if (status === "shortlisted") {
-        sendShortlistNotification({ artistEmail, artistName, opportunityTitle: opp.title }).catch(console.error);
+
+      if (isPipelineOpp && defaultForStatus === "hold") {
+        const content = status === "shortlisted"
+          ? buildShortlistEmailContent({ artistName, opportunityTitle: opp.title })
+          : buildRejectionEmailContent({ artistName, opportunityTitle: opp.title, reason: rejectionReason });
+        await supabase.from("notification_queue").insert({
+          opportunity_id: opp.id,
+          application_id: applicationId,
+          recipient_id: app.artist_id,
+          notification_type: status,
+          email_subject: content.subject,
+          email_body: content.html,
+          status: "queued",
+        });
       } else {
-        sendRejectionNotification({ artistEmail, artistName, opportunityTitle: opp.title, reason: rejectionReason }).catch(console.error);
+        if (status === "shortlisted") {
+          sendShortlistNotification({ artistEmail, artistName, opportunityTitle: opp.title }).catch(console.error);
+        } else {
+          sendRejectionNotification({ artistEmail, artistName, opportunityTitle: opp.title, reason: rejectionReason }).catch(console.error);
+        }
       }
     })().catch(console.error);
   }
@@ -222,20 +244,38 @@ export async function updateApplicationStatus(
         })().catch(console.error);
       }
 
-      // Notify the artist they've been selected — fire-and-forget
+      // Notify the artist they've been selected — queue or send based on notification_defaults
       void (async () => {
-        const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
+        const [{ data: authData }, { data: artistProfile }] = await Promise.all([
+          admin.auth.admin.getUserById(app.artist_id as string),
+          admin.from("profiles").select("full_name, username").eq("id", app.artist_id as string).single(),
+        ]);
         const artistEmail = authData?.user?.email;
-        if (artistEmail) {
-          const { data: artistProfile } = await admin
-            .from("profiles")
-            .select("full_name, username")
-            .eq("id", app.artist_id as string)
-            .single();
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+        if (!artistEmail) return;
+        const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
+        const notifDefaults = opp.pipeline_config?.notification_defaults as
+          | { selected?: "send" | "hold" }
+          | undefined;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
+        if (opp.pipeline_config && notifDefaults?.selected === "hold") {
+          const content = {
+            subject: `You've been selected for ${opp.title}`,
+            html: `<p>Congratulations ${artistName}, you've been selected for <strong>${opp.title}</strong>. <a href="${siteUrl}/studio?section=campaigns">Create your campaign page →</a></p>`,
+          };
+          await supabase.from("notification_queue").insert({
+            opportunity_id: opp.id,
+            application_id: applicationId,
+            recipient_id: app.artist_id,
+            notification_type: "selected",
+            email_subject: content.subject,
+            email_body: content.html,
+            status: "queued",
+          });
+        } else {
           sendCampaignSelectedNotification({
             artistEmail,
-            artistName: artistProfile?.full_name ?? artistProfile?.username ?? "Artist",
+            artistName,
             opportunityTitle: opp.title,
             studioUrl: `${siteUrl}/studio?section=campaigns`,
           }).catch(console.error);
@@ -382,4 +422,109 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
 
   if (error) return { error: error.message };
   return { url: data.signedUrl };
+}
+
+// ── Notification queue ────────────────────────────────────────────────────────
+
+export async function queueNotification(
+  opportunityId: string,
+  applicationId: string,
+  recipientId: string,
+  notificationType: "shortlisted" | "rejected" | "selected" | "approved_pending_assets",
+  emailSubject: string,
+  emailBody: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("notification_queue")
+    .insert({
+      opportunity_id: opportunityId,
+      application_id: applicationId,
+      recipient_id: recipientId,
+      notification_type: notificationType,
+      email_subject: emailSubject,
+      email_body: emailBody,
+      status: "queued",
+    });
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getQueuedNotifications(opportunityId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("notification_queue")
+    .select(`
+      id, application_id, recipient_id, notification_type,
+      email_subject, email_body, status, sent_at, created_at,
+      profiles:recipient_id (full_name, username, avatar_url)
+    `)
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "queued")
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
+}
+
+export async function flushNotifications(
+  ids: string[]
+): Promise<{ error?: string; sent: number }> {
+  if (ids.length === 0) return { sent: 0 };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated", sent: 0 };
+
+  const { data: items } = await supabase
+    .from("notification_queue")
+    .select("id, recipient_id, email_subject, email_body")
+    .in("id", ids)
+    .eq("status", "queued");
+
+  if (!items?.length) return { sent: 0 };
+
+  const admin = createAdminClient();
+  let sent = 0;
+
+  for (const item of items) {
+    try {
+      const { data: authData } = await admin.auth.admin.getUserById(item.recipient_id as string);
+      const email = authData?.user?.email;
+      if (!email) continue;
+
+      const { sendGenericEmail } = await import("@/lib/email");
+      await sendGenericEmail({
+        to: email,
+        subject: item.email_subject as string,
+        html: item.email_body as string,
+      });
+
+      await supabase
+        .from("notification_queue")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", item.id as string);
+      sent++;
+    } catch {
+      // continue on individual failure
+    }
+  }
+
+  return { sent };
+}
+
+export async function cancelNotification(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notification_queue")
+    .update({ status: "cancelled" })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return {};
 }
