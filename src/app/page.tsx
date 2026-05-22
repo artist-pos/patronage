@@ -273,7 +273,7 @@ export default async function Home() {
               New opportunities in your inbox every week. Free.
             </p>
             <Button asChild>
-              <Link href="/auth/signup">Create a free account</Link>
+              <Link href="/get-started">Create a free account</Link>
             </Button>
           </div>
         </div>

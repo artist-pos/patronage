@@ -21,7 +21,7 @@ export default async function SignupPage({ searchParams }: Props) {
   const role = VALID_ROLES.includes(roleParam as Role) ? (roleParam as Role) : null;
 
   // If a role was pre-selected, route through the role page so it auto-applies
-  const resolvedNext = next ?? (role ? `/onboarding/role?role=${role}` : undefined);
+  const resolvedNext = next ?? (role ? `/onboarding/role?role=${role}` : `/onboarding/role`);
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-6">

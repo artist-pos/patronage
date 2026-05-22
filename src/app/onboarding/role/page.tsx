@@ -28,6 +28,7 @@ async function applyRole(role: string) {
     {
       id: user.id,
       username: fallbackUsername,
+      email: user.email?.toLowerCase().trim() ?? null,
       role,
       is_active: true,
       ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
