@@ -3,7 +3,6 @@ import { LandingHero } from "@/components/partners/LandingHero";
 import { AudienceCards } from "@/components/partners/AudienceCards";
 import { FeatureRows } from "@/components/partners/FeatureRows";
 import { PricingTiers } from "@/components/partners/PricingTiers";
-import { LandingTestimonial } from "@/components/partners/LandingTestimonial";
 import { ActivationsColumn } from "@/components/partners/ActivationsColumn";
 import type { Metadata } from "next";
 
@@ -81,8 +80,6 @@ export default async function PartnersPage() {
         pipelineFirstRoundUsed={pipelineFirstRoundUsed}
         isLoggedIn={!!user}
       />
-
-      <LandingTestimonial />
 
       {/* Activations section — enquiry form with existing ActivationsColumn */}
       <div id="activations" className="border-b border-black">

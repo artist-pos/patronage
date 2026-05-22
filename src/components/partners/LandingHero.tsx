@@ -6,27 +6,27 @@ interface Props {
 export function LandingHero({ opportunityCount, artistCount }: Props) {
   return (
     <div className="border-b border-black">
-      <div className="max-w-[1280px] mx-auto px-6 py-20 space-y-8">
-        <div className="space-y-4 max-w-3xl">
+      <div className="max-w-[1600px] mx-auto px-6 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-widest text-stone-400">For Partners</p>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
             The home for arts funding opportunities in Aotearoa and Australia.
           </h1>
-          <p className="text-base text-stone-500 max-w-xl leading-relaxed">
+          <p className="text-sm text-stone-500 max-w-2xl leading-relaxed pt-0.5">
             Free listings, managed application pipelines, and activation partnerships —
             built for arts organisations, councils, galleries, and foundations.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 shrink-0">
           <a
             href="/partner/opportunities/new?type=pipeline"
-            className="inline-flex items-center gap-2 bg-black text-white px-5 py-2.5 text-sm font-medium hover:bg-black/80 transition-colors"
+            className="inline-flex items-center gap-2 bg-black text-white px-5 py-2.5 text-sm font-medium hover:bg-black/80 transition-colors whitespace-nowrap"
           >
             Configure a pipeline →
           </a>
           <a
             href="/partner/opportunities/new?type=free"
-            className="inline-flex items-center gap-2 border border-black px-5 py-2.5 text-sm font-medium hover:bg-black hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 border border-black px-5 py-2.5 text-sm font-medium hover:bg-black hover:text-white transition-colors whitespace-nowrap"
           >
             List for free →
           </a>
@@ -35,7 +35,7 @@ export function LandingHero({ opportunityCount, artistCount }: Props) {
 
       {/* Stats strip */}
       <div className="border-t border-black/20">
-        <div className="max-w-[1280px] mx-auto px-6 py-5 flex flex-wrap gap-x-12 gap-y-3">
+        <div className="max-w-[1600px] mx-auto px-6 py-5 flex flex-wrap gap-x-12 gap-y-3">
           {opportunityCount > 0 && (
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">
