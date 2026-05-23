@@ -10,24 +10,24 @@ function hashSeed(str: string): number {
   return h;
 }
 
-// Avatar: 6 rich, jewel-toned gradient pairs
+// Avatar: light-to-dark pairs from the brand palette — dark enough for white initials
 const AVATAR_GRADIENTS = [
-  { from: "#c07850", to: "#7a3c1e" },   // terracotta
-  { from: "#7268cc", to: "#3a2888" },   // indigo
-  { from: "#52a882", to: "#286050" },   // teal
-  { from: "#c07088", to: "#783050" },   // rose
-  { from: "#c88c40", to: "#845010" },   // amber
-  { from: "#6080a8", to: "#304868" },   // slate
+  { from: "#E8E3DA", to: "#5C5852" },
+  { from: "#C9C4BC", to: "#2A2724" },
+  { from: "#B5A998", to: "#5C5852" },
+  { from: "#E8E3DA", to: "#2A2724" },
+  { from: "#9A958E", to: "#2A2724" },
+  { from: "#C9C4BC", to: "#5C5852" },
 ] as const;
 
-// Banner: 6 atmospheric, gallery-like gradients
+// Banner: subtle light-to-mid washes from the same palette
 const BANNER_GRADIENTS = [
-  "linear-gradient(135deg, #f2e8d4 0%, #dcc8a8 100%)",   // warm parchment
-  "linear-gradient(135deg, #d4e4e0 0%, #a0c0bc 100%)",   // seafoam
-  "linear-gradient(135deg, #e4d8e4 0%, #bca0bc 100%)",   // lavender
-  "linear-gradient(135deg, #d0d8e8 0%, #98b0c8 100%)",   // steel blue
-  "linear-gradient(135deg, #ece0d4 0%, #ccb090 100%)",   // sand
-  "linear-gradient(135deg, #d4e0d4 0%, #9cbc9c 100%)",   // sage
+  "linear-gradient(135deg, #E8E3DA 0%, #C9C4BC 100%)",
+  "linear-gradient(135deg, #E8E3DA 0%, #B5A998 100%)",
+  "linear-gradient(135deg, #C9C4BC 0%, #9A958E 100%)",
+  "linear-gradient(135deg, #E8E3DA 0%, #9A958E 100%)",
+  "linear-gradient(135deg, #C9C4BC 0%, #B5A998 100%)",
+  "linear-gradient(135deg, #E8E3DA 0%, #5C5852 100%)",
 ] as const;
 
 export function getAvatarGradient(seed: string): { from: string; to: string } {
