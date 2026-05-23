@@ -38,6 +38,7 @@ import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork,
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
+import { getAvatarGradient, getBannerGradient } from "@/lib/defaults";
 
 const VALID_TABS = ["overview", "work", "cv", "support"] as const;
 type TabType = typeof VALID_TABS[number];
@@ -514,8 +515,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
       {/* ── Banner ── */}
-      {profile.featured_image_url && (
-        <div className="w-full aspect-[42/9] relative overflow-hidden bg-stone-100">
+      <div className="w-full aspect-[42/9] relative overflow-hidden">
+        {profile.featured_image_url ? (
           <Image
             src={profile.featured_image_url}
             alt={`${displayName} banner`}
@@ -525,14 +526,19 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             className="object-cover"
             style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
           />
-        </div>
-      )}
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: getBannerGradient(profile.username) }}
+          />
+        )}
+      </div>
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
 
         {/* ── Identity block ── */}
-        <div className={profile.featured_image_url && profile.avatar_url ? "-mt-[60px] sm:-mt-[100px]" : "pt-8 sm:pt-12"}>
-          {profile.avatar_url && (
+        <div className="-mt-[60px] sm:-mt-[100px]">
+          {profile.avatar_url ? (
             <div className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
               <Image
                 src={profile.avatar_url}
@@ -541,6 +547,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 className="object-cover"
                 sizes="200px"
               />
+            </div>
+          ) : (
+            <div
+              className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background outline outline-1 outline-black z-10 mb-4 flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${getAvatarGradient(profile.username).from} 0%, ${getAvatarGradient(profile.username).to} 100%)` }}
+            >
+              <span className="text-4xl sm:text-6xl font-semibold text-white/90 select-none">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
             </div>
           )}
 

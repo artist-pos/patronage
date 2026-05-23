@@ -37,11 +37,11 @@ const FEATURES = [
 export function FeatureRows() {
   return (
     <div className="border-b border-black">
-      <div className="max-w-[1280px] mx-auto px-6 py-16 space-y-0">
+      <div className="max-w-[1280px] mx-auto px-6 py-8 space-y-0">
         {FEATURES.map((f, i) => (
           <div
             key={f.code}
-            className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 py-14 ${
+            className={`grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 py-8 ${
               i < FEATURES.length - 1 ? "border-b border-black/20" : ""
             }`}
           >

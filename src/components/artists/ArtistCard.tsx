@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import type { ProfileWithImage } from "@/types/database";
 import type { BadgeSet } from "@/lib/badges";
+import { getAvatarGradient, getBannerGradient } from "@/lib/defaults";
 
 function locationLabel(artist: ProfileWithImage & { city?: string | null }): string | null {
   const parts = [artist.city, artist.country].filter(Boolean);
@@ -65,7 +66,10 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
             />
           </div>
         ) : (
-          <div className="w-10 h-10 shrink-0 border border-black bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+          <div
+            className="w-10 h-10 shrink-0 border border-black flex items-center justify-center text-sm font-semibold text-white/90"
+            style={{ background: `linear-gradient(135deg, ${getAvatarGradient(artist.username).from} 0%, ${getAvatarGradient(artist.username).to} 100%)` }}
+          >
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
@@ -121,7 +125,10 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
               sizes="50vw"
             />
           ) : (
-            <div className="absolute inset-0 bg-muted flex items-center justify-center text-4xl text-muted-foreground font-medium">
+            <div
+              className="absolute inset-0 flex items-center justify-center text-4xl font-semibold text-white/80"
+              style={{ background: getBannerGradient(artist.username) }}
+            >
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
@@ -187,7 +194,10 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
             <div className="absolute inset-0 bg-black/30" />
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-stone-400">
+          <div
+            className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-white/80"
+            style={{ background: getBannerGradient(artist.username) }}
+          >
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
@@ -196,7 +206,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
       {/* Right: info block — 60% width, 12px left padding */}
       <div className="bg-white border-l border-black flex flex-col w-3/5 pl-3 pr-2 pt-6 pb-2 sm:pb-3 gap-2 sm:overflow-hidden">
         <div className="flex items-start gap-2">
-          {artist.avatar_url && (
+          {artist.avatar_url ? (
             <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
               <Image
                 src={artist.avatar_url}
@@ -205,6 +215,13 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
                 className="object-cover"
                 sizes="40px"
               />
+            </div>
+          ) : (
+            <div
+              className="w-10 h-10 shrink-0 border border-black flex items-center justify-center text-sm font-semibold text-white/90"
+              style={{ background: `linear-gradient(135deg, ${getAvatarGradient(artist.username).from} 0%, ${getAvatarGradient(artist.username).to} 100%)` }}
+            >
+              {displayName.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="flex flex-col gap-1 pt-1 min-w-0">

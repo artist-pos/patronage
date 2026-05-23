@@ -17,20 +17,6 @@ export function LandingHero({ opportunityCount, artistCount }: Props) {
             built for arts organisations, councils, galleries, and foundations.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3 shrink-0">
-          <a
-            href="/partner/opportunities/new?type=pipeline"
-            className="inline-flex items-center gap-2 bg-black text-white px-5 py-2.5 text-sm font-medium hover:bg-black/80 transition-colors whitespace-nowrap"
-          >
-            Configure a pipeline →
-          </a>
-          <a
-            href="/partner/opportunities/new?type=free"
-            className="inline-flex items-center gap-2 border border-black px-5 py-2.5 text-sm font-medium hover:bg-black hover:text-white transition-colors whitespace-nowrap"
-          >
-            List for free →
-          </a>
-        </div>
       </div>
 
       {/* Stats strip */}

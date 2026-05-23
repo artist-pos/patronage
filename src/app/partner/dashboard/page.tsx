@@ -8,15 +8,59 @@ export const metadata: Metadata = {
 };
 
 const STATUS_COLOURS: Record<string, string> = {
-  pending: "bg-stone-300",
-  shortlisted: "bg-amber-400",
-  selected: "bg-emerald-500",
+  pending:                 "bg-amber-400",
+  shortlisted:             "bg-black",
+  selected:                "bg-emerald-500",
   approved_pending_assets: "bg-blue-400",
-  production_ready: "bg-violet-500",
-  rejected: "bg-red-400",
+  production_ready:        "bg-violet-500",
+  rejected:                "bg-stone-300",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending:                 "new",
+  shortlisted:             "shortlisted",
+  selected:                "selected",
+  approved_pending_assets: "in production",
+  production_ready:        "production-ready",
+  rejected:                "rejected",
 };
 
 const STATUS_ORDER = ["pending", "shortlisted", "selected", "approved_pending_assets", "production_ready", "rejected"];
+
+const LEGEND = [
+  { key: "pending",                 label: "New",              colour: "bg-amber-400"   },
+  { key: "shortlisted",             label: "Shortlisted",      colour: "bg-black"       },
+  { key: "selected",                label: "Selected",         colour: "bg-emerald-500" },
+  { key: "approved_pending_assets", label: "Pending assets",   colour: "bg-blue-400"   },
+  { key: "production_ready",        label: "Production-ready", colour: "bg-violet-500"  },
+  { key: "rejected",                label: "Rejected",         colour: "bg-stone-300"   },
+];
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function Sparkline({ data }: { data: number[] }) {
+  if (!data.length || data.every((v) => v === 0)) return null;
+  const max = Math.max(...data, 1);
+  const W = 60, H = 28, pts = data.length;
+  const points = data.map((v, i) => {
+    const x = (i / (pts - 1)) * W;
+    const y = H - (v / max) * H;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg width={W} height={H} className="shrink-0 overflow-visible">
+      <polyline points={points} fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default async function PartnerDashboardPage() {
   const supabase = await createClient();
@@ -54,7 +98,7 @@ export default async function PartnerDashboardPage() {
     [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
       supabase
         .from("opportunities")
-        .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+        .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, city, country, funding_range, profiles!opportunities_profile_id_fkey(full_name, username)")
         .eq("routing_type", "pipeline")
         .order("created_at", { ascending: false }),
       supabase
@@ -76,13 +120,13 @@ export default async function PartnerDashboardPage() {
       ownOrCollab
         ? supabase
             .from("opportunities")
-            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, city, country, funding_range, profiles!opportunities_profile_id_fkey(full_name, username)")
             .eq("routing_type", "pipeline")
             .or(ownOrCollab)
             .order("created_at", { ascending: false })
         : supabase
             .from("opportunities")
-            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, profiles!opportunities_profile_id_fkey(full_name, username)")
+            .select("id, title, type, deadline, is_active, routing_type, profile_id, organiser, city, country, funding_range, profiles!opportunities_profile_id_fkey(full_name, username)")
             .eq("routing_type", "pipeline")
             .eq("profile_id", user.id)
             .order("created_at", { ascending: false }),
@@ -116,18 +160,39 @@ export default async function PartnerDashboardPage() {
         .in("opportunity_id", oppIds)
     : { data: [] };
 
-  const countMap = new Map<string, { total: number; pending: number; shortlisted: number; selected: number; byStatus: Record<string, number> }>();
+  // Build date buckets for sparklines (last 14 days)
+  const SPARKLINE_DAYS = 14;
+  const now = Date.now();
+  const dayMs = 86400000;
+  const bucketStart = now - SPARKLINE_DAYS * dayMs;
+
+  const countMap = new Map<string, {
+    total: number; pending: number; shortlisted: number; selected: number;
+    byStatus: Record<string, number>;
+    lastAppAt: string | null;
+    dailyBuckets: number[];
+  }>();
   for (const app of appCounts ?? []) {
     const a = app as { opportunity_id: string; status: string; created_at: string };
     if (!countMap.has(a.opportunity_id)) {
-      countMap.set(a.opportunity_id, { total: 0, pending: 0, shortlisted: 0, selected: 0, byStatus: {} });
+      countMap.set(a.opportunity_id, {
+        total: 0, pending: 0, shortlisted: 0, selected: 0,
+        byStatus: {}, lastAppAt: null,
+        dailyBuckets: Array(SPARKLINE_DAYS).fill(0),
+      });
     }
     const entry = countMap.get(a.opportunity_id)!;
     entry.total++;
     entry.byStatus[a.status] = (entry.byStatus[a.status] ?? 0) + 1;
     if (a.status === "pending") entry.pending++;
     if (a.status === "shortlisted") entry.shortlisted++;
-    if (a.status === "selected" || a.status === "approved_pending_assets" || a.status === "production_ready") entry.selected++;
+    if (["selected", "approved_pending_assets", "production_ready"].includes(a.status)) entry.selected++;
+    if (!entry.lastAppAt || a.created_at > entry.lastAppAt) entry.lastAppAt = a.created_at;
+    const appTime = new Date(a.created_at).getTime();
+    if (appTime >= bucketStart) {
+      const idx = Math.floor((appTime - bucketStart) / dayMs);
+      if (idx >= 0 && idx < SPARKLINE_DAYS) entry.dailyBuckets[idx]++;
+    }
   }
 
   // KPI aggregates
@@ -184,13 +249,28 @@ export default async function PartnerDashboardPage() {
       {/* ── Pipeline rows ────────────────────────────────────────────────────── */}
       {hasPipelines && (
         <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
-            {isAdminUser ? `Active pipelines (${(opportunities as unknown[]).length} total)` : "Your pipelines"}
-          </p>
+          {/* Header row with legend */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              Live pipelines · {(opportunities as unknown[]).length}
+            </p>
+            <div className="flex items-center gap-4 flex-wrap">
+              {LEGEND.map((l) => (
+                <div key={l.key} className="flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${l.colour}`} />
+                  <span className="text-[11px] text-stone-400">{l.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {(opportunities as any[]).map((opp) => {
-              const counts = countMap.get(opp.id) ?? { total: 0, pending: 0, shortlisted: 0, selected: 0, byStatus: {} };
+              const counts = countMap.get(opp.id) ?? {
+                total: 0, pending: 0, shortlisted: 0, selected: 0,
+                byStatus: {}, lastAppAt: null, dailyBuckets: [],
+              };
               const isCollaboratorOpp = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== user.id;
               const partnerName = isAdminUser
                 ? (opp.profiles as { full_name: string | null; username: string } | null)?.full_name
@@ -200,62 +280,107 @@ export default async function PartnerDashboardPage() {
               const daysLeft = opp.deadline
                 ? Math.ceil((new Date(opp.deadline + "T00:00:00").getTime() - Date.now()) / 86400000)
                 : null;
+              const reviewedCount = counts.total - (counts.byStatus.pending ?? 0);
+              const reviewedPct = counts.total > 0 ? Math.round((reviewedCount / counts.total) * 100) : 0;
+              const location = [opp.city, opp.country].filter(Boolean).join(", ");
 
               return (
                 <Link
                   key={opp.id}
                   href={`/partner/dashboard/${opp.id}`}
-                  className="flex items-center gap-6 border border-black/10 bg-white p-4 hover:border-black/30 hover:shadow-sm transition-all group"
+                  className="block border border-black/10 bg-white p-5 hover:border-black/30 hover:shadow-sm transition-all group"
                 >
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-sm">{opp.title}</p>
-                      {isCollaboratorOpp && (
-                        <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Collaborator</span>
-                      )}
-                    </div>
-                    <div className="flex gap-3 text-xs text-stone-400 flex-wrap">
-                      <span>{opp.type}</span>
-                      {partnerName && <span>{partnerName}</span>}
-                      {daysLeft !== null && (
-                        <span className={daysLeft < 7 ? "text-red-500" : ""}>
-                          {daysLeft > 0 ? `${daysLeft}d left` : "Closed"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Stage bar */}
-                  {counts.total > 0 && (
-                    <div className="shrink-0 w-40 space-y-1 hidden md:block">
-                      <div className="flex h-2 rounded-full overflow-hidden gap-px">
-                        {STATUS_ORDER.map((s) => {
-                          const n = counts.byStatus[s] ?? 0;
-                          if (!n) return null;
-                          const pct = (n / counts.total) * 100;
-                          return (
-                            <div
-                              key={s}
-                              className={`${STATUS_COLOURS[s]} rounded-sm`}
-                              style={{ width: `${pct}%` }}
-                              title={`${s}: ${n}`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <p className="text-[10px] text-stone-400">{counts.total} applicant{counts.total !== 1 ? "s" : ""}</p>
-                    </div>
-                  )}
-
-                  {/* Stats */}
-                  <div className="shrink-0 flex items-center gap-4 text-xs text-stone-400">
-                    {counts.pending > 0 && (
-                      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded font-medium">
-                        {counts.pending} new
+                  {/* Tags row */}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-xs border border-black/20 px-2 py-0.5">{opp.type}</span>
+                    {location && <span className="text-xs text-stone-500">{location}</span>}
+                    {isCollaboratorOpp && (
+                      <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Collaborator</span>
+                    )}
+                    {daysLeft !== null && (
+                      <span className={`text-xs ${daysLeft < 7 ? "text-red-500 font-medium" : "text-stone-400"}`}>
+                        {daysLeft > 0 ? `${daysLeft} days left` : "Closed"}
                       </span>
                     )}
-                    <span className="group-hover:text-foreground transition-colors">→</span>
+                  </div>
+
+                  {/* Title */}
+                  <p className="font-semibold text-base mb-1.5 leading-snug">{opp.title}</p>
+
+                  {/* Metadata row */}
+                  <div className="flex items-center gap-0 text-xs text-stone-400 mb-4 flex-wrap">
+                    {opp.funding_range && (
+                      <>
+                        <span className="font-medium text-stone-600">{opp.funding_range}</span>
+                        <span className="mx-2.5">·</span>
+                      </>
+                    )}
+                    {(opp.organiser || partnerName) && (
+                      <>
+                        <span>{partnerName ?? opp.organiser}</span>
+                        {counts.lastAppAt && <span className="mx-2.5">·</span>}
+                      </>
+                    )}
+                    {counts.lastAppAt && (
+                      <span>Last application {timeAgo(counts.lastAppAt)}</span>
+                    )}
+                  </div>
+
+                  {/* Bottom: bar + counts | total | sparkline | arrow */}
+                  <div className="flex items-end gap-6">
+                    {/* Status bar + breakdown */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      {counts.total > 0 ? (
+                        <>
+                          <div className="flex h-2 overflow-hidden gap-px">
+                            {STATUS_ORDER.map((s) => {
+                              const n = counts.byStatus[s] ?? 0;
+                              if (!n) return null;
+                              return (
+                                <div
+                                  key={s}
+                                  className={STATUS_COLOURS[s]}
+                                  style={{ width: `${(n / counts.total) * 100}%` }}
+                                  title={`${STATUS_LABEL[s]}: ${n}`}
+                                />
+                              );
+                            })}
+                          </div>
+                          <div className="flex gap-3 text-[11px] text-stone-400 flex-wrap">
+                            {STATUS_ORDER.map((s) => {
+                              const n = counts.byStatus[s] ?? 0;
+                              if (!n) return null;
+                              return (
+                                <span key={s}>
+                                  <strong className="text-stone-700 font-semibold">{n}</strong> {STATUS_LABEL[s]}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-stone-300">No applications yet</p>
+                      )}
+                    </div>
+
+                    {/* Total count */}
+                    {counts.total > 0 && (
+                      <div className="shrink-0 text-right">
+                        <p className="text-2xl font-semibold leading-none">{counts.total}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">applications</p>
+                        <p className="text-[11px] text-stone-400">{reviewedPct}% reviewed</p>
+                      </div>
+                    )}
+
+                    {/* Sparkline */}
+                    {counts.dailyBuckets.length > 0 && (
+                      <div className="shrink-0 hidden md:block">
+                        <Sparkline data={counts.dailyBuckets} />
+                      </div>
+                    )}
+
+                    {/* Arrow */}
+                    <span className="shrink-0 text-stone-300 group-hover:text-stone-600 transition-colors text-lg">→</span>
                   </div>
                 </Link>
               );
