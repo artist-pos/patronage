@@ -8,13 +8,33 @@ async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
 }
 
+function toSlug(title: string, organiser: string | null, deadline: string | null): string {
+  const slugify = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const organiserPart = organiser ? slugify(organiser).slice(0, 40).replace(/-+$/, "") : "";
+  const titlePart = slugify(title).slice(0, 60).replace(/-+$/, "");
+  const year = deadline ? new Date(deadline).getFullYear() : null;
+  const base = [organiserPart, titlePart].filter(Boolean).join("-");
+  return year ? `${base}-${year}` : base;
+}
+
 export async function approveOpportunity(id: string) {
   await guard();
   const admin = createAdminClient();
-  await admin
+
+  // Fetch the opportunity so we can generate a slug if one is missing.
+  const { data: opp } = await admin
     .from("opportunities")
-    .update({ status: "published", is_active: true })
-    .eq("id", id);
+    .select("slug, title, organiser, deadline")
+    .eq("id", id)
+    .single();
+
+  const updates: Record<string, unknown> = { status: "published", is_active: true };
+  if (opp && !opp.slug) {
+    updates.slug = toSlug(opp.title ?? "", opp.organiser ?? null, opp.deadline ?? null);
+  }
+
+  await admin.from("opportunities").update(updates).eq("id", id);
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/opportunities");
   revalidatePath(`/opportunities/${id}`);
@@ -34,10 +54,27 @@ export async function rejectOpportunity(id: string) {
 export async function approveAll(ids: string[]) {
   await guard();
   const admin = createAdminClient();
-  await admin
+
+  // Fetch all to generate slugs for any that are missing one.
+  const { data: opps } = await admin
     .from("opportunities")
-    .update({ status: "published", is_active: true })
+    .select("id, slug, title, organiser, deadline")
     .in("id", ids);
+
+  // Generate slugs in parallel for slug-less opps, then bulk-approve all.
+  const slugUpdates = (opps ?? [])
+    .filter((o) => !o.slug)
+    .map((o) => admin
+      .from("opportunities")
+      .update({ slug: toSlug(o.title ?? "", o.organiser ?? null, o.deadline ?? null) })
+      .eq("id", o.id)
+    );
+
+  await Promise.all([
+    ...slugUpdates,
+    admin.from("opportunities").update({ status: "published", is_active: true }).in("id", ids),
+  ]);
+
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/opportunities");
   revalidatePath("/opportunities/[id]", "page");

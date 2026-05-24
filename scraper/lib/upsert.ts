@@ -213,7 +213,7 @@ export async function upsertOpportunity(
     }
 
     if (inserted?.id) {
-        const slug = toSlug(record.title, record.deadline ?? null);
+        const slug = toSlug(record.title, record.organiser ?? null, record.deadline ?? null);
         await supabase.from("opportunities").update({ slug, last_seen_at: new Date().toISOString() }).eq("id", inserted.id);
         // Update cache so subsequent sources don't re-insert this
         if (normalisedUrl) cache?.urls.set(normalisedUrl, emptyMeta);
@@ -241,14 +241,16 @@ export async function touchOpportunity(
         .eq("url", url);
 }
 
-function toSlug(title: string, deadline: string | null): string {
-    const base = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 70)
-        .replace(/-+$/, "");
+function toSlug(title: string, organiser: string | null, deadline: string | null): string {
+    const slugify = (s: string) =>
+        s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+    const organiserPart = organiser ? slugify(organiser).slice(0, 40).replace(/-+$/, "") : "";
+    const titlePart = slugify(title).slice(0, 60).replace(/-+$/, "");
     const year = deadline ? new Date(deadline).getFullYear() : null;
+
+    const parts = [organiserPart, titlePart].filter(Boolean);
+    const base = parts.join("-");
     return year ? `${base}-${year}` : base;
 }
 
