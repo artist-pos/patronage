@@ -24,6 +24,7 @@ interface ParsedOpportunity {
   tags?: string[];
   full_description?: string;
   application_url?: string;
+  email?: string;
 }
 
 const OPP_TYPE_VALUES = [
@@ -49,6 +50,8 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
   if (parsed.disciplines?.length) patch.sub_categories = parsed.disciplines;
   if (parsed.career_stage?.length) patch.career_stage = parsed.career_stage;
   if (parsed.tags?.length) patch.tags = parsed.tags;
+  if (parsed.application_url) patch.url = parsed.application_url;
+  if (parsed.email) patch.contact_email = parsed.email;
   return patch;
 }
 
@@ -193,6 +196,8 @@ export interface Patch {
   sub_categories?: string[] | null;
   career_stage?: string[] | null;
   tags?: string[] | null;
+  url?: string | null;
+  contact_email?: string | null;
 }
 
 const OPP_TYPES: OppTypeEnum[] = [
@@ -425,6 +430,30 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
             placeholder="Eligibility criteria, what's involved, context, contact information…"
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black resize-none"
           />
+        </div>
+
+        {/* Application link + contact email */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Application link <span className="text-stone-400">optional</span></label>
+            <input
+              type="url"
+              value={(opp as unknown as { url?: string | null }).url ?? ""}
+              onChange={(e) => onChange({ url: e.target.value || null })}
+              placeholder="https://…"
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Contact email <span className="text-stone-400">optional</span></label>
+            <input
+              type="email"
+              value={(opp as unknown as { contact_email?: string | null }).contact_email ?? ""}
+              onChange={(e) => onChange({ contact_email: e.target.value || null })}
+              placeholder="applications@example.com"
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
         </div>
 
         {/* Featured image */}

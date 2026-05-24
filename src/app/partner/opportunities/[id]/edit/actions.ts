@@ -30,6 +30,7 @@ export async function updateOpportunityPartner(
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
+    contact_email?: string | null;
     type?: string;
     country?: string;
     city?: string | null;

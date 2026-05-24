@@ -719,14 +719,31 @@ export default async function OpportunityPage({ params }: Props) {
           <UserCTA opportunityId={opp.id} opp={opp} />
         </Suspense>
       ) : opp.url ? (
-        <OpportunityCTALink
-          href={opp.url}
-          opportunityId={opp.id}
-          title={opp.title}
-          organiser={opp.organiser}
-          label="Apply on Official Site →"
+        <div className="flex flex-wrap items-center gap-4">
+          <OpportunityCTALink
+            href={opp.url}
+            opportunityId={opp.id}
+            title={opp.title}
+            organiser={opp.organiser}
+            label="Apply on Official Site →"
+            className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+          />
+          {opp.contact_email && (
+            <a
+              href={`mailto:${opp.contact_email}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              {opp.contact_email}
+            </a>
+          )}
+        </div>
+      ) : opp.contact_email ? (
+        <a
+          href={`mailto:${opp.contact_email}`}
           className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
-        />
+        >
+          Apply via email →
+        </a>
       ) : null}
 
       {/* ── Back link — STATIC ──────────────────────────────────────────── */}
