@@ -149,8 +149,8 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
             ))}
           </div>
 
-          {/* Featured placement add-on — only relevant for Pipeline (Standard can upgrade to Featured tier; Featured already includes it) */}
-          {selectedTier === "pipeline" && (
+          {/* Featured placement add-on — shown for Standard and Pipeline; Featured tier always includes it */}
+          {(selectedTier === "standard" || selectedTier === "pipeline") && (
             <label className="flex items-start gap-3 cursor-pointer border border-border px-4 py-3">
               <input
                 type="checkbox"
@@ -181,7 +181,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                 : "Your first Pipeline round is free. No commitment, no card required. Featured rate is introductory and subject to change."}
             </p>
           )}
-          {(selectedTier === "featured" || (selectedTier === "pipeline" && pipelineFirstRoundUsed)) && (
+          {(selectedTier === "featured" || (selectedTier === "standard" && addFeatured) || (selectedTier === "pipeline" && (pipelineFirstRoundUsed || addFeatured))) && (
             <p className="text-[11px] text-muted-foreground">
               Paid tiers add a 2.9% + 30c card processing fee at checkout. Itemised on the Stripe payment page.
             </p>
