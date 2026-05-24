@@ -372,12 +372,11 @@ export default async function OpportunityPage({ params }: Props) {
       ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", opp.profile_id).single()
       : Promise.resolve({ data: null }),
   ]);
-  // Only link to the profile if it is actually a partner/admin account.
-  // Opportunities submitted by an artist on behalf of an org should not
-  // link back to that artist's public profile.
+  // Only link to the profile if it belongs to a dedicated partner account.
+  // Admins, owners, and artists who submitted on behalf of an org should
+  // not have their personal profile linked as the organiser.
   const rawPartner = partnerProfileRes.data as { username: string; full_name: string | null; avatar_url: string | null; role: string } | null;
-  const PARTNER_ROLES = new Set(["partner", "admin", "owner"]);
-  const partnerProfile = rawPartner && PARTNER_ROLES.has(rawPartner.role) ? rawPartner : null;
+  const partnerProfile = rawPartner && rawPartner.role === "partner" ? rawPartner : null;
   const seen = new Set<string>();
   const candidates: RelatedOpp[] = [];
   for (const row of [...(byTypeRes.data ?? []), ...(byCountryRes.data ?? [])]) {
