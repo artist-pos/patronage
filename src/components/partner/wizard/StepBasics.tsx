@@ -21,6 +21,7 @@ interface ParsedOpportunity {
   entry_fee?: number | null;
   disciplines?: string[];
   career_stage?: string[];
+  tags?: string[];
   full_description?: string;
   application_url?: string;
 }
@@ -47,6 +48,7 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
   if (parsed.entry_fee != null) patch.entry_fee = parsed.entry_fee;
   if (parsed.disciplines?.length) patch.sub_categories = parsed.disciplines;
   if (parsed.career_stage?.length) patch.career_stage = parsed.career_stage;
+  if (parsed.tags?.length) patch.tags = parsed.tags;
   return patch;
 }
 
@@ -190,6 +192,7 @@ export interface Patch {
   featured_image_url?: string | null;
   sub_categories?: string[] | null;
   career_stage?: string[] | null;
+  tags?: string[] | null;
 }
 
 const OPP_TYPES: OppTypeEnum[] = [
@@ -238,6 +241,20 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
   function toggleStage(s: string) {
     const curr = opp.career_stage ?? [];
     onChange({ career_stage: curr.includes(s) ? curr.filter((x) => x !== s) : [...curr, s] });
+  }
+
+  function removeTag(t: string) {
+    onChange({ tags: (opp.tags ?? []).filter((x) => x !== t) });
+  }
+
+  const [tagInput, setTagInput] = useState("");
+
+  function addTag(raw: string) {
+    const t = raw.trim();
+    if (!t) return;
+    const curr = opp.tags ?? [];
+    if (!curr.includes(t)) onChange({ tags: [...curr, t] });
+    setTagInput("");
   }
 
   return (
@@ -496,6 +513,53 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
                 {s}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Tags <span className="text-stone-400">optional — identity, themes, focus</span>
+          </label>
+          <p className="text-xs text-stone-400">
+            e.g. Māori, Pasifika, Women, LGBTQ+, Disabled artists, Environmental, Collaborative
+          </p>
+          {(opp.tags ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {(opp.tags ?? []).map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 text-xs bg-stone-100 text-stone-700 px-2.5 py-1 rounded-full">
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(t)}
+                    className="text-stone-400 hover:text-black leading-none"
+                    aria-label={`Remove tag ${t}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); }
+              }}
+              placeholder="Type a tag and press Enter"
+              className="flex-1 border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            />
+            <button
+              type="button"
+              onClick={() => addTag(tagInput)}
+              disabled={!tagInput.trim()}
+              className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
+            >
+              Add
+            </button>
           </div>
         </div>
       </div>
