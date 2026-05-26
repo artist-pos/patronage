@@ -57,6 +57,48 @@ export default async function ProjectModal({ params }: Props) {
             <audio controls className="w-full" src={update.audio_url} />
           </div>
         )}
+        {update.content_type === "audio" && update.embed_url && !update.audio_url && (
+          <div className="border border-black bg-zinc-900 p-6">
+            <iframe
+              src={update.embed_url}
+              width="100%"
+              height="166"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              className="w-full"
+            />
+          </div>
+        )}
+        {update.content_type === "video" && (
+          update.embed_url ? (
+            <div className="border border-black bg-black overflow-hidden aspect-video">
+              <iframe
+                src={update.embed_url}
+                title={update.caption ?? `Video by ${name}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          ) : update.video_url ? (
+            <div className="border border-black bg-black overflow-hidden">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video controls className="w-full max-h-[70vh]" src={update.video_url} />
+            </div>
+          ) : null
+        )}
+        {update.content_type === "embed" && update.embed_url && update.embed_provider !== "Patronage" && (
+          <div className="border border-black overflow-hidden">
+            <iframe
+              src={update.embed_url}
+              title={update.caption ?? `Embed by ${name}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full"
+              style={{ height: 400 }}
+            />
+          </div>
+        )}
         {update.content_type === "text" && update.text_content && (
           <div className="border border-black p-6 bg-background">
             {update.text_content.split("\n\n").map((para, i) => (

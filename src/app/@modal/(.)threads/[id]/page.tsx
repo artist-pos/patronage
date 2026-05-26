@@ -156,6 +156,48 @@ function ModalThreadPost({
             <audio controls className="w-full" src={post.audio_url} />
           </div>
         )}
+        {post.content_type === "audio" && post.embed_url && !post.audio_url && (
+          <div className="border border-black bg-zinc-900 p-4">
+            <iframe
+              src={post.embed_url}
+              width="100%"
+              height="166"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              className="w-full"
+            />
+          </div>
+        )}
+        {post.content_type === "video" && (
+          post.embed_url ? (
+            <div className="border border-black bg-black overflow-hidden aspect-video">
+              <iframe
+                src={post.embed_url}
+                title={post.caption ?? "Video"}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          ) : post.video_url ? (
+            <div className="border border-black bg-black overflow-hidden">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video controls className="w-full max-h-[70vh]" src={post.video_url} />
+            </div>
+          ) : null
+        )}
+        {post.content_type === "embed" && post.embed_url && post.embed_provider !== "Patronage" && (
+          <div className="border border-black overflow-hidden">
+            <iframe
+              src={post.embed_url}
+              title={post.caption ?? "Embed"}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full"
+              style={{ height: 400 }}
+            />
+          </div>
+        )}
         {post.content_type === "text" && post.text_content && (
           <div className="border border-black p-4 bg-background">
             {post.text_content.split("\n\n").map((para, i) => (
