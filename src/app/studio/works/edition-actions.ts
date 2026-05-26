@@ -107,7 +107,9 @@ async function syncArtworkFromEdition(
 // ── Create work with initial edition ─────────────────────────────────────────
 
 export async function createWorkWithEdition(data: {
+  // Primary image URL — empty string "" is valid for non-image works
   url: string;
+  content_type?: string | null;
   title: string | null;
   year: number | null;
   medium: string | null;
@@ -119,11 +121,12 @@ export async function createWorkWithEdition(data: {
   description: string | null;
   acquisitionMode?: AcquisitionMode | null;
   forSale?: boolean;
-  // Alternative media (video file, audio file, or embed URL)
+  // Media fields
   video_url?: string | null;
   audio_url?: string | null;
   embed_url?: string | null;
   embed_provider?: string | null;
+  text_content?: string | null;
   edition: {
     price_cents: number | null;
     currency: string;
@@ -176,10 +179,12 @@ export async function createWorkWithEdition(data: {
       hidden_from_artist: false,
       position: 9999,
       source: 'self_registered',
+      content_type: data.content_type ?? 'image',
       video_url: data.video_url ?? null,
       audio_url: data.audio_url ?? null,
       embed_url: data.embed_url ?? null,
       embed_provider: data.embed_provider ?? null,
+      text_content: data.text_content ?? null,
     })
     .select("id, creator_id")
     .single();
