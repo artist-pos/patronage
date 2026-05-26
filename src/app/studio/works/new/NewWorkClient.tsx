@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Music, Play } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createWorkWithEdition } from "@/app/studio/works/edition-actions";
 import { createAndTransferWork } from "@/app/studio/provenance/actions";
+import { uploadDocumentationPhoto } from "@/app/studio/artworks/[id]/actions";
 import type { EditionListingMode, EditionType } from "@/types/database";
 
 const MAX_PX = 1600;
+const MAX_SUPPORTING = 5;
 
 type AcquisitionMode = "buy_now" | "make_offer" | "enquire_first";
 
@@ -76,6 +78,42 @@ function buildSuggestion(cats: string[], surface: string): string {
   const catStr = cats.map((c) => c.toLowerCase()).join(", ");
   if (surface && surface !== "N/A") return `${catStr} on ${surface.toLowerCase()}`;
   return catStr;
+}
+
+// Convert watch URLs to embed URLs
+function toEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+      return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
+    }
+    if (u.hostname === "youtu.be") {
+      return `https://www.youtube.com/embed${u.pathname}`;
+    }
+    if (u.hostname.includes("vimeo.com") && /^\/\d+/.test(u.pathname)) {
+      return `https://player.vimeo.com/video${u.pathname}`;
+    }
+    if (u.hostname.includes("soundcloud.com")) {
+      return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23000000&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function detectProvider(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com") || u.hostname === "youtu.be") return "YouTube";
+    if (u.hostname.includes("vimeo.com")) return "Vimeo";
+    if (u.hostname.includes("soundcloud.com")) return "SoundCloud";
+    if (u.hostname.includes("bandcamp.com")) return "Bandcamp";
+    if (u.hostname.includes("spotify.com")) return "Spotify";
+    return u.hostname.replace("www.", "");
+  } catch {
+    return null;
+  }
 }
 
 async function resizeToWebp(file: File): Promise<Blob> {
@@ -290,7 +328,11 @@ export function NewWorkClient({ profileId, mode }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const supportingInputRef = useRef<HTMLInputElement>(null);
 
+  // Primary image
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -320,6 +362,17 @@ export function NewWorkClient({ profileId, mode }: Props) {
   const [buyerEmail, setBuyerEmail] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [saleNotes, setSaleNotes] = useState("");
+
+  // ── Alternative media ─────────────────────────────────────────────────────
+  const [altMedia, setAltMedia] = useState<"none" | "video" | "audio">("none");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoEmbedUrl, setVideoEmbedUrl] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioEmbedUrl, setAudioEmbedUrl] = useState("");
+
+  // ── Supporting images ─────────────────────────────────────────────────────
+  const [supportingImages, setSupportingImages] = useState<File[]>([]);
+  const [supportingPreviews, setSupportingPreviews] = useState<string[]>([]);
 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -361,6 +414,40 @@ export function NewWorkClient({ profileId, mode }: Props) {
     setFocusedEditionId(newEd.id);
   }
 
+  function handleAltMediaToggle(type: "video" | "audio") {
+    if (altMedia === type) {
+      // Deselect
+      setAltMedia("none");
+      setVideoFile(null);
+      setVideoEmbedUrl("");
+      setAudioFile(null);
+      setAudioEmbedUrl("");
+    } else {
+      setAltMedia(type);
+      // Clear the other type
+      if (type === "video") { setAudioFile(null); setAudioEmbedUrl(""); }
+      if (type === "audio") { setVideoFile(null); setVideoEmbedUrl(""); }
+    }
+  }
+
+  function addSupportingImages(files: FileList | null) {
+    if (!files) return;
+    const remaining = MAX_SUPPORTING - supportingImages.length;
+    if (remaining <= 0) return;
+    const newFiles = Array.from(files).slice(0, remaining);
+    const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
+    setSupportingImages((prev) => [...prev, ...newFiles]);
+    setSupportingPreviews((prev) => [...prev, ...newPreviews]);
+  }
+
+  function removeSupportingImage(index: number) {
+    setSupportingImages((prev) => prev.filter((_, i) => i !== index));
+    setSupportingPreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) { setError("Please choose an image."); return; }
@@ -383,6 +470,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
     try {
       const supabase = createClient();
+
+      // ── Primary image ──────────────────────────────────────────────────────
       const blob = await resizeToWebp(file);
       const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
       const { error: upErr } = await supabase.storage
@@ -392,6 +481,41 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
       const { data: { publicUrl } } = supabase.storage.from("portfolio").getPublicUrl(path);
 
+      // ── Alternative media ─────────────────────────────────────────────────
+      let video_url: string | null = null;
+      let audio_url: string | null = null;
+      let embed_url: string | null = null;
+      let embed_provider: string | null = null;
+
+      if (altMedia === "video" && videoFile) {
+        const ext = videoFile.name.split(".").pop() ?? "mp4";
+        const vidPath = `${profileId}/${Date.now()}.${ext}`;
+        const { error: vidErr } = await supabase.storage
+          .from("video")
+          .upload(vidPath, videoFile, { contentType: videoFile.type || "video/mp4" });
+        if (vidErr) throw new Error(vidErr.message);
+        const { data: { publicUrl: vidPub } } = supabase.storage.from("video").getPublicUrl(vidPath);
+        video_url = vidPub;
+      } else if (altMedia === "video" && videoEmbedUrl.trim()) {
+        const converted = toEmbedUrl(videoEmbedUrl.trim());
+        embed_url = converted ?? videoEmbedUrl.trim();
+        embed_provider = detectProvider(videoEmbedUrl.trim());
+      } else if (altMedia === "audio" && audioFile) {
+        const ext = audioFile.name.split(".").pop() ?? "mp3";
+        const audPath = `${profileId}/${Date.now()}.${ext}`;
+        const { error: audErr } = await supabase.storage
+          .from("audio")
+          .upload(audPath, audioFile, { contentType: audioFile.type || "audio/mpeg" });
+        if (audErr) throw new Error(audErr.message);
+        const { data: { publicUrl: audPub } } = supabase.storage.from("audio").getPublicUrl(audPath);
+        audio_url = audPub;
+      } else if (altMedia === "audio" && audioEmbedUrl.trim()) {
+        const converted = toEmbedUrl(audioEmbedUrl.trim());
+        embed_url = converted ?? audioEmbedUrl.trim();
+        embed_provider = detectProvider(audioEmbedUrl.trim());
+      }
+
+      // ── Dimensions ────────────────────────────────────────────────────────
       const wMm = widthMm.trim() ? parseInt(widthMm, 10) || null : null;
       const hMm = heightMm.trim() ? parseInt(heightMm, 10) || null : null;
       const derivedDimensions = wMm && hMm ? `${wMm} × ${hMm} mm` : wMm ? `${wMm} mm` : null;
@@ -411,6 +535,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
           substrate: e.substrate.trim() || null,
         };
       });
+
+      let artworkId: string | undefined;
 
       if (mode === "sale") {
         const salePriceMajor = parseFloat(salePrice);
@@ -439,6 +565,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
         });
         if (result.error) throw new Error(result.error);
         router.push("/studio/provenance");
+        return;
       } else {
         const origPricing = origEd ? computePricing(origEd.netReceive) : null;
         const result = await createWorkWithEdition({
@@ -454,6 +581,10 @@ export function NewWorkClient({ profileId, mode }: Props) {
           description: description.trim() || null,
           forSale: true,
           acquisitionMode: origEd?.acquisitionMode ?? "enquire_first",
+          video_url,
+          audio_url,
+          embed_url,
+          embed_provider,
           edition: {
             price_cents: origEd?.poa || !origPricing ? null : Math.round(origPricing.listedPrice * 100),
             currency: origEd?.currency ?? "NZD",
@@ -464,8 +595,23 @@ export function NewWorkClient({ profileId, mode }: Props) {
           extraEditions: mappedExtras,
         });
         if (result.error) throw new Error(result.error);
-        router.push(`/studio/works/${result.id}`);
+        artworkId = result.id;
       }
+
+      // ── Supporting images (upload after artwork ID is available) ──────────
+      if (artworkId && supportingImages.length > 0) {
+        await Promise.all(
+          supportingImages.map(async (imgFile) => {
+            const fd = new FormData();
+            fd.set("artworkId", artworkId!);
+            fd.set("type", "other");
+            fd.set("file", imgFile);
+            await uploadDocumentationPhoto(fd);
+          })
+        );
+      }
+
+      router.push(`/studio/works/${artworkId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setUploading(false);
@@ -500,7 +646,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
   const metaForm = (
     <div className="space-y-8">
-      {/* ── Image ── */}
+      {/* ── Primary image ── */}
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Image</h2>
         <label className="flex items-center gap-3 cursor-pointer">
@@ -522,6 +668,151 @@ export function NewWorkClient({ profileId, mode }: Props) {
         </label>
         {preview && (
           <img src={preview} alt="" className="max-h-64 max-w-full object-contain bg-muted" />
+        )}
+      </section>
+
+      {/* ── Supporting images ── */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Supporting images</h2>
+          <span className="text-xs text-muted-foreground">{supportingImages.length}/{MAX_SUPPORTING}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Verso, scale shots, installation views, details — optional. Saved as documentation photos.
+        </p>
+
+        {/* Thumbnails */}
+        {supportingPreviews.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {supportingPreviews.map((src, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={src}
+                  alt={`Supporting image ${i + 1}`}
+                  className="w-20 h-20 object-cover border border-border bg-muted"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSupportingImage(i)}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {supportingImages.length < MAX_SUPPORTING && (
+          <label className="flex items-center gap-3 cursor-pointer w-fit">
+            <span className="text-sm border border-black px-3 py-1.5 hover:bg-muted/40 transition-colors whitespace-nowrap">
+              + Add images
+            </span>
+            <input
+              ref={supportingInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="sr-only"
+              onChange={(e) => addSupportingImages(e.target.files)}
+            />
+          </label>
+        )}
+      </section>
+
+      {/* ── Alternative media ── */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Alternative media</h2>
+        <p className="text-xs text-muted-foreground">
+          Attach a video or audio file alongside this work — optional.
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleAltMediaToggle("video")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border transition-colors ${
+              altMedia === "video"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+            }`}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Video
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAltMediaToggle("audio")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border transition-colors ${
+              altMedia === "audio"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+            }`}
+          >
+            <Music className="w-3.5 h-3.5" />
+            Audio
+          </button>
+        </div>
+
+        {altMedia === "video" && (
+          <div className="space-y-3 pl-3 border-l-2 border-black">
+            <label className="flex flex-col items-start gap-1 cursor-pointer">
+              <span className="text-xs text-muted-foreground">Upload a video file</span>
+              <span className="text-sm border border-black px-3 py-1.5 hover:bg-muted/40 transition-colors">
+                {videoFile ? videoFile.name : "Browse…"}
+              </span>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                className="sr-only"
+                onChange={(e) => { setVideoFile(e.target.files?.[0] ?? null); setVideoEmbedUrl(""); }}
+              />
+            </label>
+            <p className="text-xs text-muted-foreground">— or paste a YouTube / Vimeo URL —</p>
+            <input
+              type="url"
+              value={videoEmbedUrl}
+              onChange={(e) => { setVideoEmbedUrl(e.target.value); setVideoFile(null); }}
+              placeholder="https://youtube.com/watch?v=…"
+              disabled={!!videoFile}
+              className={`${inputCls} disabled:opacity-40`}
+            />
+            {videoEmbedUrl && detectProvider(videoEmbedUrl) && (
+              <p className="text-xs text-muted-foreground">Detected: {detectProvider(videoEmbedUrl)}</p>
+            )}
+          </div>
+        )}
+
+        {altMedia === "audio" && (
+          <div className="space-y-3 pl-3 border-l-2 border-black">
+            <label className="flex flex-col items-start gap-1 cursor-pointer">
+              <span className="text-xs text-muted-foreground">Upload an audio file</span>
+              <span className="text-sm border border-black px-3 py-1.5 hover:bg-muted/40 transition-colors">
+                {audioFile ? audioFile.name : "Browse…"}
+              </span>
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                className="sr-only"
+                onChange={(e) => { setAudioFile(e.target.files?.[0] ?? null); setAudioEmbedUrl(""); }}
+              />
+            </label>
+            <p className="text-xs text-muted-foreground">— or paste a SoundCloud / Bandcamp URL —</p>
+            <input
+              type="url"
+              value={audioEmbedUrl}
+              onChange={(e) => { setAudioEmbedUrl(e.target.value); setAudioFile(null); }}
+              placeholder="https://soundcloud.com/…"
+              disabled={!!audioFile}
+              className={`${inputCls} disabled:opacity-40`}
+            />
+            {audioEmbedUrl && detectProvider(audioEmbedUrl) && (
+              <p className="text-xs text-muted-foreground">Detected: {detectProvider(audioEmbedUrl)}</p>
+            )}
+          </div>
         )}
       </section>
 

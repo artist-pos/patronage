@@ -119,6 +119,11 @@ export async function createWorkWithEdition(data: {
   description: string | null;
   acquisitionMode?: AcquisitionMode | null;
   forSale?: boolean;
+  // Alternative media (video file, audio file, or embed URL)
+  video_url?: string | null;
+  audio_url?: string | null;
+  embed_url?: string | null;
+  embed_provider?: string | null;
   edition: {
     price_cents: number | null;
     currency: string;
@@ -171,6 +176,10 @@ export async function createWorkWithEdition(data: {
       hidden_from_artist: false,
       position: 9999,
       source: 'self_registered',
+      video_url: data.video_url ?? null,
+      audio_url: data.audio_url ?? null,
+      embed_url: data.embed_url ?? null,
+      embed_provider: data.embed_provider ?? null,
     })
     .select("id, creator_id")
     .single();

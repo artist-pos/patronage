@@ -81,11 +81,14 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
       if (u.embed_url) {
         return (
           <div className="relative bg-black aspect-video overflow-hidden">
-            <Link href={href} className="absolute inset-0 z-10 flex items-center justify-center">
+            {/* Decorative play overlay — outer card Link handles navigation.
+                Do NOT nest a Link here: nested <a> tags are invalid HTML and
+                cause browsers to extract the inner element, breaking the layout. */}
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
                 <Play className="w-5 h-5 text-white fill-white ml-0.5" />
               </div>
-            </Link>
+            </div>
             <iframe
               src={u.embed_url}
               title={u.caption ?? `Video by ${name}`}
@@ -97,12 +100,13 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
       }
       if (u.video_url) {
         return (
-          <div className="bg-black overflow-hidden">
+          // stopPropagation lets users interact with video controls
+          // without triggering the outer card Link's navigation.
+          <div className="bg-black overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video
               className="w-full max-h-[300px]"
               src={u.video_url}
-              onClick={(e) => e.preventDefault()}
               controls
             />
           </div>
