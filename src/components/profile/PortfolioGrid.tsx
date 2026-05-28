@@ -32,9 +32,10 @@ interface Props {
   lastRowAlign?: "left" | "center" | "right";
 }
 
-function getAR(item: GridItem): number {
+function getAR(item: GridItem, detectedARs?: Record<string, number>): number {
   if (isSeries(item)) return 3 / 2;
   const img = item as PortfolioImage;
+  if (detectedARs?.[img.id]) return detectedARs[img.id];
   if (img.natural_width && img.natural_height && img.natural_height > 0) {
     return img.natural_width / img.natural_height;
   }
@@ -66,7 +67,7 @@ interface Row  { tiles: Tile[]; isLast: boolean; }
  *
  * The incomplete last row uses targetH and is centred.
  */
-function buildRows(images: GridItem[], containerW: number, targetH: number, gap: number): Row[] {
+function buildRows(images: GridItem[], containerW: number, targetH: number, gap: number, detectedARs: Record<string, number>): Row[] {
   if (containerW <= 0 || images.length === 0) return [];
 
   const rows: Row[] = [];
@@ -74,7 +75,7 @@ function buildRows(images: GridItem[], containerW: number, targetH: number, gap:
   let batchAR = 0;
 
   for (const img of images) {
-    const ar = getAR(img);
+    const ar = getAR(img, detectedARs);
     batch.push(img);
     batchAR += ar;
 
@@ -84,7 +85,7 @@ function buildRows(images: GridItem[], containerW: number, targetH: number, gap:
       // Row is full — compute exact pixel widths
       const tiles: Tile[] = batch.map(i => ({
         img: i,
-        w: Math.round(getAR(i) * rowH),
+        w: Math.round(getAR(i, detectedARs) * rowH),
         h: Math.round(rowH),
       }));
       // Absorb rounding error in the last tile so the row is exactly containerW
@@ -102,7 +103,7 @@ function buildRows(images: GridItem[], containerW: number, targetH: number, gap:
     rows.push({
       tiles: batch.map(i => ({
         img: i,
-        w: Math.round(getAR(i) * targetH),
+        w: Math.round(getAR(i, detectedARs) * targetH),
         h: targetH,
       })),
       isLast: true,
@@ -123,6 +124,18 @@ export function PortfolioGrid({
   const displayed = limit ? images.slice(0, limit) : images;
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState<number | null>(null);
+  const [detectedARs, setDetectedARs] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    for (const item of images) {
+      if (!isSeries(item)) {
+        const img = item as PortfolioImage;
+        if (img.natural_width && img.natural_height && img.natural_height > 0) {
+          init[img.id] = img.natural_width / img.natural_height;
+        }
+      }
+    }
+    return init;
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -133,7 +146,18 @@ export function PortfolioGrid({
     return () => ro.disconnect();
   }, []);
 
-  const rows = containerW !== null ? buildRows(displayed, containerW, rowH, gutter) : [];
+  function handleImageLoad(id: string, e: React.SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    if (naturalWidth > 0 && naturalHeight > 0) {
+      const ar = naturalWidth / naturalHeight;
+      setDetectedARs(prev => {
+        if (Math.abs((prev[id] ?? 0) - ar) < 0.01) return prev;
+        return { ...prev, [id]: ar };
+      });
+    }
+  }
+
+  const rows = containerW !== null ? buildRows(displayed, containerW, rowH, gutter, detectedARs) : [];
 
   return (
     <div ref={containerRef}>
@@ -203,6 +227,7 @@ export function PortfolioGrid({
                     src={artwork.url}
                     alt={label ?? "Portfolio work"}
                     loading="lazy"
+                    onLoad={(e) => handleImageLoad(artwork.id, e)}
                     style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#FAFAF9" }}
                   />
                 )}
