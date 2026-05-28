@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { PortfolioGrid } from "@/components/profile/PortfolioGrid";
 import { saveGalleryLayout } from "@/app/profile/gallery-actions";
-import type { PortfolioImage } from "@/types/database";
+import type { GridItem } from "@/components/profile/PortfolioGrid";
 
 interface Props {
-  images: PortfolioImage[];
+  images: GridItem[];
   username: string;
   viewerRole?: string | null;
   profileId?: string;

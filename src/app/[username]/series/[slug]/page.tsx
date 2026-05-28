@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles";
-import { SeriesGallery } from "@/components/profile/SeriesGallery";
-import { supabaseTransform } from "@/lib/image";
+import { SeriesDetailClient } from "./SeriesDetailClient";
 import type { SeriesWork, SeriesEditionOption } from "@/types/database";
 
 interface Props {
@@ -92,59 +90,18 @@ export default async function SeriesDetailPage({ params }: Props) {
 
   const enrichedArtworks = artworks.map(a => ({ ...a, editions: editionsMap[a.id] ?? [] }));
 
-  const heroTransformed = series.hero_image_url
-    ? supabaseTransform(series.hero_image_url, { width: 1600, quality: 85 }) ?? series.hero_image_url
-    : null;
-
   const viewer = authResult.data.user;
   const isOwner = viewer?.id === profile.id;
   const artistName = profile.full_name ?? profile.username;
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pb-16">
-      {/* Breadcrumb */}
-      <div className="py-6 text-sm text-muted-foreground">
-        <Link href={`/${username}?tab=work`} className="hover:text-foreground transition-colors">
-          ← {artistName}
-        </Link>
-        {isOwner && (
-          <>
-            <span className="mx-2 text-border">·</span>
-            <Link href={`/studio/series/${series.id}`} className="hover:text-foreground transition-colors">
-              Edit series
-            </Link>
-          </>
-        )}
-      </div>
-
-      {/* Hero */}
-      {heroTransformed && (
-        <div className="w-full aspect-[21/9] relative overflow-hidden bg-stone-100 mb-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={heroTransformed}
-            alt={series.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="mb-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-2">{series.title}</h1>
-        {series.description && (
-          <p className="text-muted-foreground leading-relaxed">{series.description}</p>
-        )}
-      </div>
-
-      {/* Gallery */}
-      <SeriesGallery
-        artworks={enrichedArtworks}
-        artistId={profile.id}
-        artistName={artistName}
-        artistUsername={username}
-        viewer={viewer ? { id: viewer.id } : null}
-      />
-    </div>
+    <SeriesDetailClient
+      series={{ id: series.id, title: series.title, description: series.description }}
+      artworks={enrichedArtworks}
+      artistName={artistName}
+      artistUsername={username}
+      isOwner={isOwner}
+      seriesId={series.id}
+    />
   );
 }

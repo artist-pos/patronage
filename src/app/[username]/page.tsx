@@ -304,7 +304,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
   const needsCollaborations   = isArtistProfile && tab === "work";
   const needsArtistCollection = isArtistProfile && tab === "work";
-  const needsSeries           = isArtistProfile && tab === "work";
+  const needsSeries           = isArtistProfile && (tab === "work" || tab === "overview");
   const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
 
   const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw] = await Promise.all([
@@ -824,6 +824,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   receivedGrants={profile.received_grants ?? []}
                   achievements={achievements}
                   portfolioImages={images}
+                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>}
                   studioUpdates={studioUpdates}
                   artistName={displayName}
                   viewerRole={viewerRole}

@@ -4,19 +4,37 @@ import { useState, useRef, useEffect } from "react";
 import { Music, Play, Type, ExternalLink } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
 
+export interface GridSeriesItem {
+  _kind: "series";
+  id: string;
+  title: string;
+  slug: string;
+  hero_image_url: string | null;
+  artworkCount: number;
+  is_featured: boolean;
+}
+
+export type GridItem = PortfolioImage | GridSeriesItem;
+
+function isSeries(item: GridItem): item is GridSeriesItem {
+  return "_kind" in item && item._kind === "series";
+}
+
 interface Props {
-  images: PortfolioImage[];
+  images: GridItem[];
   username: string;
   viewerRole?: string | null;
   profileId?: string;
   limit?: number;
   isOwner?: boolean;
-  rowH?: number;    // target row height in px
-  gutter?: number;  // fixed gap between tiles in px
+  rowH?: number;
+  gutter?: number;
   lastRowAlign?: "left" | "center" | "right";
 }
 
-function getAR(img: PortfolioImage): number {
+function getAR(item: GridItem): number {
+  if (isSeries(item)) return 3 / 2;
+  const img = item as PortfolioImage;
   if (img.natural_width && img.natural_height && img.natural_height > 0) {
     return img.natural_width / img.natural_height;
   }
@@ -31,7 +49,7 @@ function getAR(img: PortfolioImage): number {
   }
 }
 
-interface Tile { img: PortfolioImage; w: number; h: number; }
+interface Tile { img: GridItem; w: number; h: number; }
 interface Row  { tiles: Tile[]; isLast: boolean; }
 
 /**
@@ -48,11 +66,11 @@ interface Row  { tiles: Tile[]; isLast: boolean; }
  *
  * The incomplete last row uses targetH and is centred.
  */
-function buildRows(images: PortfolioImage[], containerW: number, targetH: number, gap: number): Row[] {
+function buildRows(images: GridItem[], containerW: number, targetH: number, gap: number): Row[] {
   if (containerW <= 0 || images.length === 0) return [];
 
   const rows: Row[] = [];
-  let batch: PortfolioImage[] = [];
+  let batch: GridItem[] = [];
   let batchAR = 0;
 
   for (const img of images) {
@@ -133,92 +151,103 @@ export function PortfolioGrid({
           }}
         >
           {row.tiles.map(({ img, w, h }) => {
-            const ct    = img.content_type ?? "image";
-            const label = img.title
-              ? `${img.title}${img.year ? ` (${img.year})` : ""}`
-              : img.caption ?? undefined;
-            const hasCaption = !!(img.title || img.year);
+            if (isSeries(img)) {
+              return (
+                <div key={img.id} style={{ width: w, flexShrink: 0, minWidth: 0 }}>
+                  <a
+                    href={`/${username}/series/${img.slug}`}
+                    aria-label={img.title}
+                    style={{ width: w, height: h, position: "relative", overflow: "hidden", display: "block", textDecoration: "none" }}
+                  >
+                    {img.hero_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={img.hero_image_url}
+                        alt={img.title}
+                        loading="lazy"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: "#e7e5e4" }} />
+                    )}
+                  </a>
+                  <div style={{ paddingTop: 5, overflow: "hidden", width: "100%" }}>
+                    <p style={{ fontSize:12,fontWeight:500,color:"#1c1c1c",lineHeight:1.4,margin:0,wordBreak:"break-word" }}>
+                      {img.title}
+                    </p>
+                    <p style={{ fontSize:11,color:"#78716c",lineHeight:1.4,margin:0 }}>
+                      {img.artworkCount} {img.artworkCount === 1 ? "work" : "works"}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+
+            const artwork = img as PortfolioImage;
+            const ct    = artwork.content_type ?? "image";
+            const label = artwork.title
+              ? `${artwork.title}${artwork.year ? ` (${artwork.year})` : ""}`
+              : artwork.caption ?? undefined;
+            const hasCaption = !!(artwork.title || artwork.year);
 
             return (
-              <div key={img.id} style={{ width: w, flexShrink: 0, minWidth: 0 }}>
+              <div key={artwork.id} style={{ width: w, flexShrink: 0, minWidth: 0 }}>
               <a
-                href={`/${username}/works/${img.slug ?? img.id}`}
+                href={`/${username}/works/${artwork.slug ?? artwork.id}`}
                 aria-label={label ?? "View artwork"}
-                style={{
-                  width: w,
-                  height: h,
-                  position: "relative",
-                  overflow: "hidden",
-                  display: "block",
-                  textDecoration: "none",
-                }}
+                style={{ width: w, height: h, position: "relative", overflow: "hidden", display: "block", textDecoration: "none" }}
               >
-                {/* Image / Document */}
-                {(ct === "image" || ct === "document") && img.url && (
+                {(ct === "image" || ct === "document") && artwork.url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={img.url}
+                    src={artwork.url}
                     alt={label ?? "Portfolio work"}
                     loading="lazy"
                     style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#FAFAF9" }}
                   />
                 )}
-
-                {/* Audio */}
                 {ct === "audio" && (
                   <div style={{ position:"absolute",inset:0,background:"#1c1c1e",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,color:"white" }}>
-                    {img.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.url} alt="" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.25 }} />
-                    )}
+                    {artwork.url && <img src={artwork.url} alt="" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.25 }} />} {/* eslint-disable-line @next/next/no-img-element */}
                     <Music className="w-6 h-6" style={{ position:"relative" }} />
                     {label && <p style={{ position:"relative",fontSize:10,textAlign:"center",padding:"0 12px",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" }}>{label}</p>}
                   </div>
                 )}
-
-                {/* Video */}
                 {ct === "video" && (
                   <div style={{ position:"absolute",inset:0,background:"#1c1c1e",display:"flex",alignItems:"center",justifyContent:"center",color:"white" }}>
-                    {img.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.url} alt="" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.25 }} />
-                    )}
+                    {artwork.url && <img src={artwork.url} alt="" style={{ position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.25 }} />} {/* eslint-disable-line @next/next/no-img-element */}
                     <div style={{ position:"relative",width:40,height:40,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.8)",display:"flex",alignItems:"center",justifyContent:"center" }}>
                       <Play className="w-4 h-4 ml-0.5" />
                     </div>
                   </div>
                 )}
-
-                {/* Text / Writing */}
                 {ct === "text" && (
                   <div style={{ position:"absolute",inset:0,background:"#fafaf8",padding:16,display:"flex",flexDirection:"column",gap:8,overflow:"hidden" }}>
                     <Type className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                    {img.text_content && (
+                    {artwork.text_content && (
                       <p style={{ fontFamily:"monospace",fontSize:11,lineHeight:1.6,color:"#57534e",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:10,WebkitBoxOrient:"vertical",whiteSpace:"pre-wrap" }}>
-                        {img.text_content}
+                        {artwork.text_content}
                       </p>
                     )}
                   </div>
                 )}
-
-                {/* Embed */}
                 {ct === "embed" && (
                   <div style={{ position:"absolute",inset:0,background:"#1c1c1e",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,color:"white" }}>
                     <ExternalLink className="w-5 h-5 opacity-60" />
-                    <p style={{ fontSize:10,textTransform:"uppercase",letterSpacing:"0.1em",color:"#a8a29e" }}>{img.embed_provider ?? "Embed"}</p>
+                    <p style={{ fontSize:10,textTransform:"uppercase",letterSpacing:"0.1em",color:"#a8a29e" }}>{artwork.embed_provider ?? "Embed"}</p>
                   </div>
                 )}
               </a>
               {hasCaption && (
                 <div style={{ paddingTop: 5, overflow: "hidden", width: "100%" }}>
-                  {img.title && (
+                  {artwork.title && (
                     <p style={{ fontSize:12,fontWeight:500,color:"#1c1c1c",lineHeight:1.4,margin:0,wordBreak:"break-word" }}>
-                      {img.title}
+                      {artwork.title}
                     </p>
                   )}
-                  {img.year && (
+                  {artwork.year && (
                     <p style={{ fontSize:11,color:"#78716c",lineHeight:1.4,margin:0 }}>
-                      {img.year}
+                      {artwork.year}
                     </p>
                   )}
                 </div>

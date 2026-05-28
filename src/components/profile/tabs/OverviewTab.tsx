@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
+import type { GridItem, GridSeriesItem } from "@/components/profile/PortfolioGrid";
 import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist, ProfileAchievement } from "@/types/database";
@@ -13,12 +14,22 @@ function formatDateRange(start: string | null, end: string | null): string | nul
   return `Until ${fmt(end!)}`;
 }
 
+interface SeriesListItem {
+  id: string;
+  title: string;
+  slug: string;
+  hero_image_url: string | null;
+  artworkCount: number;
+  is_featured: boolean;
+}
+
 interface Props {
   exhibitions: ExhibitionEntry[];
   bibliography: BibliographyEntry[];
   receivedGrants: string[];
   achievements: ProfileAchievement[];
   portfolioImages: PortfolioImage[];
+  seriesList?: SeriesListItem[];
   studioUpdates: ProjectUpdateWithArtist[];
   artistName: string;
   viewerRole: string | null;
@@ -36,6 +47,7 @@ export function OverviewTab({
   receivedGrants,
   achievements,
   portfolioImages,
+  seriesList = [],
   studioUpdates,
   artistName,
   viewerRole,
@@ -210,11 +222,18 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* Portfolio preview — featured works first, fallback to first 9 */}
-      {portfolioImages.length > 0 && (() => {
-        const featured = portfolioImages.filter(i => i.is_featured);
-        const displayImages = featured.length > 0 ? featured : portfolioImages;
-        const isFiltered = featured.length > 0;
+      {/* Portfolio preview — featured works + featured series first, fallback to first 9 */}
+      {(portfolioImages.length > 0 || seriesList.length > 0) && (() => {
+        const featuredSeriesItems: GridSeriesItem[] = seriesList
+          .filter(s => s.is_featured)
+          .map(s => ({ _kind: "series" as const, id: s.id, title: s.title, slug: s.slug, hero_image_url: s.hero_image_url, artworkCount: s.artworkCount, is_featured: true }));
+        const featuredArtworks = portfolioImages.filter(i => i.is_featured);
+        const hasFeatured = featuredSeriesItems.length > 0 || featuredArtworks.length > 0;
+        const allSeriesItems: GridSeriesItem[] = seriesList.map(s => ({ _kind: "series" as const, id: s.id, title: s.title, slug: s.slug, hero_image_url: s.hero_image_url, artworkCount: s.artworkCount, is_featured: s.is_featured }));
+        const displayImages: GridItem[] = hasFeatured
+          ? [...featuredSeriesItems, ...featuredArtworks]
+          : [...allSeriesItems, ...portfolioImages];
+        const isFiltered = hasFeatured;
         return (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -226,8 +245,8 @@ export function OverviewTab({
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 {isFiltered
-                  ? `All ${portfolioImages.length} works →`
-                  : portfolioImages.length > 9
+                  ? `All works →`
+                  : portfolioImages.length + seriesList.length > 9
                     ? `View all ${portfolioImages.length} works →`
                     : null}
               </Link>
