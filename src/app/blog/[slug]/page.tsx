@@ -174,7 +174,7 @@ export default async function BlogPostPage({ params }: Props) {
                     payload={{
                       type: "blog",
                       title: post.title,
-                      sub: "Patronage Blog",
+                      sub: "",
                       price: null,
                       tag: "Blog",
                       handle: "patronage.nz",
