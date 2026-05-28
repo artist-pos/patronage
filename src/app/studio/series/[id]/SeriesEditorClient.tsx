@@ -63,7 +63,7 @@ async function compressToWebp(file: File): Promise<Blob> {
 
 async function uploadToStorage(profileId: string, blob: Blob, prefix: string): Promise<string> {
   const supabase = getSupabase();
-  const path = `${prefix}/${profileId}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+  const path = `${profileId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
   const { error } = await supabase.storage
     .from("portfolio")
     .upload(path, blob, { contentType: "image/webp", upsert: false });
