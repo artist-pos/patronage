@@ -3,7 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 import type { SeriesWork, SeriesEditionOption } from "@/types/database";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 interface Props {
   series: {
@@ -16,9 +19,10 @@ interface Props {
   artistUsername: string;
   isOwner: boolean;
   seriesId: string;
+  seriesSlug: string;
 }
 
-export function SeriesDetailClient({ series, artworks, artistName, artistUsername, isOwner, seriesId }: Props) {
+export function SeriesDetailClient({ series, artworks, artistName, artistUsername, isOwner, seriesId, seriesSlug }: Props) {
   const [idx, setIdx] = useState(0);
   const current = artworks[idx];
 
@@ -123,7 +127,22 @@ export function SeriesDetailClient({ series, artworks, artistName, artistUsernam
             <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Series — {artworks.length} {artworks.length === 1 ? "work" : "works"}
             </p>
-            <h1 className="text-2xl font-bold leading-snug">{series.title}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-bold leading-snug">{series.title}</h1>
+              <ShareTrigger
+                variant="icon"
+                payload={{
+                  type: "work",
+                  title: current?.title ?? current?.caption ?? series.title,
+                  sub: series.title,
+                  price: null,
+                  tag: current?.medium ?? "",
+                  handle: artistUsername,
+                  imageUrl: current?.url ?? null,
+                  shareUrl: `${SITE_URL}/${artistUsername}/series/${seriesSlug}`,
+                }}
+              />
+            </div>
             {current && (current.title || current.caption) && (
               <p className="text-base text-muted-foreground font-normal">
                 {current.title ?? current.caption}

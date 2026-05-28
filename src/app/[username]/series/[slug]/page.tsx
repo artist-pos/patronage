@@ -102,6 +102,7 @@ export default async function SeriesDetailPage({ params }: Props) {
       artistUsername={username}
       isOwner={isOwner}
       seriesId={series.id}
+      seriesSlug={slug}
     />
   );
 }
