@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { BlogImages } from "@/components/blog/BlogImages";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
 import type { Metadata } from "next";
 
 interface Props {
@@ -158,9 +159,34 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* Header */}
           <div className="space-y-2 max-w-[720px]">
-            <h1 className="text-3xl font-semibold tracking-tight leading-tight">
-              {post.title}
-            </h1>
+            <div className="flex items-start gap-3">
+              <h1 className="text-3xl font-semibold tracking-tight leading-tight flex-1">
+                {post.title}
+              </h1>
+              {post.image_url && (() => {
+                const imageOptions = [
+                  { url: post.image_url, label: "Image 1" },
+                  ...(post.image_url_2 ? [{ url: post.image_url_2, label: "Image 2" }] : []),
+                ];
+                return (
+                  <ShareTrigger
+                    variant="icon"
+                    payload={{
+                      type: "blog",
+                      title: post.title,
+                      sub: "Patronage Blog",
+                      price: null,
+                      tag: "Blog",
+                      handle: "patronage.nz",
+                      imageUrl: post.image_url,
+                      shareUrl: canonicalUrl,
+                      imageOptions: imageOptions.length > 1 ? imageOptions : undefined,
+                    }}
+                    className="mt-1 w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-muted transition-colors shrink-0"
+                  />
+                );
+              })()}
+            </div>
             <p className="text-sm text-muted-foreground">
               {formatDate(post.published_at ?? post.created_at)}
             </p>

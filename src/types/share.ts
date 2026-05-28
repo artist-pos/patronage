@@ -1,4 +1,4 @@
-export type ShareType = 'work' | 'update' | 'support' | 'profile'
+export type ShareType = 'work' | 'update' | 'support' | 'profile' | 'blog'
 export type ShareTemplate = 'dark' | 'light' | 'warm' | 'slate'
 export type ShareFormat = 'story' | 'post'
 
