@@ -305,8 +305,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsCollaborations   = isArtistProfile && tab === "work";
   const needsArtistCollection = isArtistProfile && tab === "work";
   const needsSeries           = isArtistProfile && tab === "work";
+  const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw] = await Promise.all([
     needsPortfolio
       ? supabase
           .from("artworks")
@@ -403,19 +404,33 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     needsSeries
       ? supabase
           .from("series")
-          .select("id, title, slug, hero_image_url, series_artworks(count)")
+          .select("id, title, slug, hero_image_url, is_featured, series_artworks(count)")
           .eq("artist_id", profile.id)
+          .order("is_featured", { ascending: false })
           .order("created_at", { ascending: false })
           .then(({ data }) => (data ?? []).map(s => ({
             id: s.id,
             title: s.title,
             slug: s.slug,
             hero_image_url: s.hero_image_url as string | null,
+            is_featured: s.is_featured as boolean,
             artworkCount: Array.isArray(s.series_artworks)
               ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
               : 0,
           })))
-      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number }>),
+      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>),
+    // Series artwork IDs — to exclude from the portfolio gallery
+    needsSeriesArtworkIds
+      ? supabase
+          .from("series")
+          .select("series_artworks(artwork_id)")
+          .eq("artist_id", profile.id)
+          .then(({ data }) =>
+            (data ?? []).flatMap(s =>
+              (s.series_artworks as { artwork_id: string }[]).map(sa => sa.artwork_id)
+            )
+          )
+      : Promise.resolve([] as string[]),
   ]);
 
   // Build map: artworks.id → listed editions sorted by sort_order
@@ -438,7 +453,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
   const artistProjects = ownerProjects.length > 0 ? ownerProjects : tabProjects;
 
-  const images = portfolioImages;
+  const seriesArtworkIdSet = new Set(seriesArtworkIdsRaw as string[]);
+  const images = (portfolioImages as Artwork[]).filter(img => !seriesArtworkIdSet.has(img.id));
 
   const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
 
@@ -826,7 +842,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
                   collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
-                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number }>}
+                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}

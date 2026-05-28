@@ -11,6 +11,7 @@ interface SeriesCard {
   slug: string;
   hero_image_url: string | null;
   artworkCount: number;
+  is_featured: boolean;
 }
 
 interface SoldWork extends Artwork {
@@ -85,48 +86,15 @@ export function WorkTab({
         />
       )}
 
-      {/* ── Series ── */}
-      {seriesList.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Series</h2>
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-            {seriesList.map(s => (
-              <Link
-                key={s.id}
-                href={`/${username}/series/${s.slug}`}
-                className="shrink-0 group"
-              >
-                <div className="w-[160px] space-y-1.5">
-                  <div className="w-[160px] h-[120px] overflow-hidden bg-stone-100">
-                    {s.hero_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={s.hero_image_url}
-                        alt={s.title}
-                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-stone-200" />
-                    )}
-                  </div>
-                  <p className="text-sm font-medium truncate group-hover:underline underline-offset-2">{s.title}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.artworkCount} {s.artworkCount === 1 ? "work" : "works"}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Work — full body of work ── */}
-      {(isOwner || portfolioImages.length > 0) && (() => {
+      {/* ── Work — full body of work (series + standalone) ── */}
+      {(isOwner || portfolioImages.length > 0 || seriesList.length > 0) && (() => {
         const sortedImages = [...portfolioImages].sort((a, b) => {
           if (a.is_featured && !b.is_featured) return -1;
           if (!a.is_featured && b.is_featured) return 1;
           return (a.position ?? 0) - (b.position ?? 0);
         });
         return (
-        <section className="space-y-4">
+        <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Work
@@ -148,6 +116,38 @@ export function WorkTab({
               </div>
             )}
           </div>
+
+          {/* Series cards */}
+          {seriesList.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+              {seriesList.map(s => (
+                <Link
+                  key={s.id}
+                  href={`/${username}/series/${s.slug}`}
+                  className="shrink-0 group"
+                >
+                  <div className="w-[160px] space-y-1.5">
+                    <div className="w-[160px] h-[120px] overflow-hidden bg-stone-100">
+                      {s.hero_image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={s.hero_image_url}
+                          alt={s.title}
+                          className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-stone-200" />
+                      )}
+                    </div>
+                    <p className="text-sm font-medium truncate group-hover:underline underline-offset-2">{s.title}</p>
+                    <p className="text-[11px] text-muted-foreground">{s.artworkCount} {s.artworkCount === 1 ? "work" : "works"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Standalone works gallery */}
           {sortedImages.length > 0 ? (
             <GalleryWithControls
               images={sortedImages}
@@ -159,11 +159,11 @@ export function WorkTab({
               savedGutter={galleryGutter}
               noControls
             />
-          ) : (
+          ) : seriesList.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No work added yet. Your portfolio is how people discover your practice — even one or two pieces makes a difference.
             </p>
-          )}
+          ) : null}
         </section>
         );
       })()}

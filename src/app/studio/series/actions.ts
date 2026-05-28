@@ -170,6 +170,24 @@ export async function syncSeriesArtworks(
   return {};
 }
 
+export async function toggleSeriesFeatured(seriesId: string, featured: boolean): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("series")
+    .update({ is_featured: featured })
+    .eq("id", seriesId)
+    .eq("artist_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/studio");
+  revalidatePath(`/studio/series/${seriesId}`);
+  return {};
+}
+
 export async function deleteSeries(seriesId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

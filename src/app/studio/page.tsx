@@ -137,7 +137,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const structuredGrants = (structuredGrantsResult.data ?? []) as Grant[];
 
   // Works: portfolio, available, sold, confirmations, collected, series — all in one round
-  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult] =
+  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult, seriesArtworkIdsResult] =
     needsWorks
       ? await Promise.all([
           supabase
@@ -185,27 +185,44 @@ export default async function StudioPage({ searchParams }: PageProps) {
           getPendingConfirmationCount(user.id),
           supabase
             .from("series")
-            .select("id, title, slug, hero_image_url, series_artworks(count)")
+            .select("id, title, slug, hero_image_url, is_featured, series_artworks(count)")
             .eq("artist_id", user.id)
+            .order("is_featured", { ascending: false })
             .order("created_at", { ascending: false }),
+          // Series artwork IDs — used to exclude series works from the archival list
+          supabase
+            .from("series")
+            .select("series_artworks(artwork_id)")
+            .eq("artist_id", user.id)
+            .then(({ data }) =>
+              new Set(
+                (data ?? []).flatMap(s =>
+                  (s.series_artworks as { artwork_id: string }[]).map(sa => sa.artwork_id)
+                )
+              )
+            ),
         ])
-      : [null, null, null, null, null, 0, null];
+      : [null, null, null, null, null, 0, null, new Set<string>()];
 
   const featuredIds = new Set(
     ((featuredRows as { data: { id: string }[] | null } | null)?.data ?? []).map((r) => r.id)
   );
+  const seriesArtworkIds = (seriesArtworkIdsResult as Set<string> | null) ?? new Set<string>();
   const portfolioWorks = (
     (portfolioResult as { data: { id: string; [key: string]: unknown }[] | null } | null)?.data ?? []
-  ).map((w) => ({ ...w, is_featured: featuredIds.has(w.id) }));
+  )
+    .filter((w) => !seriesArtworkIds.has(w.id))
+    .map((w) => ({ ...w, is_featured: featuredIds.has(w.id) }));
   const availableWorks = (availableResult as { data: unknown[] | null } | null)?.data ?? [];
   const soldWorks = (soldResult as { data: unknown[] | null } | null)?.data ?? [];
   const featuredCount = featuredIds.size;
 
-  const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
+  const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
     id: s.id,
     title: s.title,
     slug: s.slug,
     hero_image_url: s.hero_image_url,
+    is_featured: s.is_featured,
     artworkCount: (s.series_artworks as unknown as [{ count: number }])?.[0]?.count ?? 0,
   }));
 

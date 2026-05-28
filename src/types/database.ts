@@ -1086,6 +1086,7 @@ export interface Series {
   slug: string;
   hero_image_url: string | null;
   description: string | null;
+  is_featured: boolean;
   created_at: string;
 }
 
@@ -1101,6 +1102,7 @@ export interface SeriesListItem {
   slug: string;
   hero_image_url: string | null;
   artworkCount: number;
+  is_featured: boolean;
 }
 
 export interface SeriesWork {
