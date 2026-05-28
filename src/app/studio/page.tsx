@@ -87,7 +87,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (activeSection === "collection") redirect("/dashboard/collection");
 
   // Sub-tab initial values — read once for SSR; client components manage subsequent switches
-  const WORKS_TABS = ["archival", "for-sale", "sold", "series"] as const;
+  const WORKS_TABS = ["archival", "for-sale", "sold"] as const;
   type WorksTab = typeof WORKS_TABS[number];
   const initialWorksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
     ? (params.wt as WorksTab)
@@ -185,10 +185,9 @@ export default async function StudioPage({ searchParams }: PageProps) {
           getPendingConfirmationCount(user.id),
           supabase
             .from("series")
-            .select("id, title, slug, hero_image_url, is_featured, series_artworks(count)")
+            .select("id, title, slug, hero_image_url, is_featured, position, series_artworks(count)")
             .eq("artist_id", user.id)
-            .order("is_featured", { ascending: false })
-            .order("created_at", { ascending: false }),
+            .order("position", { ascending: true }),
           // Series artwork IDs — used to exclude series works from the archival list
           supabase
             .from("series")
@@ -217,12 +216,13 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const soldWorks = (soldResult as { data: unknown[] | null } | null)?.data ?? [];
   const featuredCount = featuredIds.size;
 
-  const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
+  const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
     id: s.id,
     title: s.title,
     slug: s.slug,
     hero_image_url: s.hero_image_url,
     is_featured: s.is_featured,
+    position: s.position,
     artworkCount: (s.series_artworks as unknown as [{ count: number }])?.[0]?.count ?? 0,
   }));
 

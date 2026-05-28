@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { WorksTable } from "@/components/dashboard/WorksTable";
-import { SeriesTab } from "@/components/studio/SeriesTab";
-import { toggleSeriesFeatured } from "@/app/studio/series/actions";
+import { WorksTable, type SeriesRow } from "@/components/dashboard/WorksTable";
 
-type WorksTab = "archival" | "for-sale" | "sold" | "series";
+type WorksTab = "archival" | "for-sale" | "sold";
 
 interface Props {
   initialTab: WorksTab;
@@ -19,7 +17,7 @@ interface Props {
   featuredCount: number;
   engagementMap: Record<string, { view: number; play: number }>;
   pendingConfirmationCount: number;
-  seriesList: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number; is_featured: boolean }>;
+  seriesList: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number; is_featured: boolean; position: number }>;
 }
 
 export function WorksTabsClient({
@@ -28,13 +26,24 @@ export function WorksTabsClient({
   engagementMap, pendingConfirmationCount, seriesList,
 }: Props) {
   const [tab, setTab] = useState<WorksTab>(initialTab);
-  const [localSeries, setLocalSeries] = useState(seriesList);
-  const [, startTransition] = useTransition();
 
   function switchTab(t: WorksTab) {
     setTab(t);
     window.history.replaceState(null, "", `/studio?section=works&wt=${t}`);
   }
+
+  // Merge series into archival list, sorted by position
+  const seriesItems: SeriesRow[] = seriesList.map(s => ({
+    _kind: "series" as const,
+    id: s.id,
+    title: s.title,
+    hero_image_url: s.hero_image_url,
+    artworkCount: s.artworkCount,
+    is_featured: s.is_featured,
+    position: s.position,
+  }));
+  const mergedPortfolio = [...seriesItems, ...portfolioWorks]
+    .sort((a, b) => (a.position ?? 9999) - (b.position ?? 9999));
 
   return (
     <div className="space-y-6">
@@ -50,7 +59,7 @@ export function WorksTabsClient({
       )}
 
       <div className="flex gap-0 border-b border-border">
-        {(["archival", "for-sale", "sold", "series"] as const).map((t) => (
+        {(["archival", "for-sale", "sold"] as const).map((t) => (
           <button
             key={t}
             onClick={() => switchTab(t)}
@@ -60,72 +69,28 @@ export function WorksTabsClient({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "archival" ? "Archival" : t === "for-sale" ? "Sell" : t === "sold" ? "Sold" : "Series"}
+            {t === "archival" ? "Archival" : t === "for-sale" ? "Sell" : "Sold"}
           </button>
         ))}
       </div>
 
       {tab === "archival" && (
         <div className="space-y-6">
-          {(featuredCount > 0 || portfolioWorks.length > 0 || localSeries.length > 0) && (
+          {(featuredCount > 0 || mergedPortfolio.length > 0) && (
             <div className="flex items-center justify-between text-xs text-muted-foreground border border-border px-4 py-2.5">
               <span>
                 <span className="font-semibold text-foreground">{featuredCount}</span> of 8 works featured
                 {featuredCount > 0 && " — shown on your profile overview"}
               </span>
               {featuredCount === 0 && (
-                <span>Open any work and mark it as Featured to curate your overview.</span>
+                <span>Star any work or series to feature it on your profile overview.</span>
               )}
-            </div>
-          )}
-
-          {/* Series section */}
-          {localSeries.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Series</p>
-              <div className="divide-y divide-border border border-border">
-                {localSeries.map(s => (
-                  <div key={s.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <div className="w-10 h-10 shrink-0 overflow-hidden bg-stone-100">
-                      {s.hero_image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={s.hero_image_url} alt={s.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-stone-200" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{s.title}</p>
-                      <p className="text-xs text-muted-foreground">{s.artworkCount} {s.artworkCount === 1 ? "work" : "works"}</p>
-                    </div>
-                    <button
-                      title={s.is_featured ? "Remove from profile overview" : "Feature on profile overview"}
-                      onClick={() => {
-                        const next = !s.is_featured;
-                        setLocalSeries(prev => prev.map(x => x.id === s.id ? { ...x, is_featured: next } : x));
-                        startTransition(() => { toggleSeriesFeatured(s.id, next); });
-                      }}
-                      className={`shrink-0 p-1 transition-colors ${s.is_featured ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill={s.is_featured ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
-                        <polygon points="8,1 10,6 15,6 11,9.5 12.5,15 8,12 3.5,15 5,9.5 1,6 6,6" />
-                      </svg>
-                    </button>
-                    <Link
-                      href={`/studio/series/${s.id}`}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                    >
-                      Edit →
-                    </Link>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
           <WorksTable
             section="portfolio"
-            portfolioWorks={portfolioWorks}
+            portfolioWorks={mergedPortfolio}
             availableWorks={availableWorks}
             soldWorks={soldWorks}
             featuredCount={featuredCount}
@@ -217,9 +182,6 @@ export function WorksTabsClient({
         </div>
       )}
 
-      {tab === "series" && (
-        <SeriesTab series={seriesList} />
-      )}
 
     </div>
   );

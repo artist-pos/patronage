@@ -27,13 +27,24 @@ import {
   deletePortfolioWork,
   unlistWork,
   archiveWork,
-  reorderPortfolioWorks,
+  reorderMixedArchivalItems,
 } from "@/app/profile/available-work-actions";
+import { toggleSeriesFeatured } from "@/app/studio/series/actions";
 import {
   requestArtworkDeletion,
   removeFromArtistProfile,
 } from "@/app/profile/artwork-delete-actions";
 import { formatPrice } from "@/lib/format-price";
+
+interface SeriesRow {
+  _kind: "series";
+  id: string;
+  title: string;
+  hero_image_url: string | null;
+  artworkCount: number;
+  is_featured: boolean;
+  position: number;
+}
 
 interface PortfolioRow {
   id: string;
@@ -80,9 +91,11 @@ interface SoldRow {
   ledger_id?: string | null;
 }
 
+export type { SeriesRow };
+
 interface Props {
   section: "portfolio" | "available" | "sold";
-  portfolioWorks: PortfolioRow[];
+  portfolioWorks: (PortfolioRow | SeriesRow)[];
   availableWorks: AvailableRow[];
   soldWorks: SoldRow[];
   featuredCount: number;
@@ -249,6 +262,89 @@ function SortablePortfolioRow({
   );
 }
 
+function isSeries(item: PortfolioRow | SeriesRow): item is SeriesRow {
+  return "_kind" in item && item._kind === "series";
+}
+
+function SortableSeriesRow({
+  series,
+  busy,
+  onToggleFeatured,
+}: {
+  series: SeriesRow;
+  busy: string | null;
+  onToggleFeatured: (id: string, current: boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: series.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 py-3">
+      <button
+        {...attributes}
+        {...listeners}
+        className="w-5 h-7 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing shrink-0"
+        aria-label="Drag to reorder"
+      >
+        <svg width="10" height="14" viewBox="0 0 10 16" fill="currentColor">
+          <circle cx="3" cy="3" r="1.5" /><circle cx="7" cy="3" r="1.5" />
+          <circle cx="3" cy="8" r="1.5" /><circle cx="7" cy="8" r="1.5" />
+          <circle cx="3" cy="13" r="1.5" /><circle cx="7" cy="13" r="1.5" />
+        </svg>
+      </button>
+
+      <div className="w-11 h-11 shrink-0 overflow-hidden bg-muted border border-border">
+        {series.hero_image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={series.hero_image_url} alt={series.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-stone-200" />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{series.title}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {series.artworkCount} {series.artworkCount === 1 ? "work" : "works"}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {series.is_featured && <Badge>★</Badge>}
+        <span className="text-[10px] px-1.5 py-0.5 leading-none border border-stone-300 text-stone-500">Series</span>
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={() => onToggleFeatured(series.id, series.is_featured)}
+          disabled={busy === series.id}
+          title={series.is_featured ? "Remove from featured" : "Mark as featured"}
+          className={`w-7 h-7 flex items-center justify-center transition-colors disabled:opacity-40 ${
+            series.is_featured ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill={series.is_featured ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+            <path d="M8 1l1.854 3.756L14 5.528l-3 2.924.708 4.128L8 10.57l-3.708 1.98.708-4.128L2 5.528l4.146-.772z" />
+          </svg>
+        </button>
+        <Link
+          href={`/studio/series/${series.id}`}
+          className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          title="Edit series"
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M11.5 2.5a1.5 1.5 0 012.121 2.121l-8.5 8.5L2 14l.879-3.121 8.621-8.379z" />
+          </svg>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function WorksTable({
   section,
   portfolioWorks,
@@ -259,7 +355,7 @@ export function WorksTable({
   engagementMap = {},
 }: Props) {
   const router = useRouter();
-  const [portfolio, setPortfolio] = useState<PortfolioRow[]>(portfolioWorks);
+  const [portfolio, setPortfolio] = useState<(PortfolioRow | SeriesRow)[]>(portfolioWorks);
   const [available, setAvailable] = useState<AvailableRow[]>(availableWorks);
   const [sold, setSold] = useState<SoldRow[]>(soldWorks);
   const [busy, setBusy] = useState<string | null>(null);
@@ -277,7 +373,10 @@ export function WorksTable({
     const newIndex = portfolio.findIndex(w => w.id === over.id);
     const reordered = arrayMove(portfolio, oldIndex, newIndex);
     setPortfolio(reordered);
-    await reorderPortfolioWorks(reordered.map(w => w.id));
+    await reorderMixedArchivalItems(reordered.map(item => ({
+      id: item.id,
+      kind: isSeries(item) ? "series" as const : "artwork" as const,
+    })));
   }
 
   function showError(msg: string) {
@@ -289,7 +388,13 @@ export function WorksTable({
 
   async function toggleFeatured(id: string, current: boolean) {
     setBusy(id);
-    const result = await toggleFeaturedWork(id, !current, featuredCount);
+    const item = portfolio.find(w => w.id === id);
+    let result: { error?: string };
+    if (item && isSeries(item)) {
+      result = await toggleSeriesFeatured(id, !current);
+    } else {
+      result = await toggleFeaturedWork(id, !current, featuredCount);
+    }
     if (result.error) showError(result.error);
     else setPortfolio(prev => prev.map(w => (w.id === id ? { ...w, is_featured: !current } : w)));
     setBusy(null);
@@ -375,17 +480,26 @@ export function WorksTable({
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={portfolio.map(w => w.id)} strategy={verticalListSortingStrategy}>
               <div className="divide-y divide-border border-t border-border">
-                {portfolio.map(work => (
-                  <SortablePortfolioRow
-                    key={work.id}
-                    work={work}
-                    busy={busy}
-                    featuredCount={featuredCount}
-                    engagementMap={engagementMap}
-                    onToggleFeatured={toggleFeatured}
-                    onToggleHide={toggleHidePortfolio}
-                    onDelete={handleDeletePortfolio}
-                  />
+                {portfolio.map(item => (
+                  isSeries(item) ? (
+                    <SortableSeriesRow
+                      key={item.id}
+                      series={item}
+                      busy={busy}
+                      onToggleFeatured={toggleFeatured}
+                    />
+                  ) : (
+                    <SortablePortfolioRow
+                      key={item.id}
+                      work={item}
+                      busy={busy}
+                      featuredCount={featuredCount}
+                      engagementMap={engagementMap}
+                      onToggleFeatured={toggleFeatured}
+                      onToggleHide={toggleHidePortfolio}
+                      onDelete={handleDeletePortfolio}
+                    />
+                  )
                 ))}
               </div>
             </SortableContext>

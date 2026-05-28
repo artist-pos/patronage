@@ -139,6 +139,30 @@ export async function reorderPortfolioWorks(
   return {};
 }
 
+export async function reorderMixedArchivalItems(
+  orderedItems: { id: string; kind: "artwork" | "series" }[]
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const artworkUpdates = orderedItems
+    .filter(i => i.kind === "artwork")
+    .map(({ id }, position) =>
+      supabase.from("artworks").update({ position }).eq("id", id).eq("creator_id", user.id).eq("current_owner_id", user.id)
+    );
+  const seriesUpdates = orderedItems
+    .filter(i => i.kind === "series")
+    .map(({ id }, position) =>
+      supabase.from("series").update({ position }).eq("id", id).eq("artist_id", user.id)
+    );
+
+  const results = await Promise.all([...artworkUpdates, ...seriesUpdates]);
+  const firstError = results.find(r => r.error)?.error;
+  if (firstError) return { error: firstError.message };
+  return {};
+}
+
 export async function toggleFeaturedWork(
   workId: string,
   featured: boolean,
