@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { claimEntity } from "./actions";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -12,6 +13,169 @@ export default async function ClaimPage({ params }: Props) {
   const { token } = await params;
   const supabase = await createClient();
   const admin = createAdminClient();
+
+  // ── Entity claim (partner/artist profile) ────────────────────────────────
+  const { data: entityToken } = await admin
+    .from("claim_tokens")
+    .select("*")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (entityToken) {
+    const isExpired =
+      entityToken.status === "expired" ||
+      (entityToken.expires_at && new Date(entityToken.expires_at) < new Date());
+
+    if (isExpired) {
+      return (
+        <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+          <p className="text-sm font-semibold">Link expired</p>
+          <p className="text-sm text-muted-foreground">
+            This claim link has expired. Contact{" "}
+            <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">hello@patronage.nz</a>{" "}
+            to request a new one.
+          </p>
+        </div>
+      );
+    }
+
+    if (entityToken.status === "claimed") {
+      return (
+        <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+          <p className="text-sm font-semibold">Already claimed</p>
+          <p className="text-sm text-muted-foreground">This profile has already been claimed.</p>
+          <Link href="/auth/login" className="text-sm underline underline-offset-2">Sign in →</Link>
+        </div>
+      );
+    }
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id, full_name, username, role, account_status")
+      .eq("id", entityToken.entity_id)
+      .single();
+
+    let opportunityCount = 0;
+    if (entityToken.entity_type === "partner" && profile) {
+      const { count } = await admin
+        .from("opportunities")
+        .select("*", { count: "exact", head: true })
+        .eq("profile_id", profile.id);
+      opportunityCount = count ?? 0;
+    }
+
+    const entityLabel = profile?.full_name ?? entityToken.recipient_name ?? "your organisation";
+    const entityTypeLabel = entityToken.entity_type === "partner" ? "organisation" : "artist profile";
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      const expectedRole = entityToken.entity_type === "partner" ? "partner" : "artist";
+      if (userProfile?.role !== expectedRole && userProfile?.role !== "admin" && userProfile?.role !== "owner") {
+        return (
+          <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+            <p className="text-sm font-semibold">Wrong account type</p>
+            <p className="text-sm text-muted-foreground">
+              This link is for a {entityToken.entity_type} account. Your account is a <strong>{userProfile?.role}</strong> account.
+              Contact{" "}
+              <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">hello@patronage.nz</a>{" "}
+              for help.
+            </p>
+          </div>
+        );
+      }
+
+      const result = await claimEntity(token, user.id);
+      if (result.error) {
+        return (
+          <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+            <p className="text-sm font-semibold">Something went wrong</p>
+            <p className="text-sm text-muted-foreground">{result.error}</p>
+          </div>
+        );
+      }
+      redirect(result.redirectTo ?? "/dashboard");
+    }
+
+    const claimPath = `/claim/${token}`;
+    const signupHref = `/auth/signup?role=${entityToken.entity_type}&next=${encodeURIComponent(claimPath)}`;
+    const signinHref = `/auth/login?next=${encodeURIComponent(claimPath)}`;
+
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+        <div className="bg-black text-white px-6 py-6 space-y-4">
+          <p className="text-base font-semibold leading-snug">
+            {entityToken.entity_type === "partner"
+              ? `${entityLabel}, Patronage has created a profile for your organisation. Claim it to manage your presence and connect with NZ artists.`
+              : `${entityLabel}, Patronage has created an artist profile for you. Claim it to take ownership and complete your profile.`}
+          </p>
+          {entityToken.entity_type === "partner" && opportunityCount > 0 && (
+            <p className="text-sm text-white/70">
+              {opportunityCount} opportunity listing{opportunityCount !== 1 ? "s" : ""} already attached to your profile.
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link href={signupHref} className="inline-block bg-white text-black text-sm font-semibold px-5 py-2.5 text-center hover:bg-stone-100 transition-colors">
+              Claim {entityTypeLabel} →
+            </Link>
+            <Link href={signinHref} className="inline-block border border-white/40 text-white text-sm px-5 py-2.5 text-center hover:border-white transition-colors">
+              Sign in
+            </Link>
+          </div>
+        </div>
+
+        <div className="border border-border p-5 space-y-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">You are claiming</p>
+          <p className="text-xl font-semibold">{entityLabel}</p>
+          <p className="text-sm text-muted-foreground capitalize">{entityTypeLabel} on Patronage</p>
+          {entityToken.entity_type === "partner" && opportunityCount > 0 && (
+            <p className="text-sm text-muted-foreground">Includes {opportunityCount} opportunity listing{opportunityCount !== 1 ? "s" : ""}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">What happens when you claim</p>
+          <ul className="text-sm text-muted-foreground space-y-1.5">
+            {entityToken.entity_type === "partner" ? (
+              <>
+                <li>→ You take ownership of the {entityLabel} listing on Patronage</li>
+                <li>→ Edit your organisation description, logo, and contact details</li>
+                <li>→ Manage your opportunity listings and applications</li>
+              </>
+            ) : (
+              <>
+                <li>→ You take ownership of this artist profile</li>
+                <li>→ Edit your bio, portfolio, and contact details</li>
+                <li>→ Connect with grants, residencies, and commissions</li>
+              </>
+            )}
+          </ul>
+        </div>
+
+        <div className="border-t border-border pt-6 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link href={signupHref} className="inline-block bg-black text-white text-sm font-semibold px-5 py-2.5 text-center hover:bg-black/80 transition-colors">
+              Claim {entityTypeLabel} →
+            </Link>
+            <Link href={signinHref} className="inline-block border border-black text-sm px-5 py-2.5 text-center hover:bg-muted transition-colors">
+              Sign in
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Questions? <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">hello@patronage.nz</a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Provenance link claim (artwork collection) ────────────────────────────
 
   // Look up provenance link by claim token
   const { data: link } = await admin

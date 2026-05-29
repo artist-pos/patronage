@@ -5,6 +5,58 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+
+async function logClaimInviteToCRM(
+  email: string,
+  organiserName: string,
+  opportunityTitle: string
+): Promise<void> {
+  const admin = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: existing } = await admin
+    .from("outreach_contacts")
+    .select("id, status")
+    .eq("email", email.trim())
+    .maybeSingle();
+
+  if (existing) {
+    await Promise.all([
+      admin.from("outreach_activity").insert({
+        contact_id: existing.id,
+        activity_type: "email_sent",
+        description: `Claim invite sent for opportunity: ${opportunityTitle}`,
+      }),
+      admin.from("outreach_contacts").update({
+        last_activity_date: today,
+        ...(existing.status === "not_started" ? { status: "contacted" } : {}),
+      }).eq("id", existing.id),
+    ]);
+  } else {
+    const { data: newContact } = await admin
+      .from("outreach_contacts")
+      .insert({
+        company: organiserName || email.split("@")[1] || "Unknown",
+        email: email.trim(),
+        status: "contacted",
+        channel: "intro_email",
+        sent_from: "patronage",
+        last_activity_date: today,
+        first_contact_date: today,
+        category: "other",
+      })
+      .select("id")
+      .single();
+
+    if (newContact) {
+      await admin.from("outreach_activity").insert({
+        contact_id: newContact.id,
+        activity_type: "email_sent",
+        description: `Claim invite sent for opportunity: ${opportunityTitle}`,
+      });
+    }
+  }
+}
 import {
   buildClaimOnlyBody,
   buildClaimPipelineBody,
@@ -151,6 +203,9 @@ export async function sendClaimInvite(
     })
     .eq("id", opp.id);
 
+  // Log to CRM (fire-and-forget — don't block the response)
+  logClaimInviteToCRM(input.recipientEmail, input.recipientName, input.subject).catch(console.error);
+
   revalidatePath("/admin/opportunities");
   return { scheduledFor: scheduledAt };
 }
@@ -222,6 +277,9 @@ export async function sendSingleBulkInvite(
       claim_invite_template: template,
     })
     .eq("id", item.opportunityId);
+
+  // Log to CRM (fire-and-forget)
+  logClaimInviteToCRM(item.recipientEmail, item.organiserName, item.opportunityTitle).catch(console.error);
 
   revalidatePath("/admin/opportunities");
   return {};

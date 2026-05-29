@@ -1141,3 +1141,76 @@ export interface SeriesEditionOption {
 export interface SeriesWithWorks extends Series {
   artworks: SeriesWork[];
 }
+
+// ── Outreach CRM (migration 150) ──────────────────────────────────────────────
+
+export type OutreachCategory =
+  | 'corporate' | 'council_govt' | 'arts_sector' | 'education'
+  | 'developer' | 'investor' | 'media_platform' | 'other';
+
+export type OutreachContactStatus =
+  | 'not_started' | 'contacted' | 'no_response' | 'replied'
+  | 'meeting_booked' | 'in_conversation' | 'rejected' | 'completed' | 'paused' | 'bounced';
+
+export type OutreachChannel =
+  | 'email' | 'linkedin' | 'phone' | 'in_person'
+  | 'contact_form' | 'intro_email' | 'instagram' | 'other';
+
+export type OutreachSentFrom = 'personal' | 'patronage';
+
+export type OutreachActivityType =
+  | 'email_sent' | 'email_received' | 'meeting' | 'phone_call'
+  | 'linkedin_message' | 'note' | 'status_change';
+
+export interface OutreachContact {
+  id: string;
+  company: string;
+  contact_name: string | null;
+  role: string | null;
+  email: string | null;
+  linkedin_url: string | null;
+  category: OutreachCategory;
+  status: OutreachContactStatus;
+  channel: OutreachChannel | null;
+  warm_intro_via: string | null;
+  first_contact_date: string | null;
+  last_activity_date: string | null;
+  follow_up_date: string | null;
+  meeting_date: string | null;
+  their_response: string | null;
+  next_action: string | null;
+  notes: string | null;
+  sent_from: OutreachSentFrom;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachActivity {
+  id: string;
+  contact_id: string;
+  activity_type: OutreachActivityType;
+  description: string;
+  created_at: string;
+}
+
+// ── Claim tokens (migration 151) ──────────────────────────────────────────────
+
+export type ClaimEntityType = 'partner' | 'artist';
+export type ClaimTokenStatus = 'pending' | 'sent' | 'claimed' | 'expired';
+
+export interface ClaimToken {
+  id: string;
+  token: string;
+  entity_type: ClaimEntityType;
+  entity_id: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  status: ClaimTokenStatus;
+  sent_at: string | null;
+  claimed_at: string | null;
+  claimed_by: string | null;
+  expires_at: string | null;
+  outreach_contact_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
