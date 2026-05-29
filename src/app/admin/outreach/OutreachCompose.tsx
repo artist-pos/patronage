@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { X, Bold, Italic, Underline, Link } from "lucide-react";
 import { sendOutreachEmail, cancelScheduledEmail, sendScheduledNow } from "./actions";
 
@@ -211,11 +212,12 @@ function FormatToolbar({ textareaRef, onBodyChange }: {
 }
 
 export function OutreachCompose() {
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [toName, setToName] = useState("");
-  const [toEmail, setToEmail] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [toName, setToName] = useState(() => searchParams.get("name") ?? "");
+  const [toEmail, setToEmail] = useState(() => searchParams.get("to") ?? "");
+  const [subject, setSubject] = useState(() => searchParams.get("subject") ?? "");
+  const [body, setBody] = useState(() => searchParams.get("body") ?? "");
   const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+import { Suspense } from "react";
 import { getOutreachHistory } from "./actions";
 import { OutreachCompose, SentHistory, ScheduledHistory } from "./OutreachCompose";
 
@@ -18,7 +19,9 @@ export default async function OutreachPage() {
         </p>
       </div>
 
-      <OutreachCompose />
+      <Suspense fallback={null}>
+        <OutreachCompose />
+      </Suspense>
 
       {scheduled.length > 0 && (
         <div className="space-y-3 border-t border-border pt-8">
