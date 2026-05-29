@@ -11,6 +11,7 @@ async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
     .from("opportunities")
     .select("*")
     .eq("status", status)
+    .order("deadline", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(200);
   return (data ?? []) as Opportunity[];
