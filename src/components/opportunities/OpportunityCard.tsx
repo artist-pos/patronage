@@ -83,8 +83,8 @@ function jitterScore(score: number, oppId: string): number {
 }
 
 function matchBadgeCls(score: number): string {
-  if (score >= 80) return "text-emerald-700 bg-emerald-50 border-emerald-200";
-  if (score >= 60) return "text-amber-700 bg-amber-50 border-amber-200";
+  if (score >= 70) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 50) return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-stone-500 bg-stone-50 border-stone-200";
 }
 
@@ -168,7 +168,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         </span>
 
         {/* Match score — list view */}
-        {matchScore !== undefined && matchScore >= 40 && (
+        {matchScore !== undefined && matchScore >= 30 && (
           <span className={`text-xs font-medium border px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${matchBadgeCls(matchScore)}`}>
             {matchScore}%
           </span>
@@ -210,7 +210,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1 md:gap-1.5">
-          {matchScore !== undefined && matchScore >= 40 && (
+          {matchScore !== undefined && matchScore >= 30 && (
             <span className={`text-xs font-medium border rounded-full px-2 md:px-3 py-1 leading-none ${matchBadgeCls(matchScore)}`}>
               {matchScore}%
             </span>
@@ -286,7 +286,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Match reason — desktop only, shown in For You tab */}
         {matchReason && matchScore !== undefined && (
-          <p className={`hidden md:block text-xs leading-relaxed ${matchScore >= 80 ? "text-emerald-700" : matchScore >= 60 ? "text-amber-700" : "text-stone-500"}`}>
+          <p className={`hidden md:block text-xs leading-relaxed ${matchScore >= 70 ? "text-emerald-700" : matchScore >= 50 ? "text-amber-700" : "text-stone-500"}`}>
             {matchReason}
           </p>
         )}
