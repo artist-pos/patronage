@@ -140,10 +140,11 @@ async function main() {
   }
 
   // Clean up matches for expired opportunities
+  const activeIds = opps.map((o) => o.id);
   const { error: cleanErr } = await supabase
     .from("opportunity_artist_matches")
     .delete()
-    .not("opportunity_id", "in", `(${opps.map((o) => `'${o.id}'`).join(",")})`);
+    .not("opportunity_id", "in", `(${activeIds.join(",")})`);
 
   if (cleanErr) console.warn("cleanup warning:", cleanErr.message);
 
