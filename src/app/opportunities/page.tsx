@@ -72,12 +72,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
   // Fetch data — only what the active tab needs
-  const [stats, matchedOpps, rawAllOpps, scoreMap, teaserOpps] = await Promise.all([
+  const [stats, matchedOpps, rawAllOpps, scoreMap] = await Promise.all([
     getMarketplaceStats(),
     (tab === "for-you" && isArtist && hasDisciplines) ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
     (tab === "all" || !isArtist) ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search }) : Promise.resolve([]),
     (tab === "all" && isArtist && hasDisciplines) ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
-    (tab === "for-you" && !user) ? getOpportunities({}, 6) : Promise.resolve([]),
+    Promise.resolve([]),
   ]);
 
   // Merge scores onto all-tab results (score only, no reason — reason is For You only)
@@ -147,8 +147,8 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       {/* For You tab content */}
       {tab === "for-you" && (
         <>
-          {/* Unauthenticated — teaser */}
-          {!user && <ForYouTeaser opps={teaserOpps} />}
+          {/* Unauthenticated — CTA */}
+          {!user && <ForYouTeaser />}
 
           {/* Authenticated non-artist (patron/partner) */}
           {user && !isArtist && (
