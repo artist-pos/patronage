@@ -1,6 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -54,13 +55,14 @@ export async function sendOutreachEmail(data: {
   subject: string;
   body: string;
   cc?: string[];
+  inReplyTo?: string; // Message-ID of the email being replied to
   scheduledAt?: string; // NZ local datetime string "YYYY-MM-DDTHH:mm"
 }): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { toName, toEmail, subject, body, cc = [], scheduledAt } = data;
+  const { toName, toEmail, subject, body, cc = [], inReplyTo, scheduledAt } = data;
   if (!toName.trim() || !toEmail.trim() || !subject.trim() || !body.trim()) {
     return { error: "All fields are required." };
   }
@@ -68,6 +70,7 @@ export async function sendOutreachEmail(data: {
   const admin = createAdminClient();
 
   // Schedule for later — just persist, don't send now
+  // (inReplyTo is stored so sendScheduledNow can thread correctly)
   if (scheduledAt) {
     const scheduledUtc = nzLocalToUtc(scheduledAt);
     const { error: scheduleError } = await admin.from("outreach_emails").insert({
@@ -77,6 +80,7 @@ export async function sendOutreachEmail(data: {
       subject: subject.trim(),
       body: body.trim(),
       cc_emails: cc,
+      in_reply_to: inReplyTo ?? null,
       status: "scheduled",
       scheduled_at: scheduledUtc,
       sent_at: null,
@@ -89,7 +93,9 @@ export async function sendOutreachEmail(data: {
     return {};
   }
 
-  // Send immediately
+  // Generate a Message-ID we control so we can thread replies later
+  const messageId = `<${randomUUID()}@patronage.nz>`;
+
   const resend = getResend();
   const { error: sendError } = await resend.emails.send({
     from: FROM_OUTREACH,
@@ -98,6 +104,10 @@ export async function sendOutreachEmail(data: {
     replyTo: FROM_OUTREACH,
     subject,
     html: buildHtmlEmail(body),
+    headers: {
+      "Message-ID": messageId,
+      ...(inReplyTo ? { "In-Reply-To": inReplyTo, "References": inReplyTo } : {}),
+    },
   });
 
   if (sendError) return { error: sendError.message };
@@ -109,6 +119,7 @@ export async function sendOutreachEmail(data: {
     subject: subject.trim(),
     body: body.trim(),
     cc_emails: cc,
+    message_id: messageId,
     status: "sent",
     sent_at: new Date().toISOString(),
   });
@@ -123,7 +134,7 @@ export async function getOutreachHistory() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("outreach_emails")
-    .select("id, to_name, to_email, subject, body, cc_emails, status, sent_at, scheduled_at")
+    .select("id, to_name, to_email, subject, body, cc_emails, message_id, status, sent_at, scheduled_at")
     .order("created_at", { ascending: false })
     .limit(100);
   return data ?? [];
@@ -138,7 +149,7 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
 
   const { data: email, error: fetchError } = await admin
     .from("outreach_emails")
-    .select("id, to_name, to_email, subject, body, cc_emails, status")
+    .select("id, to_name, to_email, subject, body, cc_emails, in_reply_to, status")
     .eq("id", id)
     .single();
 
@@ -147,6 +158,9 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
   if (email.status !== "scheduled") return { error: "Email is not scheduled." };
 
   const cc: string[] = email.cc_emails ?? [];
+  const inReplyTo: string | null = email.in_reply_to ?? null;
+  const messageId = `<${randomUUID()}@patronage.nz>`;
+
   const resend = getResend();
   const { error: sendError } = await resend.emails.send({
     from: FROM_OUTREACH,
@@ -155,6 +169,10 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
     replyTo: FROM_OUTREACH,
     subject: email.subject,
     html: buildHtmlEmail(email.body),
+    headers: {
+      "Message-ID": messageId,
+      ...(inReplyTo ? { "In-Reply-To": inReplyTo, "References": inReplyTo } : {}),
+    },
   });
 
   if (sendError) return { error: sendError.message };
@@ -165,6 +183,7 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
       status: "sent",
       sent_at: new Date().toISOString(),
       scheduled_at: null,
+      message_id: messageId,
     })
     .eq("id", id);
 

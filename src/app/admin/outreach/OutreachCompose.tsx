@@ -266,6 +266,7 @@ export function OutreachCompose() {
   const [subject, setSubject] = useState(() => searchParams.get("subject") ?? "");
   const [body, setBody] = useState(() => searchParams.get("body") ?? "");
   const [cc, setCc] = useState<string[]>([]);
+  const [inReplyTo, setInReplyTo] = useState(() => searchParams.get("in_reply_to") ?? "");
   const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -285,6 +286,7 @@ export function OutreachCompose() {
     if (to !== null) setToEmail(to);
     if (subj !== null) setSubject(subj);
     if (b !== null) setBody(b);
+    setInReplyTo(searchParams.get("in_reply_to") ?? "");
     setCc([]);
   }, [searchParams]);
 
@@ -297,6 +299,7 @@ export function OutreachCompose() {
     startTransition(async () => {
       const result = await sendOutreachEmail({
         toName, toEmail, subject, body, cc,
+        inReplyTo: inReplyTo || undefined,
         scheduledAt: scheduling ? scheduledAt : undefined,
       });
       if (result.error) {
@@ -308,6 +311,7 @@ export function OutreachCompose() {
       setSubject("");
       setBody("");
       setCc([]);
+      setInReplyTo("");
       setScheduledAt("");
       setScheduling(false);
       setToast(scheduling ? "Email scheduled." : "Email sent.");
@@ -363,6 +367,18 @@ export function OutreachCompose() {
           <label className={labelCls}>CC</label>
           <CcInput cc={cc} onChange={setCc} />
         </div>
+
+        {inReplyTo && (
+          <div className="flex items-center justify-between text-xs text-stone-400 bg-stone-50 border border-border px-3 py-2">
+            <span className="flex items-center gap-1.5">
+              <CornerDownRight className="w-3 h-3 shrink-0" />
+              Threaded reply — will appear in the recipient&apos;s existing conversation
+            </span>
+            <button type="button" onClick={() => setInReplyTo("")} className="hover:text-foreground transition-colors ml-3 shrink-0">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className={labelCls}>Subject</label>
@@ -455,6 +471,7 @@ type SentEmail = {
   subject: string;
   body: string;
   cc_emails?: string[] | null;
+  message_id?: string | null;
   sent_at: string | null;
 };
 
@@ -473,6 +490,7 @@ export function SentHistory({ emails }: { emails: SentEmail[] }) {
     e.stopPropagation();
     const subject = email.subject.startsWith("Re: ") ? email.subject : `Re: ${email.subject}`;
     const params = new URLSearchParams({ to: email.to_email, name: email.to_name, subject });
+    if (email.message_id) params.set("in_reply_to", email.message_id);
     router.push(`/admin/outreach?${params.toString()}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
