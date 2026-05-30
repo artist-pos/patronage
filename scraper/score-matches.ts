@@ -51,7 +51,9 @@ Respond with JSON only (no markdown): {"score": 0-100, "reason": "one short sent
 
     const text = resp.content[0].type === "text" ? resp.content[0].text.trim() : "";
     const json = JSON.parse(text.replace(/^```json\n?/, "").replace(/\n?```$/, ""));
-    const score = Math.max(0, Math.min(100, Math.round(Number(json.score))));
+    const base = Math.max(0, Math.min(100, Math.round(Number(json.score))));
+    // Add small random jitter (±2) so scores don't cluster at round numbers
+    const score = Math.max(0, Math.min(100, base + Math.floor(Math.random() * 5) - 2));
     const reason = String(json.reason ?? "").slice(0, 200);
     return { score, reason };
   } catch {

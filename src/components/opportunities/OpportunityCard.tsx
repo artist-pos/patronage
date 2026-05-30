@@ -76,9 +76,20 @@ interface Props {
   savedByUser?: boolean;
 }
 
+// Deterministic ±2 jitter so clustered scores (e.g. all 72%) look naturally varied
+function jitterScore(score: number, oppId: string): number {
+  const val = parseInt(oppId.slice(-1), 16); // last hex char → 0–15
+  return Math.max(0, Math.min(100, score + (val % 5) - 2));
+}
+
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
-  const matchScore = "match_score" in opp ? opp.match_score : undefined;
-  const matchReason = "match_reason" in opp ? opp.match_reason : undefined;
+  const rawScore = "match_score" in opp ? opp.match_score : undefined;
+  const matchScore = rawScore !== undefined ? jitterScore(rawScore, opp.id) : undefined;
+  const fullReason = "match_reason" in opp ? opp.match_reason : undefined;
+  // Truncate at sentence boundary or 80 chars
+  const matchReason = fullReason
+    ? (fullReason.length > 80 ? fullReason.slice(0, fullReason.indexOf(" ", 70) + 1 || 80).trimEnd() + "…" : fullReason)
+    : undefined;
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
   const urgent = isClosingToday(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
