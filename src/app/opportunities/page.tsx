@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArtistScoreMap } from "@/lib/opportunities";
+import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
@@ -65,18 +66,18 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
 
-  // Determine active tab
-  const defaultTab = isArtist ? "for-you" : "all";
-  const tab = params.tab === "all" ? "all" : params.tab === "for-you" ? "for-you" : defaultTab;
+  // Determine active tab — default everyone to "for-you" (unauthenticated see teaser)
+  const tab = params.tab === "all" ? "all" : "for-you";
 
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
   // Fetch data — only what the active tab needs
-  const [stats, matchedOpps, rawAllOpps, scoreMap] = await Promise.all([
+  const [stats, matchedOpps, rawAllOpps, scoreMap, teaserOpps] = await Promise.all([
     getMarketplaceStats(),
     (tab === "for-you" && isArtist && hasDisciplines) ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
     (tab === "all" || !isArtist) ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search }) : Promise.resolve([]),
     (tab === "all" && isArtist && hasDisciplines) ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
+    (tab === "for-you" && !user) ? getOpportunities({}, 6) : Promise.resolve([]),
   ]);
 
   // Merge scores onto all-tab results (score only, no reason — reason is For You only)
@@ -138,46 +139,54 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      {/* Tab switch — artists only */}
-      {isArtist && (
-        <Suspense>
-          <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={matchedOpps.length} />
-        </Suspense>
-      )}
+      {/* Tab switch — always visible */}
+      <Suspense>
+        <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={matchedOpps.length} />
+      </Suspense>
 
       {/* For You tab content */}
-      {tab === "for-you" && isArtist && (
+      {tab === "for-you" && (
         <>
-          {!hasDisciplines ? (
-            <div className="border border-border p-8 text-center space-y-3">
-              <p className="text-sm font-medium">Complete your profile to get personalised matches</p>
-              <p className="text-xs text-muted-foreground">Add your disciplines so we can surface the most relevant opportunities for your practice.</p>
-              <Link
-                href="/profile/edit"
-                className="inline-block text-xs font-medium px-4 py-2 bg-black text-white hover:opacity-80 transition-opacity"
-              >
-                Edit profile
-              </Link>
-            </div>
-          ) : matchedOpps.length === 0 ? (
-            <div className="border border-border p-8 text-center space-y-2">
-              <p className="text-sm font-medium">Your matches are being calculated</p>
-              <p className="text-xs text-muted-foreground">
-                Scores are updated weekly after new opportunities are scraped.{" "}
-                <Link href="/opportunities?tab=all" className="underline underline-offset-2">
-                  Browse all opportunities
-                </Link>{" "}
-                in the meantime.
-              </p>
-            </div>
-          ) : (
-            <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
+          {/* Unauthenticated — teaser */}
+          {!user && <ForYouTeaser opps={teaserOpps} />}
+
+          {/* Authenticated non-artist (patron/partner) */}
+          {user && !isArtist && (
+            <p className="text-sm text-muted-foreground py-12 text-center">
+              Personalised matches are available for artist profiles.
+            </p>
+          )}
+
+          {/* Artist states */}
+          {user && isArtist && (
+            <>
+              {!hasDisciplines ? (
+                <div className="border border-border p-8 text-center space-y-3">
+                  <p className="text-sm font-medium">Complete your profile to get personalised matches</p>
+                  <p className="text-xs text-muted-foreground">Add your disciplines so we can surface the most relevant opportunities for your practice.</p>
+                  <Link href="/profile/edit" className="inline-block text-xs font-medium px-4 py-2 bg-black text-white hover:opacity-80 transition-opacity">
+                    Edit profile
+                  </Link>
+                </div>
+              ) : matchedOpps.length === 0 ? (
+                <div className="border border-border p-8 text-center space-y-2">
+                  <p className="text-sm font-medium">Your matches are being calculated</p>
+                  <p className="text-xs text-muted-foreground">
+                    Scores are updated weekly after new opportunities are scraped.{" "}
+                    <Link href="/opportunities?tab=all" className="underline underline-offset-2">Browse all opportunities</Link>{" "}
+                    in the meantime.
+                  </p>
+                </div>
+              ) : (
+                <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={true} />
+              )}
+            </>
           )}
         </>
       )}
 
       {/* All Opportunities tab content */}
-      {(tab === "all" || !isArtist) && (
+      {tab === "all" && (
         <>
           {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} />}
 
