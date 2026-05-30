@@ -140,29 +140,29 @@ export default async function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
               <Link
                 href="/auth/signup?role=artist"
-                className="flex flex-col items-center text-center gap-1 bg-black text-white px-5 py-4 hover:bg-black/85 transition-colors"
+                className="flex flex-col text-left gap-1 border border-black px-5 py-4 hover:bg-muted/40 transition-colors"
               >
-                <span className="text-sm font-semibold">Join as an Artist</span>
-                <span className="text-xs opacity-70 leading-snug">
-                  Build your profile and find opportunities.
+                <span className="text-sm font-semibold">I&apos;m an artist</span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  Build your profile, find opportunities, share your practice.
                 </span>
               </Link>
               <Link
                 href="/auth/signup?role=patron"
-                className="flex flex-col items-center text-center gap-1 border border-black px-5 py-4 hover:bg-muted/50 transition-colors"
+                className="flex flex-col text-left gap-1 border border-black px-5 py-4 hover:bg-muted/40 transition-colors"
               >
-                <span className="text-sm font-semibold">Join as a Patron</span>
+                <span className="text-sm font-semibold">I support artists</span>
                 <span className="text-xs text-muted-foreground leading-snug">
-                  Follow and collect work from artists you believe in.
+                  Follow artists, collect work, discover new practices.
                 </span>
               </Link>
               <Link
                 href="/auth/signup?role=partner"
-                className="flex flex-col items-center text-center gap-1 border border-black px-5 py-4 hover:bg-muted/50 transition-colors"
+                className="flex flex-col text-left gap-1 border border-black px-5 py-4 hover:bg-muted/40 transition-colors"
               >
-                <span className="text-sm font-semibold">Join as a Partner</span>
+                <span className="text-sm font-semibold">I represent an organisation</span>
                 <span className="text-xs text-muted-foreground leading-snug">
-                  List opportunities, run applications, or invest in artists as part of your ESG strategy.
+                  List opportunities and reach artists directly.
                 </span>
               </Link>
             </div>

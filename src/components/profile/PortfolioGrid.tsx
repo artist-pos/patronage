@@ -12,6 +12,8 @@ export interface GridSeriesItem {
   hero_image_url: string | null;
   artworkCount: number;
   is_featured: boolean;
+  position?: number;
+  year?: number;
 }
 
 export type GridItem = PortfolioImage | GridSeriesItem;
@@ -200,7 +202,7 @@ export function PortfolioGrid({
                       {img.title}
                     </p>
                     <p style={{ fontSize:11,color:"#78716c",lineHeight:1.4,margin:0 }}>
-                      {img.artworkCount} {img.artworkCount === 1 ? "work" : "works"}
+                      {img.year ? `${img.year} · ` : ""}{img.artworkCount} {img.artworkCount === 1 ? "work" : "works"}
                     </p>
                   </div>
                 </div>

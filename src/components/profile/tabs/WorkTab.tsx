@@ -13,6 +13,8 @@ interface SeriesCard {
   hero_image_url: string | null;
   artworkCount: number;
   is_featured: boolean;
+  position?: number;
+  year?: number;
 }
 
 interface SoldWork extends Artwork {
@@ -97,13 +99,15 @@ export function WorkTab({
           hero_image_url: s.hero_image_url,
           artworkCount: s.artworkCount,
           is_featured: s.is_featured,
+          position: s.position,
+          year: s.year,
         }));
-        const sortedArtworks = [...portfolioImages].sort((a, b) => {
-          if (a.is_featured && !b.is_featured) return -1;
-          if (!a.is_featured && b.is_featured) return 1;
-          return (a.position ?? 0) - (b.position ?? 0);
-        });
-        const allItems: GridItem[] = [...seriesItems, ...sortedArtworks];
+        const allItems: GridItem[] = [...seriesItems, ...portfolioImages]
+          .sort((a, b) => {
+            const posA = (a as { position?: number | null }).position ?? 9999;
+            const posB = (b as { position?: number | null }).position ?? 9999;
+            return posA - posB;
+          });
 
         return (
         <section className="space-y-4">

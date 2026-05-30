@@ -11,7 +11,7 @@ export function ForYouTeaser() {
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
         <Link
-          href="/auth/signup"
+          href="/get-started"
           className="inline-block text-sm font-medium px-6 py-2.5 bg-black text-white hover:opacity-80 transition-opacity"
         >
           Get matched — it&apos;s free

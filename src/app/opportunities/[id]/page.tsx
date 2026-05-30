@@ -226,10 +226,10 @@ async function UserCTA({
   if (!user) {
     return (
       <a
-        href="/auth/login"
+        href="/get-started"
         className="inline-flex items-center gap-2 border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
       >
-        Sign in to apply →
+        Create an account to apply →
       </a>
     );
   }

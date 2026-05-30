@@ -26,7 +26,7 @@ export function UnauthSaveModal({ onClose }: Props) {
           </p>
           <div className="flex flex-col gap-2">
             <Link
-              href="/auth/signup"
+              href="/get-started"
               className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
             >
               Create account →

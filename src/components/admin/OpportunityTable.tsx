@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
-import { X, Mail } from "lucide-react";
+import { X, Mail, Search } from "lucide-react";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import type { Opportunity } from "@/types/database";
@@ -124,6 +124,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [bulkPanelOpen, setBulkPanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
+  const [search, setSearch] = useState("");
 
   const [claimState, setClaimState] = useState<Record<string, ClaimState>>(
     () =>
@@ -231,10 +232,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const inviteOpp = inviteTargetId ? opps.find(o => o.id === inviteTargetId) ?? null : null;
   const selectedOpps = opps.filter(o => selected.has(o.id));
 
-  // Filter opps by claim status
-  const filteredOpps = claimFilter === "all"
-    ? opps
-    : opps.filter(o => getClaimStatus(o) === claimFilter);
+  // Filter opps by search + claim status
+  const q = search.trim().toLowerCase();
+  const filteredOpps = opps.filter(o => {
+    if (claimFilter !== "all" && getClaimStatus(o) !== claimFilter) return false;
+    if (q && !o.title?.toLowerCase().includes(q) && !o.organiser?.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   const visibleIds = filteredOpps.map(o => o.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
@@ -244,6 +248,18 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
       {/* Header toolbar */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search title or organiser…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="text-xs border border-border pl-6 pr-2 py-1.5 focus:outline-none focus:border-black bg-background w-52"
+            />
+          </div>
+
           {/* Claim filter */}
           <select
             value={claimFilter}
@@ -410,7 +426,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
         </table>
         {filteredOpps.length === 0 && (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            {claimFilter !== "all" ? "No opportunities with this claim status." : "No opportunities yet."}
+            {q ? `No opportunities matching "${search}".` : claimFilter !== "all" ? "No opportunities with this claim status." : "No opportunities yet."}
           </p>
         )}
       </div>

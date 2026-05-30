@@ -404,21 +404,22 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     needsSeries
       ? supabase
           .from("series")
-          .select("id, title, slug, hero_image_url, is_featured, series_artworks(count)")
+          .select("id, title, slug, hero_image_url, is_featured, position, created_at, series_artworks(count)")
           .eq("artist_id", profile.id)
-          .order("is_featured", { ascending: false })
-          .order("created_at", { ascending: false })
+          .order("position", { ascending: true })
           .then(({ data }) => (data ?? []).map(s => ({
             id: s.id,
             title: s.title,
             slug: s.slug,
             hero_image_url: s.hero_image_url as string | null,
             is_featured: s.is_featured as boolean,
+            position: s.position as number,
+            year: s.created_at ? new Date(s.created_at as string).getFullYear() : undefined,
             artworkCount: Array.isArray(s.series_artworks)
               ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
               : 0,
           })))
-      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>),
+      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>),
     // Series artwork IDs — to exclude from the portfolio gallery
     needsSeriesArtworkIds
       ? supabase
@@ -824,7 +825,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   receivedGrants={profile.received_grants ?? []}
                   achievements={achievements}
                   portfolioImages={images}
-                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>}
+                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
                   studioUpdates={studioUpdates}
                   artistName={displayName}
                   viewerRole={viewerRole}
@@ -843,7 +844,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   availableWorks={publicAvailableWorks}
                   soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
                   collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
-                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; artworkCount: number }>}
+                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
                   profileId={profile.id}
                   username={profile.username}
                   artistName={displayName}
