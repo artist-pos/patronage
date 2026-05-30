@@ -1,10 +1,10 @@
 "use client";
 
 import { OpportunityCard } from "./OpportunityCard";
-import type { Opportunity } from "@/types/database";
+import type { Opportunity, OpportunityWithMatch } from "@/types/database";
 
 interface Props {
-  opportunities: Opportunity[];
+  opportunities: (Opportunity | OpportunityWithMatch)[];
   view?: "gallery" | "list";
   priorityOffset?: number;
   isAuthenticated?: boolean;

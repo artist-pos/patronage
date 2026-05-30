@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
-import type { Opportunity, OpportunityFilters, OpportunityInsert } from "@/types/database";
+import type { Opportunity, OpportunityFilters, OpportunityInsert, OpportunityWithMatch } from "@/types/database";
 
 const CARD_FIELDS = [
   "id", "slug", "title", "organiser", "caption", "description",
@@ -187,6 +187,51 @@ export const getOpportunityById = cache(async function getOpportunityById(idOrSl
 
   return data as Opportunity | null;
 });
+
+export async function getMatchedOpportunities(
+  artistId: string,
+  threshold = 70,
+  limit = 30
+): Promise<OpportunityWithMatch[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // Step 1: get match scores
+  const { data: matches, error: matchErr } = await supabase
+    .from("opportunity_artist_matches")
+    .select("opportunity_id, score, reason")
+    .eq("artist_id", artistId)
+    .gte("score", threshold)
+    .order("score", { ascending: false })
+    .limit(limit);
+
+  if (matchErr) throw new Error(matchErr.message);
+  if (!matches?.length) return [];
+
+  const scoreMap = new Map(matches.map((m) => [m.opportunity_id as string, { score: m.score as number, reason: m.reason as string | null }]));
+  const ids = [...scoreMap.keys()];
+
+  // Step 2: fetch the opportunity rows
+  const { data: opps, error: oppErr } = await supabase
+    .from("opportunities")
+    .select(CARD_FIELDS)
+    .in("id", ids)
+    .eq("is_active", true)
+    .eq("status", "published")
+    .or(`deadline.gte.${today},deadline.is.null`);
+
+  if (oppErr) throw new Error(oppErr.message);
+  if (!opps?.length) return [];
+
+  return (opps as unknown as Opportunity[])
+    .map((opp) => {
+      const m = scoreMap.get(opp.id);
+      if (!m) return null;
+      return { ...opp, match_score: m.score, match_reason: m.reason } as OpportunityWithMatch;
+    })
+    .filter((o): o is OpportunityWithMatch => o !== null)
+    .sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0));
+}
 
 export async function insertOpportunities(rows: OpportunityInsert[]) {
   const supabase = await createClient();

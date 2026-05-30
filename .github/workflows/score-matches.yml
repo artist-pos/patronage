@@ -1,0 +1,36 @@
+name: Score Opportunity Matches
+
+on:
+  workflow_run:
+    workflows: ["Scrape Opportunities"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  score:
+    name: Score artist-opportunity matches
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: scraper/package.json
+
+      - name: Install scraper dependencies
+        working-directory: scraper
+        run: npm install
+
+      - name: Run scorer
+        working-directory: scraper
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx score-matches.ts

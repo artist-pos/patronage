@@ -884,6 +884,19 @@ export interface BibliographyEntry {
   link: string;
 }
 
+export interface OpportunityMatch {
+  artist_id: string;
+  opportunity_id: string;
+  score: number;
+  reason: string | null;
+  scored_at: string;
+}
+
+export type OpportunityWithMatch = Opportunity & {
+  match_score?: number;
+  match_reason?: string | null;
+};
+
 export interface ProfileFilters {
   country?: CountryEnum;
   career_stage?: CareerStageEnum;

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Opportunity, RecurrencePattern } from "@/types/database";
+import type { Opportunity, RecurrencePattern, OpportunityWithMatch } from "@/types/database";
 import { SaveButton } from "./SaveButton";
 import { OpportunityImageArea } from "./OpportunityImageArea";
 
@@ -67,7 +67,7 @@ function isPreOpen(opensAt: string | null): boolean {
 }
 
 interface Props {
-  opp: Opportunity;
+  opp: Opportunity | OpportunityWithMatch;
   isPreview?: boolean;
   view?: "gallery" | "list";
   /** Pass true for the first few above-fold cards to prioritise LCP. */
@@ -77,6 +77,8 @@ interface Props {
 }
 
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
+  const matchScore = "match_score" in opp ? opp.match_score : undefined;
+  const matchReason = "match_reason" in opp ? opp.match_reason : undefined;
   const closing = isClosingSoon(opp.opens_at ?? null, opp.deadline);
   const urgent = isClosingToday(opp.opens_at ?? null, opp.deadline);
   const preOpen = isPreOpen(opp.opens_at ?? null);
@@ -147,6 +149,13 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         <span className="font-mono text-xs text-muted-foreground whitespace-nowrap shrink-0">
           {days}
         </span>
+
+        {/* Match score — list view */}
+        {matchScore !== undefined && (
+          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+            {matchScore}% match
+          </span>
+        )}
       </div>
     );
 
@@ -184,6 +193,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1 md:gap-1.5">
+          {matchScore !== undefined && (
+            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 md:px-3 py-1 leading-none">
+              {matchScore}% match
+            </span>
+          )}
           <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
             {opp.type}
           </span>
@@ -253,8 +267,15 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           );
         })()}
 
+        {/* Match reason — desktop only, shown in For You tab */}
+        {matchReason && (
+          <p className="hidden md:block text-xs text-emerald-700 leading-relaxed">
+            {matchReason}
+          </p>
+        )}
+
         {/* Caption — desktop only */}
-        {(opp.caption || opp.description) && (
+        {!matchReason && (opp.caption || opp.description) && (
           <p className="hidden md:block text-xs text-muted-foreground leading-relaxed flex-1">
             {opp.caption ?? opp.description}
           </p>
