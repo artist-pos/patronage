@@ -82,6 +82,12 @@ function jitterScore(score: number, oppId: string): number {
   return Math.max(0, Math.min(100, score + (val % 5) - 2));
 }
 
+function matchBadgeCls(score: number): string {
+  if (score >= 80) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 60) return "text-amber-700 bg-amber-50 border-amber-200";
+  return "text-stone-500 bg-stone-50 border-stone-200";
+}
+
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
   const rawScore = "match_score" in opp ? opp.match_score : undefined;
   const matchScore = rawScore !== undefined ? jitterScore(rawScore, opp.id) : undefined;
@@ -162,9 +168,9 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         </span>
 
         {/* Match score — list view */}
-        {matchScore !== undefined && (
-          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
-            {matchScore}% match
+        {matchScore !== undefined && matchScore >= 40 && (
+          <span className={`text-xs font-medium border px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${matchBadgeCls(matchScore)}`}>
+            {matchScore}%
           </span>
         )}
       </div>
@@ -204,9 +210,9 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1 md:gap-1.5">
-          {matchScore !== undefined && (
-            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 md:px-3 py-1 leading-none">
-              {matchScore}% match
+          {matchScore !== undefined && matchScore >= 40 && (
+            <span className={`text-xs font-medium border rounded-full px-2 md:px-3 py-1 leading-none ${matchBadgeCls(matchScore)}`}>
+              {matchScore}%
             </span>
           )}
           <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
@@ -279,8 +285,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         })()}
 
         {/* Match reason — desktop only, shown in For You tab */}
-        {matchReason && (
-          <p className="hidden md:block text-xs text-emerald-700 leading-relaxed">
+        {matchReason && matchScore !== undefined && (
+          <p className={`hidden md:block text-xs leading-relaxed ${matchScore >= 80 ? "text-emerald-700" : matchScore >= 60 ? "text-amber-700" : "text-stone-500"}`}>
             {matchReason}
           </p>
         )}

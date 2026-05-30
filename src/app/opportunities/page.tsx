@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getOpportunities, getMarketplaceStats, getMatchedOpportunities } from "@/lib/opportunities";
+import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArtistScoreMap } from "@/lib/opportunities";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
@@ -72,11 +72,17 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
   // Fetch data — only what the active tab needs
-  const [stats, matchedOpps, allOpps] = await Promise.all([
+  const [stats, matchedOpps, rawAllOpps, scoreMap] = await Promise.all([
     getMarketplaceStats(),
     (tab === "for-you" && isArtist && hasDisciplines) ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
     (tab === "all" || !isArtist) ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search }) : Promise.resolve([]),
+    (tab === "all" && isArtist && hasDisciplines) ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
   ]);
+
+  // Merge scores onto all-tab results (score only, no reason — reason is For You only)
+  const allOpps = scoreMap.size > 0
+    ? rawAllOpps.map((o) => scoreMap.has(o.id) ? { ...o, match_score: scoreMap.get(o.id) } : o)
+    : rawAllOpps;
 
   const featuredOpp = (tab === "all" && !hasManualFilters)
     ? (allOpps.find((o) => o.is_featured) ?? null)

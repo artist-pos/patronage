@@ -188,6 +188,15 @@ export const getOpportunityById = cache(async function getOpportunityById(idOrSl
   return data as Opportunity | null;
 });
 
+export async function getArtistScoreMap(artistId: string): Promise<Map<string, number>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("opportunity_artist_matches")
+    .select("opportunity_id, score")
+    .eq("artist_id", artistId);
+  return new Map((data ?? []).map((r) => [r.opportunity_id as string, r.score as number]));
+}
+
 export async function getMatchedOpportunities(
   artistId: string,
   threshold = 70,
