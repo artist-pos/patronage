@@ -123,7 +123,10 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
 
   // Track if dirty (has unsaved changes)
   const [dirty, setDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Always-fresh ref — updated by useEffect after React flushes state, so setTimeout never reads stale values
+  const latestInput = useRef<CreateContactInput>(buildInput());
 
   // Load activities on open (existing contact only)
   useEffect(() => {
@@ -141,6 +144,13 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Keep latestInput ref in sync after React flushes state updates
+  useEffect(() => {
+    latestInput.current = buildInput();
+  }, [company, contactName, role, email, linkedinUrl, category, status, channel,
+      warmIntroVia, firstContactDate, lastActivityDate, followUpDate, meetingDate,
+      theirResponse, nextAction, notes, sentFrom]);
 
   function buildInput(): CreateContactInput {
     return {
@@ -164,21 +174,42 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
     };
   }
 
+  async function handleSave() {
+    if (!contact) return;
+    const input = buildInput();
+    setSaveStatus("saving");
+    startTransition(async () => {
+      const res = await updateContact(contact.id, input);
+      if (!res.error) {
+        setDirty(false);
+        setSaveStatus("saved");
+        onUpdated({ ...contact, ...input, updated_at: new Date().toISOString() });
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } else {
+        setSaveStatus("idle");
+        setToast(res.error ?? "Save failed.");
+      }
+    });
+  }
+
   function scheduleAutoSave() {
     setDirty(true);
     if (isNew) return; // New contacts save on submit, not auto
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
       if (!contact) return;
+      // latestInput.current is kept fresh by useEffect — no stale closure
+      const input = latestInput.current;
       startTransition(async () => {
-        const input = buildInput();
         const res = await updateContact(contact.id, input);
         if (!res.error) {
           setDirty(false);
+          setSaveStatus("saved");
           onUpdated({ ...contact, ...input, updated_at: new Date().toISOString() });
+          setTimeout(() => setSaveStatus("idle"), 2000);
         }
       });
-    }, 800);
+    }, 1500);
   }
 
   function field(setter: (v: string) => void) {
@@ -262,8 +293,19 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
         <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-background z-10">
           <p className="text-sm font-semibold">{isNew ? "New Contact" : (contact?.company ?? "")}</p>
           <div className="flex items-center gap-2">
-            {!isNew && dirty && <span className="text-[10px] text-muted-foreground">Saving…</span>}
-            {!isNew && !dirty && <span className="text-[10px] text-muted-foreground">Saved</span>}
+            {!isNew && (
+              <>
+                {saveStatus === "saving" && <span className="text-[10px] text-muted-foreground">Saving…</span>}
+                {saveStatus === "saved" && <span className="text-[10px] text-stone-400">Saved</span>}
+                <button
+                  onClick={handleSave}
+                  disabled={isPending || !dirty}
+                  className="text-xs font-medium px-3 py-1 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-30"
+                >
+                  Save
+                </button>
+              </>
+            )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
               <X className="w-4 h-4" />
             </button>
