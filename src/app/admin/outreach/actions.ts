@@ -53,13 +53,14 @@ export async function sendOutreachEmail(data: {
   toEmail: string;
   subject: string;
   body: string;
+  cc?: string[];
   scheduledAt?: string; // NZ local datetime string "YYYY-MM-DDTHH:mm"
 }): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { toName, toEmail, subject, body, scheduledAt } = data;
+  const { toName, toEmail, subject, body, cc = [], scheduledAt } = data;
   if (!toName.trim() || !toEmail.trim() || !subject.trim() || !body.trim()) {
     return { error: "All fields are required." };
   }
@@ -75,6 +76,7 @@ export async function sendOutreachEmail(data: {
       to_email: toEmail.trim(),
       subject: subject.trim(),
       body: body.trim(),
+      cc_emails: cc,
       status: "scheduled",
       scheduled_at: scheduledUtc,
       sent_at: null,
@@ -92,6 +94,7 @@ export async function sendOutreachEmail(data: {
   const { error: sendError } = await resend.emails.send({
     from: FROM_OUTREACH,
     to: [`${toName} <${toEmail}>`],
+    ...(cc.length > 0 ? { cc } : {}),
     replyTo: FROM_OUTREACH,
     subject,
     html: buildHtmlEmail(body),
@@ -105,6 +108,7 @@ export async function sendOutreachEmail(data: {
     to_email: toEmail.trim(),
     subject: subject.trim(),
     body: body.trim(),
+    cc_emails: cc,
     status: "sent",
     sent_at: new Date().toISOString(),
   });
@@ -119,7 +123,7 @@ export async function getOutreachHistory() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("outreach_emails")
-    .select("id, to_name, to_email, subject, body, status, sent_at, scheduled_at")
+    .select("id, to_name, to_email, subject, body, cc_emails, status, sent_at, scheduled_at")
     .order("created_at", { ascending: false })
     .limit(100);
   return data ?? [];
@@ -134,7 +138,7 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
 
   const { data: email, error: fetchError } = await admin
     .from("outreach_emails")
-    .select("id, to_name, to_email, subject, body, status")
+    .select("id, to_name, to_email, subject, body, cc_emails, status")
     .eq("id", id)
     .single();
 
@@ -142,10 +146,12 @@ export async function sendScheduledNow(id: string): Promise<{ error?: string }> 
   if (!email) return { error: "Email not found." };
   if (email.status !== "scheduled") return { error: "Email is not scheduled." };
 
+  const cc: string[] = email.cc_emails ?? [];
   const resend = getResend();
   const { error: sendError } = await resend.emails.send({
     from: FROM_OUTREACH,
     to: [`${email.to_name} <${email.to_email}>`],
+    ...(cc.length > 0 ? { cc } : {}),
     replyTo: FROM_OUTREACH,
     subject: email.subject,
     html: buildHtmlEmail(email.body),

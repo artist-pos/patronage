@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
-import { X, Bold, Italic, Underline, Link } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { X, Bold, Italic, Underline, Link, CornerDownRight } from "lucide-react";
 import { sendOutreachEmail, cancelScheduledEmail, sendScheduledNow } from "./actions";
 
 function buildHtml(_toName: string, _subject: string, body: string): string {
@@ -34,9 +34,55 @@ function buildHtml(_toName: string, _subject: string, body: string): string {
 </html>`;
 }
 
-function PreviewModal({ toName, toEmail, subject, body, onClose }: {
+function CcInput({ cc, onChange }: { cc: string[]; onChange: (cc: string[]) => void }) {
+  const [input, setInput] = useState("");
+
+  function addEmail() {
+    const email = input.trim().replace(/,+$/, "");
+    if (!email || cc.includes(email)) { setInput(""); return; }
+    onChange([...cc, email]);
+    setInput("");
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5 border border-border px-2.5 py-1.5 focus-within:border-foreground transition-colors min-h-[36px]">
+      {cc.map((email, i) => (
+        <span key={email} className="flex items-center gap-1 bg-stone-100 text-xs px-2 py-0.5 rounded-full shrink-0">
+          {email}
+          <button
+            type="button"
+            onClick={() => onChange(cc.filter((_, idx) => idx !== i))}
+            className="text-stone-400 hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        type="email"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "Tab" || e.key === ",") {
+            e.preventDefault();
+            addEmail();
+          }
+          if (e.key === "Backspace" && !input && cc.length > 0) {
+            onChange(cc.slice(0, -1));
+          }
+        }}
+        onBlur={addEmail}
+        placeholder={cc.length === 0 ? "Add CC… (Enter to add)" : ""}
+        className="text-sm bg-transparent flex-1 min-w-[180px] focus:outline-none placeholder:text-stone-300"
+      />
+    </div>
+  );
+}
+
+function PreviewModal({ toName, toEmail, cc, subject, body, onClose }: {
   toName: string;
   toEmail: string;
+  cc: string[];
   subject: string;
   body: string;
   onClose: () => void;
@@ -73,6 +119,7 @@ function PreviewModal({ toName, toEmail, subject, body, onClose }: {
         <div className="bg-stone-100 border border-border text-xs text-muted-foreground px-4 py-3 space-y-1 font-mono">
           <p><span className="text-stone-400">From:</span> Patronage &lt;hello@patronage.nz&gt;</p>
           <p><span className="text-stone-400">To:</span> {toName} &lt;{toEmail}&gt;</p>
+          {cc.length > 0 && <p><span className="text-stone-400">CC:</span> {cc.join(", ")}</p>}
           <p><span className="text-stone-400">Subject:</span> {subject}</p>
         </div>
 
@@ -218,12 +265,28 @@ export function OutreachCompose() {
   const [toEmail, setToEmail] = useState(() => searchParams.get("to") ?? "");
   const [subject, setSubject] = useState(() => searchParams.get("subject") ?? "");
   const [body, setBody] = useState(() => searchParams.get("body") ?? "");
+  const [cc, setCc] = useState<string[]>([]);
   const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMounted = useRef(false);
+
+  // Re-apply form when searchParams change (e.g. follow-up navigation)
+  useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; }
+    const name = searchParams.get("name");
+    const to = searchParams.get("to");
+    const subj = searchParams.get("subject");
+    const b = searchParams.get("body");
+    if (name !== null) setToName(name);
+    if (to !== null) setToEmail(to);
+    if (subj !== null) setSubject(subj);
+    if (b !== null) setBody(b);
+    setCc([]);
+  }, [searchParams]);
 
   function handleSend() {
     setError(null);
@@ -233,7 +296,7 @@ export function OutreachCompose() {
     }
     startTransition(async () => {
       const result = await sendOutreachEmail({
-        toName, toEmail, subject, body,
+        toName, toEmail, subject, body, cc,
         scheduledAt: scheduling ? scheduledAt : undefined,
       });
       if (result.error) {
@@ -244,6 +307,7 @@ export function OutreachCompose() {
       setToEmail("");
       setSubject("");
       setBody("");
+      setCc([]);
       setScheduledAt("");
       setScheduling(false);
       setToast(scheduling ? "Email scheduled." : "Email sent.");
@@ -262,6 +326,7 @@ export function OutreachCompose() {
         <PreviewModal
           toName={toName}
           toEmail={toEmail}
+          cc={cc}
           subject={subject}
           body={body}
           onClose={() => setPreviewing(false)}
@@ -292,6 +357,11 @@ export function OutreachCompose() {
               className={inputCls}
             />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className={labelCls}>CC</label>
+          <CcInput cc={cc} onChange={setCc} />
         </div>
 
         <div className="space-y-1.5">
@@ -384,6 +454,7 @@ type SentEmail = {
   to_email: string;
   subject: string;
   body: string;
+  cc_emails?: string[] | null;
   sent_at: string | null;
 };
 
@@ -396,6 +467,15 @@ function formatDate(iso: string | null) {
 
 export function SentHistory({ emails }: { emails: SentEmail[] }) {
   const [selected, setSelected] = useState<SentEmail | null>(null);
+  const router = useRouter();
+
+  function handleFollowUp(email: SentEmail, e: React.MouseEvent) {
+    e.stopPropagation();
+    const subject = email.subject.startsWith("Re: ") ? email.subject : `Re: ${email.subject}`;
+    const params = new URLSearchParams({ to: email.to_email, name: email.to_name, subject });
+    router.push(`/admin/outreach?${params.toString()}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <>
@@ -403,6 +483,7 @@ export function SentHistory({ emails }: { emails: SentEmail[] }) {
         <PreviewModal
           toName={selected.to_name}
           toEmail={selected.to_email}
+          cc={selected.cc_emails ?? []}
           subject={selected.subject}
           body={selected.body}
           onClose={() => setSelected(null)}
@@ -422,9 +503,19 @@ export function SentHistory({ emails }: { emails: SentEmail[] }) {
                 {email.to_name} &lt;{email.to_email}&gt;
               </p>
             </div>
-            <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0 pt-0.5">
-              {formatDate(email.sent_at)}
-            </p>
+            <div className="flex items-center gap-3 shrink-0 pt-0.5">
+              <button
+                type="button"
+                onClick={(e) => handleFollowUp(email, e)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title="Compose a follow-up to this email"
+              >
+                <CornerDownRight className="w-3 h-3" /> Follow-up
+              </button>
+              <p className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatDate(email.sent_at)}
+              </p>
+            </div>
           </button>
         ))}
       </div>
@@ -438,6 +529,7 @@ type ScheduledEmail = {
   to_email: string;
   subject: string;
   body: string;
+  cc_emails?: string[] | null;
   scheduled_at: string | null;
 };
 
@@ -490,6 +582,7 @@ export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
         <PreviewModal
           toName={selected.to_name}
           toEmail={selected.to_email}
+          cc={selected.cc_emails ?? []}
           subject={selected.subject}
           body={selected.body}
           onClose={() => setSelected(null)}
