@@ -66,6 +66,10 @@ Allow patrons to re-list and sell collected works to other patrons or collectors
 
 **Build trigger:** After primary-sale commission is live and at least one patron has confirmed interest in reselling.
 
+## #21 · "Hide this" per card on For You tab
+
+Skip the feedback widget for MVP. Add a "Hide this" button per card on the For You opportunities tab once there are enough users to assess whether matches are landing well. Hiding is actionable immediately — store a `hidden` flag on `opportunity_artist_matches` and filter it out of `getMatchedOpportunities`. No re-scoring loop required.
+
 ---
 
 ## #11 · Analytics dashboard
