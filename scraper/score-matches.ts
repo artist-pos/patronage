@@ -21,15 +21,19 @@ const COUNTRY_MAP: Record<string, string[]> = {
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function scoreOnePair(
-  artist: { id: string; disciplines: string[]; career_stage: string | null; country: string | null; bio: string | null },
+  artist: { id: string; disciplines: string[]; career_stage: string | null; country: string | null; bio: string | null; year_of_birth: number | null },
   opp:    { id: string; title: string; type: string; country: string; sub_categories: string[] | null; career_stage: string[] | null; description: string | null; caption: string | null }
 ): Promise<{ score: number; reason: string } | null> {
-  const prompt = `Score 0–100 how well this arts opportunity matches this artist. Consider: discipline overlap, geographic eligibility, career stage. Be honest — a poor match should score below 40.
+  const currentYear = new Date().getFullYear();
+  const age = artist.year_of_birth ? currentYear - artist.year_of_birth : null;
+
+  const prompt = `Score 0–100 how well this arts opportunity matches this artist. Consider: discipline overlap, geographic eligibility, career stage, and age eligibility. Be honest — a poor match should score below 40.
 
 Artist:
 - Disciplines: ${artist.disciplines.join(", ")}
 - Career stage: ${artist.career_stage ?? "unspecified"}
 - Country: ${artist.country ?? "unspecified"}
+- Age: ${age !== null ? `${age} years old` : "unknown"}
 - Bio: ${(artist.bio ?? "").slice(0, 200)}
 
 Opportunity:
@@ -79,12 +83,12 @@ async function main() {
   // Fetch all artist profiles with disciplines set
   const { data: artists, error: artistsErr } = await supabase
     .from("profiles")
-    .select("id, disciplines, career_stage, country, bio")
+    .select("id, disciplines, career_stage, country, bio, year_of_birth")
     .in("role", ["artist", "owner"])
     .not("disciplines", "is", null);
 
   if (artistsErr) { console.error("profiles fetch error:", artistsErr.message); process.exit(1); }
-  const validArtists = (artists ?? []).filter((a) => a.disciplines && a.disciplines.length > 0);
+  const validArtists = (artists ?? []).filter((a): a is typeof a & { disciplines: string[] } => Array.isArray(a.disciplines) && a.disciplines.length > 0);
   if (!validArtists.length) { console.log("No artists with disciplines set."); return; }
   console.log(`Loaded ${validArtists.length} artists.`);
 
