@@ -211,7 +211,6 @@ export async function getMatchedOpportunities(
     .select("opportunity_id, score, reason")
     .eq("artist_id", artistId)
     .gte("score", threshold)
-    .order("score", { ascending: false })
     .limit(limit);
 
   if (matchErr) throw new Error(matchErr.message);
@@ -239,7 +238,13 @@ export async function getMatchedOpportunities(
       return { ...opp, match_score: m.score, match_reason: m.reason } as OpportunityWithMatch;
     })
     .filter((o): o is OpportunityWithMatch => o !== null)
-    .sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0));
+    .sort((a, b) => {
+      // Nulls (open-ended) go last, otherwise ascending by deadline
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return a.deadline.localeCompare(b.deadline);
+    });
 }
 
 export async function insertOpportunities(rows: OpportunityInsert[]) {
