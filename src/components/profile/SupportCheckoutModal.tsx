@@ -82,14 +82,20 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
             )}
           </div>
 
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            required
-            className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
-          />
+          {prefilledEmail ? (
+            <p className="text-sm text-muted-foreground border border-border px-3 py-2 bg-stone-50">
+              {prefilledEmail}
+            </p>
+          ) : (
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+              className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
+            />
+          )}
           <input
             type="text"
             value={name}

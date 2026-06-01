@@ -29,6 +29,13 @@ interface WorkPricing {
   print_sizes?: PrintSize[];
 }
 
+interface ShippingConfig {
+  nz_cents?: number;
+  intl_cents?: number;
+  stripe_nz_rate_id?: string;
+  stripe_intl_rate_id?: string;
+}
+
 interface StorefrontConfig extends Record<string, unknown> {
   hero_work_id?: string;
   selected_work_ids?: string[];
@@ -42,6 +49,7 @@ interface StorefrontConfig extends Record<string, unknown> {
   edition_size?: string;
   paper_stock?: string;
   artist_statement?: string;
+  shipping?: ShippingConfig;
 }
 
 interface Work {
@@ -225,6 +233,11 @@ export function CampaignConfigPanel({
 
   const [artistStatement, setArtistStatement] = useState(cfg.artist_statement ?? bio ?? "");
 
+  // Shipping rates (NZD dollars, converted to cents when saving)
+  const existingShipping = cfg.shipping as ShippingConfig | undefined;
+  const [shippingNzDollars, setShippingNzDollars] = useState(existingShipping?.nz_cents ? String(existingShipping.nz_cents / 100) : "");
+  const [shippingIntlDollars, setShippingIntlDollars] = useState(existingShipping?.intl_cents ? String(existingShipping.intl_cents / 100) : "");
+
   // Layout mode
   const [layoutMode, setLayoutMode] = useState<"shopfront" | "showcase">(cfg.layout_mode ?? "shopfront");
 
@@ -319,11 +332,23 @@ export function CampaignConfigPanel({
   }
 
   function buildConfig(): StorefrontConfig {
+    const nzCents = shippingNzDollars ? Math.round(parseFloat(shippingNzDollars) * 100) : undefined;
+    const intlCents = shippingIntlDollars ? Math.round(parseFloat(shippingIntlDollars) * 100) : undefined;
+    const shippingConfig: ShippingConfig | undefined = (nzCents || intlCents)
+      ? {
+          ...(nzCents ? { nz_cents: nzCents } : {}),
+          ...(intlCents ? { intl_cents: intlCents } : {}),
+          // Preserve cached Stripe rate IDs so they aren't wiped on save
+          ...(existingShipping?.stripe_nz_rate_id ? { stripe_nz_rate_id: existingShipping.stripe_nz_rate_id } : {}),
+          ...(existingShipping?.stripe_intl_rate_id ? { stripe_intl_rate_id: existingShipping.stripe_intl_rate_id } : {}),
+        }
+      : undefined;
     return {
       hero_work_id: heroWorkId,
       selected_work_ids: [...selectedWorkIds],
       artist_statement: artistStatement.trim() || undefined,
       layout_mode: layoutMode,
+      ...(shippingConfig ? { shipping: shippingConfig } : {}),
       work_pricing: Object.fromEntries(
         [...selectedWorkIds]
           .filter(id => workPricing[id])
@@ -1035,6 +1060,43 @@ export function CampaignConfigPanel({
           placeholder="A short statement about this body of work or campaign…"
           className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
         />
+        {/* Shipping rates */}
+        <div className="space-y-3 pt-2 border-t border-border">
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Shipping (optional)</label>
+            <p className="text-[11px] text-muted-foreground">
+              Set flat-rate postage for buyers who can&apos;t take the work in person.
+              Stripe will present both options at checkout and collect the buyer&apos;s address.
+              Leave blank if not offering postage.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">NZ delivery (NZD)</label>
+              <input
+                type="number"
+                value={shippingNzDollars}
+                onChange={e => setShippingNzDollars(e.target.value)}
+                placeholder="e.g. 20"
+                min="0"
+                step="0.01"
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black bg-background"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">International (NZD)</label>
+              <input
+                type="number"
+                value={shippingIntlDollars}
+                onChange={e => setShippingIntlDollars(e.target.value)}
+                placeholder="e.g. 60"
+                min="0"
+                step="0.01"
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black bg-background"
+              />
+            </div>
+          </div>
+        </div>
         <button
           type="button"
           onClick={handleSaveDetails}

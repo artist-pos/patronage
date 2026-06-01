@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createShadowAccount, ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
+import { sendCampaignSaleNotificationEmail, sendCampaignPurchaseReceiptEmail } from "@/lib/email";
 
 /**
  * Webhook handler for `checkout.session.completed` with purpose=campaign_sale.
@@ -17,11 +18,12 @@ import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 export async function handleCampaignSaleCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
-  const { campaign_id, work_id, artist_id, buyer_name } = session.metadata ?? {};
+  const { campaign_id, work_id, artist_id, buyer_name, print_size } = session.metadata ?? {};
   if (!campaign_id || !work_id || !artist_id) {
     console.warn("[campaign sale handler] missing required metadata", session.metadata);
     return;
   }
+  const isPrint = !!print_size;
 
   const buyerEmail = session.customer_details?.email;
   const buyerName = buyer_name ?? session.customer_details?.name ?? "";
@@ -42,7 +44,7 @@ export async function handleCampaignSaleCompleted(
   }
 
   const resolvedArtworkId: string = artwork.id;
-  if (!artwork.is_available) {
+  if (!isPrint && !artwork.is_available) {
     console.warn(`[campaign sale handler] artwork ${resolvedArtworkId} already transferred — skipping`);
     return;
   }
@@ -60,11 +62,13 @@ export async function handleCampaignSaleCompleted(
   // Ensure the artwork has a provenance ledger ID
   const ledgerId = await ensureLedgerId(resolvedArtworkId);
 
-  // Transfer ownership
-  await admin
-    .from("artworks")
-    .update({ current_owner_id: buyerId, is_available: false })
-    .eq("id", resolvedArtworkId);
+  // Transfer ownership — prints don't exhaust the original, so keep is_available
+  if (!isPrint) {
+    await admin
+      .from("artworks")
+      .update({ current_owner_id: buyerId, is_available: false })
+      .eq("id", resolvedArtworkId);
+  }
 
   // Append to buyer's acquired_works
   const { data: buyerProfile } = await admin
@@ -110,14 +114,25 @@ export async function handleCampaignSaleCompleted(
     campaignId: campaign_id,
   });
 
-  // Fetch artist profile for certificate branding
-  const [{ data: artistProfile }, { data: branding }] = await Promise.all([
+  // Fetch artist profile, branding, campaign title, and artist auth email in parallel
+  const [
+    { data: artistProfile },
+    { data: branding },
+    { data: campaign },
+    { data: { user: artistUser } },
+  ] = await Promise.all([
     admin.from("profiles").select("full_name, username").eq("id", artist_id).maybeSingle(),
     admin.from("profiles").select("provenance_logo_url, provenance_signature_url").eq("id", artist_id).maybeSingle(),
+    admin.from("campaigns").select("title").eq("id", campaign_id).maybeSingle(),
+    admin.auth.admin.getUserById(artist_id),
   ]);
 
   const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
+  const artistUsername = artistProfile?.username ?? null;
   const workTitle = artwork.title ?? artwork.caption ?? "Untitled";
+  const campaignTitle = (campaign as { title?: string } | null)?.title ?? "campaign";
+  const currency = (session.currency ?? "nzd").toUpperCase();
+  const amountCents = session.amount_total ?? 0;
 
   sendTransferCertificate({
     artistId: artist_id,
@@ -126,7 +141,7 @@ export async function handleCampaignSaleCompleted(
     workTitle,
     workImageUrl: artwork.url ?? null,
     artistName,
-    artistUsername: artistProfile?.username ?? null,
+    artistUsername,
     patronName: buyerName,
     yearCreated: (artwork as { year?: number | null }).year ?? null,
     medium: (artwork as { medium?: string | null }).medium ?? null,
@@ -136,6 +151,33 @@ export async function handleCampaignSaleCompleted(
     logoUrl: branding?.provenance_logo_url ?? null,
     signatureUrl: branding?.provenance_signature_url ?? null,
     isNewAccount: isNew,
+  }).catch(console.error);
+
+  if (artistUser?.email) {
+    sendCampaignSaleNotificationEmail({
+      artistEmail: artistUser.email,
+      artistName,
+      buyerName,
+      workTitle,
+      amountCents,
+      currency,
+      campaignTitle,
+      isPrint,
+      printSize: print_size ?? undefined,
+    }).catch(console.error);
+  }
+
+  sendCampaignPurchaseReceiptEmail({
+    buyerEmail,
+    buyerName,
+    artistName,
+    workTitle,
+    amountCents,
+    currency,
+    campaignTitle,
+    isPrint,
+    printSize: print_size ?? undefined,
+    artistProfileUsername: artistUsername,
   }).catch(console.error);
 
   void paymentIntent; // used in ledger via createLedgerEntry's transaction_ref (not on cert)

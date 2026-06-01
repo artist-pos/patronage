@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findAuthUserIdByEmail } from "@/lib/supabase/find-user-by-email";
+import { sendNewSupportEmail, sendSupportReceiptEmail } from "@/lib/email";
 
 /**
  * Webhook handler for purpose=support_one_off OR support_recurring on
@@ -68,19 +69,51 @@ export async function handleSupportCompleted(session: Stripe.Checkout.Session): 
     }
   }
 
-  await admin
-    .from("support_subscriptions")
-    .update({
-      supporter_id: supporterId,
-      supporter_email: supporterEmail,
-      stripe_session_id: session.id,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      stripe_payment_intent: paymentIntent,
-      status: sub.tier_type === "recurring" ? "active" : "one_off_paid",
-      started_at: startedAt,
-    })
-    .eq("id", sub.id);
+  const isRecurring = sub.tier_type === "recurring";
+
+  const [, tierRow, artistProfile] = await Promise.all([
+    admin
+      .from("support_subscriptions")
+      .update({
+        supporter_id: supporterId,
+        supporter_email: supporterEmail,
+        stripe_session_id: session.id,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        stripe_payment_intent: paymentIntent,
+        status: isRecurring ? "active" : "one_off_paid",
+        started_at: startedAt,
+      })
+      .eq("id", sub.id),
+    admin.from("support_tiers").select("title").eq("id", sub.tier_id).maybeSingle(),
+    admin.from("profiles").select("full_name, username").eq("id", sub.recipient_id).maybeSingle(),
+  ]);
+
+  const tierTitle = (tierRow as { title?: string } | null)?.title ?? "Support tier";
+  const artistName = (artistProfile as { full_name?: string | null; username?: string } | null)?.full_name
+    ?? (artistProfile as { full_name?: string | null; username?: string } | null)?.username
+    ?? "the artist";
+  const artistUsername = (artistProfile as { username?: string } | null)?.username ?? null;
+  const supporterName = session.customer_details?.name ?? null;
+
+  sendNewSupportEmail(
+    sub.recipient_id,
+    supporterName,
+    tierTitle,
+    sub.amount_cents,
+    sub.currency ?? "NZD",
+    isRecurring,
+  ).catch(console.error);
+
+  sendSupportReceiptEmail(
+    supporterEmail,
+    artistName,
+    artistUsername,
+    tierTitle,
+    sub.buyer_paid_total_cents,
+    sub.currency ?? "NZD",
+    isRecurring,
+  ).catch(console.error);
 }
 
 /**

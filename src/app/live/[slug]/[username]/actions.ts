@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCampaignEnquiryNotification } from "@/lib/email";
-import { createCheckoutSession } from "@/lib/stripe";
+import { createCheckoutSession, getStripe } from "@/lib/stripe";
 import { createShadowAccount, ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 
@@ -82,6 +82,13 @@ export async function createCampaignSaleCheckout(opts: {
   currency: string;
   workTitle: string;
   workImageUrl: string | null;
+  printSize?: string;
+  shippingConfig?: {
+    nz_cents?: number;
+    intl_cents?: number;
+    stripe_nz_rate_id?: string;
+    stripe_intl_rate_id?: string;
+  };
 }): Promise<{ checkoutUrl?: string; error?: string }> {
   if (!opts.buyerName.trim() || !opts.buyerEmail.trim()) {
     return { error: "Name and email are required." };
@@ -90,7 +97,58 @@ export async function createCampaignSaleCheckout(opts: {
     return { error: "Use claimCampaignWorkFree for free works." };
   }
 
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const metadata: Record<string, string> = {
+    campaign_id: opts.campaignId,
+    work_id: opts.workId,
+    artist_id: opts.artistId,
+    buyer_name: opts.buyerName.trim(),
+    ...(opts.printSize ? { print_size: opts.printSize } : {}),
+  };
+
   try {
+    // If shipping rates are configured, use the Stripe SDK directly so we can
+    // attach shipping_options (not supported by the generic createCheckoutSession helper).
+    const hasShipping = opts.shippingConfig &&
+      (opts.shippingConfig.nz_cents || opts.shippingConfig.intl_cents);
+
+    if (hasShipping) {
+      const shippingOptionIds = await Promise.all([
+        opts.shippingConfig!.nz_cents
+          ? ensureShippingRate("nz", opts.shippingConfig!.nz_cents, opts.currency, opts.campaignId, opts.shippingConfig!.stripe_nz_rate_id)
+          : Promise.resolve(null),
+        opts.shippingConfig!.intl_cents
+          ? ensureShippingRate("intl", opts.shippingConfig!.intl_cents, opts.currency, opts.campaignId, opts.shippingConfig!.stripe_intl_rate_id)
+          : Promise.resolve(null),
+      ]);
+
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer_email: opts.buyerEmail.trim(),
+        line_items: [{
+          quantity: 1,
+          price_data: {
+            currency: opts.currency.toLowerCase(),
+            unit_amount: opts.priceCents,
+            product_data: {
+              name: opts.workTitle,
+              images: opts.workImageUrl ? [opts.workImageUrl] : undefined,
+              description: `Artwork by ${opts.artistUsername} — includes Patronage provenance certificate.`,
+            },
+          },
+        }],
+        shipping_address_collection: { allowed_countries: ["NZ", "AU", "GB", "US", "CA", "DE", "FR", "JP", "SG", "HK", "CN", "KR", "TW", "TH", "MY", "ID", "PH", "IN", "AE", "CH", "SE", "NO", "DK", "NL", "IT", "ES", "PT"] },
+        shipping_options: shippingOptionIds.filter(Boolean).map(id => ({ shipping_rate: id! })),
+        metadata: { purpose: "campaign_sale", ...metadata },
+        payment_intent_data: { metadata: { purpose: "campaign_sale", ...metadata } },
+        success_url: `${SITE_URL}/live/${opts.campaignSlug}/${opts.artistUsername}?purchased=1`,
+        cancel_url: `${SITE_URL}/live/${opts.campaignSlug}/${opts.artistUsername}`,
+      });
+      if (!session.url) throw new Error("Stripe didn't return a checkout URL");
+      return { checkoutUrl: session.url };
+    }
+
     const { url } = await createCheckoutSession({
       purpose: "campaign_sale",
       mode: "payment",
@@ -101,15 +159,10 @@ export async function createCampaignSaleCheckout(opts: {
           currency: opts.currency.toLowerCase(),
           productName: opts.workTitle,
           productImageUrl: opts.workImageUrl,
-          productDescription: `Original artwork by ${opts.artistUsername} — includes Patronage provenance certificate.`,
+          productDescription: `Artwork by ${opts.artistUsername} — includes Patronage provenance certificate.`,
         },
       ],
-      metadata: {
-        campaign_id: opts.campaignId,
-        work_id: opts.workId,
-        artist_id: opts.artistId,
-        buyer_name: opts.buyerName.trim(),
-      },
+      metadata,
       successPath: `/live/${opts.campaignSlug}/${opts.artistUsername}?purchased=1`,
       cancelPath: `/live/${opts.campaignSlug}/${opts.artistUsername}`,
     });
@@ -118,6 +171,59 @@ export async function createCampaignSaleCheckout(opts: {
     console.error("[createCampaignSaleCheckout]", err);
     return { error: "Failed to start checkout. Please try again." };
   }
+}
+
+/**
+ * Lazily create a Stripe ShippingRate for the given zone and cache the ID
+ * back on the campaign's landing_page_config so future checkouts reuse it.
+ */
+async function ensureShippingRate(
+  zone: "nz" | "intl",
+  amountCents: number,
+  currency: string,
+  campaignId: string,
+  cachedRateId?: string,
+): Promise<string> {
+  if (cachedRateId) {
+    // Verify it still exists in Stripe
+    try {
+      await getStripe().shippingRates.retrieve(cachedRateId);
+      return cachedRateId;
+    } catch {
+      // Doesn't exist — fall through to create a new one
+    }
+  }
+
+  const displayName = zone === "nz" ? "NZ Delivery" : "International Delivery";
+  const rate = await getStripe().shippingRates.create({
+    display_name: displayName,
+    type: "fixed_amount",
+    fixed_amount: { amount: amountCents, currency: currency.toLowerCase() },
+    metadata: { campaign_id: campaignId, zone },
+  });
+
+  // Cache the new rate ID so the next checkout reuses it
+  const admin = createAdminClient();
+  const { data: campaign } = await admin
+    .from("campaigns")
+    .select("landing_page_config")
+    .eq("id", campaignId)
+    .maybeSingle();
+  if (campaign) {
+    const existing = (campaign.landing_page_config ?? {}) as Record<string, unknown>;
+    const existingShipping = (existing.shipping ?? {}) as Record<string, unknown>;
+    await admin.from("campaigns").update({
+      landing_page_config: {
+        ...existing,
+        shipping: {
+          ...existingShipping,
+          [`stripe_${zone}_rate_id`]: rate.id,
+        },
+      },
+    }).eq("id", campaignId);
+  }
+
+  return rate.id;
 }
 
 /**

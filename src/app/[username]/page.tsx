@@ -882,6 +882,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   isOwner={isOwner}
                   artistName={displayName}
                   tiers={supportTiers}
+                  userEmail={user?.email ?? undefined}
                 />
               )}
             </div>

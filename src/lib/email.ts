@@ -1232,6 +1232,192 @@ export async function sendArtistAttributionEmail({
   });
 }
 
+// ── Support notifications ─────────────────────────────────────────────────────
+
+/**
+ * Notify an artist when someone supports them (one-off or recurring).
+ */
+export async function sendNewSupportEmail(
+  artistId: string,
+  supporterName: string | null,
+  tierTitle: string,
+  amountCents: number,
+  currency: string,
+  isRecurring: boolean,
+): Promise<void> {
+  const admin = createAdminClient();
+  const { data: { user } } = await admin.auth.admin.getUserById(artistId);
+  if (!user?.email) return;
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const amount = `${currency} ${(amountCents / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const from = supporterName ? esc(supporterName) : "Someone";
+  const action = isRecurring ? `subscribed to <strong>${esc(tierTitle)}</strong>` : `supported you with <strong>${esc(tierTitle)}</strong>`;
+
+  await getResend().emails.send({
+    from: FROM,
+    to: user.email,
+    subject: `New supporter — ${supporterName ?? "Someone"} (${amount}${isRecurring ? "/month" : ""})`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New supporter</p>
+      <p style="margin:0 0 16px;font-size:15px;"><strong>${from}</strong> ${action} for <strong>${amount}${isRecurring ? "/month" : ""}</strong>.</p>
+      <a href="${SITE_URL}/studio/earnings" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View earnings →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Send a receipt to a supporter after a successful support payment.
+ */
+export async function sendSupportReceiptEmail(
+  toEmail: string,
+  artistName: string,
+  artistUsername: string | null,
+  tierTitle: string,
+  amountCents: number,
+  currency: string,
+  isRecurring: boolean,
+): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const amount = `${currency} ${(amountCents / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const profileUrl = artistUsername ? `${SITE_URL}/${artistUsername}` : SITE_URL;
+
+  await getResend().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `Your support for ${artistName} is confirmed`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Support confirmed</p>
+      <p style="margin:0 0 8px;font-size:15px;">Thank you for supporting <strong>${esc(artistName)}</strong>.</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:16px 0;margin:16px 0 24px;">
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;width:160px;">Tier</td><td style="padding:6px 0;font-size:13px;">${esc(tierTitle)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Type</td><td style="padding:6px 0;font-size:13px;">${isRecurring ? "Monthly subscription" : "One-off contribution"}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Amount</td><td style="padding:6px 0;font-size:14px;font-weight:600;">${amount}${isRecurring ? "/month" : ""}</td></tr>
+      </table>
+      <a href="${profileUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View ${esc(artistName)}'s profile →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        ${isRecurring ? "You can cancel your subscription at any time from your <a href=\"" + SITE_URL + "/dashboard?tab=subscriptions\" style=\"color:#888;\">dashboard</a>." : ""}
+        Questions? <a href="mailto:hello@patronage.nz" style="color:#888;">hello@patronage.nz</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+// ── Campaign sale notifications ───────────────────────────────────────────────
+
+/**
+ * Notify an artist that a sale was made via their campaign storefront.
+ */
+export async function sendCampaignSaleNotificationEmail(opts: {
+  artistEmail: string;
+  artistName: string;
+  buyerName: string;
+  workTitle: string;
+  amountCents: number;
+  currency: string;
+  campaignTitle: string;
+  isPrint: boolean;
+  printSize?: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const amount = `${opts.currency} ${(opts.amountCents / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const item = opts.isPrint && opts.printSize
+    ? `${esc(opts.workTitle)} (${esc(opts.printSize)} print)`
+    : esc(opts.workTitle);
+
+  await getResend().emails.send({
+    from: FROM,
+    to: opts.artistEmail,
+    subject: `New sale — ${opts.buyerName} purchased ${opts.workTitle} (${amount})`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New sale via ${esc(opts.campaignTitle)}</p>
+      <p style="margin:0 0 16px;font-size:15px;"><strong>${esc(opts.buyerName)}</strong> purchased <strong>${item}</strong> for <strong>${amount}</strong>.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a provenance certificate. Check your earnings for payout details.</p>
+      <a href="${SITE_URL}/studio/earnings" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View earnings →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Send a purchase receipt to a buyer after a successful campaign sale.
+ */
+export async function sendCampaignPurchaseReceiptEmail(opts: {
+  buyerEmail: string;
+  buyerName: string;
+  artistName: string;
+  workTitle: string;
+  amountCents: number;
+  currency: string;
+  campaignTitle: string;
+  isPrint: boolean;
+  printSize?: string;
+  artistProfileUsername: string | null;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const amount = `${opts.currency} ${(opts.amountCents / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const item = opts.isPrint && opts.printSize
+    ? `${esc(opts.workTitle)} (${esc(opts.printSize)} print)`
+    : esc(opts.workTitle);
+  const profileUrl = opts.artistProfileUsername ? `${SITE_URL}/${opts.artistProfileUsername}` : SITE_URL;
+  const greeting = opts.buyerName ? `Kia ora ${esc(opts.buyerName)},` : "Kia ora,";
+
+  await getResend().emails.send({
+    from: FROM,
+    to: opts.buyerEmail,
+    subject: `Your purchase — ${opts.workTitle} by ${opts.artistName}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Purchase confirmed</p>
+      <p style="margin:0 0 16px;font-size:15px;">${greeting}</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Thank you for your purchase via <strong>${esc(opts.campaignTitle)}</strong>.</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:16px 0;margin:0 0 24px;">
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;width:160px;">Work</td><td style="padding:6px 0;font-size:13px;">${item}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Artist</td><td style="padding:6px 0;font-size:13px;">${esc(opts.artistName)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;">Amount paid</td><td style="padding:6px 0;font-size:14px;font-weight:600;">${amount}</td></tr>
+      </table>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">A certificate of provenance has been sent separately.</p>
+      <a href="${profileUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View ${esc(opts.artistName)}'s profile →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        Questions? <a href="mailto:hello@patronage.nz" style="color:#888;">hello@patronage.nz</a> ·
+        <a href="${SITE_URL}" style="color:#888;">Patronage</a>
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendSaleRevertedBuyer({
   toEmail,
   buyerName,

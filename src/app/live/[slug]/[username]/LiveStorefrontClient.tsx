@@ -52,6 +52,12 @@ interface Props {
     edition_size?: string;
     paper_stock?: string;
     artist_statement?: string;
+    shipping?: {
+      nz_cents?: number;
+      intl_cents?: number;
+      stripe_nz_rate_id?: string;
+      stripe_intl_rate_id?: string;
+    };
   };
   highlightWorkId: string | null;
   artistEmail: null;
@@ -105,6 +111,7 @@ export function LiveStorefrontClient({
   );
   const [showOriginalPanel, setShowOriginalPanel] = useState(false);
   const [showPrintsPanel, setShowPrintsPanel] = useState(false);
+  const [selectedPrint, setSelectedPrint] = useState<{ size: string; priceCents: number } | null>(null);
   const [showEnquiryForm, setShowEnquiryForm] = useState(false);
   const [enquirySubject, setEnquirySubject] = useState<string | null>(null);
   const [enquiryName, setEnquiryName] = useState("");
@@ -200,6 +207,7 @@ export function LiveStorefrontClient({
     if (!showPrintsPanel) setShowOriginalPanel(false);
     setShowPrintsPanel(v => !v);
     setShowEnquiryForm(false);
+    setSelectedPrint(null);
   }
 
   async function handleEnquirySubmit(e: React.FormEvent) {
@@ -229,6 +237,7 @@ export function LiveStorefrontClient({
     workId: string,
     priceCents: number,
     isFree: boolean,
+    printSize?: string,
   ) {
     e.preventDefault();
     if (!purchaseName.trim() || !purchaseEmail.trim()) return;
@@ -248,6 +257,9 @@ export function LiveStorefrontClient({
       setPurchaseDone(true);
     } else {
       const displayWork2 = works.find(w => w.id === workId) ?? works[0];
+      const workTitle = printSize
+        ? `${displayWork2?.caption ?? displayWork2?.title ?? campaign.title} — ${printSize} print`
+        : (displayWork2?.caption ?? displayWork2?.title ?? campaign.title);
       const result = await createCampaignSaleCheckout({
         campaignId: campaign.id,
         workId,
@@ -258,8 +270,10 @@ export function LiveStorefrontClient({
         buyerEmail: purchaseEmail.trim(),
         priceCents,
         currency: "NZD",
-        workTitle: displayWork2?.caption ?? displayWork2?.title ?? campaign.title,
+        workTitle,
         workImageUrl: displayWork2?.url ?? null,
+        printSize,
+        shippingConfig: cfg.shipping,
       });
       setPurchaseSubmitting(false);
       if (result.error) { setPurchaseError(result.error); return; }
@@ -358,8 +372,8 @@ export function LiveStorefrontClient({
             {showOriginalPanel && (() => {
               const isFree = !resolvedPricing.is_poa && resolvedPricing.price === 0;
               const hasPrice = !resolvedPricing.is_poa && resolvedPricing.price != null && resolvedPricing.price > 0;
-              const acquisitionMode = resolvedPricing.acquisition_mode ?? "enquire_first";
-              const isBuyNow = acquisitionMode === "buy_now" && hasPrice;
+              const effectiveMode = resolvedPricing.acquisition_mode ?? (hasPrice ? "buy_now" : "enquire_first");
+              const isBuyNow = effectiveMode === "buy_now" && hasPrice;
               const priceCents = Math.round((resolvedPricing.price ?? 0) * 100);
               const currentWorkId = displayWork?.id ?? works[0]?.id ?? "";
 
@@ -426,16 +440,50 @@ export function LiveStorefrontClient({
                   </p>
                 )}
                 <div className="divide-y divide-border">
-                  {printSizes.filter(r => r.size).map((row, i) => (
-                    <div key={i} className="flex items-center justify-between py-2.5">
-                      <span className="text-sm">{row.size}</span>
-                      <button onClick={() => openEnquiry(`Print enquiry: ${row.size}${row.price ? ` — ${row.price}` : ""}`)}
-                        className="text-xs border border-border px-4 py-1.5 hover:border-black transition-colors">
-                        {row.price || "Enquire"}
-                      </button>
-                    </div>
-                  ))}
+                  {printSizes.filter(r => r.size).map((row, i) => {
+                    const parsedPrice = row.price ? parseFloat(row.price.replace(/[^0-9.]/g, "")) : NaN;
+                    const hasPrintPrice = !isNaN(parsedPrice) && parsedPrice > 0;
+                    const isBuyNowPrint = hasPrintPrice && (resolvedPricing.acquisition_mode === "buy_now" || (!resolvedPricing.acquisition_mode && hasPrintPrice));
+                    return (
+                      <div key={i} className="flex items-center justify-between py-2.5">
+                        <span className="text-sm">{row.size}</span>
+                        {isBuyNowPrint ? (
+                          <button
+                            onClick={() => setSelectedPrint(prev => prev?.size === row.size ? null : { size: row.size, priceCents: Math.round(parsedPrice * 100) })}
+                            className={`text-xs border px-4 py-1.5 transition-colors ${selectedPrint?.size === row.size ? "border-black bg-black text-white" : "border-border hover:border-black"}`}>
+                            Buy — {row.price}
+                          </button>
+                        ) : (
+                          <button onClick={() => openEnquiry(`Print enquiry: ${row.size}${row.price ? ` — ${row.price}` : ""}`)}
+                            className="text-xs border border-border px-4 py-1.5 hover:border-black transition-colors">
+                            {row.price ? `Enquire` : "Enquire"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+                {selectedPrint && !purchaseDone && (
+                  <form onSubmit={e => handlePurchaseSubmit(e, displayWork?.id ?? works[0]?.id ?? "", selectedPrint.priceCents, false, selectedPrint.size)} className="space-y-2 pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">Purchase includes a Patronage provenance certificate.</p>
+                    <input type="text" value={purchaseName} onChange={e => setPurchaseName(e.target.value)} required placeholder="Your name"
+                      className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
+                    <input type="email" value={purchaseEmail} onChange={e => setPurchaseEmail(e.target.value)} required placeholder="Email address"
+                      className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
+                    {purchaseError && <p className="text-xs text-red-600">{purchaseError}</p>}
+                    <button type="submit" disabled={purchaseSubmitting || !purchaseName.trim() || !purchaseEmail.trim()}
+                      className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40">
+                      {purchaseSubmitting ? "Redirecting to checkout…" : `Buy — ${selectedPrint.size} →`}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground text-center">Secure checkout via Stripe</p>
+                  </form>
+                )}
+                {purchaseDone && selectedPrint && (
+                  <div className="pt-2 border-t border-border space-y-1">
+                    <p className="text-sm font-medium">Done — check your inbox.</p>
+                    <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way to {purchaseEmail}.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

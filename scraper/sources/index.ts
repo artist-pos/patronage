@@ -69,6 +69,7 @@ export const sources: Source[] = [
   { name: "ArtsACT", url: "https://www.arts.act.gov.au/funding", country: "AUS", isListPage: true, followLinks: true },
   { name: "Arts Tasmania", url: "https://www.arts.tas.gov.au/grants_and_funding", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "https://www.arts.tas.gov.au/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/grants/, detailBudget: 30 },
   { name: "Northern Territory Arts", url: "https://arts.nt.gov.au/grants", country: "AUS", isListPage: true, followLinks: true },
+  { name: "Art Support Australia", url: "https://www.artsupport.com.au/opportunities", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "https://www.artsupport.com.au/sitemap.xml", sitemapLastmodOnly: true, linkPattern: /\/opportunities\//, detailBudget: 30 },
   { name: "Artlink Australia", url: "https://www.artlink.com.au/", country: "AUS" },
 
   // ── Tier 3: Australian Prizes ─────────────────────────────────────────────

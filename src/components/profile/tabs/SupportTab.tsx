@@ -10,9 +10,10 @@ interface Props {
   isOwner: boolean;
   artistName: string;
   tiers?: SupportTier[];
+  userEmail?: string;
 }
 
-export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName, tiers = [] }: Props) {
+export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName, tiers = [], userEmail }: Props) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [, startTransition] = useTransition();
   const [selectedTier, setSelectedTier] = useState<SupportTier | null>(null);
@@ -106,20 +107,37 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedTier(tier)}
-              className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
-            >
-              {isOwner ? "Configure →" : `Support ${artistName}`}
-            </button>
+            {isOwner ? (
+              <a
+                href="/studio?section=support"
+                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
+              >
+                Configure →
+              </a>
+            ) : tier.tier_type === "service" || tier.tier_type === "project" ? (
+              <a
+                href="/messages"
+                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
+              >
+                Get in touch →
+              </a>
+            ) : (
+              <button
+                onClick={() => setSelectedTier(tier)}
+                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
+              >
+                {`Support ${artistName}`}
+              </button>
+            )}
           </div>
         ))
       )}
 
-      {selectedTier && (
+      {!isOwner && selectedTier && (
         <SupportCheckoutModal
           tier={selectedTier}
           artistName={artistName}
+          prefilledEmail={userEmail}
           onClose={() => setSelectedTier(null)}
         />
       )}
