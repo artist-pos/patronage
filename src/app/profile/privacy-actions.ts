@@ -48,7 +48,8 @@ export async function updateProfilePrivacy(
     | "show_follows"
     | "show_location"
     | "show_previously_collected"
-    | "show_supporting",
+    | "show_supporting"
+    | "hide_blog_card",
   value: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient();

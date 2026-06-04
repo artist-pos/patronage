@@ -39,8 +39,6 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
   const [error, setError] = useState<string | null>(null);
 
   // Enquiry step
-  const [enquiryName, setEnquiryName] = useState("");
-  const [enquiryEmail, setEnquiryEmail] = useState("");
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [enquirySending, setEnquirySending] = useState(false);
   const [enquirySent, setEnquirySent] = useState(false);
@@ -67,11 +65,9 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
   }
 
   async function handleEnquirySubmit() {
-    if (!enquiryName.trim() || !enquiryEmail.trim() || !enquiryMessage.trim()) return;
+    if (!enquiryMessage.trim()) return;
     setEnquirySending(true);
     const result = await submitCustomCampaignEnquiry({
-      name: enquiryName.trim(),
-      email: enquiryEmail.trim(),
       message: enquiryMessage.trim(),
     });
     setEnquirySending(false);
@@ -149,24 +145,6 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Your name *</label>
-            <input
-              type="text"
-              value={enquiryName}
-              onChange={e => setEnquiryName(e.target.value)}
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">Your email *</label>
-            <input
-              type="email"
-              value={enquiryEmail}
-              onChange={e => setEnquiryEmail(e.target.value)}
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black"
-            />
-          </div>
-          <div className="space-y-1.5">
             <label className="text-xs font-medium">What are you planning? *</label>
             <textarea
               value={enquiryMessage}
@@ -183,7 +161,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
         <button
           type="button"
           onClick={handleEnquirySubmit}
-          disabled={enquirySending || !enquiryName.trim() || !enquiryEmail.trim() || !enquiryMessage.trim()}
+          disabled={enquirySending || !enquiryMessage.trim()}
           className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {enquirySending ? "Sending…" : "Send enquiry →"}

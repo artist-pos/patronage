@@ -10,6 +10,7 @@ import {
   deleteCampaignFile,
   publishStorefront,
   submitForApproval,
+  setCampaignPublic,
 } from "@/app/studio/campaigns/actions";
 import { NewArtworkEditor } from "@/components/dashboard/NewArtworkEditor";
 
@@ -67,6 +68,7 @@ interface Campaign {
   campaign_type: string;
   status: string;
   production_status: string;
+  is_public: boolean;
   partner_name: string | null;
   campaign_start_date: string | null;
   campaign_end_date: string | null;
@@ -302,6 +304,8 @@ export function CampaignConfigPanel({
 
   // Publishing
   const [publishing, setPublishing] = useState(false);
+  const [isPublic, setIsPublic] = useState(campaign.is_public);
+  const [togglingPublic, setTogglingPublic] = useState(false);
 
   const supabase = createClient();
 
@@ -484,6 +488,19 @@ export function CampaignConfigPanel({
     saveAs(blob, `${campaign.slug}-qr-assets.zip`);
   }
 
+  async function handleTogglePublic() {
+    setTogglingPublic(true);
+    const next = !isPublic;
+    const result = await setCampaignPublic(campaign.id, next);
+    setTogglingPublic(false);
+    if (result.error) showToast(`Error: ${result.error}`);
+    else {
+      setIsPublic(next);
+      showToast(next ? "Campaign visible on your profile." : "Campaign hidden from your profile.");
+      router.refresh();
+    }
+  }
+
   async function handlePublish() {
     if (!heroWorkId) { showToast("Select a hero artwork first."); return; }
     setPublishing(true);
@@ -553,9 +570,19 @@ export function CampaignConfigPanel({
             Preview storefront ↗
           </a>
           {isLive && (
-            <span className="inline-block text-[10px] bg-green-100 text-green-700 px-2 py-0.5 font-medium uppercase tracking-wide">
-              Live
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`inline-block text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${isPublic ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                {isPublic ? "Live" : "Delisted"}
+              </span>
+              <button
+                type="button"
+                onClick={handleTogglePublic}
+                disabled={togglingPublic}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+              >
+                {togglingPublic ? "Saving…" : isPublic ? "Delist from profile" : "Re-publish to profile"}
+              </button>
+            </div>
           )}
           {isSubmitted && (
             <span className="inline-block text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 font-medium uppercase tracking-wide">

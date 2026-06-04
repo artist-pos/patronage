@@ -79,6 +79,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
               isOwner={isOwner}
               projects={projects}
               artworks={artworks}
+              profileId={profileId}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed={false}
@@ -94,6 +95,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
               isOwner={isOwner}
               projects={projects}
               artworks={artworks}
+              profileId={profileId}
               from={`profile&u=${artistUsername}`}
               onDeleted={onDeleted}
               fixed
@@ -181,6 +183,7 @@ function Tile({
   isOwner,
   projects,
   artworks,
+  profileId,
   from,
   onDeleted,
   fixed,
@@ -189,12 +192,14 @@ function Tile({
   isOwner: boolean;
   projects: { id: string; title: string }[];
   artworks?: { id: string; label: string }[];
+  profileId?: string;
   from?: string;
   onDeleted: (id: string) => void;
   fixed: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const href = u.project_id
     ? `/threads/${u.project_id}?scroll=${u.id}`
@@ -303,6 +308,29 @@ function Tile({
             </p>
           )}
         </div>
+      )}
+
+      {/* Add update to same project thread */}
+      {isOwner && u.project_id && profileId && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddModalOpen(true); }}
+            className="w-full border-t border-border px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors text-left"
+          >
+            + Add update to thread
+          </button>
+          {addModalOpen && (
+            <CreateUpdateModal
+              profileId={profileId}
+              projects={projects}
+              defaultProjectId={u.project_id}
+              defaultProjectTitle={projects.find(p => p.id === u.project_id)?.title}
+              openByDefault
+              onClose={() => setAddModalOpen(false)}
+            />
+          )}
+        </>
       )}
     </div>
   );

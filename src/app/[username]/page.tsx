@@ -39,6 +39,7 @@ import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJusti
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
 import { getAvatarGradient, getBannerGradient } from "@/lib/defaults";
+import { HideBlogCardToggle } from "@/components/profile/HideBlogCardToggle";
 
 const VALID_TABS = ["overview", "work", "cv", "support"] as const;
 type TabType = typeof VALID_TABS[number];
@@ -404,7 +405,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     needsSeries
       ? supabase
           .from("series")
-          .select("id, title, slug, hero_image_url, is_featured, position, created_at, series_artworks(count)")
+          .select("id, title, slug, hero_image_url, is_featured, position, year, series_artworks(count)")
           .eq("artist_id", profile.id)
           .order("position", { ascending: true })
           .then(({ data }) => (data ?? []).map(s => ({
@@ -414,7 +415,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             hero_image_url: s.hero_image_url as string | null,
             is_featured: s.is_featured as boolean,
             position: s.position as number,
-            year: s.created_at ? new Date(s.created_at as string).getFullYear() : undefined,
+            year: (s.year as number | null) ?? undefined,
             artworkCount: Array.isArray(s.series_artworks)
               ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
               : 0,
@@ -781,30 +782,37 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       payload={sharePayload}
                     />
                   </div>
-                  {featuredBlogPost && (
-                    <Link
-                      href={`/blog/${featuredBlogPost.slug}`}
-                      className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
-                    >
-                      {featuredBlogPost.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={featuredBlogPost.image_url}
-                          alt=""
-                          className="shrink-0 block w-auto"
-                          style={{ height: "48px" }}
-                        />
+                  {featuredBlogPost && (isOwner || !profile.hide_blog_card) && (
+                    <div className="space-y-1">
+                      {!profile.hide_blog_card && (
+                        <Link
+                          href={`/blog/${featuredBlogPost.slug}`}
+                          className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
+                        >
+                          {featuredBlogPost.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={featuredBlogPost.image_url}
+                              alt=""
+                              className="shrink-0 block w-auto"
+                              style={{ height: "48px" }}
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                              Featured on Patronage
+                            </p>
+                            <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
+                              {featuredBlogPost.title}
+                            </p>
+                          </div>
+                          <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
+                        </Link>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                          Featured on Patronage
-                        </p>
-                        <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-                          {featuredBlogPost.title}
-                        </p>
-                      </div>
-                      <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-                    </Link>
+                      {isOwner && (
+                        <HideBlogCardToggle hidden={profile.hide_blog_card} />
+                      )}
+                    </div>
                   )}
                 </div>
               );

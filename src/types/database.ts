@@ -368,6 +368,8 @@ export interface Profile {
   // Payment profile (migration 053)
   gst_registered: boolean;
   gst_number: string | null;
+  // Blog card visibility (migration 156)
+  hide_blog_card: boolean;
 }
 
 export interface ArtistFollowup {

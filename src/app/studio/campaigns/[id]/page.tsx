@@ -32,6 +32,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       .from("campaigns")
       .select(`
         id, title, slug, campaign_type, status, production_status,
+        is_public,
         partner_name, partner_profile_id,
         campaign_start_date, campaign_end_date,
         location_address, location_lat, location_lng,
@@ -72,7 +73,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   const c = campaign as {
     id: string; title: string; slug: string; campaign_type: string;
-    status: string; production_status: string;
+    status: string; production_status: string; is_public: boolean;
     partner_name: string | null; partner_profile_id: string | null;
     campaign_start_date: string | null; campaign_end_date: string | null;
     location_address: string | null; location_lat: number | null; location_lng: number | null;

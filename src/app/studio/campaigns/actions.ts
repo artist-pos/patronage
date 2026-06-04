@@ -118,6 +118,7 @@ export async function updateCampaignConfig(
     hero_work_id?: string | null;
     status?: string;
     production_status?: string;
+    is_public?: boolean;
   }
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
@@ -305,6 +306,10 @@ export async function publishStorefront(campaignId: string): Promise<{ error?: s
 
 export async function submitForApproval(campaignId: string): Promise<{ error?: string }> {
   return updateCampaignConfig(campaignId, { status: "awaiting_approval" });
+}
+
+export async function setCampaignPublic(campaignId: string, isPublic: boolean): Promise<{ error?: string }> {
+  return updateCampaignConfig(campaignId, { is_public: isPublic });
 }
 
 export async function deleteCampaign(campaignId: string): Promise<{ error?: string }> {

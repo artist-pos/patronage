@@ -121,7 +121,7 @@ export async function createSeries(data: {
 
 export async function updateSeries(
   seriesId: string,
-  data: { title?: string; description?: string | null; hero_image_url?: string }
+  data: { title?: string; description?: string | null; hero_image_url?: string; year?: number | null }
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

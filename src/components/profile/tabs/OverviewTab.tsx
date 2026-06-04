@@ -232,9 +232,11 @@ export function OverviewTab({
         const featuredArtworks = portfolioImages.filter(i => i.is_featured);
         const hasFeatured = featuredSeriesItems.length > 0 || featuredArtworks.length > 0;
         const allSeriesItems: GridSeriesItem[] = seriesList.map(s => ({ _kind: "series" as const, id: s.id, title: s.title, slug: s.slug, hero_image_url: s.hero_image_url, artworkCount: s.artworkCount, is_featured: s.is_featured, position: s.position, year: s.year }));
+        const byPosition = (a: GridItem, b: GridItem) =>
+          ((a as { position?: number }).position ?? 9999) - ((b as { position?: number }).position ?? 9999);
         const displayImages: GridItem[] = hasFeatured
-          ? [...featuredSeriesItems, ...featuredArtworks]
-          : [...allSeriesItems, ...portfolioImages];
+          ? ([...featuredSeriesItems, ...featuredArtworks] as GridItem[]).sort(byPosition)
+          : ([...allSeriesItems, ...portfolioImages] as GridItem[]).sort(byPosition);
         const isFiltered = hasFeatured;
         return (
           <div className="space-y-4">

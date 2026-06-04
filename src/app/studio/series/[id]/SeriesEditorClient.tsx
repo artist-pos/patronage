@@ -102,6 +102,7 @@ interface SeriesData {
   slug: string;
   hero_image_url: string | null;
   description: string | null;
+  year?: number | null;
 }
 
 function SortableArtworkCard({
@@ -210,6 +211,8 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
   const [titleSaving, setTitleSaving] = useState(false);
   const [description, setDescription] = useState(series.description ?? "");
   const [descSaving, setDescSaving] = useState(false);
+  const [year, setYear] = useState<string>(series.year != null ? String(series.year) : "");
+  const [yearSaving, setYearSaving] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -257,6 +260,18 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
     if (result.error) setError(result.error);
     else flash("Title saved.");
     setTitleSaving(false);
+  }
+
+  // --- Year ---
+  async function handleYearBlur() {
+    const parsed = year.trim() ? parseInt(year.trim(), 10) : null;
+    const prev = series.year ?? null;
+    if (parsed === prev || (year.trim() && isNaN(parsed!))) { if (year.trim() && isNaN(parsed!)) setYear(prev != null ? String(prev) : ""); return; }
+    setYearSaving(true);
+    const result = await updateSeries(series.id, { year: parsed });
+    if (result.error) setError(result.error);
+    else flash("Year saved.");
+    setYearSaving(false);
   }
 
   // --- Description ---
@@ -454,6 +469,21 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             className="w-full text-sm border-b border-border focus:border-foreground focus:outline-none pb-1 bg-transparent"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
+            Year {yearSaving && <span className="normal-case font-normal text-stone-400">saving…</span>}
+          </label>
+          <input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            onBlur={handleYearBlur}
+            placeholder="e.g. 2024"
+            min={1900}
+            max={2100}
+            className="w-32 text-sm border-b border-border focus:border-foreground focus:outline-none pb-1 bg-transparent"
           />
         </div>
         <div className="space-y-1">

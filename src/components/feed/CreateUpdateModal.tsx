@@ -63,6 +63,12 @@ interface Props {
   label?: string;
   className?: string;
   projects?: { id: string; title: string }[];
+  /** When set, the modal opens immediately and the project is locked to this id */
+  defaultProjectId?: string;
+  defaultProjectTitle?: string;
+  /** When true, the trigger button is not rendered — caller controls open state */
+  openByDefault?: boolean;
+  onClose?: () => void;
 }
 
 const TYPE_OPTIONS: { type: ContentTypeEnum; label: string; icon: React.ReactNode }[] = [
@@ -78,8 +84,12 @@ export function CreateUpdateModal({
   label = "New update +",
   className,
   projects = [],
+  defaultProjectId,
+  defaultProjectTitle,
+  openByDefault = false,
+  onClose,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openByDefault);
   const [contentType, setContentType] = useState<ContentTypeEnum>("image");
 
   // Image
@@ -104,8 +114,10 @@ export function CreateUpdateModal({
   const [error, setError] = useState<string | null>(null);
 
   // Project selection
-  const [projectMode, setProjectMode] = useState<"none" | "existing" | "new">("none");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projectMode, setProjectMode] = useState<"none" | "existing" | "new">(
+    defaultProjectId ? "existing" : "none"
+  );
+  const [selectedProjectId, setSelectedProjectId] = useState(defaultProjectId ?? "");
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectLead, setNewProjectLead] = useState("");
 
@@ -127,14 +139,15 @@ export function CreateUpdateModal({
     setEmbedUrl("");
     setTextContent("");
     setError(null);
-    setProjectMode("none");
-    setSelectedProjectId("");
+    setProjectMode(defaultProjectId ? "existing" : "none");
+    setSelectedProjectId(defaultProjectId ?? "");
     setNewProjectTitle("");
     setNewProjectLead("");
     setCollaborators([]);
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
     if (videoInputRef.current) videoInputRef.current.value = "";
+    onClose?.();
   }
 
   function handleTypeChange(t: ContentTypeEnum) {
@@ -294,12 +307,14 @@ export function CreateUpdateModal({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className={className ?? "bg-black text-white px-4 py-2 text-sm hover:opacity-80 transition-opacity"}
-      >
-        {label}
-      </button>
+      {!openByDefault && (
+        <button
+          onClick={() => setOpen(true)}
+          className={className ?? "bg-black text-white px-4 py-2 text-sm hover:opacity-80 transition-opacity"}
+        >
+          {label}
+        </button>
+      )}
 
       {open && (
         <div
@@ -483,45 +498,54 @@ export function CreateUpdateModal({
                 />
               )}
 
-              {/* Project dropdown */}
+              {/* Project — locked when defaultProjectId provided */}
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Project
                 </p>
-                <select
-                  value={selectValue}
-                  onChange={(e) => handleProjectSelectChange(e.target.value)}
-                  className="w-full border border-black text-sm px-3 py-2 outline-none bg-background"
-                >
-                  <option value="none">None / Standalone Update</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
-                  ))}
-                  <option value="new">+ Create New Project</option>
-                </select>
-
-                {projectMode === "new" && (
-                  <div className="space-y-2 pl-3 border-l-2 border-black">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={newProjectTitle}
-                        onChange={(e) => setNewProjectTitle(e.target.value.slice(0, MAX_PROJ_TITLE))}
-                        placeholder="Project title…"
-                        className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
-                      />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-                        {newProjectTitle.length}/{MAX_PROJ_TITLE}
-                      </span>
-                    </div>
-                    <textarea
-                      value={newProjectLead}
-                      onChange={(e) => setNewProjectLead(e.target.value)}
-                      placeholder="Project description… (optional)"
-                      rows={2}
-                      className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
-                    />
+                {defaultProjectId ? (
+                  <div className="flex items-center gap-2 border border-black px-3 py-2 bg-muted/40">
+                    <span className="text-sm flex-1 truncate">{defaultProjectTitle ?? "Project"}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Locked</span>
                   </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectValue}
+                      onChange={(e) => handleProjectSelectChange(e.target.value)}
+                      className="w-full border border-black text-sm px-3 py-2 outline-none bg-background"
+                    >
+                      <option value="none">None / Standalone Update</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.title}</option>
+                      ))}
+                      <option value="new">+ Create New Project</option>
+                    </select>
+
+                    {projectMode === "new" && (
+                      <div className="space-y-2 pl-3 border-l-2 border-black">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newProjectTitle}
+                            onChange={(e) => setNewProjectTitle(e.target.value.slice(0, MAX_PROJ_TITLE))}
+                            placeholder="Project title…"
+                            className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                            {newProjectTitle.length}/{MAX_PROJ_TITLE}
+                          </span>
+                        </div>
+                        <textarea
+                          value={newProjectLead}
+                          onChange={(e) => setNewProjectLead(e.target.value)}
+                          placeholder="Project description… (optional)"
+                          rows={2}
+                          className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

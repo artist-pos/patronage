@@ -17,7 +17,7 @@ export default async function EditSeriesPage({ params }: PageProps) {
 
   const [profileResult, seriesResult] = await Promise.all([
     supabase.from("profiles").select("role, username").eq("id", user.id).single(),
-    supabase.from("series").select("id, title, slug, hero_image_url, description").eq("id", id).eq("artist_id", user.id).single(),
+    supabase.from("series").select("id, title, slug, hero_image_url, description, year").eq("id", id).eq("artist_id", user.id).single(),
   ]);
 
   const profile = profileResult.data;
