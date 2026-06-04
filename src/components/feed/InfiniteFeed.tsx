@@ -9,6 +9,22 @@ const PAGE_SIZE = 10;
 
 type FeedAudience = "everyone" | "following" | "subscribed";
 
+function useColumnCount(): number {
+  const [cols, setCols] = useState(2);
+  useEffect(() => {
+    function update() {
+      if (window.innerWidth >= 1280) setCols(5);
+      else if (window.innerWidth >= 1024) setCols(4);
+      else if (window.innerWidth >= 640) setCols(3);
+      else setCols(2);
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return cols;
+}
+
 interface Props {
   initialUpdates: ProjectUpdateWithArtist[];
   initialHasMore: boolean;
@@ -27,6 +43,7 @@ export function InfiniteFeed({
   const [updates, setUpdates] = useState<ProjectUpdateWithArtist[]>(initialUpdates);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
+  const colCount = useColumnCount();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(initialUpdates.length);
   const router = useRouter();
@@ -139,25 +156,20 @@ export function InfiniteFeed({
       )}
 
       {!isEmpty && (
-        <>
-          {/* Mobile: 2-column flex split — avoids iOS Safari CSS columns bug */}
-          <div className="flex gap-2 items-start sm:hidden">
-            {[0, 1].map((col) => (
-              <div key={col} className="flex flex-col gap-2 flex-1 min-w-0">
-                {updates.filter((_, i) => i % 2 === col).map((u, colIdx) => (
-                  <FeedCard key={u.id} u={u} priority={col === 0 && colIdx === 0} />
+        /* Round-robin column distribution — items fill left-to-right then down,
+           matching reading order. CSS `columns` fills top-to-bottom per column
+           which reverses this, so we manually assign items to columns instead. */
+        <div className="flex gap-2 items-start">
+          {Array.from({ length: colCount }, (_, col) => (
+            <div key={col} className="flex flex-col gap-2 flex-1 min-w-0">
+              {updates
+                .filter((_, i) => i % colCount === col)
+                .map((u, colIdx) => (
+                  <FeedCard key={u.id} u={u} priority={col < 2 && colIdx === 0} />
                 ))}
-              </div>
-            ))}
-          </div>
-
-          {/* sm+: CSS columns masonry */}
-          <div className="hidden sm:block columns-3 lg:columns-4 xl:columns-5 gap-2">
-            {updates.map((u, i) => (
-              <FeedCard key={u.id} u={u} priority={i < 2} />
-            ))}
-          </div>
-        </>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Sentinel — triggers next load when scrolled into view */}
