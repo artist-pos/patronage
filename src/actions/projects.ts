@@ -58,6 +58,26 @@ export async function unlinkProjectFromArtwork(projectId: string, artworkId: str
   revalidatePath(`/studio/works/${artworkId}`);
 }
 
+export async function updateProject(
+  projectId: string,
+  title: string,
+  description: string | null,
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ title: title.trim(), description: description?.trim() || null })
+    .eq("id", projectId)
+    .eq("artist_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/threads/${projectId}`);
+  return {};
+}
+
 export async function assignUpdateToProject(updateId: string, projectId: string | null) {
   const supabase = await createClient();
   const { error } = await supabase

@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Props {
   username: string;
@@ -9,10 +7,9 @@ interface Props {
 }
 
 export function ArtistProfileLink({ username, children, className }: Props) {
-  const router = useRouter();
   return (
-    <button className={className} onClick={() => router.replace(`/${username}`)}>
+    <Link href={`/${username}`} className={className}>
       {children}
-    </button>
+    </Link>
   );
 }

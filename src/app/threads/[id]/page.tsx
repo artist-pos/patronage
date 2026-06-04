@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
+import { EditProjectHeader } from "@/components/projects/EditProjectHeader";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getProfileById } from "@/lib/profiles";
@@ -60,10 +61,10 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   const currentUserUsername = currentUserProfile?.username;
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
   const isAdmin = currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner";
-
   const canNote = !!user;
 
   const { project, posts } = thread;
+  const isOwner = currentUserProfile?.id === project.artist_id;
   const artistName = project.artist_full_name ?? project.artist_username;
 
   return (
@@ -79,12 +80,21 @@ export default async function ThreadPage({ params, searchParams }: Props) {
 
       {/* Project header */}
       <div className="space-y-4 border-b border-border pb-10">
-        <h1 className="text-3xl font-bold tracking-tight">{project.title}</h1>
-
-        {project.description && (
-          <p className="text-base leading-relaxed text-muted-foreground">
-            {project.description}
-          </p>
+        {isOwner ? (
+          <EditProjectHeader
+            projectId={project.id}
+            initialTitle={project.title}
+            initialDescription={project.description ?? null}
+          />
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight">{project.title}</h1>
+            {project.description && (
+              <p className="text-base leading-relaxed text-muted-foreground">
+                {project.description}
+              </p>
+            )}
+          </>
         )}
 
         {/* Artist identity */}
