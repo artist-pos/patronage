@@ -8,7 +8,7 @@ export default function TermsPage() {
     <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: May 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: June 2026</p>
       </header>
 
       <Section title="1. Who We Are">
@@ -90,6 +90,38 @@ export default function TermsPage() {
           <strong>Partner listings.</strong> Standard listings are free. Featured placements
           and Pipeline activations carry published fees payable via Stripe, with card
           processing costs disclosed at checkout.
+        </p>
+
+        <p className="mt-3">
+          <strong>Stripe Connect for artists.</strong> Artists who list works or products for
+          sale on Patronage must complete Stripe Connect onboarding before any work can be
+          made available for purchase. By connecting a Stripe account you agree to{" "}
+          <a
+            href="https://stripe.com/nz/legal/connect-account"
+            className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Stripe&rsquo;s Connected Account Agreement
+          </a>
+          . Tax reporting obligations arising from sales — including GST where applicable —
+          are the artist&rsquo;s own responsibility. Stripe collects identity and tax information
+          (IRD number, ABN, or equivalent) as part of KYC verification; Patronage does not
+          independently store or verify this information.
+        </p>
+
+        <p className="mt-3">
+          <strong>Brokered campaigns and opportunities.</strong> Where Patronage brokers a
+          campaign storefront or commercial opportunity on an artist&rsquo;s behalf, the net
+          proceeds of each sale (after deducting any disclosed fulfilment, production, or
+          third-party costs) may be split between the artist, Patronage, and one or more
+          designated funds — such as a maintenance fund, development fund, or charitable
+          cause. The specific split and any fund allocations will be disclosed to the artist
+          before the campaign is activated and confirmed in writing. Example: on a
+          NZ$100 print sale with NZ$30 fulfilment, the remaining NZ$70 might be distributed
+          as 80% to the artist (NZ$56), 10% to Patronage (NZ$7), and 10% to a named fund
+          (NZ$7). Patronage will remit fund allocations to the nominated recipient on a
+          schedule agreed at the time of the campaign.
         </p>
 
         <p className="mt-3">
