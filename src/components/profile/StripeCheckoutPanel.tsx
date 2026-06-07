@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   CheckoutElementsProvider,
+  ExpressCheckoutElement,
   PaymentElement,
   useCheckoutElements,
 } from "@stripe/react-stripe-js/checkout";
@@ -35,22 +36,24 @@ function CheckoutForm({
   const result = useCheckoutElements();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasExpressMethods, setHasExpressMethods] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function confirm() {
     if (result.type !== "success") return;
     setProcessing(true);
     setError(null);
-
     const confirmResult = await result.checkout.confirm();
-
     if (confirmResult.type === "error") {
       setError(confirmResult.error.message ?? "Payment failed. Please try again.");
       setProcessing(false);
       return;
     }
-
     onSuccess();
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await confirm();
   }
 
   if (result.type === "error") {
@@ -61,6 +64,30 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Express Checkout (Apple Pay / Google Pay / Link etc.) */}
+      <div className={hasExpressMethods ? undefined : "hidden"}>
+        <ExpressCheckoutElement
+          onConfirm={confirm}
+          onReady={(e) => setHasExpressMethods(!!e.availablePaymentMethods)}
+          options={{
+            buttonType: { applePay: "buy", googlePay: "buy", paypal: "buynow" },
+            buttonHeight: 44,
+            buttonTheme: {},
+            layout: { maxColumns: 1, maxRows: 3, overflow: "never" },
+            paymentMethodOrder: [],
+            paymentMethods: {},
+          }}
+        />
+      </div>
+
+      {hasExpressMethods && (
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex-1 border-t border-border" />
+          <span>or pay another way</span>
+          <div className="flex-1 border-t border-border" />
+        </div>
+      )}
+
       <PaymentElement
         options={{
           layout: "accordion",

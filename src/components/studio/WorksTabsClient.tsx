@@ -18,12 +18,13 @@ interface Props {
   engagementMap: Record<string, { view: number; play: number }>;
   pendingConfirmationCount: number;
   seriesList: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number; is_featured: boolean; position: number }>;
+  stripeConnectEnabled: boolean;
 }
 
 export function WorksTabsClient({
   initialTab, profileId, profileComplete, missingFields,
   portfolioWorks, availableWorks, soldWorks, featuredCount,
-  engagementMap, pendingConfirmationCount, seriesList,
+  engagementMap, pendingConfirmationCount, seriesList, stripeConnectEnabled,
 }: Props) {
   const [tab, setTab] = useState<WorksTab>(initialTab);
 
@@ -47,6 +48,17 @@ export function WorksTabsClient({
 
   return (
     <div className="space-y-6">
+      {!stripeConnectEnabled && (
+        <div className="flex items-center justify-between border border-stone-200 bg-stone-50 px-4 py-3 rounded-lg">
+          <p className="text-sm text-stone-700">
+            Connect a Stripe account to list works for sale. Any previously listed works have been delisted until you connect.
+          </p>
+          <Link href="/studio/earnings" className="text-sm text-stone-900 font-medium underline underline-offset-2 shrink-0 ml-4 whitespace-nowrap">
+            Connect Stripe →
+          </Link>
+        </div>
+      )}
+
       {pendingConfirmationCount > 0 && (
         <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-4 py-3">
           <p className="text-sm text-amber-900">

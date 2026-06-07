@@ -57,19 +57,30 @@ async function getArtwork(
 }
 
 // Re-sync the artworks row from ALL listed editions.
-// is_available = true if any edition is listed.
+// is_available = true if any edition is listed AND the artist has Stripe Connect enabled.
 // price_cents = minimum price across listed editions (for "From X" display).
 // listing_mode / acquisition_mode taken from original edition if listed, else first listed.
 async function resyncArtworkFromAllEditions(artworkId: string, creatorId: string) {
   const admin = createAdminClient();
-  const { data: listedEditions } = await admin
-    .from("editions")
-    .select("type, price_cents, currency, poa, listing_mode")
-    .eq("work_id", artworkId)
-    .eq("listed", true)
-    .order("sort_order", { ascending: true });
+  const [{ data: listedEditions }, { data: artistProfile }] = await Promise.all([
+    admin
+      .from("editions")
+      .select("type, price_cents, currency, poa, listing_mode")
+      .eq("work_id", artworkId)
+      .eq("listed", true)
+      .order("sort_order", { ascending: true }),
+    admin
+      .from("profiles")
+      .select("stripe_connect_status, stripe_account_id")
+      .eq("id", creatorId)
+      .maybeSingle(),
+  ]);
 
-  if (!listedEditions?.length) {
+  const connectEnabled =
+    artistProfile?.stripe_connect_status === "enabled" &&
+    !!artistProfile?.stripe_account_id;
+
+  if (!listedEditions?.length || !connectEnabled) {
     await admin.from("artworks")
       .update({ is_available: false })
       .eq("id", artworkId)
@@ -105,6 +116,17 @@ async function syncArtworkFromEdition(
 }
 
 // ── Create work with initial edition ─────────────────────────────────────────
+
+async function assertConnectEnabled(userId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_connect_status, stripe_account_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.stripe_connect_status === "enabled" && profile?.stripe_account_id) return null;
+  return "Connect your Stripe account in Studio → Earnings before listing works for sale.";
+}
 
 export async function createWorkWithEdition(data: {
   // Primary image URL — empty string "" is valid for non-image works
@@ -146,6 +168,11 @@ export async function createWorkWithEdition(data: {
   const admin = createAdminClient();
   const firstEd = data.edition;
   const isListed = firstEd.listed || (data.extraEditions?.some(e => e.listed) ?? false);
+
+  if (isListed) {
+    const connectError = await assertConnectEnabled(user.id);
+    if (connectError) return { error: connectError };
+  }
   const mode = data.acquisitionMode
     ?? (firstEd.listing_mode === 'direct' ? 'buy_now' : 'enquire_first');
 
@@ -304,6 +331,18 @@ export async function toggleEditionListed(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  if (listed) {
+    const admin = createAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("stripe_connect_status, stripe_account_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.stripe_connect_status !== "enabled" || !profile?.stripe_account_id) {
+      return { error: "Connect your Stripe account in Studio → Earnings before listing works for sale." };
+    }
+  }
+
   const artwork = await getArtwork(supabase, artworkId, user.id);
   if (!artwork) return { error: "Work not found" };
 
@@ -380,6 +419,9 @@ export async function publishWorkToForSale(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+
+  const connectError = await assertConnectEnabled(user.id);
+  if (connectError) return { error: connectError };
 
   const admin = createAdminClient();
 

@@ -46,6 +46,10 @@ A series groups related but distinct artworks (e.g. "Coastal Series") under a si
 
 Note: supporting images on individual artwork detail pages (multiple angles, documentation photos) are a separate system and remain unchanged.
 
+## #22 · Stripe Connect required for campaign product/print sales
+
+Campaigns that sell physical products, prints, or originals (i.e. any campaign with a Stripe checkout flow) must require the artist to have completed Stripe Connect onboarding before activation. Gate the campaign activation ("coming soon") button on `stripe_connect_status === 'enabled'` — show a "Connect your Stripe account first" prompt if not connected. Same pattern as the works listing gate added to `edition-actions.ts`.
+
 ## #19 · Stripe Adaptive Pricing
 
 Enable Adaptive Pricing so buyers outside NZD/AUD see prices in their local currency, with Stripe handling conversion and settling in the artist's currency. Already on the Checkout Sessions API — just add `adaptivePricing: { allowed: true }` to `CheckoutElementsProvider` options in `src/components/profile/StripeCheckoutPanel.tsx`. No backend changes needed.

@@ -64,7 +64,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (!user) redirect("/auth/login");
 
   const [{ data: profileRow }, completionProfile] = await Promise.all([
-    supabase.from("profiles").select("role, username, full_name, gst_registered, gst_number").eq("id", user.id).single(),
+    supabase.from("profiles").select("role, username, full_name, gst_registered, gst_number, stripe_connect_status, stripe_account_id").eq("id", user.id).single(),
     fetchCompletionProfile(user.id),
   ]);
 
@@ -514,6 +514,10 @@ export default async function StudioPage({ searchParams }: PageProps) {
             engagementMap={engagementMap}
             pendingConfirmationCount={pendingConfirmationCount}
             seriesList={seriesList}
+            stripeConnectEnabled={
+              profileRow?.stripe_connect_status === "enabled" &&
+              !!profileRow?.stripe_account_id
+            }
           />
         )}
 
