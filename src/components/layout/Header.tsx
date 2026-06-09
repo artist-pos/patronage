@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById } from "@/lib/profiles";
 import { getUnreadCount } from "@/lib/messages";
+import { getUnreadNotificationCount } from "@/lib/notifications";
 import { NavBar } from "./NavBar";
 import { SearchCommand } from "@/components/search/SearchCommand";
 
@@ -27,7 +28,10 @@ export async function Header() {
   } = await supabase.auth.getUser();
 
   const profile = user ? await getProfileById(user.id) : null;
-  const unreadCount = user ? await getUnreadCount() : 0;
+  const [unreadCount, unreadNotifications] = await Promise.all([
+    user ? getUnreadCount() : Promise.resolve(0),
+    user ? getUnreadNotificationCount(user.id) : Promise.resolve(0),
+  ]);
 
   return (
     <header className="border-b border-stone-100 sticky top-0 z-40 bg-white/90 backdrop-blur-sm">
@@ -62,6 +66,7 @@ export async function Header() {
             username={profile?.username ?? null}
             userId={user?.id ?? null}
             unreadCount={unreadCount}
+            unreadNotifications={unreadNotifications}
             signOut={signOut}
             role={profile?.role ?? null}
           />

@@ -2,7 +2,8 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findAuthUserIdByEmail } from "@/lib/supabase/find-user-by-email";
 import { ledgerContentHash, HASH_VERSION } from "@/lib/content-hash";
-import { sendPurchaseConfirmation } from "@/lib/email";
+import { sendPurchaseConfirmation, sendPrimaryArtistSaleNotificationEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * Shared completion logic for primary sales — called by both the legacy
@@ -223,12 +224,35 @@ async function completePrimarySale(params: {
     { onConflict: "holder_id,artwork_id", ignoreDuplicates: true },
   );
 
-  const [{ data: artistProfile }, { data: artworkForEmail }] = await Promise.all([
+  const [{ data: artistProfile }, { data: artworkForEmail }, { data: { user: artistAuthUser } }] = await Promise.all([
     admin.from("profiles").select("full_name, username").eq("id", sale.artist_id).maybeSingle(),
     admin.from("artworks").select("ledger_id, url, caption").eq("id", provenanceArtworkId).maybeSingle(),
+    admin.auth.admin.getUserById(sale.artist_id),
   ]);
   const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "The artist";
   const isGuest = sale.buyer_id === null;
+
+  if (artistAuthUser?.email) {
+    sendPrimaryArtistSaleNotificationEmail({
+      artistEmail: artistAuthUser.email,
+      artistName,
+      buyerName: params.buyerName,
+      workTitle: artworkForEmail?.caption ?? "Untitled",
+      salePriceCents: sale.sale_price_cents,
+      currency: sale.currency,
+    }).catch(console.error);
+  }
+
+  const workTitle = artworkForEmail?.caption ?? "Untitled";
+  const buyerLabel = params.buyerName ?? "Someone";
+  createNotification(
+    sale.artist_id,
+    "sale",
+    `${buyerLabel} purchased ${workTitle}`,
+    null,
+    "/studio/earnings",
+  ).catch(console.error);
+
   sendPurchaseConfirmation({
     toEmail: buyerEmail,
     buyerName: params.buyerName,

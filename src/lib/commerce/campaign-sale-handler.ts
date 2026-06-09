@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createShadowAccount, ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 import { sendCampaignSaleNotificationEmail, sendCampaignPurchaseReceiptEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * Webhook handler for `checkout.session.completed` with purpose=campaign_sale.
@@ -166,6 +167,14 @@ export async function handleCampaignSaleCompleted(
       printSize: print_size ?? undefined,
     }).catch(console.error);
   }
+
+  createNotification(
+    artist_id,
+    "sale",
+    `${buyerName || "Someone"} purchased ${workTitle}`,
+    null,
+    "/studio/earnings",
+  ).catch(console.error);
 
   sendCampaignPurchaseReceiptEmail({
     buyerEmail,

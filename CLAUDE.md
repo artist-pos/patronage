@@ -1,6 +1,6 @@
-# Patronage — Claude Code Guide
+# CLAUDE.md
 
-Read this file before making any changes to the codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ---
 
@@ -16,6 +16,44 @@ Read this file before making any changes to the codebase.
 - **Role-based dashboards** — artists, patrons, partners, admins
 
 **Language**: Always use NZ/British spelling in all user-facing text: organise, colour, honour, behaviour, centre, travelling, cancelled, analyse, favour, programme (arts context). Never US spellings.
+
+---
+
+## Commands
+
+```bash
+# App
+npm run dev          # Next.js dev server
+npm run build        # Production build (also type-checks)
+npm run lint         # ESLint
+npx tsc --noEmit     # Type-check without building
+
+# Scraper (run from scraper/ directory)
+cd scraper
+SCRAPER_TIER=1 npm run scrape   # Run one tier (1–4); omit SCRAPER_TIER to run all
+```
+
+There are no automated tests. Type-checking (`npx tsc --noEmit`) is the primary correctness signal.
+
+---
+
+## Environment Variables
+
+Copy `.env.local.example` → `.env.local`:
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin key — bypasses RLS; server only |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URL (no trailing slash) |
+| `RESEND_API_KEY` | Email sending |
+| `CRON_SECRET` | Guards `/api/cron/*` routes |
+| `ANTHROPIC_API_KEY` | Used by `/api/parse-opportunity` |
+| `STRIPE_SECRET_KEY` | Commerce |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature verification |
+
+Scraper uses a separate `scraper/.env` with `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 ---
 
@@ -43,16 +81,14 @@ src/
 ├── app/                        # Next.js App Router pages
 │   ├── [username]/             # Public artist profile page
 │   ├── admin/                  # Admin dashboard
-│   ├── api/                    # API routes (opportunities, feed, analytics, search)
+│   ├── api/                    # API routes (opportunities, feed, analytics, search, stripe webhook)
 │   ├── auth/                   # Signup, login, onboarding
-│   ├── dashboard/              # Artist + patron dashboards
+│   ├── dashboard/              # Patron dashboard + collection
 │   ├── feed/                   # Studio feed masonry page
 │   ├── messages/               # DM conversations
-│   ├── onboarding/             # Role selection + profile setup
 │   ├── opportunities/          # Opportunity browser + detail pages
 │   ├── partner/                # Partner dashboard (submission review)
-│   ├── profile/                # Profile editing
-│   ├── projects/               # Project threads
+│   ├── studio/                 # Artist studio (works, earnings, connect, campaigns, provenance)
 │   ├── globals.css             # Tailwind + CSS custom properties
 │   └── layout.tsx              # Root layout with Header/Footer
 │
@@ -72,12 +108,15 @@ src/
 │   │   ├── server.ts           # SSR Supabase client (cookie-based auth)
 │   │   ├── client.ts           # Browser Supabase client
 │   │   └── admin.ts            # Admin client — bypasses RLS (service role key)
+│   ├── commerce/               # One handler file per commerce surface (see Commerce below)
 │   ├── profiles.ts             # getProfileById, getProfiles, getPortfolioImages
 │   ├── opportunities.ts        # getOpportunities, getClosingSoonOpportunities
 │   ├── feed.ts                 # getLatestUpdates, getArtistUpdates
 │   ├── projects.ts             # getThread, getArtistProjects
 │   ├── messages.ts             # getMessages, getUnreadCount
 │   ├── email.ts                # Resend templates + send functions (uses admin client)
+│   ├── stripe.ts               # Stripe client + CheckoutPurpose type + checkout helpers
+│   ├── commerce-fee.ts         # CommerceSurface type + fee calculation
 │   ├── image.ts                # supabaseTransform(), detectOrientation(), orientationClass()
 │   ├── badges.ts               # computeBadges()
 │   └── saved-opportunities.ts  # getSavedOpportunities, categorizeSaved
@@ -98,7 +137,7 @@ scraper/
 │   └── upsert.ts               # Dedup + insert/update
 └── types.ts                    # Source, ScrapedOpportunity interfaces
 
-supabase/migrations/            # 051 migrations (numbered 001–051)
+supabase/migrations/            # 156+ SQL migrations (run manually in Supabase SQL Editor)
 ```
 
 ---
@@ -112,7 +151,35 @@ supabase/migrations/            # 051 migrations (numbered 001–051)
 - **Optimistic UI**: `useState` immediately, reconcile on server response
 - **Toast**: Inline state + `setTimeout(3000)` pattern
 - **Email**: Fire-and-forget `.catch(console.error)` — never awaited in user-facing code
-- **Admin client** (bypasses RLS): Only used in `src/lib/email.ts` and transfer actions — never in client components
+- **Admin client** (bypasses RLS): Only used in `src/lib/email.ts`, `src/lib/commerce/`, and transfer actions — never in client components
+- **Page width**: Outer container of any new page is `max-w-[1600px]`
+
+---
+
+## Commerce Architecture
+
+All Stripe payments flow through a single webhook at `src/app/api/stripe/webhook/route.ts`. It dispatches on `session.metadata.purpose` (typed as `CheckoutPurpose` / `CommerceSurface`) to a handler in `src/lib/commerce/`:
+
+| Purpose | Handler | Surface |
+|---|---|---|
+| `primary_sale` | `primary-sale-handler.ts` | Buy work directly from artist profile |
+| `resale` | `resale-handler.ts` | Patron re-selling a work |
+| `negotiated_sale` | `negotiated-sale-handler.ts` | Offer → accept flow via messages |
+| `campaign_sale` | `campaign-sale-handler.ts` | Campaign storefront purchase |
+| `pipeline_entry_fee` | `pipeline-handler.ts` | Application entry fee |
+| `featured_listing` | `featured-handler.ts` | Artist pays to feature a listing |
+| `support_one_off` / `support_recurring` | `support-handler.ts` | Patron support tiers |
+| `partner_submission` | `partner-submission-handler.ts` | Partner pays to submit |
+
+**Adding a new commerce surface**: create `src/lib/commerce/<surface>-handler.ts`, register it in `COMPLETED_HANDLERS` in the webhook route, add the purpose to `CommerceSurface` in `src/lib/commerce-fee.ts`.
+
+**Stripe Connect**: Artists connect their bank via Stripe Express (`src/app/studio/connect/`). `profiles.stripe_account_id` + `profiles.stripe_connect_status` (`pending|enabled|restricted|null`) track state.
+
+---
+
+## Migrations
+
+Migrations are plain SQL files in `supabase/migrations/`. There is no CLI migration runner — **run them manually in the Supabase SQL Editor**. Name new files sequentially: `157_description.sql`. The special file `RUN_THIS_IN_SUPABASE.sql` contains aggregate fixes run ad-hoc.
 
 ---
 
@@ -183,12 +250,15 @@ const { data } = await supabase
 
 // Upsert with conflict resolution
 .upsert({ ...data }, { onConflict: "url" })
+
+// Get auth user email (admin only — not in profiles table)
+const { data: { user } } = await admin.auth.admin.getUserById(userId);
 ```
 
 **RLS summary**:
 - Public: opportunities (published), profiles (public fields), feed updates
 - Authenticated: own profile edits, own messages, own portfolio
-- Admin client only: email lookups in `auth.users`, provenance transfers
+- Admin client only: email lookups in `auth.users`, provenance transfers, commerce handlers
 
 ---
 
@@ -223,6 +293,8 @@ Full schema: `src/types/database.ts`. Key facts:
 - `opportunities.routing_type` — `external` | `pipeline`; pipeline opps use `opportunity_applications`
 - `opportunity_applications.status` — `pending|shortlisted|selected|approved_pending_assets|production_ready|rejected`
 - `messages.message_type` — `text|transfer_request|transfer_accepted|work_offer`
+- `profiles.role` — `artist|owner|patron|partner|admin` (no "collector" role)
+- `profiles.stripe_account_id` + `profiles.stripe_connect_status` — Stripe Express connect state
 
 ---
 

@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createConnectAccountLink } from "./actions";
+import { createConnectAccountLink, disconnectConnectAccount } from "./actions";
 
 interface Props {
   currentStatus: string | null;
@@ -10,6 +10,7 @@ interface Props {
 
 export function ConnectForm({ currentStatus }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [isDisconnecting, startDisconnect] = useTransition();
   const router = useRouter();
 
   function handleConnect() {
@@ -19,6 +20,17 @@ export function ConnectForm({ currentStatus }: Props) {
         window.location.href = result.url;
       } else if (result.error) {
         alert(result.error);
+      }
+    });
+  }
+
+  function handleDisconnect() {
+    startDisconnect(async () => {
+      const result = await disconnectConnectAccount();
+      if (result.error) {
+        alert(result.error);
+      } else {
+        router.refresh();
       }
     });
   }
@@ -34,7 +46,7 @@ export function ConnectForm({ currentStatus }: Props) {
       <button
         type="button"
         onClick={handleConnect}
-        disabled={isPending}
+        disabled={isPending || isDisconnecting}
         className="w-full sm:w-auto px-5 py-2.5 bg-black text-white text-sm rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
       >
         {isPending
@@ -43,6 +55,22 @@ export function ConnectForm({ currentStatus }: Props) {
           ? "Complete Stripe onboarding →"
           : "Connect bank account →"}
       </button>
+
+      {currentStatus === "pending" && (
+        <div className="pt-2 border-t border-stone-100">
+          <p className="text-xs text-muted-foreground mb-2">
+            Connected to the wrong account? Reset and start fresh.
+          </p>
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={isPending || isDisconnecting}
+            className="text-xs text-stone-500 hover:text-red-600 underline underline-offset-2 transition-colors disabled:opacity-50"
+          >
+            {isDisconnecting ? "Resetting…" : "Reset Stripe connection"}
+          </button>
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">
         You will be redirected to Stripe to complete setup. Return here when done.

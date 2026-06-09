@@ -11,12 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatDropdown } from "@/components/chat/ChatDropdown";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 interface NavBarProps {
   isLoggedIn: boolean;
   username: string | null;
   userId: string | null;
   unreadCount: number;
+  unreadNotifications: number;
   signOut: () => Promise<void>;
   role?: string | null;
 }
@@ -27,7 +29,7 @@ const NAV_LINKS = [
   { href: "/opportunities", label: "Opportunities" },
 ];
 
-export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, role }: NavBarProps) {
+export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifications, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
   const isPartner = role === "partner" || role === "admin";
   const [open, setOpen] = useState(false);
@@ -37,6 +39,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
       {/* ── Desktop right column ──────────────────────── */}
       <div className="hidden sm:flex items-center gap-4 text-sm">
         <ChatDropdown userId={userId} username={username} />
+        {isLoggedIn && userId && (
+          <NotificationBell userId={userId} initialUnreadCount={unreadNotifications} />
+        )}
         {isLoggedIn ? (
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
@@ -99,6 +104,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, signOut, rol
       {/* ── Mobile icons row (chat + hamburger) ─────── */}
       <div className="sm:hidden flex items-center gap-3">
         <ChatDropdown userId={userId} username={username} />
+        {isLoggedIn && userId && (
+          <NotificationBell userId={userId} initialUnreadCount={unreadNotifications} />
+        )}
       <button
         className="flex flex-col gap-1.5 p-1 shrink-0"
         onClick={() => setOpen((o) => !o)}

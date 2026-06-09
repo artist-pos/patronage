@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findAuthUserIdByEmail } from "@/lib/supabase/find-user-by-email";
 import { sendNewSupportEmail, sendSupportReceiptEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * Webhook handler for purpose=support_one_off OR support_recurring on
@@ -103,6 +104,16 @@ export async function handleSupportCompleted(session: Stripe.Checkout.Session): 
     sub.amount_cents,
     sub.currency ?? "NZD",
     isRecurring,
+  ).catch(console.error);
+
+  createNotification(
+    sub.recipient_id,
+    "support",
+    supporterName
+      ? `${supporterName} is now supporting you`
+      : "You have a new supporter",
+    tierTitle,
+    "/studio/earnings",
   ).catch(console.error);
 
   sendSupportReceiptEmail(

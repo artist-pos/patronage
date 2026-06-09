@@ -1418,6 +1418,40 @@ export async function sendCampaignPurchaseReceiptEmail(opts: {
   });
 }
 
+export async function sendPrimaryArtistSaleNotificationEmail(opts: {
+  artistEmail: string;
+  artistName: string;
+  buyerName: string | null;
+  workTitle: string;
+  salePriceCents: number;
+  currency: string;
+}): Promise<void> {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const amount = `${opts.currency} ${(opts.salePriceCents / 100).toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const buyer = opts.buyerName ? esc(opts.buyerName) : "Someone";
+
+  await getResend().emails.send({
+    from: FROM,
+    to: opts.artistEmail,
+    subject: `New sale — ${opts.workTitle} sold for ${amount}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New sale</p>
+      <p style="margin:0 0 16px;font-size:15px;"><strong>${buyer}</strong> purchased <strong>${esc(opts.workTitle)}</strong> for <strong>${amount}</strong>.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a provenance certificate. Your payout will be processed automatically once Stripe settles the payment.</p>
+      <a href="${SITE_URL}/studio/earnings" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View earnings →</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendSaleRevertedBuyer({
   toEmail,
   buyerName,

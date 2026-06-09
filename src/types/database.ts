@@ -222,6 +222,17 @@ export interface ApplicationScore {
   updated_at: string;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'sale' | 'support' | 'transfer_request' | 'transfer_accepted';
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface NotificationQueueItem {
   id: string;
   opportunity_id: string;

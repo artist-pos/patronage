@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted, notifyShippingAddress, type ShippingAddress } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 import { ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { calculateFees } from "@/lib/commerce-fee";
@@ -167,6 +168,14 @@ export async function initiateTransfer(
 
   notifyTransferRequest(buyerId, artistName, workTitle, conversationId).catch(console.error);
 
+  createNotification(
+    buyerId,
+    "transfer_request",
+    `${artistName} sent you a work`,
+    workTitle,
+    `/messages/${conversationId}`,
+  ).catch(console.error);
+
   return { checkoutUrl };
 }
 
@@ -292,6 +301,14 @@ export async function acceptTransfer(
       .select("provenance_logo_url, provenance_signature_url")
       .eq("id", work.creator_id)
       .maybeSingle();
+    createNotification(
+      work.creator_id,
+      "transfer_accepted",
+      `${buyerName} accepted your transfer`,
+      workTitle,
+      "/studio/provenance",
+    ).catch(console.error);
+
     await Promise.all([
       notifyTransferAccepted(work.creator_id, buyerName, workTitle),
       sendTransferCertificate({

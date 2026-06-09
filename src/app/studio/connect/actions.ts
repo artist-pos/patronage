@@ -36,14 +36,54 @@ export async function createConnectAccountLink(): Promise<{ url?: string; error?
       .eq("id", user.id);
   }
 
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${SITE_URL}/studio/connect`,
-    return_url: `${SITE_URL}/studio/connect/return`,
-    type: "account_onboarding",
-  });
+  try {
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${SITE_URL}/studio/connect`,
+      return_url: `${SITE_URL}/studio/connect/return`,
+      type: "account_onboarding",
+    });
+    return { url: link.url };
+  } catch (err: unknown) {
+    // Stored account ID no longer exists in Stripe (e.g. wrong mode, deleted).
+    // Clear it and create a fresh one so the artist can retry immediately.
+    const isStale =
+      err instanceof Error &&
+      "code" in err &&
+      (err as { code?: string }).code === "resource_missing";
 
-  return { url: link.url };
+    if (isStale) {
+      const account = await stripe.accounts.create({ type: "express" });
+      accountId = account.id;
+      await admin
+        .from("profiles")
+        .update({ stripe_account_id: accountId, stripe_connect_status: "pending" })
+        .eq("id", user.id);
+      const link = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${SITE_URL}/studio/connect`,
+        return_url: `${SITE_URL}/studio/connect/return`,
+        type: "account_onboarding",
+      });
+      return { url: link.url };
+    }
+
+    throw err;
+  }
+}
+
+export async function disconnectConnectAccount(): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createAdminClient();
+  await admin
+    .from("profiles")
+    .update({ stripe_account_id: null, stripe_connect_status: null })
+    .eq("id", user.id);
+
+  return {};
 }
 
 export async function syncConnectStatus(): Promise<{ status?: string; error?: string }> {

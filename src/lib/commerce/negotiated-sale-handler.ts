@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensureLedgerId, createLedgerEntry } from "@/lib/provenance";
 import { sendPurchaseConfirmation } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { sendTransferCertificate } from "@/lib/pdf/transfer-certificate";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -107,6 +108,14 @@ export async function handleNegotiatedSaleCompleted(
     const artistUsername = artistProfile?.username ?? null;
     const buyerName = buyerProfile?.full_name ?? buyerProfile?.username ?? null;
     const workTitle = artwork?.caption ?? "Untitled";
+
+    createNotification(
+      sale.artist_id,
+      "sale",
+      `${buyerName ?? "Someone"} purchased ${workTitle}`,
+      null,
+      "/studio/earnings",
+    ).catch(console.error);
 
     await Promise.all([
       sendTransferCertificate({
