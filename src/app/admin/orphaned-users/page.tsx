@@ -70,19 +70,27 @@ export default async function OrphanedUsersPage() {
     (u) => u.email_confirmed_at && !profileIds.has(u.id)
   );
 
+  // Pending = unverified email, no profiles row
+  const pending = allAuthUsers.filter(
+    (u) => !u.email_confirmed_at && !profileIds.has(u.id)
+  );
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">Orphaned Users</h1>
         <p className="text-xs text-muted-foreground">
-          {orphaned.length} confirmed account{orphaned.length !== 1 ? "s" : ""} with no profile row.
-          These users verified their email but never completed role selection.
-          Assigning a role here creates their profile and sends a welcome DM.
+          Auth users with no profile row — either unverified or verified but never completed role selection.
         </p>
       </div>
 
+      <div className="space-y-2">
+        <h2 className="text-sm font-medium">Verified — no profile</h2>
+        <p className="text-xs text-muted-foreground">{orphaned.length} user{orphaned.length !== 1 ? "s" : ""} · confirmed email but never selected a role. Assign one to create their profile.</p>
+      </div>
+
       {orphaned.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No orphaned users — all good.</p>
+        <p className="text-sm text-muted-foreground">None — all good.</p>
       ) : (
         <div className="border border-border">
           <table className="w-full text-sm">
@@ -120,6 +128,40 @@ export default async function OrphanedUsersPage() {
                         </form>
                       ))}
                     </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="space-y-2 pt-4">
+        <h2 className="text-sm font-medium">Pending verification</h2>
+        <p className="text-xs text-muted-foreground">{pending.length} user{pending.length !== 1 ? "s" : ""} · signed up but haven&apos;t clicked the confirmation email yet.</p>
+      </div>
+
+      {pending.length === 0 ? (
+        <p className="text-sm text-muted-foreground">None.</p>
+      ) : (
+        <div className="border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Email</th>
+                <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Signed up</th>
+                <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pending.map((u) => (
+                <tr key={u.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 text-stone-700">{u.email}</td>
+                  <td className="px-4 py-3 text-stone-500 text-xs">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString("en-NZ") : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1">Awaiting email confirmation</span>
                   </td>
                 </tr>
               ))}
