@@ -58,6 +58,20 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
       if (error) {
         setError("That email and password combination didn't work. Try again or reset your password.");
       } else {
+        // Check if the user has completed onboarding (has a profile row)
+        const { data: { user: authedUser } } = await supabase.auth.getUser();
+        if (authedUser) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", authedUser.id)
+            .maybeSingle();
+          if (!profile) {
+            router.push("/onboarding/role");
+            router.refresh();
+            return;
+          }
+        }
         router.push(next);
         router.refresh();
       }

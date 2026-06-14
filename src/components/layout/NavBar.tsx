@@ -92,12 +92,20 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Link
-            href="/auth/login"
-            className="border border-border px-3 py-1.5 hover:bg-muted transition-colors"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/auth/login"
+              className="px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="border border-black bg-black text-white px-3 py-1.5 hover:bg-stone-800 transition-colors"
+            >
+              Sign up
+            </Link>
+          </div>
         )}
       </div>
 
@@ -179,9 +187,14 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                 </div>
               </>
             ) : (
-              <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                Sign in
-              </Link>
+              <>
+                <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  Sign in
+                </Link>
+                <Link href="/auth/signup" onClick={() => setOpen(false)} className="font-medium hover:text-muted-foreground transition-colors">
+                  Sign up
+                </Link>
+              </>
             )}
           </div>
         </div>

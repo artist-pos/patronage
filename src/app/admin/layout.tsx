@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin/outreach", label: "Outreach" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/claim-tokens", label: "Claim Tokens" },
+  { href: "/admin/orphaned-users", label: "Orphaned Users" },
   { href: "/admin/social", label: "Social" },
   { href: "/partner/dashboard", label: "Pipelines" },
 ];
