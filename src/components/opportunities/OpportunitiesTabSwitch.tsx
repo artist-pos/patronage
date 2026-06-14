@@ -28,6 +28,17 @@ export function OpportunitiesTabSwitch({ activeTab, matchCount }: Props) {
     <div className="inline-flex items-center gap-1 bg-stone-100 rounded-full p-1">
       <button
         type="button"
+        onClick={() => switchTab("all")}
+        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+          activeTab === "all"
+            ? "bg-white text-foreground shadow-sm"
+            : "text-stone-500 hover:text-foreground"
+        }`}
+      >
+        All Opportunities
+      </button>
+      <button
+        type="button"
         onClick={() => switchTab("for-you")}
         className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
           activeTab === "for-you"
@@ -37,23 +48,8 @@ export function OpportunitiesTabSwitch({ activeTab, matchCount }: Props) {
       >
         For You
         {matchCount > 0 && (
-          <span className={`ml-1.5 text-xs ${
-            activeTab === "for-you" ? "text-stone-400" : "text-stone-400"
-          }`}>
-            {matchCount}
-          </span>
+          <span className="ml-1.5 text-xs text-stone-400">{matchCount}</span>
         )}
-      </button>
-      <button
-        type="button"
-        onClick={() => switchTab("all")}
-        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
-          activeTab === "all"
-            ? "bg-white text-foreground shadow-sm"
-            : "text-stone-500 hover:text-foreground"
-        }`}
-      >
-        All Opportunities
       </button>
     </div>
   );

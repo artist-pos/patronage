@@ -66,8 +66,8 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
 
-  // Determine active tab — default everyone to "for-you" (unauthenticated see teaser)
-  const tab = params.tab === "all" ? "all" : "for-you";
+  // Determine active tab — default to "all"; "for-you" is opt-in
+  const tab = params.tab === "for-you" ? "for-you" : "all";
 
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
