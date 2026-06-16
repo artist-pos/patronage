@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import {
   DndContext,
   rectIntersection,
@@ -367,10 +367,16 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
             ref={inputRef}
             type="file"
             accept=".pdf,application/pdf"
+            disabled={uploading}
             onChange={(e) => handleFiles(e.target.files)}
-            className="text-sm file:mr-4 file:border file:border-border file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted"
+            className="text-sm file:mr-4 file:border file:border-border file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted disabled:opacity-50"
           />
-          {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+          {uploading && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Uploading…
+            </span>
+          )}
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
@@ -436,10 +442,16 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
+            disabled={uploading}
             onChange={(e) => handleFiles(e.target.files)}
-            className="text-sm file:mr-4 file:border file:border-border file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted"
+            className="text-sm file:mr-4 file:border file:border-border file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted disabled:opacity-50"
           />
-          {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+          {uploading && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Processing image…
+            </span>
+          )}
         </div>
       )}
 

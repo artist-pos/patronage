@@ -39,11 +39,14 @@ export function SearchCommand() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // Desktop and mobile each get their own ref. Sharing one ref across both
+  // inputs left it pointing at a stale/unmounted node, breaking focus on mobile.
   const inputRef = useRef<HTMLInputElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const desktopContainerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // '/' shortcut focuses the input on desktop
+  // '/' shortcut focuses the desktop search input
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (
@@ -52,7 +55,7 @@ export function SearchCommand() {
         !(e.target instanceof HTMLTextAreaElement)
       ) {
         e.preventDefault();
-        setMobileSearchOpen(true);
+        setOpen(true);
         setTimeout(() => inputRef.current?.focus(), 0);
       }
       if (e.key === "Escape") {
@@ -60,17 +63,29 @@ export function SearchCommand() {
         setQuery("");
         setMobileSearchOpen(false);
         inputRef.current?.blur();
-      }
-      if (e.key === "Enter" && e.target === inputRef.current && query.trim().length >= 2) {
-        e.preventDefault();
-        router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-        setOpen(false);
-        setMobileSearchOpen(false);
+        mobileInputRef.current?.blur();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Navigate to the full results page. Reads the live query (not a stale
+  // closure), so it works from both the desktop and mobile inputs.
+  function submitSearch() {
+    const q = query.trim();
+    if (q.length < 2) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    setOpen(false);
+    setMobileSearchOpen(false);
+  }
+
+  function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitSearch();
+    }
+  }
 
   // Click outside desktop container to close dropdown
   useEffect(() => {
@@ -249,6 +264,7 @@ export function SearchCommand() {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onKeyDown={onInputKeyDown}
           placeholder="Search artists, regions, or opportunities..."
           className="w-full pl-8 pr-7 py-1.5 text-xs border border-border focus:border-foreground outline-none bg-background transition-colors"
         />
@@ -268,7 +284,7 @@ export function SearchCommand() {
       <button
         className="sm:hidden p-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
         aria-label="Search"
-        onClick={() => { setMobileSearchOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+        onClick={() => { setMobileSearchOpen(true); setOpen(true); setTimeout(() => mobileInputRef.current?.focus(), 50); }}
       >
         <Search className="w-[18px] h-[18px]" />
       </button>
@@ -280,10 +296,11 @@ export function SearchCommand() {
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
-              ref={inputRef}
+              ref={mobileInputRef}
               autoFocus
               value={query}
               onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+              onKeyDown={onInputKeyDown}
               placeholder="Search artists, opportunities…"
               className="flex-1 text-sm outline-none bg-transparent placeholder:text-muted-foreground"
             />

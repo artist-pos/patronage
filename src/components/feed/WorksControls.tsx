@@ -53,8 +53,8 @@ export function WorksControls({ mediumOptions, currentSort, currentMedium, curre
         <option value="price_desc">Price: high to low</option>
       </select>
 
-      {/* Layout switcher */}
-      <div className="flex items-center border border-border rounded-sm overflow-hidden">
+      {/* Layout switcher — desktop only; mobile uses a fixed 2-column grid */}
+      <div className="hidden sm:flex items-center border border-border rounded-sm overflow-hidden">
         <button
           onClick={() => update("wlayout", "justified")}
           className={`p-1.5 transition-colors ${

@@ -10,16 +10,50 @@ import { Label } from "@/components/ui/label";
 interface Props {
   mode: "login" | "signup";
   next?: string;
+  /** Role chosen at signup — carried to the auth callback as a top-level param. */
+  role?: string;
 }
 
-export function AuthForm({ mode, next = "/profile/edit" }: Props) {
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
+
+export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
   const supabase = createClient();
+
+  // Carry both the post-auth destination and the chosen role through the
+  // callback. Role is a top-level param (not nested in `next`) so it survives
+  // the OAuth provider round-trip.
+  function buildCallbackUrl() {
+    const params = new URLSearchParams();
+    if (role) params.set("role", role);
+    if (next) params.set("next", next);
+    return `${location.origin}/auth/callback?${params.toString()}`;
+  }
+
+  function validate(): boolean {
+    const errs: FieldErrors = {};
+    if (!email.trim()) {
+      errs.email = "Enter your email address.";
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      errs.email = "Enter a valid email address.";
+    }
+    if (!password) {
+      errs.password = "Enter a password.";
+    } else if (mode === "signup" && password.length < 8) {
+      errs.password = "Password must be at least 8 characters.";
+    }
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
 
   async function handleGoogleSignIn() {
     setError(null);
@@ -27,7 +61,7 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: buildCallbackUrl(),
       },
     });
     if (error) {
@@ -40,13 +74,14 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!validate()) return;
     setLoading(true);
 
     if (mode === "signup") {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+        options: { emailRedirectTo: buildCallbackUrl() },
       });
       if (error) {
         setError(error.message);
@@ -101,18 +136,26 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
       </div>
 
       {/* Email / password */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
-            required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: undefined }));
+            }}
             placeholder="you@example.com"
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
+            className={fieldErrors.email ? "border-destructive focus-visible:border-destructive" : undefined}
           />
+          {fieldErrors.email && (
+            <p id="email-error" className="text-xs text-destructive">{fieldErrors.email}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
@@ -120,12 +163,19 @@ export function AuthForm({ mode, next = "/profile/edit" }: Props) {
             id="password"
             type="password"
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            required
-            minLength={8}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: undefined }));
+            }}
             placeholder={mode === "signup" ? "Min. 8 characters" : "••••••••"}
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? "password-error" : undefined}
+            className={fieldErrors.password ? "border-destructive focus-visible:border-destructive" : undefined}
           />
+          {fieldErrors.password && (
+            <p id="password-error" className="text-xs text-destructive">{fieldErrors.password}</p>
+          )}
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>

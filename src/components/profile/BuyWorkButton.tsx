@@ -123,11 +123,12 @@ export function BuyWorkButton({
       </button>
 
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="sm:max-w-4xl w-full p-0 gap-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row" style={{ height: "min(82vh, 680px)" }}>
-            {/* Left — artwork image */}
+        <DialogContent className="sm:max-w-4xl w-full p-0 gap-0 overflow-hidden max-h-[90vh] sm:max-h-none">
+          <div className="flex flex-col sm:flex-row h-auto max-h-[90vh] sm:h-[680px] sm:max-h-[82vh]">
+            {/* Left — artwork image. Capped on mobile so the purchase panel
+                stays visible without excessive scrolling (375px viewport). */}
             {workImageUrl && (
-              <div className="sm:w-[45%] shrink-0 bg-stone-100 overflow-hidden">
+              <div className="h-[32vh] sm:h-auto sm:w-[45%] shrink-0 bg-stone-100 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={workImageUrl}
@@ -138,7 +139,7 @@ export function BuyWorkButton({
             )}
 
             {/* Right — content panel, scrollable */}
-            <div className="flex-1 flex flex-col p-8 gap-5 min-w-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 flex flex-col p-6 sm:p-8 gap-5 min-w-0 overflow-y-auto">
 
               {step === "success" ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 text-center">

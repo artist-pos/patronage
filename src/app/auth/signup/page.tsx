@@ -38,7 +38,9 @@ export default async function SignupPage({ searchParams }: Props) {
   const { next, role: roleParam } = await searchParams;
   const role = VALID_ROLES.includes(roleParam as Role) ? (roleParam as Role) : null;
 
-  const resolvedNext = next ?? (role ? `/onboarding/role?role=${role}` : `/onboarding/role`);
+  // Where to land after auth if no role is set. When a role IS set, the callback
+  // routes through /onboarding/role using the top-level role param instead.
+  const resolvedNext = next ?? "/onboarding/role";
 
   // No role selected — show role picker
   if (!role) {
@@ -97,7 +99,7 @@ export default async function SignupPage({ searchParams }: Props) {
             </Link>
           </p>
         </div>
-        <AuthForm mode="signup" next={resolvedNext} />
+        <AuthForm mode="signup" next={resolvedNext} role={role} />
         <p className="text-xs text-muted-foreground">
           You&rsquo;ll receive a confirmation email. After verifying, you can
           complete your profile.

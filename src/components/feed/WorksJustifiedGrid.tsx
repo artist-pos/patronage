@@ -908,12 +908,16 @@ export function WorksJustifiedGrid({
     if (w > 0 && h > 0) setDims((prev) => ({ ...prev, [id]: { w, h } }));
   }
 
+  // On narrow viewports (mobile) fall back to a fixed 2-column grid instead of
+  // the justified layout, which needs the desktop-only sizing controls to look right.
+  const isNarrow = containerW !== null && containerW < 640;
+
   const rows = useMemo(
     () =>
-      containerW !== null && layout === "justified"
+      containerW !== null && layout === "justified" && !isNarrow
         ? buildRows(displayedArtworks, dims, containerW, rowH, hGap)
         : [],
-    [displayedArtworks, dims, containerW, rowH, hGap, layout],
+    [displayedArtworks, dims, containerW, rowH, hGap, layout, isNarrow],
   );
 
   function handleSave() {
@@ -940,7 +944,7 @@ export function WorksJustifiedGrid({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       {/* Saved filter toggle */}
       {savedLoaded && artworks.some((a) => savedIds.has(a.id)) && (
         <div className="flex items-center gap-2">
@@ -959,9 +963,9 @@ export function WorksJustifiedGrid({
         </div>
       )}
 
-      {/* Admin layout controls — justified only */}
+      {/* Admin layout controls — justified only; hidden on mobile (fixed 2-col grid) */}
       {isAdmin && layout === "justified" && (
-        <div className="flex flex-wrap items-center gap-6 pb-3 border-b border-border">
+        <div className="hidden sm:flex flex-wrap items-center gap-6 pb-3 border-b border-border">
           <div className="flex items-center gap-3">
             <label className="text-xs text-muted-foreground whitespace-nowrap">
               Row height: {rowH}px
@@ -1084,9 +1088,87 @@ export function WorksJustifiedGrid({
         </div>
       )}
 
-      {/* Justified grid layout */}
-      {layout === "justified" && (
-        <div ref={containerRef}>
+      {/* Mobile: fixed 2-column grid (justified layout only) */}
+      {layout === "justified" && isNarrow && (
+        <div className="grid grid-cols-2 gap-2">
+          {displayedArtworks.map((artwork, idx) => {
+            const displayName = artwork.profile?.full_name ?? artwork.profile?.username ?? "";
+            const title = artwork.title ?? artwork.caption ?? "Untitled";
+            const profileHref = artwork.profile ? `/${artwork.profile.username}` : "#";
+            const hasMultipleEditions = (artwork.editions?.length ?? 0) > 1;
+            const basePrice = !artwork.hide_price
+              ? formatPrice(artwork.price_cents, artwork.price_currency, artwork.is_poa)
+              : null;
+            const formattedPrice = basePrice && hasMultipleEditions ? `From ${basePrice}` : basePrice;
+            const isSaved = savedLoaded && savedIds.has(artwork.id);
+            const isHidden = ownerActions?.hiddenIds.has(artwork.id) ?? false;
+
+            return (
+              <div key={artwork.id} className="min-w-0">
+                <div
+                  className="relative w-full aspect-square overflow-hidden bg-[#FAFAF9] cursor-pointer"
+                  onClick={() => openLightbox(idx)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={artwork.url}
+                    alt={title}
+                    loading="lazy"
+                    onLoad={(e) => handleLoad(artwork.id, e)}
+                    className="w-full h-full object-contain block"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleSave(artwork.id); }}
+                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-white/85"
+                    aria-label={isSaved ? "Remove bookmark" : "Bookmark"}
+                  >
+                    {isSaved ? (
+                      <BookmarkCheck className="w-3.5 h-3.5 text-black" />
+                    ) : (
+                      <Bookmark className="w-3.5 h-3.5 text-stone-600" />
+                    )}
+                  </button>
+                  {hasMultipleEditions && (
+                    <span className="absolute top-2 left-2 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                      {artwork.editions!.length} editions
+                    </span>
+                  )}
+                  {isHidden && (
+                    <span className="absolute bottom-2 left-2 text-[9px] font-mono uppercase tracking-widest text-white bg-black/60 px-2 py-0.5 rounded">
+                      Hidden
+                    </span>
+                  )}
+                </div>
+                <div className="pt-1.5">
+                  <Link
+                    href={profileHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 mb-0.5"
+                  >
+                    <ArtistAvatar avatarUrl={artwork.profile?.avatar_url ?? null} displayName={displayName} size={14} />
+                    <span className="text-[11px] text-stone-500 truncate">{displayName}</span>
+                  </Link>
+                  <p className="text-xs font-medium text-stone-900 truncate leading-tight">{title}</p>
+                  {artwork.medium && (
+                    <p className="text-[11px] text-stone-400 truncate mt-0.5">{artwork.medium}</p>
+                  )}
+                  {formattedPrice && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-[11px] font-medium text-stone-900">{formattedPrice}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Justified grid layout — desktop */}
+      {layout === "justified" && !isNarrow && (
+        <div>
           {rows.map((row, ri) => (
             <div
               key={ri}

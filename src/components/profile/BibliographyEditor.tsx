@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,11 @@ interface Props {
 
 export function BibliographyEditor({ profileId, initial }: Props) {
   const [entries, setEntries] = useState<BibliographyEntry[]>(initial);
+  // Stable per-row keys so React keeps each block's inputs bound to the right
+  // entry after add/remove. Using the array index as the key made later blocks
+  // appear unresponsive once rows were added or removed.
+  const nextKey = useRef(initial.length);
+  const [keys, setKeys] = useState<number[]>(() => initial.map((_, i) => i));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supabase = createClient();
@@ -34,6 +39,13 @@ export function BibliographyEditor({ profileId, initial }: Props) {
 
   function remove(idx: number) {
     setEntries((prev) => prev.filter((_, i) => i !== idx));
+    setKeys((prev) => prev.filter((_, i) => i !== idx));
+    setSaved(false);
+  }
+
+  function add() {
+    setEntries((p) => [...p, blank()]);
+    setKeys((p) => [...p, nextKey.current++]);
     setSaved(false);
   }
 
@@ -50,7 +62,7 @@ export function BibliographyEditor({ profileId, initial }: Props) {
   return (
     <div className="space-y-4">
       {entries.map((entry, idx) => (
-        <div key={idx} className="border border-black p-4 space-y-3">
+        <div key={keys[idx]} className="border border-black p-4 space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className={LABEL}>Type</Label>
@@ -128,7 +140,7 @@ export function BibliographyEditor({ profileId, initial }: Props) {
       <div className="flex items-center gap-4 pt-2">
         <button
           type="button"
-          onClick={() => { setEntries((p) => [...p, blank()]); setSaved(false); }}
+          onClick={add}
           className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
         >
           + Add Entry

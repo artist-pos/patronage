@@ -166,28 +166,39 @@ export function StudioFeedCard({ u, className = "" }: { u: ProjectUpdateWithArti
     return null;
   })();
 
+  const avatar = u.artist_avatar_url ? (
+    <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
+      <Image src={u.artist_avatar_url} alt={name} fill loading="lazy" className="object-cover" sizes="20px" />
+    </div>
+  ) : (
+    <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+
   return (
-    <Link
-      href={href}
-      scroll={false}
+    <div
       className={`group block sm:inline-block border border-border bg-background overflow-hidden ${className}`}
       style={widthStyle}
     >
-      {mediaSection}
+      {/* Media links to the update; the artist attribution links to the public
+          profile (/{username}) — not an internal studio route. */}
+      <Link href={href} scroll={false} className="block">
+        {mediaSection}
+      </Link>
       <div className="px-2.5 py-1.5 border-t border-border">
-        <div className="flex items-center gap-1.5 min-w-0">
-          {u.artist_avatar_url ? (
-            <div className="relative w-5 h-5 shrink-0 overflow-hidden border border-black">
-              <Image src={u.artist_avatar_url} alt={name} fill loading="lazy" className="object-cover" sizes="20px" />
-            </div>
-          ) : (
-            <div className="w-5 h-5 shrink-0 border border-black bg-muted flex items-center justify-center text-[8px] font-semibold">
-              {name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
-        </div>
+        {u.artist_username ? (
+          <Link href={`/${u.artist_username}`} className="flex items-center gap-1.5 min-w-0 group/artist">
+            {avatar}
+            <p className="text-xs font-semibold truncate flex-1 min-w-0 group-hover/artist:underline">{name}</p>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-1.5 min-w-0">
+            {avatar}
+            <p className="text-xs font-semibold truncate flex-1 min-w-0">{name}</p>
+          </div>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }

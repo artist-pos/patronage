@@ -45,6 +45,15 @@ const nextConfig: NextConfig = {
       { source: "/works", destination: "/feed?tab=works" },
     ];
   },
+  async redirects() {
+    return [
+      // Legacy/marketing URLs still hit by crawlers and cached links. Redirect
+      // to the closest current page instead of falling through to the
+      // [username] catch-all (which would render a misleading profile 404).
+      { source: "/core-features", destination: "/", permanent: true },
+      { source: "/market-opportunity", destination: "/opportunities", permanent: true },
+    ];
+  },
   async headers() {
     return [
       // Negative-lookahead matcher so /embed routes don't inherit
