@@ -30,4 +30,6 @@ create policy "insert own termination survey"
   on public.termination_surveys
   for insert
   to authenticated
-  with check (auth.uid() = user_id);
+  -- (select auth.uid()) so the auth lookup runs once per query, not per row
+  -- (Supabase linter 0003_auth_rls_initplan).
+  with check ((select auth.uid()) = user_id);
