@@ -2,7 +2,7 @@ import Link from "next/link";
 import { supabaseTransform } from "@/lib/image";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import type { GridItem, GridSeriesItem } from "@/components/profile/PortfolioGrid";
-import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
+import { StudioUpdatesRow } from "@/components/profile/StudioUpdatesRow";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import type { ExhibitionEntry, BibliographyEntry, PortfolioImage, ProjectUpdateWithArtist, ProfileAchievement } from "@/types/database";
 
@@ -71,7 +71,6 @@ export function OverviewTab({
     ...receivedGrants.map((g) => ({ type: "manual" as const, data: g })),
   ].slice(0, 3);
   const totalGrantCount = achievements.length + receivedGrants.length;
-  const selectedUpdates = studioUpdates.slice(0, 3);
 
   const hasHighlights =
     selectedExhibitions.length > 0 ||
@@ -271,29 +270,9 @@ export function OverviewTab({
         );
       })()}
 
-      {/* Studio updates preview — up to 3 */}
-      {selectedUpdates.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-                Studio Updates
-              </h3>
-              <p className="text-sm text-gray-400 mt-0.5">Recent updates</p>
-            </div>
-            <Link
-              href={`/${username}?tab=studio`}
-              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-            >
-              View all →
-            </Link>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none items-start">
-            {selectedUpdates.map((u) => (
-              <StudioUpdateTile key={u.id} u={u} />
-            ))}
-          </div>
-        </div>
+      {/* Studio updates — fills the row width, expand for the rest */}
+      {studioUpdates.length > 0 && (
+        <StudioUpdatesRow updates={studioUpdates} username={username} />
       )}
     </div>
   );
