@@ -11,6 +11,7 @@ import {
   getGrowthMetrics,
 } from "@/lib/admin";
 import type { MediumTrend, GrantPerformance } from "@/lib/admin";
+import { BackfillThumbsButton } from "@/components/admin/BackfillThumbsButton";
 
 function BarChart({ data }: { data: MediumTrend[] }) {
   if (data.length === 0) return <p className="text-xs text-muted-foreground">No filter activity yet.</p>;
@@ -352,6 +353,14 @@ export default async function AdminPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* ── Maintenance ────────────────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+          Maintenance
+        </h2>
+        <BackfillThumbsButton />
       </section>
     </div>
   );
