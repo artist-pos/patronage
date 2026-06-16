@@ -100,7 +100,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
             let q = supabase
               .from("artworks")
               .select(
-                "id, url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
+                "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
               )
               .eq("is_available", true)
               .eq("hide_available", false);

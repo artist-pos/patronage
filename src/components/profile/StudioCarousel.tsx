@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, Music, Play, ExternalLink, FileText } from "lucide-react";
 import { deleteUpdate } from "@/actions/updates";
-import { supabaseTransform } from "@/lib/image";
+import { gridImageSrc } from "@/lib/image";
 import { AssignProjectButton } from "./AssignProjectButton";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import type { ProjectUpdateWithArtist } from "@/types/database";
@@ -255,7 +255,7 @@ function Tile({
           {isImage && u.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={supabaseTransform(u.image_url, { width: 480, quality: 70 }) ?? u.image_url}
+              src={gridImageSrc(u.image_url, u.thumb_url, 480, 70)}
               alt={u.caption ?? "Studio update"}
               loading="lazy"
               style={{ height: CAROUSEL_H, width: "auto", display: "block" }}

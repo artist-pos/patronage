@@ -33,6 +33,7 @@ async function resolveUniqueSlug(
 
 export async function createPortfolioWork(data: {
   url: string;
+  thumbUrl?: string | null;
   orientation: "landscape" | "portrait" | "square";
   naturalWidth: number;
   naturalHeight: number;
@@ -76,6 +77,7 @@ export async function createPortfolioWork(data: {
       creator_id: user.id,
       current_owner_id: user.id,
       url: data.url,
+      thumb_url: data.thumbUrl ?? null,
       orientation: data.orientation,
       natural_width: data.naturalWidth,
       natural_height: data.naturalHeight,

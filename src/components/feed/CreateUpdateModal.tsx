@@ -182,6 +182,7 @@ export function CreateUpdateModal({
     setError(null);
     try {
       let image_url: string | null = null;
+      let thumb_url: string | null = null;
       let audio_url: string | null = null;
       let video_url: string | null = null;
       let embed_url: string | null = null;
@@ -193,14 +194,20 @@ export function CreateUpdateModal({
       let imageOrientation: string | null = null;
 
       if (contentType === "image" && imageFile) {
-        const path = `${profileId}/updates/${Date.now()}.webp`;
+        const ts = Date.now();
+        const path = `${profileId}/updates/${ts}.webp`;
+        const thumbPath = `${profileId}/updates/${ts}-thumb.webp`;
         const result = await uploadImage(imageFile, {
           bucket: "portfolio",
           path,
           maxWidth: 1600,
           quality: 90,
+          thumb: true,
+          thumbPath,
+          thumbWidth: 800,
         });
         image_url = result.url;
+        thumb_url = result.thumbUrl ?? null;
         image_width = result.width;
         image_height = result.height;
         imageOrientation = detectOrientation(result.width, result.height);
@@ -266,6 +273,7 @@ export function CreateUpdateModal({
           artist_id: profileId,
           content_type: contentType,
           image_url,
+          thumb_url,
           audio_url,
           video_url,
           embed_url,

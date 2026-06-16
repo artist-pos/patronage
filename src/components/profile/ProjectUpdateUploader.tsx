@@ -42,16 +42,21 @@ export function ProjectUpdateUploader({ profileId }: Props) {
     setError(null);
     setUploading(true);
     try {
-      const path = `${profileId}/updates/${Date.now()}.webp`;
-      const { url: imageUrl } = await uploadImage(imageFile, {
+      const ts = Date.now();
+      const path = `${profileId}/updates/${ts}.webp`;
+      const thumbPath = `${profileId}/updates/${ts}-thumb.webp`;
+      const { url: imageUrl, thumbUrl } = await uploadImage(imageFile, {
         bucket: "portfolio",
         path,
         maxWidth: 1600,
         quality: 90,
+        thumb: true,
+        thumbPath,
+        thumbWidth: 800,
       });
       const { data: inserted } = await supabase
         .from("project_updates")
-        .insert({ artist_id: profileId, image_url: imageUrl, caption: caption.trim() || null })
+        .insert({ artist_id: profileId, image_url: imageUrl, thumb_url: thumbUrl ?? null, caption: caption.trim() || null })
         .select()
         .single();
 

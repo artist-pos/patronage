@@ -45,3 +45,22 @@ export function supabaseTransform(
   if (opts.quality) params.set("quality", String(opts.quality));
   return params.size > 0 ? `${transformed}?${params}` : transformed;
 }
+
+/**
+ * Best `src` for a grid/feed tile, in priority order:
+ *   1. the pre-generated thumbnail (a static CDN file — free + fast),
+ *   2. a read-time render-endpoint resize of the original (fallback for rows not
+ *      yet backfilled, or where the thumb upload failed),
+ *   3. the original URL.
+ * Keeps grids off full-resolution originals while never producing a broken image.
+ */
+export function gridImageSrc(
+  fullUrl: string | null | undefined,
+  thumbUrl: string | null | undefined,
+  width: number,
+  quality = 72
+): string | undefined {
+  if (thumbUrl) return thumbUrl;
+  if (!fullUrl) return undefined;
+  return supabaseTransform(fullUrl, { width, quality }) ?? fullUrl;
+}

@@ -463,6 +463,8 @@ export interface Artwork {
   creator_id: string;
   current_owner_id: string;
   url: string;
+  /** Pre-generated ~800px thumbnail for grids; full `url` is used in detail/lightbox. */
+  thumb_url?: string | null;
   caption: string | null;
   price_cents: number | null;
   is_poa: boolean;
@@ -948,6 +950,8 @@ export interface ProjectUpdate {
   artist_id: string;
   project_id: string | null;
   image_url: string | null;
+  /** Pre-generated ~480px thumbnail for grids/carousels; full `image_url` is used in detail. */
+  thumb_url?: string | null;
   caption: string | null;
   content_type: ContentTypeEnum;
   discipline: DisciplineEnum | null;

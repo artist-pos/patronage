@@ -7,6 +7,7 @@ import Image from "next/image";
 import { X, Bookmark, BookmarkCheck } from "lucide-react";
 import { saveWorksLayout } from "@/app/feed/works-layout-actions";
 import { formatPrice } from "@/lib/format-price";
+import { gridImageSrc } from "@/lib/image";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { formatSharePrice } from "@/lib/share-canvas";
 
@@ -44,6 +45,7 @@ export interface EditionOption {
 export interface ArtworkForGrid {
   id: string;
   url: string;
+  thumb_url?: string | null;
   title: string | null;
   caption: string | null;
   description?: string | null;
@@ -1052,7 +1054,7 @@ export function WorksJustifiedGrid({
                 <div className="w-14 h-14 flex-shrink-0 overflow-hidden bg-stone-100 relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={artwork.url}
+                    src={gridImageSrc(artwork.url, artwork.thumb_url, 200, 70)}
                     alt={title}
                     loading="lazy"
                     className="w-full h-full object-contain"
@@ -1111,7 +1113,7 @@ export function WorksJustifiedGrid({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={artwork.url}
+                    src={gridImageSrc(artwork.url, artwork.thumb_url, 800, 75)}
                     alt={title}
                     loading="lazy"
                     onLoad={(e) => handleLoad(artwork.id, e)}
@@ -1215,7 +1217,7 @@ export function WorksJustifiedGrid({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={artwork.url}
+                        src={gridImageSrc(artwork.url, artwork.thumb_url, 800, 75)}
                         alt={title}
                         loading="lazy"
                         onLoad={(e) => handleLoad(artwork.id, e)}

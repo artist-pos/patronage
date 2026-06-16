@@ -249,17 +249,21 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       for (const file of toUpload) {
         try {
           const path = `${profileId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_").replace(/\.[^.]+$/, "")}.webp`;
-          const { url, width, height } = await uploadImage(file, {
+          const thumbPath = path.replace(/\.webp$/, "-thumb.webp");
+          const { url, thumbUrl, width, height } = await uploadImage(file, {
             bucket: "portfolio",
             path,
             maxWidth: 1600,
             quality: 85,
+            thumb: true,
+            thumbPath,
+            thumbWidth: 800,
           });
           const orientation = detectOrientation(width, height);
 
           const { data: row } = await supabase
             .from("artworks")
-            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, orientation, natural_width: width, natural_height: height, position: images.length + uploaded.length, is_available: false, source: 'self_registered' })
+            .insert({ profile_id: profileId, creator_id: profileId, current_owner_id: profileId, url, thumb_url: thumbUrl ?? null, orientation, natural_width: width, natural_height: height, position: images.length + uploaded.length, is_available: false, source: 'self_registered' })
             .select()
             .single();
           if (row) uploaded.push(row as PortfolioImage);

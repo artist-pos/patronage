@@ -160,6 +160,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
     try {
       const supabase = createClient();
       let url = "";
+      let thumbUrl: string | null = null;
       let orientation: "landscape" | "portrait" | "square" = "portrait";
       let naturalWidth = 0;
       let naturalHeight = 0;
@@ -184,6 +185,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           thumbQuality: 80,
         });
         url = result.url;
+        thumbUrl = result.thumbUrl ?? null;
         naturalWidth = result.width;
         naturalHeight = result.height;
         orientation = detectOrientation(result.width, result.height);
@@ -250,6 +252,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
       const result = await createPortfolioWork({
         url,
+        thumbUrl,
         orientation,
         naturalWidth,
         naturalHeight,
