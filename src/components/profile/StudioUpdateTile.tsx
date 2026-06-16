@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { supabaseTransform } from "@/lib/image";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 const TILE_H = 200;
@@ -37,8 +38,9 @@ export function StudioUpdateTile({ u }: { u: ProjectUpdateWithArtist }) {
         {u.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={u.image_url}
+            src={supabaseTransform(u.image_url, { width: 480, quality: 70 }) ?? u.image_url}
             alt={u.caption ?? "Studio update"}
+            loading="lazy"
             style={{ height: TILE_H, width: "auto", display: "block" }}
             onLoad={handleImgLoad}
           />

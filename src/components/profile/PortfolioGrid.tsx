@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Music, Play, Type, ExternalLink } from "lucide-react";
+import { supabaseTransform } from "@/lib/image";
 import type { PortfolioImage } from "@/types/database";
 
 export interface GridSeriesItem {
@@ -188,7 +189,7 @@ export function PortfolioGrid({
                     {img.hero_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={img.hero_image_url}
+                        src={supabaseTransform(img.hero_image_url, { width: 800, quality: 75 }) ?? img.hero_image_url}
                         alt={img.title}
                         loading="lazy"
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -226,7 +227,7 @@ export function PortfolioGrid({
                 {(ct === "image" || ct === "document") && artwork.url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={artwork.url}
+                    src={supabaseTransform(artwork.url, { width: 800, quality: 75 }) ?? artwork.url}
                     alt={label ?? "Portfolio work"}
                     loading="lazy"
                     onLoad={(e) => handleImageLoad(artwork.id, e)}

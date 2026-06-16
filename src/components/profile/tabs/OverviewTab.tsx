@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { supabaseTransform } from "@/lib/image";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
 import type { GridItem, GridSeriesItem } from "@/components/profile/PortfolioGrid";
 import { StudioUpdateTile } from "@/components/profile/StudioUpdateTile";
@@ -97,8 +98,9 @@ export function OverviewTab({
                   {campaign.hero_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={campaign.hero_image_url}
+                      src={supabaseTransform(campaign.hero_image_url, { width: 200, quality: 70 }) ?? campaign.hero_image_url}
                       alt={campaign.title}
+                      loading="lazy"
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     />
                   ) : (
