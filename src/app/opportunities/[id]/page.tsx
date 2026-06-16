@@ -11,7 +11,7 @@ import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
-import { DescriptionAccordion } from "@/components/opportunities/DescriptionAccordion";
+import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
@@ -700,12 +700,7 @@ export default async function OpportunityPage({ params }: Props) {
             {opp.caption ?? opp.description ?? opp.full_description}
           </p>
           {opp.full_description && opp.full_description !== (opp.caption ?? opp.description) && (
-            <DescriptionAccordion
-              fullDescription={opp.full_description}
-              opportunityId={opp.id}
-              title={opp.title}
-              organiser={opp.organiser}
-            />
+            <StructuredDescription text={opp.full_description} />
           )}
         </div>
       )}
