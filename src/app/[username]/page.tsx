@@ -533,15 +533,20 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
       {/* ── Banner ── */}
+      {/* LCP element. Served via the Supabase render endpoint at a fixed 1600px
+          (a CDN-cached WebP) rather than next/image — which would generate a
+          1920–3840px variant on demand on wide/retina screens, the slow path.
+          Plain <img> with high fetch priority so it's in the initial HTML and
+          paints without waiting on client JS. */}
       <div className="w-full aspect-[42/9] relative overflow-hidden">
         {profile.featured_image_url ? (
-          <Image
-            src={profile.featured_image_url}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url}
             alt={`${displayName} banner`}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
             style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
           />
         ) : (

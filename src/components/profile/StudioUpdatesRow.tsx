@@ -40,7 +40,7 @@ export function StudioUpdatesRow({
   // How many tiles fit in a single row at the current width.
   let fitCount: number;
   if (containerW == null) {
-    fitCount = Math.min(updates.length, 6); // pre-measure default; extras are clipped
+    fitCount = Math.min(updates.length, 4); // pre-measure default; extras are clipped
   } else {
     let used = 0;
     fitCount = 0;

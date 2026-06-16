@@ -31,6 +31,7 @@ export function StudioUpdateTile({ u }: { u: ProjectUpdateWithArtist }) {
   return (
     <Link
       href={href}
+      prefetch={false}
       className="flex-none block border border-border bg-background"
       style={cardStyle}
     >
