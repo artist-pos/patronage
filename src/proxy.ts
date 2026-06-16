@@ -3,6 +3,25 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED = ["/onboarding/role", "/onboarding", "/profile/edit", "/admin"];
 
+/**
+ * Supabase session refresh + route guards.
+ *
+ * Session refresh — REQUIRED for the cookie-based SSR auth setup.
+ * Server Components cannot write cookies, so they can't persist a refreshed
+ * access token. Without refreshing here, once the access token expires (~1h)
+ * every authenticated request has multiple server clients (Header, page, libs)
+ * concurrently trying to refresh with the same refresh token. Supabase rotates
+ * refresh tokens on use, so all-but-one fail and retry, and nothing can persist
+ * the new token — producing multi-second to multi-minute hangs, dead RSC
+ * navigations (links that "don't work" until a full page load), and slow
+ * authenticated pages (/admin, partner submit, etc.).
+ *
+ * Running getUser() here refreshes the token exactly once per request and
+ * writes the new cookies onto the response, so downstream Server Components see
+ * a fresh, valid session and never race on a refresh.
+ *
+ * Official pattern: https://supabase.com/docs/guides/auth/server-side/nextjs
+ */
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -27,6 +46,8 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // IMPORTANT: do not run code between createServerClient and getUser — it
+  // refreshes the session and must be the first thing that touches auth.
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -38,7 +59,10 @@ export async function proxy(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    // Carry any refreshed session cookies onto the redirect response
+    supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
   }
 
   // Redirect authenticated users away from auth pages
@@ -47,7 +71,9 @@ export async function proxy(request: NextRequest) {
       const homeUrl = request.nextUrl.clone();
       homeUrl.pathname = "/";
       homeUrl.search = "";
-      return NextResponse.redirect(homeUrl);
+      const redirect = NextResponse.redirect(homeUrl);
+      supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      return redirect;
     }
   }
 
@@ -56,6 +82,13 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Run on all paths except:
+     * - static assets (_next/static, _next/image, favicon, fonts, images)
+     * - the Stripe webhook + cron routes (authenticated by signature/secret,
+     *   never by user cookies — no session to refresh, and we must not touch
+     *   the raw webhook request)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|api/stripe/webhook|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|ttf|txt|xml)$).*)",
   ],
 };
