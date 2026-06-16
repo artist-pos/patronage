@@ -4,7 +4,7 @@ import { HUB_CONTENT } from "@/lib/hub-content";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
 const CATEGORY_SLUGS = [
-  "new-zealand", "australia", "uk", "us", "eu", "global",
+  "new-zealand", "australia", "global",
   "visual-art", "music", "poetry", "writing", "dance", "film", "photography", "craft", "performance",
 ];
 

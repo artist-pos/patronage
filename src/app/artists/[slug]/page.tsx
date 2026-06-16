@@ -34,11 +34,10 @@ type SlugMeta = CountryMeta | DisciplineMeta;
 
 const SLUG_MAP: Record<string, SlugMeta> = {
   // Countries
+  // profiles.country is a strict enum (NZ | AUS | Global). Only these country
+  // slugs are valid — UK/US/EU would throw "invalid input value for enum" → 500.
   "new-zealand": { kind: "country", value: "NZ",     label: "New Zealand",  adjective: "New Zealand-based" },
   "australia":   { kind: "country", value: "AUS",    label: "Australian",   adjective: "Australian" },
-  "uk":          { kind: "country", value: "UK",     label: "UK",           adjective: "UK-based" },
-  "us":          { kind: "country", value: "US",     label: "US",           adjective: "US-based" },
-  "eu":          { kind: "country", value: "EU",     label: "European",     adjective: "European" },
   "global":      { kind: "country", value: "Global", label: "Global",       adjective: "internationally based" },
   // Disciplines
   "visual-art":    { kind: "discipline", value: "visual_art",   label: "Visual Artists",                 singular: "visual artist",          prose: "painters, printmakers, sculptors, and visual artists" },

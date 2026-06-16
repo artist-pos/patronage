@@ -28,6 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${name} — Studio Update | Patronage`,
     description: update.caption ?? `Studio update from ${name} on Patronage.`,
     openGraph: { images: ogImages },
+    // Collapse ?from=/?t= variants to one canonical URL (param-less).
+    alternates: { canonical: `/projects/${id}` },
   };
 }
 

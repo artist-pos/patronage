@@ -38,6 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${thread.project.title} — ${name} | Patronage`,
     description: thread.project.description ?? `Project thread by ${name} on Patronage.`,
+    // Collapse ?scroll= variants to one canonical URL (the slug, param-less).
+    alternates: { canonical: `/threads/${thread.project.slug ?? id}` },
   };
 }
 
