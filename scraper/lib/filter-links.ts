@@ -14,7 +14,15 @@
 
 // Paths that reliably indicate non-opportunity pages
 const BLOCKLIST_PATH =
-  /\/(login|logout|sign.?up|register|admin|search|tags?|categor(y|ies)|author|wp-[a-z]+|feed\/?$|rss\/?$|sitemap|contact|about|privacy|terms|cookie|newsletter|subscribe|unsubscribe|donate|shop|cart|basket|events?\/?$|news\/?$|press\/?$|media\/?$|blog\/?$|accessibility|cdn-cgi|email.?protection|language|lang\/|page\/\d+|archive\/?$|profile|account|dashboard)\b/i;
+  /\/(login|logout|sign.?up|register|admin|search|author|wp-[a-z]+|feed\/?$|rss\/?$|sitemap|contact|about|privacy|terms|cookie|newsletter|subscribe|unsubscribe|donate|shop|cart|basket|events?\/?$|news\/?$|press\/?$|media\/?$|blog\/?$|accessibility|cdn-cgi|email.?protection|language|lang\/|page\/\d+|archive\/?$|profile|account|dashboard)\b/i;
+
+// Taxonomy index pages (category / tag listings). Matched as a FULL path segment
+// — the term must be followed by "/" or end-of-string — so a detail slug that merely
+// contains the word (e.g. /opportunities/x-category-prize/) is NOT blocked. The
+// optional [a-z]+- prefix catches WordPress custom taxonomies like /opp-categories/
+// and /opp-tags/, not just the bare /category/ form. This is the trap that mis-routed
+// ArtInfoLand ops onto category pages.
+const TAXONOMY_PATH = /\/(?:[a-z]+-)?(?:categor(?:y|ies)|tags?)(?:\/|$)/i;
 
 // URL patterns that strongly suggest an opportunity detail page
 const ALLOWLIST_PATH =
@@ -78,8 +86,8 @@ export function filterLinks(links: string[], options: FilterLinksOptions): strin
     // Skip file downloads
     if (SKIP_EXT.test(path)) return false;
 
-    // Skip blocklisted paths
-    if (BLOCKLIST_PATH.test(path)) return false;
+    // Skip blocklisted paths and taxonomy index pages
+    if (BLOCKLIST_PATH.test(path) || TAXONOMY_PATH.test(path)) return false;
 
     // If the source specifies a link pattern, it's authoritative
     if (customPattern) return customPattern.test(path) || customPattern.test(link);
