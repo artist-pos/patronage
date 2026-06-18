@@ -43,6 +43,40 @@ type ToolbarItem =
   | { type: "action"; label: string; action: () => void; active: boolean }
   | { type: "separator" };
 
+/** Largest edge (px) we keep when downscaling on the client before upload. */
+const MAX_PX = 1600;
+
+/**
+ * Downscale + re-encode an image to WebP in the browser before upload.
+ * Keeps the POST body well under Vercel's 4.5 MB function request limit —
+ * raw camera/phone photos routinely exceed it, which surfaced as
+ * "Upload failed" when the full-size file was sent untouched.
+ */
+async function resizeToWebp(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const src = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(src);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
+        "image/webp",
+        0.88
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(src);
+      reject(new Error("Could not read image file"));
+    };
+    img.src = src;
+  });
+}
+
 /** Convert a UTC ISO string to NZ local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
 function utcToNzLocal(utcStr: string): string {
   const d = new Date(utcStr);
@@ -132,10 +166,12 @@ export function BlogEditor({ post, userId }: Props) {
 
   async function uploadBlogImage(file: File): Promise<string | null> {
     const path = `${userId}/blog/${Date.now()}.webp`;
-    const { url } = await uploadImage(file, { bucket: "portfolio", path, quality: 90 }).catch(err => {
-      setError(err.message);
-      return { url: null as unknown as string };
-    });
+    const { url } = await resizeToWebp(file)
+      .then(blob => uploadImage(blob, { bucket: "portfolio", path, quality: 90 }))
+      .catch(err => {
+        setError(err.message);
+        return { url: null as unknown as string };
+      });
     return url ?? null;
   }
 
