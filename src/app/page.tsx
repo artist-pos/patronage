@@ -117,12 +117,8 @@ export default async function Home() {
     <div>
       <div className={`max-w-[1600px] mx-auto px-6 ${isAuthenticated ? "py-0 space-y-0" : "py-16 space-y-16"}`}>
 
-        {/* ── Hero / Brand header ── */}
-        {isAuthenticated ? (
-          <h1 className="text-4xl font-semibold tracking-tight text-center mt-8 mb-4">
-            Patronage
-          </h1>
-        ) : (
+        {/* ── Hero / Brand header (signed-out only) ── */}
+        {!isAuthenticated && (
           <div className="space-y-6 flex flex-col items-center text-center">
             <div className="space-y-1.5">
               <h1 className="text-4xl font-semibold tracking-tight">Career infrastructure for artists in Aotearoa.</h1>
@@ -169,13 +165,8 @@ export default async function Home() {
           </div>
         )}
 
-        {/* ── Divider for authenticated view ── */}
-        {isAuthenticated && (
-          <hr className="my-6" style={{ borderColor: "#eeeeee" }} />
-        )}
-
         {/* ── Active Directory ── */}
-        <div className={`space-y-8 ${isAuthenticated ? "pt-0" : "border-t border-border pt-16"}`}>
+        <div className={`space-y-8 ${isAuthenticated ? "pt-8" : "border-t border-border pt-16"}`}>
           <div className="space-y-1 text-center">
             {isAuthenticated && isNewUser && (
               <p className="text-base text-gray-500 mb-2">
