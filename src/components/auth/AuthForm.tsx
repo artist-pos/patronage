@@ -29,14 +29,16 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
 
   const supabase = createClient();
 
-  // Carry both the post-auth destination and the chosen role through the
-  // callback. Role is a top-level param (not nested in `next`) so it survives
-  // the OAuth provider round-trip.
-  function buildCallbackUrl() {
+  // Carry both the post-auth destination and the chosen role through the auth
+  // redirect. Role is a top-level param (not nested in `next`) so it survives
+  // the OAuth provider round-trip. OAuth uses /auth/callback (PKCE code flow);
+  // email signup uses /auth/confirm (token_hash flow) so the link survives
+  // email prefetch/scanners and works across devices.
+  function buildAuthUrl(path: "/auth/callback" | "/auth/confirm") {
     const params = new URLSearchParams();
     if (role) params.set("role", role);
     if (next) params.set("next", next);
-    return `${location.origin}/auth/callback?${params.toString()}`;
+    return `${location.origin}${path}?${params.toString()}`;
   }
 
   function validate(): boolean {
@@ -61,7 +63,7 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: buildCallbackUrl(),
+        redirectTo: buildAuthUrl("/auth/callback"),
       },
     });
     if (error) {
@@ -81,7 +83,7 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: buildCallbackUrl() },
+        options: { emailRedirectTo: buildAuthUrl("/auth/confirm") },
       });
       if (error) {
         setError(error.message);

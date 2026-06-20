@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { ExpiredLinkNotice } from "@/components/auth/ExpiredLinkNotice";
 
 export const metadata = { title: "Sign In — Patronage" };
 
@@ -26,11 +27,23 @@ export default async function LoginPage({ searchParams }: Props) {
             You need a partner account to list opportunities.
           </p>
         )}
-        {error === "callback" && (
-          <p className="text-xs text-destructive">
-            Something went wrong. Please try again.
+        {message === "confirm-sent" && (
+          <p className="text-xs text-muted-foreground border border-black px-3 py-2 bg-muted">
+            Confirmation email sent. Check your inbox (and spam) for the link.
           </p>
         )}
+        {error === "callback" && (
+          <div className="text-xs text-destructive space-y-1">
+            <p>
+              That link didn&rsquo;t work — it may have expired or been opened on a
+              different device.
+            </p>
+            <Link href="/auth/confirm?status=expired" className="underline underline-offset-2">
+              Resend confirmation email →
+            </Link>
+          </div>
+        )}
+        <ExpiredLinkNotice />
         <AuthForm mode="login" next={next ?? "/profile/edit"} />
       </div>
     </div>
