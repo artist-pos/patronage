@@ -896,6 +896,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   artistName={displayName}
                   tiers={supportTiers}
                   userEmail={user?.email ?? undefined}
+                  stripeConnected={profile.stripe_connect_status === "enabled"}
                 />
               )}
             </div>

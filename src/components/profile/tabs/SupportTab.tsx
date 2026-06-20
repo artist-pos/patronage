@@ -11,9 +11,16 @@ interface Props {
   artistName: string;
   tiers?: SupportTier[];
   userEmail?: string;
+  /**
+   * Whether the artist has an active Stripe Connect account (charges enabled).
+   * Derived from profiles.stripe_connect_status === "enabled" — no live Stripe
+   * call. When false, payment buttons are replaced with an "unavailable" note
+   * for visitors; tiers and pricing stay visible.
+   */
+  stripeConnected?: boolean;
 }
 
-export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName, tiers = [], userEmail }: Props) {
+export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName, tiers = [], userEmail, stripeConnected = false }: Props) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [, startTransition] = useTransition();
   const [selectedTier, setSelectedTier] = useState<SupportTier | null>(null);
@@ -121,13 +128,17 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
               >
                 Get in touch →
               </a>
-            ) : (
+            ) : stripeConnected ? (
               <button
                 onClick={() => setSelectedTier(tier)}
                 className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
               >
                 {`Support ${artistName}`}
               </button>
+            ) : (
+              <span className="text-xs text-muted-foreground whitespace-nowrap sm:text-right">
+                Support payments coming soon
+              </span>
             )}
           </div>
         ))

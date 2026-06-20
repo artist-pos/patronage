@@ -46,39 +46,46 @@ export async function initiateSupportCheckout(
   const fees = calculateFees(surface, subjectPriceCents);
   const currency = "NZD";
 
-  // Insert the pending subscription record and fetch the artist's Connect
-  // status in parallel — both depend only on tier data already in hand.
-  const [{ data: subscription, error: insertError }, { data: artistProfile }] = await Promise.all([
-    admin
-      .from("support_subscriptions")
-      .insert({
-        tier_id: tier.id,
-        recipient_id: tier.profile_id,
-        supporter_id: user?.id ?? null,
-        supporter_email: supporterEmail,
-        supporter_name: input.supporterName?.trim() || null,
-        amount_cents: fees.subjectPriceCents,
-        currency,
-        patronage_commission_cents: fees.patronageRevenueCents,
-        buyer_paid_total_cents: fees.buyerPaidTotalCents,
-        tier_type: tier.tier_type,
-      })
-      .select("id")
-      .single(),
-    admin
-      .from("profiles")
-      .select("stripe_account_id, stripe_connect_status")
-      .eq("id", tier.profile_id)
-      .maybeSingle(),
-  ]);
-  if (insertError || !subscription) {
-    return { error: insertError?.message ?? "Couldn't create support record." };
-  }
+  // Guard FIRST, before creating any record or Stripe session: the artist
+  // must have an active Stripe Connect account to receive the funds. Without
+  // a transfer destination, Stripe settles the whole charge into Patronage's
+  // platform balance and the money never reaches the artist — the exact bug
+  // this prevents. The profile-page button gate is only cosmetic; this server
+  // action is a public endpoint, so this is the authoritative check.
+  const { data: artistProfile } = await admin
+    .from("profiles")
+    .select("stripe_account_id, stripe_connect_status")
+    .eq("id", tier.profile_id)
+    .maybeSingle();
 
   const connectDestination =
     artistProfile?.stripe_connect_status === "enabled" && artistProfile?.stripe_account_id
       ? artistProfile.stripe_account_id
       : null;
+  if (!connectDestination) {
+    return { error: "This artist isn't set up to receive payments yet." };
+  }
+
+  // Record the pending support payment only once we know funds can be routed.
+  const { data: subscription, error: insertError } = await admin
+    .from("support_subscriptions")
+    .insert({
+      tier_id: tier.id,
+      recipient_id: tier.profile_id,
+      supporter_id: user?.id ?? null,
+      supporter_email: supporterEmail,
+      supporter_name: input.supporterName?.trim() || null,
+      amount_cents: fees.subjectPriceCents,
+      currency,
+      patronage_commission_cents: fees.patronageRevenueCents,
+      buyer_paid_total_cents: fees.buyerPaidTotalCents,
+      tier_type: tier.tier_type,
+    })
+    .select("id")
+    .single();
+  if (insertError || !subscription) {
+    return { error: insertError?.message ?? "Couldn't create support record." };
+  }
 
   // Mint the Stripe Price lazily and cache it on the tier. Recurring uses
   // a recurring price; one-off uses a one-time price. Re-mint when the

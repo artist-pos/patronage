@@ -64,7 +64,16 @@ export async function initiatePrimarySale(
     artistProfile?.stripe_connect_status === "enabled" &&
     !!artistProfile?.stripe_account_id;
 
-  const payoutMethod = useConnect ? "stripe_connect" : "manual";
+  // Block the sale unless funds can be routed straight to the artist's
+  // connected account. Without a transfer destination Stripe settles the
+  // charge into Patronage's platform balance — money must always go to the
+  // artist automatically. This server action is a public endpoint, so this
+  // is the authoritative guard.
+  if (!useConnect) {
+    return { error: "This artist isn't set up to receive payments yet." };
+  }
+
+  const payoutMethod = "stripe_connect";
 
   const { data: row, error: insertError } = await admin
     .from("primary_sale_transactions")
@@ -191,6 +200,12 @@ export async function createPrimaryEmbeddedCheckout(input: {
   const artistProfile = artistProfileResult.data;
   const useConnect = artistProfile?.stripe_connect_status === "enabled" && !!artistProfile?.stripe_account_id;
 
+  // Block the sale unless funds can be routed straight to the artist's
+  // connected account (same guard as the redirect-checkout flow above).
+  if (!useConnect) {
+    return { error: "This artist isn't set up to receive payments yet." };
+  }
+
   const { data: row, error: insertError } = await admin
     .from("primary_sale_transactions")
     .insert({
@@ -202,7 +217,7 @@ export async function createPrimaryEmbeddedCheckout(input: {
       currency,
       patronage_commission_cents: fees.patronageRevenueCents,
       buyer_paid_total_cents: fees.buyerPaidTotalCents,
-      payout_method: useConnect ? "stripe_connect" : "manual",
+      payout_method: "stripe_connect",
       edition_id: input.editionId ?? null,
     })
     .select("id")
