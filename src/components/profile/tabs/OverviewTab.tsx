@@ -32,6 +32,8 @@ interface Props {
   receivedGrants: string[];
   achievements: ProfileAchievement[];
   portfolioImages: PortfolioImage[];
+  /** Featured works the artist has sold — surfaced in the "Selected Work" strip only. */
+  featuredSoldWorks?: PortfolioImage[];
   seriesList?: SeriesListItem[];
   studioUpdates: ProjectUpdateWithArtist[];
   artistName: string;
@@ -50,6 +52,7 @@ export function OverviewTab({
   receivedGrants,
   achievements,
   portfolioImages,
+  featuredSoldWorks = [],
   seriesList = [],
   studioUpdates,
   artistName,
@@ -230,7 +233,7 @@ export function OverviewTab({
         const featuredSeriesItems: GridSeriesItem[] = seriesList
           .filter(s => s.is_featured)
           .map(s => ({ _kind: "series" as const, id: s.id, title: s.title, slug: s.slug, hero_image_url: s.hero_image_url, artworkCount: s.artworkCount, is_featured: true, position: s.position, year: s.year }));
-        const featuredArtworks = portfolioImages.filter(i => i.is_featured);
+        const featuredArtworks = [...portfolioImages.filter(i => i.is_featured), ...featuredSoldWorks];
         const hasFeatured = featuredSeriesItems.length > 0 || featuredArtworks.length > 0;
         const allSeriesItems: GridSeriesItem[] = seriesList.map(s => ({ _kind: "series" as const, id: s.id, title: s.title, slug: s.slug, hero_image_url: s.hero_image_url, artworkCount: s.artworkCount, is_featured: s.is_featured, position: s.position, year: s.year }));
         const byPosition = (a: GridItem, b: GridItem) =>

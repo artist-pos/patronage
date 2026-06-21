@@ -139,17 +139,20 @@ export async function reorderPortfolioWorks(
   return {};
 }
 
-export async function reorderMixedArchivalItems(
+export async function reorderWorks(
   orderedItems: { id: string; kind: "artwork" | "series" }[]
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Artworks are matched by creator only (not current_owner_id) so the artist
+  // can reorder works they created even after selling them — RLS policy
+  // artworks_update_creator permits this.
   const updates = orderedItems.map(({ id, kind }, position) =>
     kind === "series"
       ? supabase.from("series").update({ position }).eq("id", id).eq("artist_id", user.id)
-      : supabase.from("artworks").update({ position }).eq("id", id).eq("creator_id", user.id).eq("current_owner_id", user.id)
+      : supabase.from("artworks").update({ position }).eq("id", id).eq("creator_id", user.id)
   );
 
   const results = await Promise.all(updates);

@@ -265,6 +265,11 @@ export function PortfolioGrid({
                     <p style={{ fontSize:10,textTransform:"uppercase",letterSpacing:"0.1em",color:"#a8a29e" }}>{artwork.embed_provider ?? "Embed"}</p>
                   </div>
                 )}
+                {artwork.is_available && (
+                  <span style={{ position:"absolute",top:8,left:8,fontSize:10,fontWeight:500,padding:"2px 8px",borderRadius:9999,background:"rgba(28,28,30,0.85)",color:"white",letterSpacing:"0.02em" }}>
+                    For sale
+                  </span>
+                )}
               </a>
               {hasCaption && (
                 <div style={{ paddingTop: 5, overflow: "hidden", width: "100%" }}>

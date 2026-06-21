@@ -34,7 +34,7 @@ const CvTab = dynamic(() =>
 const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage } from "@/types/database";
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
@@ -308,7 +308,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   const needsSeries           = isArtistProfile && (tab === "work" || tab === "overview");
   const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
 
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw] = await Promise.all([
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await Promise.all([
     needsPortfolio
       ? supabase
           .from("artworks")
@@ -433,6 +433,21 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             )
           )
       : Promise.resolve([] as string[]),
+    // Featured works the artist has sold — surfaced in the Overview "Selected Work" strip
+    needsPortfolio
+      ? supabase
+          .from("artworks")
+          .select("*, editions(id, type)")
+          .eq("creator_id", profile.id)
+          .neq("current_owner_id", profile.id)
+          .eq("is_featured", true)
+          .eq("hide_from_archive", false)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []).filter((w) => {
+            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
+            return eds.length === 0 || eds.every(e => e.type === "original");
+          }))
+      : Promise.resolve([]),
   ]);
 
   // Build map: artworks.id → listed editions sorted by sort_order
@@ -838,6 +853,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   receivedGrants={profile.received_grants ?? []}
                   achievements={achievements}
                   portfolioImages={images}
+                  featuredSoldWorks={featuredSoldWorks as PortfolioImage[]}
                   seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
                   studioUpdates={studioUpdates}
                   artistName={displayName}

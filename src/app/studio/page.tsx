@@ -46,8 +46,10 @@ interface PageProps {
   searchParams: Promise<{
     section?: string;
     tab?: string;
-    /** works sub-tab: archival | for-sale | sold | collected */
-    wt?: string;
+    /** works filter pill: all | for-sale | sold | featured | archival */
+    wf?: string;
+    /** works view: list | grid */
+    view?: string;
     /** feed sub-tab: updates | projects | notes */
     ft?: string;
     /** analytics period */
@@ -87,11 +89,12 @@ export default async function StudioPage({ searchParams }: PageProps) {
   if (activeSection === "collection") redirect("/dashboard/collection");
 
   // Sub-tab initial values — read once for SSR; client components manage subsequent switches
-  const WORKS_TABS = ["archival", "for-sale", "sold"] as const;
-  type WorksTab = typeof WORKS_TABS[number];
-  const initialWorksTab: WorksTab = (WORKS_TABS as readonly string[]).includes(params.wt ?? "")
-    ? (params.wt as WorksTab)
-    : "archival";
+  const WORKS_FILTERS = ["all", "for-sale", "sold", "featured", "archival"] as const;
+  type WorksFilter = typeof WORKS_FILTERS[number];
+  const initialWorksFilter: WorksFilter = (WORKS_FILTERS as readonly string[]).includes(params.wf ?? "")
+    ? (params.wf as WorksFilter)
+    : "all";
+  const initialWorksView: "list" | "grid" = params.view === "grid" ? "grid" : "list";
 
   const FEED_TABS = ["updates", "projects", "notes"] as const;
   type FeedTab = typeof FEED_TABS[number];
@@ -136,43 +139,26 @@ export default async function StudioPage({ searchParams }: PageProps) {
     : { data: [] };
   const structuredGrants = (structuredGrantsResult.data ?? []) as Grant[];
 
-  // Works: portfolio, available, sold, confirmations, collected, series — all in one round
-  const [portfolioResult, availableResult, soldResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult, seriesArtworkIdsResult] =
+  // Works: one query for every work the artist created (archival, for-sale,
+  // sold), plus featured count, engagement, confirmations, series.
+  const [worksResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult, seriesArtworkIdsResult] =
     needsWorks
       ? await Promise.all([
           supabase
             .from("artworks")
-            .select("id, url, caption, description, hide_from_archive, is_available, position, created_at, content_type, title, year, medium, dimensions")
-            .eq("profile_id", user.id)
+            .select("id, url, caption, description, title, year, medium, dimensions, content_type, price_cents, is_poa, price_currency, is_available, is_featured, hide_available, hide_price, hide_from_archive, position, created_at, current_owner_id, hidden_from_artist, ledger_id, editions(id, type)")
             .eq("creator_id", user.id)
-            .eq("current_owner_id", user.id)
-            .eq("is_available", false)
             .neq("source", "holder_uploaded")
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
-            .select("id, url, caption, description, price_cents, is_poa, price_currency, is_available, is_featured, hide_available, hide_price, position, created_at")
-            .eq("profile_id", user.id)
-            .eq("is_available", true)
-            .order("position", { ascending: true }),
-          supabase
-            .from("artworks")
-            .select("id, url, caption, price_cents, is_poa, price_currency, created_at, current_owner_id, hidden_from_artist, ledger_id")
-            .eq("creator_id", user.id)
-            .neq("current_owner_id", user.id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("artworks")
             .select("id, is_featured")
-            .eq("profile_id", user.id)
             .eq("creator_id", user.id)
             .eq("is_featured", true),
           supabase
             .from("artworks")
             .select("id")
-            .eq("profile_id", user.id)
             .eq("creator_id", user.id)
-            .eq("is_available", false)
             .then(async ({ data: pids }) => {
               const ids = (pids ?? []).map((r: { id: string }) => r.id);
               if (!ids.length) return { data: [] };
@@ -187,7 +173,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .select("id, title, slug, hero_image_url, is_featured, position, series_artworks(count)")
             .eq("artist_id", user.id)
             .order("position", { ascending: true }),
-          // Series artwork IDs — used to exclude series works from the archival list
+          // Series artwork IDs — used to exclude series works from the flat list
           supabase
             .from("series")
             .select("series_artworks(artwork_id)")
@@ -200,19 +186,38 @@ export default async function StudioPage({ searchParams }: PageProps) {
               )
             ),
         ])
-      : [null, null, null, null, null, 0, null, new Set<string>()];
+      : [null, null, null, 0, null, new Set<string>()];
 
   const featuredIds = new Set(
     ((featuredRows as { data: { id: string }[] | null } | null)?.data ?? []).map((r) => r.id)
   );
   const seriesArtworkIds = (seriesArtworkIdsResult as Set<string> | null) ?? new Set<string>();
-  const portfolioWorks = (
-    (portfolioResult as { data: { id: string; [key: string]: unknown }[] | null } | null)?.data ?? []
+
+  type StudioWorkStatus = "archival" | "for-sale" | "sold";
+  type RawWork = Record<string, unknown> & {
+    id: string;
+    current_owner_id: string;
+    is_available: boolean;
+    editions: { id: string; type: string }[] | null;
+  };
+  const works = (
+    (worksResult as { data: RawWork[] | null } | null)?.data ?? []
   )
-    .filter((w) => !seriesArtworkIds.has(w.id))
-    .map((w) => ({ ...w, is_featured: featuredIds.has(w.id) }));
-  const availableWorks = (availableResult as { data: unknown[] | null } | null)?.data ?? [];
-  const soldWorks = (soldResult as { data: unknown[] | null } | null)?.data ?? [];
+    .map((w) => {
+      const sold = w.current_owner_id !== user.id;
+      const status: StudioWorkStatus = sold ? "sold" : (w.is_available ? "for-sale" : "archival");
+      return { ...w, status, is_featured: featuredIds.has(w.id) };
+    })
+    .filter((w) => {
+      // Sold list shows originals only — print editions live in patron collections
+      if (w.status === "sold") {
+        const eds = w.editions ?? [];
+        if (eds.length > 0 && !eds.every((e) => e.type === "original")) return false;
+      }
+      // Series members are represented by their series tile, not as loose archival works
+      if (w.status === "archival" && seriesArtworkIds.has(w.id)) return false;
+      return true;
+    });
   const featuredCount = featuredIds.size;
 
   const seriesList = ((seriesResult as { data: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; series_artworks: Array<{ count: number }> }> | null } | null)?.data ?? []).map(s => ({
@@ -502,13 +507,11 @@ export default async function StudioPage({ searchParams }: PageProps) {
         {/* ── Works ── */}
         {activeSection === "works" && (
           <WorksTabsClient
-            initialTab={initialWorksTab}
-            profileId={user.id}
+            initialView={initialWorksView}
+            initialFilter={initialWorksFilter}
             profileComplete={profileComplete}
             missingFields={missingFields}
-            portfolioWorks={portfolioWorks as Parameters<typeof WorksTabsClient>[0]["portfolioWorks"]}
-            availableWorks={availableWorks as Parameters<typeof WorksTabsClient>[0]["availableWorks"]}
-            soldWorks={soldWorks as Parameters<typeof WorksTabsClient>[0]["soldWorks"]}
+            works={works as unknown as Parameters<typeof WorksTabsClient>[0]["works"]}
             featuredCount={featuredCount}
             engagementMap={engagementMap}
             pendingConfirmationCount={pendingConfirmationCount}
