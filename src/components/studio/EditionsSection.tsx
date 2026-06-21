@@ -8,6 +8,8 @@ import {
   deleteEdition,
   toggleEditionListed,
 } from "@/app/studio/works/edition-actions";
+import { pricingFromNet, pricingFromListed } from "@/lib/pricing";
+import { PricingBreakdownBox } from "@/components/studio/PricingBreakdownBox";
 
 const TYPE_LABELS: Record<EditionType, string> = {
   original: "Original",
@@ -169,14 +171,8 @@ function PricingCalculator({
   }
 
   const net = getNet();
-  const p = net > 0 ? (() => {
-    const listedPrice = net / 0.9;
-    const commission = listedPrice * 0.1;
-    const stripeProcessing = listedPrice * 0.029 + 0.30;
-    return { listedPrice, commission, stripeProcessing, buyerPays: listedPrice + stripeProcessing };
-  })() : null;
+  const p = pricingFromNet(net);
 
-  const fmtN = (n: number) => n.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const ci = "w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground";
   const sl = "text-xs text-muted-foreground";
   const tabCls = (active: boolean) =>
@@ -227,25 +223,7 @@ function PricingCalculator({
       )}
 
       {p ? (
-        <div className="bg-muted/30 border border-border px-4 py-3 space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">You receive</span>
-            <span className="font-medium text-emerald-700">{currency} {fmtN(net)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Patronage commission (10%)</span><span>+ {currency} {fmtN(p.commission)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Listed price</span><span>{currency} {fmtN(p.listedPrice)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Stripe processing (2.9% + 30¢)</span><span>+ {currency} {fmtN(p.stripeProcessing)}</span>
-          </div>
-          <div className="border-t border-border pt-2 flex justify-between">
-            <span className="text-xs font-medium">Buyer pays</span>
-            <span className="text-xs font-semibold">{currency} {fmtN(p.buyerPays)}</span>
-          </div>
-        </div>
+        <PricingBreakdownBox breakdown={p} currency={currency} />
       ) : (
         <p className="text-xs text-muted-foreground">Enter values above to see the breakdown.</p>
       )}
@@ -409,7 +387,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
   const hasOriginal = editions.some((e) => e.type === "original") || pendingDrafts.some((d) => d.type === "original");
 
   return (
-    <div className="flex gap-8 items-start">
+    <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
       {/* Left — editions content */}
       <div className="flex-1 min-w-0 space-y-4">
         <div className="flex items-center justify-between">
@@ -513,9 +491,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
       {pendingDrafts.map((draft) => {
         const isBusy = busy.has(draft.tempId);
         const isOriginal = draft.type === "original";
-        const listedPrice = computeListingPrice(draft.netReceive);
-        const commission = listedPrice != null ? listedPrice * 0.1 : null;
-        const takehome = listedPrice != null ? listedPrice * 0.9 : null;
+        const draftPricing = pricingFromNet(parseFloat(draft.netReceive));
 
         return (
           <div key={draft.tempId} className="border border-border p-4 space-y-4">
@@ -631,21 +607,8 @@ export function EditionsSection({ workId, initialEditions }: Props) {
                       className="flex-1 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground"
                     />
                   </div>
-                  {listedPrice != null && (
-                    <div className="border border-border px-3 py-2 space-y-0.5 text-[11px]">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">You receive</span>
-                        <span className="font-mono text-emerald-700">{draft.currency} {takehome!.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Patronage commission (10%)</span>
-                        <span className="font-mono">+ {draft.currency} {commission!.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-border pt-1 mt-1">
-                        <span className="font-medium">Listing price</span>
-                        <span className="font-mono font-medium">{draft.currency} {listedPrice.toFixed(2)}</span>
-                      </div>
-                    </div>
+                  {draftPricing && (
+                    <PricingBreakdownBox breakdown={draftPricing} currency={draft.currency} />
                   )}
                 </div>
               )}
@@ -704,7 +667,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
 
       {/* Right — sticky pricing calculator */}
       {calcOpen && (
-        <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-[72px]">
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-[72px]">
           <PricingCalculator
             currency={focusedPending?.currency ?? "NZD"}
             focusedLabel={focusedLabel}
@@ -819,13 +782,10 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
               className="w-32 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
           </div>
         )}
-        {hasPrice && (
-          <div className="border border-border px-3 py-2 space-y-0.5 text-[11px]">
-            <div className="flex justify-between"><span className="text-muted-foreground">Listing price</span><span className="font-mono">{draft.currency} {priceNum.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Patronage commission (10%)</span><span className="font-mono">−{draft.currency} {(priceNum * 0.10).toFixed(2)}</span></div>
-            <div className="flex justify-between border-t border-border pt-1 mt-1"><span className="font-medium">Your take-home</span><span className="font-mono font-medium">{draft.currency} {(priceNum * 0.90).toFixed(2)}</span></div>
-          </div>
-        )}
+        {hasPrice && (() => {
+          const breakdown = pricingFromListed(priceNum);
+          return breakdown ? <PricingBreakdownBox breakdown={breakdown} currency={draft.currency} /> : null;
+        })()}
       </div>
 
       {/* How collectors buy */}

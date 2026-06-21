@@ -151,7 +151,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .order("position", { ascending: true }),
           supabase
             .from("artworks")
-            .select("id, url, caption, description, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, position, created_at")
+            .select("id, url, caption, description, price_cents, is_poa, price_currency, is_available, is_featured, hide_available, hide_price, position, created_at")
             .eq("profile_id", user.id)
             .eq("is_available", true)
             .order("position", { ascending: true }),
@@ -166,7 +166,6 @@ export default async function StudioPage({ searchParams }: PageProps) {
             .select("id, is_featured")
             .eq("profile_id", user.id)
             .eq("creator_id", user.id)
-            .eq("is_available", false)
             .eq("is_featured", true),
           supabase
             .from("artworks")

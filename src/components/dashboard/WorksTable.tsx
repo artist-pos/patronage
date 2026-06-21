@@ -72,6 +72,7 @@ interface AvailableRow {
   is_poa: boolean;
   price_currency: string;
   is_available: boolean;
+  is_featured: boolean;
   hide_available: boolean;
   hide_price: boolean;
   position: number;
@@ -419,6 +420,14 @@ export function WorksTable({
 
   // ── Available work actions ───────────────────────────────────────────────
 
+  async function toggleFeaturedAvailable(id: string, current: boolean) {
+    setBusy(id);
+    const result = await toggleFeaturedWork(id, !current, featuredCount);
+    if (result.error) showError(result.error);
+    else setAvailable(prev => prev.map(w => (w.id === id ? { ...w, is_featured: !current } : w)));
+    setBusy(null);
+  }
+
   async function toggleHide(id: string, current: boolean) {
     setBusy(id);
     const result = await toggleHideAvailable(id, !current);
@@ -525,10 +534,24 @@ export function WorksTable({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {work.is_featured && <Badge>★</Badge>}
                   {work.hide_available && <Badge muted>Hidden</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                  {/* Feature */}
+                  <button
+                    onClick={() => toggleFeaturedAvailable(work.id, work.is_featured)}
+                    disabled={busy === work.id}
+                    title={work.is_featured ? "Remove from featured" : "Feature on profile (stays for sale)"}
+                    className={`w-7 h-7 flex items-center justify-center transition-colors disabled:opacity-40 ${
+                      work.is_featured ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill={work.is_featured ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                      <path d="M8 1l1.854 3.756L14 5.528l-3 2.924.708 4.128L8 10.57l-3.708 1.98.708-4.128L2 5.528l4.146-.772z" />
+                    </svg>
+                  </button>
                   {/* Edit */}
                   <Link
                     href={`/studio/works/${work.id}`}

@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { createWorkWithEdition } from "@/app/studio/works/edition-actions";
 import { createAndTransferWork } from "@/app/studio/provenance/actions";
 import { uploadDocumentationPhoto } from "@/app/studio/artworks/[id]/actions";
+import { pricingFromNet } from "@/lib/pricing";
+import { PricingBreakdownBox } from "@/components/studio/PricingBreakdownBox";
 import type { EditionListingMode, EditionType, ContentTypeEnum } from "@/types/database";
 
 const MAX_PX = 1600;
@@ -146,23 +148,10 @@ async function resizeToWebp(file: File): Promise<Blob> {
   });
 }
 
-function computePricing(netReceive: string): {
-  listedPrice: number;
-  commission: number;
-  stripeProcessing: number;
-  buyerPays: number;
-} | null {
-  const net = parseFloat(netReceive);
-  if (!Number.isFinite(net) || net <= 0) return null;
-  const listedPrice = net / 0.9;
-  const commission = listedPrice * 0.1;
-  const stripeProcessing = listedPrice * 0.029 + 0.30;
-  const buyerPays = listedPrice + stripeProcessing;
-  return { listedPrice, commission, stripeProcessing, buyerPays };
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Thin wrapper so existing call sites keep parsing the string field; the
+// actual model lives in @/lib/pricing so every breakdown stays in sync.
+function computePricing(netReceive: string) {
+  return pricingFromNet(parseFloat(netReceive));
 }
 
 function acquisitionToListingMode(mode: AcquisitionMode): EditionListingMode {
@@ -201,12 +190,7 @@ function PricingCalculator({ currency, focusedLabel, onUsePrice }: {
   }
 
   const net = getNet();
-  const p = net > 0 ? (() => {
-    const listedPrice = net / 0.9;
-    const commission = listedPrice * 0.1;
-    const stripeProcessing = listedPrice * 0.029 + 0.30;
-    return { listedPrice, commission, stripeProcessing, buyerPays: listedPrice + stripeProcessing };
-  })() : null;
+  const p = pricingFromNet(net);
 
   const curr = currency;
   const tabCls = (active: boolean) =>
@@ -261,13 +245,7 @@ function PricingCalculator({ currency, focusedLabel, onUsePrice }: {
       )}
 
       {p ? (
-        <div className="bg-muted/30 border border-border px-4 py-3 space-y-1.5">
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">You receive</span><span className="font-medium text-green-700">{curr} {fmtN(net)}</span></div>
-          <div className="flex justify-between text-xs text-muted-foreground"><span>Patronage commission (10%)</span><span>+ {curr} {fmtN(p.commission)}</span></div>
-          <div className="flex justify-between text-xs text-muted-foreground"><span>Listed price</span><span>{curr} {fmtN(p.listedPrice)}</span></div>
-          <div className="flex justify-between text-xs text-muted-foreground"><span>Stripe processing (2.9% + 30¢)</span><span>+ {curr} {fmtN(p.stripeProcessing)}</span></div>
-          <div className="border-t border-border pt-2 flex justify-between"><span className="text-xs font-medium">Buyer pays</span><span className="text-xs font-semibold">{curr} {fmtN(p.buyerPays)}</span></div>
-        </div>
+        <PricingBreakdownBox breakdown={p} currency={curr} />
       ) : (
         <p className="text-xs text-muted-foreground">Enter values above to see the breakdown.</p>
       )}
@@ -654,22 +632,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
   function PriceBreakdown({ receive, curr }: { receive: string; curr: string }) {
     const p = computePricing(receive);
     if (!p) return null;
-    return (
-      <div className="text-xs space-y-1 bg-muted/30 border border-border px-3 py-2.5">
-        <div className="flex justify-between text-muted-foreground">
-          <span>Patronage commission (10%):</span><span>+ {curr} {fmt(p.commission)}</span>
-        </div>
-        <div className="flex justify-between text-muted-foreground">
-          <span>Listed price (sale price):</span><span>{curr} {fmt(p.listedPrice)}</span>
-        </div>
-        <div className="flex justify-between text-muted-foreground">
-          <span>Stripe processing (2.9% + 30¢):</span><span>+ {curr} {fmt(p.stripeProcessing)}</span>
-        </div>
-        <div className="border-t border-border pt-1 flex justify-between font-semibold text-foreground">
-          <span>Buyer pays:</span><span>{curr} {fmt(p.buyerPays)}</span>
-        </div>
-      </div>
-    );
+    return <PricingBreakdownBox breakdown={p} currency={curr} />;
   }
 
   // ── Primary media section ─────────────────────────────────────────────────
@@ -933,7 +896,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
     <section className="border-t border-border pt-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Editions</h2>
-        {mode === "list" && (
+        {mode !== "sale" && (
           <button type="button" onClick={() => setCalcOpen((o) => !o)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${calcOpen ? "rotate-180" : ""}`} />
@@ -1065,7 +1028,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
     </section>
   );
 
-  if (mode === "list") {
+  // List + archive modes share the same layout (editions + pricing calculator).
+  if (mode !== "sale") {
     const focusedEd = editions.find((e) => e.id === focusedEditionId) ?? null;
     const focusedLabel = focusedEd
       ? (focusedEd.type === "original" ? "Original" : focusedEd.label || EDITION_TYPE_LABELS[focusedEd.type as Exclude<EditionType, "original">])
@@ -1076,21 +1040,10 @@ export function NewWorkClient({ profileId, mode }: Props) {
         <div className="flex flex-col lg:flex-row lg:items-start gap-12 mt-8">
           <div className="flex-1 min-w-0 max-w-2xl">
             {editionsSection}
-            {error && <p className="text-sm text-destructive mt-6">{error}</p>}
-            <div className="flex items-center gap-3 pt-8">
-              <button type="submit" disabled={!canSubmit() || uploading}
-                className="px-6 py-2.5 bg-black text-white text-sm hover:opacity-80 transition-opacity disabled:opacity-40">
-                {uploading ? "Saving…" : "Save work"}
-              </button>
-              <button type="button" onClick={() => router.back()}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3">
-                Cancel
-              </button>
-            </div>
           </div>
 
           {calcOpen && (
-            <div className="hidden lg:block w-72 xl:w-80 shrink-0 sticky top-[72px]">
+            <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-[72px]">
               <PricingCalculator
                 currency={focusedEd?.currency ?? "NZD"}
                 focusedLabel={focusedLabel}
@@ -1100,6 +1053,19 @@ export function NewWorkClient({ profileId, mode }: Props) {
               />
             </div>
           )}
+        </div>
+        <div className="max-w-2xl">
+          {error && <p className="text-sm text-destructive mt-6">{error}</p>}
+          <div className="flex items-center gap-3 pt-8">
+            <button type="submit" disabled={!canSubmit() || uploading}
+              className="px-6 py-2.5 bg-black text-white text-sm hover:opacity-80 transition-opacity disabled:opacity-40">
+              {uploading ? "Saving…" : "Save work"}
+            </button>
+            <button type="button" onClick={() => router.back()}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3">
+              Cancel
+            </button>
+          </div>
         </div>
       </form>
     );
@@ -1159,22 +1125,5 @@ export function NewWorkClient({ profileId, mode }: Props) {
     );
   }
 
-  // Archive mode
-  return (
-    <form onSubmit={handleSubmit} className="max-w-2xl">
-      {metaForm}
-      {editionsSection}
-      {error && <p className="text-sm text-destructive mt-6">{error}</p>}
-      <div className="flex items-center gap-3 pt-8">
-        <button type="submit" disabled={!canSubmit() || uploading}
-          className="px-6 py-2.5 bg-black text-white text-sm hover:opacity-80 transition-opacity disabled:opacity-40">
-          {uploading ? "Saving…" : "Save work"}
-        </button>
-        <button type="button" onClick={() => router.back()}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3">
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
+  return null;
 }
