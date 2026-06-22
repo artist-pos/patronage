@@ -76,6 +76,25 @@ Skip the feedback widget for MVP. Add a "Hide this" button per card on the For Y
 
 ---
 
+## #23 · Exportable pipeline data for external CRMs
+
+Let partners who run their intake/relationship management in an external CRM (e.g. Monday, and Monday forms) get applicant/submission data out of the pipeline dashboard so they can import it into their own tools. The data already exists: `opportunity_applications` (status, applicant profile, answers, entry-fee/payment state) aggregated on `/partner/dashboard/[opportunityId]`.
+
+**Options, cheapest → richest:**
+1. **CSV/Excel export button** (the 80/20 answer) — a server route that streams the partner's applications, respecting their active filters (opportunity, status, date), as CSV. Monday imports CSV into a board cleanly. Snapshot, not sync; no external accounts or API keys.
+2. **Shareable export link / scheduled email** — same CSV behind a stable link or a weekly emailed export (reuse Resend + cron). Good for partners who don't want to log in to pull data.
+3. **Generic webhook ("send to Zapier/Make")** — fire an event on new submission / status change to a partner-configured webhook URL; partner wires "new row → Monday item" via Monday's native Zapier/Make connectors. Stays CRM-agnostic (Monday, HubSpot, Airtable…) with one feature.
+4. **Direct Monday integration** — push items into a board via Monday's GraphQL API or forms/webhooks. Most seamless but a real per-CRM integration: token storage per partner, board/column mapping UI, error handling. Only worth it once several partners specifically ask for Monday.
+
+**Decisions regardless of approach:**
+- **Field mapping** — which columns (applicant name/email, discipline, status, submission date, answers, payment status). Free-text answer fields are the messy part for a rigid CRM schema.
+- **PII / consent** — exporting applicant contact info to a third-party CRM has privacy implications; add a line to terms and gate exports to the opportunity's owning partner only.
+- **Snapshot vs sync** — CSV is a snapshot; webhooks/API give ongoing sync. Most partners are fine with snapshots early on.
+
+**Recommendation:** start with #1 (CSV export); add #3 (webhook) later if partners want automation. Skip #4 until there's clear demand for Monday specifically.
+
+---
+
 ## #11 · Analytics dashboard
 
 **Trigger:** Build when there are 50+ artists with at least 10 completed sales across the platform. Below that threshold, the earnings dashboard is sufficient and a chart with 3 data points is noise, not signal.

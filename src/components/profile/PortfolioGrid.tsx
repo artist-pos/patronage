@@ -38,6 +38,11 @@ interface Props {
 function getAR(item: GridItem, detectedARs?: Record<string, number>): number {
   if (isSeries(item)) return 3 / 2;
   const img = item as PortfolioImage;
+  // Prefer the work's real physical proportions so e.g. a 900×900mm work renders
+  // square regardless of how the photo was cropped (image is contained inside).
+  if (img.width_mm && img.height_mm && img.height_mm > 0) {
+    return img.width_mm / img.height_mm;
+  }
   if (detectedARs?.[img.id]) return detectedARs[img.id];
   if (img.natural_width && img.natural_height && img.natural_height > 0) {
     return img.natural_width / img.natural_height;

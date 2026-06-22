@@ -55,7 +55,7 @@ export default async function PrivateRoomPage({ params }: Props) {
     .select(`
       position,
       artwork:artwork_id (
-        id, url, title, caption, price_cents, is_poa, price_currency, medium, hide_price,
+        id, url, title, caption, price_cents, is_poa, price_currency, medium, hide_price, width_mm, height_mm,
         creator_profile:creator_id (username, full_name, avatar_url)
       )
     `)
@@ -66,6 +66,7 @@ export default async function PrivateRoomPage({ params }: Props) {
     id: string; url: string; title: string | null; caption: string | null;
     price_cents: number | null; is_poa: boolean; price_currency: string;
     medium: string | null; hide_price: boolean;
+    width_mm: number | null; height_mm: number | null;
     creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | { username: string; full_name: string | null; avatar_url: string | null }[] | null;
   };
 
@@ -84,12 +85,14 @@ export default async function PrivateRoomPage({ params }: Props) {
         price_currency: raw.price_currency as "NZD" | "AUD",
         medium: raw.medium,
         hide_price: !room.show_prices || raw.hide_price,
+        width_mm: raw.width_mm,
+        height_mm: raw.height_mm,
         profile: cp
           ? { username: cp.username, full_name: cp.full_name, avatar_url: cp.avatar_url }
           : null,
       } satisfies ArtworkForGrid;
     })
-    .filter((a): a is ArtworkForGrid => a !== null);
+    .filter((a) => a !== null) as ArtworkForGrid[];
 
   const displayName = profile.full_name ?? profile.username;
 

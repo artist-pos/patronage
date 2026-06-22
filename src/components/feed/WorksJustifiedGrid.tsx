@@ -51,6 +51,8 @@ export interface ArtworkForGrid {
   description?: string | null;
   year?: number | null;
   dimensions?: string | null;
+  width_mm?: number | null;
+  height_mm?: number | null;
   ledger_id?: string | null;
   price_cents: number | null;
   is_poa: boolean;
@@ -138,6 +140,14 @@ const DEFAULT_V_GAP = 12;
 interface Tile { artwork: ArtworkForGrid; w: number; h: number; artworkIndex: number }
 interface Row  { tiles: Tile[]; isLast: boolean }
 
+// Aspect ratio: prefer the work's real physical proportions (so a 900×900mm work
+// is square, image contained) and fall back to the loaded image's pixel ratio.
+function arOf(a: ArtworkForGrid, dims: Record<string, { w: number; h: number }>): number {
+  if (a.width_mm && a.height_mm && a.height_mm > 0) return a.width_mm / a.height_mm;
+  const d = dims[a.id];
+  return d && d.h > 0 ? d.w / d.h : 1;
+}
+
 function buildRows(
   artworks: ArtworkForGrid[],
   dims: Record<string, { w: number; h: number }>,
@@ -153,8 +163,7 @@ function buildRows(
 
   for (let i = 0; i < artworks.length; i++) {
     const art = artworks[i];
-    const d = dims[art.id];
-    const ar = d && d.h > 0 ? d.w / d.h : 1;
+    const ar = arOf(art, dims);
     batch.push({ artwork: art, idx: i });
     batchAR += ar;
 
@@ -162,8 +171,7 @@ function buildRows(
 
     if (rowH <= targetH) {
       const tiles: Tile[] = batch.map(({ artwork: a, idx }) => {
-        const da = dims[a.id];
-        const r = da && da.h > 0 ? da.w / da.h : 1;
+        const r = arOf(a, dims);
         return { artwork: a, w: Math.round(r * rowH), h: Math.round(rowH), artworkIndex: idx };
       });
       const used = tiles.reduce((s, t) => s + t.w, 0) + (tiles.length - 1) * hGap;
@@ -177,8 +185,7 @@ function buildRows(
   if (batch.length > 0) {
     rows.push({
       tiles: batch.map(({ artwork: a, idx }) => {
-        const da = dims[a.id];
-        const r = da && da.h > 0 ? da.w / da.h : 1;
+        const r = arOf(a, dims);
         return { artwork: a, w: Math.round(r * targetH), h: targetH, artworkIndex: idx };
       }),
       isLast: true,
