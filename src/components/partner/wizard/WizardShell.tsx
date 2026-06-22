@@ -38,6 +38,10 @@ const FREE_STEPS = [
   { number: 3, label: "Review" },
 ];
 
+// Anonymous authors only fill the info step; they must sign in before the rest
+// of the listing process (review + publish), which happens once authenticated.
+const FREE_STEPS_ANON = [{ number: 2, label: "Basics" }];
+
 const PIPELINE_STEPS = [
   { number: 1, label: "Template" },
   { number: 2, label: "Basics" },
@@ -69,7 +73,7 @@ export function WizardShell({
   initialDocuments,
   anonymous = false,
 }: Props) {
-  const steps = isPipeline ? PIPELINE_STEPS : FREE_STEPS;
+  const steps = isPipeline ? PIPELINE_STEPS : anonymous ? FREE_STEPS_ANON : FREE_STEPS;
   const minStep = steps[0].number;
   const maxStep = steps[steps.length - 1].number;
 
@@ -208,8 +212,10 @@ export function WizardShell({
     }
     if (step === maxStep) {
       if (!allRequired || submitting) return;
-      // Anonymous free listing: persist and send them to sign in / sign up. They
-      // return to /partner/list-free, which finalises the draft and publishes.
+      // Anonymous free listing: they've entered the info; gate auth here before
+      // the rest of the process. Persist and send them to sign in / sign up; they
+      // return to /partner/list-free, which finalises the draft and resumes the
+      // wizard (review + publish) authenticated.
       if (anonymous) {
         try {
           localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
@@ -252,7 +258,7 @@ export function WizardShell({
         nextDisabled={nextDisabled}
         isLastStep={isLastStep}
         anonymous={anonymous}
-        nextLabel={anonymous && isLastStep ? "Sign in to publish →" : undefined}
+        nextLabel={anonymous && isLastStep ? "Sign in to continue →" : undefined}
       />
 
       <main className="max-w-[1280px] mx-auto px-6 py-10 pb-24">
