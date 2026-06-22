@@ -36,3 +36,32 @@ export async function deleteUpdate(updateId: string, urls: UpdateUrls = {}) {
   revalidatePath("/");
   revalidatePath("/feed");
 }
+
+/** Edit the text of an existing studio update (caption and/or written body). */
+export async function editUpdate(
+  updateId: string,
+  fields: { caption?: string | null; text_content?: string | null },
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const patch: Record<string, string | null> = {};
+  if (fields.caption !== undefined) patch.caption = fields.caption?.trim() || null;
+  if (fields.text_content !== undefined) patch.text_content = fields.text_content?.trim() || null;
+  if (Object.keys(patch).length === 0) return {};
+
+  // RLS ("Artist updates own project_updates") restricts this to the owner.
+  const { error } = await supabase
+    .from("project_updates")
+    .update(patch)
+    .eq("id", updateId)
+    .eq("artist_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/feed");
+  revalidatePath(`/updates/${updateId}`);
+  return {};
+}

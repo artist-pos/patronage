@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function addNote(
   updateId: string,
@@ -38,6 +39,26 @@ export async function addNote(
   revalidatePath(`/projects/${updateId}`);
   if (updateRow?.project_id) {
     revalidatePath(`/threads/${updateRow.project_id}`);
+  }
+
+  // Notify the artist that someone left a note (skip self-notes).
+  if (user.id !== artistId) {
+    const { data: sender } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user.id)
+      .single();
+    const senderName = sender?.full_name ?? sender?.username ?? "Someone";
+    const link = updateRow?.project_id
+      ? `/threads/${updateRow.project_id}?scroll=${updateId}`
+      : `/projects/${updateId}`;
+    await createNotification(
+      artistId,
+      "note",
+      `${senderName} left a note`,
+      content.trim().slice(0, 100),
+      link,
+    ).catch(() => {});
   }
 
   // If RLS filtered the read-back, return a stable fallback so the optimistic

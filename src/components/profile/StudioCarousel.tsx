@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, Music, Play, ExternalLink, FileText } from "lucide-react";
-import { deleteUpdate } from "@/actions/updates";
+import { X, Music, Play, ExternalLink, FileText, Pencil } from "lucide-react";
+import { deleteUpdate, editUpdate } from "@/actions/updates";
 import { gridImageSrc } from "@/lib/image";
 import { AssignProjectButton } from "./AssignProjectButton";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
@@ -202,6 +202,33 @@ function Tile({
   const router = useRouter();
   const [addModalOpen, setAddModalOpen] = useState(false);
 
+  // Retroactive text editing (owner only). "text" updates edit the written body;
+  // all other types edit the caption.
+  const isTextUpdate = u.content_type === "text";
+  const [caption, setCaption] = useState(u.caption ?? "");
+  const [textContent, setTextContent] = useState(u.text_content ?? "");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const du = { ...u, caption, text_content: textContent };
+
+  function openEdit(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraft(isTextUpdate ? textContent : caption);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const res = await editUpdate(u.id, isTextUpdate ? { text_content: draft } : { caption: draft });
+    setSaving(false);
+    if (res.error) return;
+    if (isTextUpdate) setTextContent(draft.trim()); else setCaption(draft.trim());
+    setEditing(false);
+    router.refresh();
+  }
+
   const href = u.project_id
     ? `/threads/${u.project_id}?scroll=${u.id}`
     : from
@@ -256,19 +283,19 @@ function Tile({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={gridImageSrc(u.image_url, u.thumb_url, 480, 70)}
-              alt={u.caption ?? "Studio update"}
+              alt={du.caption ?? "Studio update"}
               loading="lazy"
               style={{ height: CAROUSEL_H, width: "auto", display: "block" }}
               onLoad={handleImgLoad}
             />
           ) : u.content_type === "audio" ? (
-            <AudioTileContent u={u} />
+            <AudioTileContent u={du} />
           ) : u.content_type === "video" ? (
-            <VideoTileContent u={u} />
+            <VideoTileContent u={du} />
           ) : u.content_type === "text" ? (
-            <TextTileContent u={u} />
+            <TextTileContent u={du} />
           ) : u.content_type === "embed" ? (
-            <EmbedTileContent u={u} />
+            <EmbedTileContent u={du} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
               Update
@@ -287,6 +314,13 @@ function Tile({
               />
             </div>
             <button
+              onClick={openEdit}
+              aria-label="Edit update text"
+              className="absolute top-1 right-7 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+            <button
               onClick={handleDelete}
               disabled={pending}
               aria-label="Delete update"
@@ -296,13 +330,44 @@ function Tile({
             </button>
           </>
         )}
+
+        {/* Inline text editor */}
+        {editing && (
+          <div
+            className="absolute inset-0 z-20 bg-background/97 p-2 flex flex-col gap-2"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              autoFocus
+              placeholder={isTextUpdate ? "Edit your update…" : "Edit caption…"}
+              className="flex-1 w-full border border-black text-[11px] leading-snug px-2 py-1.5 resize-none outline-none focus:border-foreground"
+            />
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="border border-black bg-black text-white px-2.5 py-1 text-[10px] hover:opacity-80 transition-opacity disabled:opacity-40"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                className="border border-border px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Caption / timestamp — min-w-0 keeps text within card width */}
-      {(u.caption || isOwner) && (
+      {(du.caption || isOwner) && (
         <div className="px-2 py-1.5 border-t border-border min-w-0 overflow-hidden">
-          {u.caption && (
-            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{u.caption}</p>
+          {du.caption && (
+            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{du.caption}</p>
           )}
           {isOwner && (
             <p className="text-[9px] font-mono text-muted-foreground mt-0.5">

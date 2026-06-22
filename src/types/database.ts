@@ -225,7 +225,7 @@ export interface ApplicationScore {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'sale' | 'support' | 'transfer_request' | 'transfer_accepted';
+  type: 'sale' | 'support' | 'transfer_request' | 'transfer_accepted' | 'note';
   title: string;
   body: string | null;
   link: string | null;

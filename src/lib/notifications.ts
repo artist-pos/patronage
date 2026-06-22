@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type NotificationType = "sale" | "support" | "transfer_request" | "transfer_accepted";
+export type NotificationType = "sale" | "support" | "transfer_request" | "transfer_accepted" | "note";
 
 export interface Notification {
   id: string;
