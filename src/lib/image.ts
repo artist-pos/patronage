@@ -43,6 +43,11 @@ export function supabaseTransform(
   const params = new URLSearchParams();
   if (opts.width) params.set("width", String(opts.width));
   if (opts.quality) params.set("quality", String(opts.quality));
+  // The render endpoint's default resize mode (cover) stretches the image to the
+  // requested width while keeping the ORIGINAL height — distorting the aspect
+  // ratio (a 1600×1600 square comes back 800×1600). resize=contain scales
+  // proportionally to fit the requested width. Required whenever we resize.
+  if (opts.width) params.set("resize", "contain");
   return params.size > 0 ? `${transformed}?${params}` : transformed;
 }
 

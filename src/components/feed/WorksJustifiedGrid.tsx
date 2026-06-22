@@ -140,10 +140,9 @@ const DEFAULT_V_GAP = 12;
 interface Tile { artwork: ArtworkForGrid; w: number; h: number; artworkIndex: number }
 interface Row  { tiles: Tile[]; isLast: boolean }
 
-// Aspect ratio: prefer the work's real physical proportions (so a 900×900mm work
-// is square, image contained) and fall back to the loaded image's pixel ratio.
+// Aspect ratio from the loaded image's pixel dimensions (falls back to square
+// until the image has loaded and reported its natural size).
 function arOf(a: ArtworkForGrid, dims: Record<string, { w: number; h: number }>): number {
-  if (a.width_mm && a.height_mm && a.height_mm > 0) return a.width_mm / a.height_mm;
   const d = dims[a.id];
   return d && d.h > 0 ? d.w / d.h : 1;
 }
