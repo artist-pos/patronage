@@ -222,8 +222,10 @@ export function WizardShell({
         } catch {
           /* ignore */
         }
+        // role=partner so a new account created from here defaults to partner;
+        // returning users just sign in (role unchanged).
         router.push(
-          `/auth/login?next=${encodeURIComponent("/partner/list-free")}`,
+          `/auth/login?next=${encodeURIComponent("/partner/list-free")}&role=partner`,
         );
         return;
       }

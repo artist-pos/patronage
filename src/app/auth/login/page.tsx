@@ -5,11 +5,21 @@ import { ExpiredLinkNotice } from "@/components/auth/ExpiredLinkNotice";
 export const metadata = { title: "Sign In — Patronage" };
 
 interface Props {
-  searchParams: Promise<{ next?: string; error?: string; message?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; message?: string; role?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { next, error, message } = await searchParams;
+  const { next, error, message, role } = await searchParams;
+  const signupHref = `/auth/signup${
+    next || role
+      ? `?${[
+          next ? `next=${encodeURIComponent(next)}` : "",
+          role ? `role=${encodeURIComponent(role)}` : "",
+        ]
+          .filter(Boolean)
+          .join("&")}`
+      : ""
+  }`;
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-6">
       <div className="w-full max-w-sm space-y-8">
@@ -17,10 +27,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
           <p className="text-sm text-muted-foreground">
             New here?{" "}
-            <Link
-              href={next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup"}
-              className="underline underline-offset-2"
-            >
+            <Link href={signupHref} className="underline underline-offset-2">
               Create an account
             </Link>
           </p>

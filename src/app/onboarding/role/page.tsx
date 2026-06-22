@@ -9,7 +9,7 @@ export const metadata = { title: "Get Started — Patronage" };
 const VALID_ROLES = ["artist", "patron", "partner"] as const;
 type Role = (typeof VALID_ROLES)[number];
 
-async function applyRole(role: string) {
+async function applyRole(role: string, next?: string | null) {
   "use server";
   if (!VALID_ROLES.includes(role as Role)) return;
 
@@ -47,16 +47,18 @@ async function applyRole(role: string) {
   // Send role-specific welcome DM from @patronagenz
   sendWelcomeDm(user.id, role).catch(console.error);
 
-  redirect(isArtist ? "/studio?welcome=1" : "/dashboard");
+  // Resume an interrupted flow (e.g. a free listing) if a safe next was carried.
+  const safeNext = next && next.startsWith("/") ? next : null;
+  redirect(safeNext ?? (isArtist ? "/studio?welcome=1" : "/dashboard"));
 }
 
 async function setRole(formData: FormData) {
   "use server";
-  await applyRole(formData.get("role") as string);
+  await applyRole(formData.get("role") as string, formData.get("next") as string | null);
 }
 
 interface Props {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; next?: string }>;
 }
 
 export default async function SelectRolePage({ searchParams }: Props) {
@@ -68,9 +70,9 @@ export default async function SelectRolePage({ searchParams }: Props) {
   if (profile?.role) redirect("/settings");
 
   // Pre-selected role from the homepage join buttons — skip the selection UI
-  const { role: roleParam } = await searchParams;
+  const { role: roleParam, next } = await searchParams;
   if (roleParam && VALID_ROLES.includes(roleParam as Role)) {
-    await applyRole(roleParam);
+    await applyRole(roleParam, next);
   }
 
   const roles = [
@@ -105,6 +107,7 @@ export default async function SelectRolePage({ searchParams }: Props) {
           {roles.map(({ value, label, description }) => (
             <form key={value} action={setRole}>
               <input type="hidden" name="role" value={value} />
+              {next && <input type="hidden" name="next" value={next} />}
               <button
                 type="submit"
                 className="w-full h-full text-left border border-black p-6 space-y-2 hover:bg-muted/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-black"

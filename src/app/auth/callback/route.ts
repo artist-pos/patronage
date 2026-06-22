@@ -16,7 +16,11 @@ export async function GET(request: Request) {
   // through the OAuth provider round-trip, dropping the user on the homepage.
   const next =
     role && VALID_ROLES.includes(role)
-      ? `/onboarding/role?role=${encodeURIComponent(role)}`
+      ? `/onboarding/role?role=${encodeURIComponent(role)}${
+          nextParam && nextParam.startsWith("/")
+            ? `&next=${encodeURIComponent(nextParam)}`
+            : ""
+        }`
       : nextParam ?? "/onboarding/role";
 
   if (code) {

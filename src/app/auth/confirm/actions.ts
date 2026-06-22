@@ -22,7 +22,11 @@ function siteUrl(): string {
  *  right onboarding step. */
 function destinationFor(role: string | null, next: string | null): string {
   if (role && VALID_ROLES.includes(role)) {
-    return `/onboarding/role?role=${encodeURIComponent(role)}`;
+    const params = new URLSearchParams({ role });
+    // Carry next through onboarding so post-signup flows (e.g. a free listing
+    // started while logged out) can resume where the user left off.
+    if (next && next.startsWith("/")) params.set("next", next);
+    return `/onboarding/role?${params.toString()}`;
   }
   return next || "/onboarding/role";
 }
