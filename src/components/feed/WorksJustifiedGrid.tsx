@@ -51,8 +51,6 @@ export interface ArtworkForGrid {
   description?: string | null;
   year?: number | null;
   dimensions?: string | null;
-  width_mm?: number | null;
-  height_mm?: number | null;
   ledger_id?: string | null;
   price_cents: number | null;
   is_poa: boolean;

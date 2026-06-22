@@ -70,8 +70,6 @@ function AvailableWorksSectionInner({
     description: w.description ?? w.caption,
     year: w.year ?? null,
     dimensions: w.dimensions ?? null,
-    width_mm: w.width_mm ?? null,
-    height_mm: w.height_mm ?? null,
     ledger_id: w.ledger_id ?? null,
     price_cents: w.price_cents,
     is_poa: w.is_poa ?? false,
