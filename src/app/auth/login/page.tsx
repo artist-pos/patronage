@@ -17,7 +17,10 @@ export default async function LoginPage({ searchParams }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
           <p className="text-sm text-muted-foreground">
             New here?{" "}
-            <Link href="/auth/signup" className="underline underline-offset-2">
+            <Link
+              href={next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup"}
+              className="underline underline-offset-2"
+            >
               Create an account
             </Link>
           </p>

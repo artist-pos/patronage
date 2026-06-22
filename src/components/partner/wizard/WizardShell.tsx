@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { FREE_LISTING_DRAFT_KEY } from "@/lib/free-listing";
 import { WizardChrome } from "./WizardChrome";
 import { StepTemplate } from "./StepTemplate";
 import { StepBasics, type Patch as BasicsPatch } from "./StepBasics";
@@ -28,6 +29,8 @@ interface Props {
   isPipeline: boolean;
   initialCriteria: LocalCriterion[];
   initialDocuments: PartnerDocument[];
+  /** Anonymous free-listing mode: persist to localStorage, gate auth at submit. */
+  anonymous?: boolean;
 }
 
 const FREE_STEPS = [
@@ -64,6 +67,7 @@ export function WizardShell({
   isPipeline,
   initialCriteria,
   initialDocuments,
+  anonymous = false,
 }: Props) {
   const steps = isPipeline ? PIPELINE_STEPS : FREE_STEPS;
   const minStep = steps[0].number;
@@ -99,8 +103,35 @@ export function WizardShell({
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  // Anonymous mode: hydrate from localStorage once, then mirror every change to
+  // it so the draft survives the sign-in round-trip (incl. email confirmation).
+  const [hydrated, setHydrated] = useState(!anonymous);
+  useEffect(() => {
+    if (!anonymous) return;
+    // Reading localStorage must happen after mount (it's unavailable during SSR),
+    // so loading the saved draft into state here is intentional, not a cascade.
+    try {
+      const raw = localStorage.getItem(FREE_LISTING_DRAFT_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (raw) setOpp((prev) => ({ ...prev, ...JSON.parse(raw) }));
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, [anonymous]);
+
+  useEffect(() => {
+    if (!anonymous || !hydrated) return;
+    try {
+      localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+    } catch {
+      /* ignore */
+    }
+  }, [anonymous, hydrated, opp]);
+
   const queueSave = useCallback(
     (patch: Parameters<typeof updateOpportunityPartner>[1]) => {
+      if (anonymous) return; // persistence handled by the localStorage effect
       setSaveStatus("saving");
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
@@ -113,7 +144,7 @@ export function WizardShell({
         }
       }, 800);
     },
-    [opp.id]
+    [opp.id, anonymous]
   );
 
   function handleBasicsChange(patch: BasicsPatch) {
@@ -177,6 +208,19 @@ export function WizardShell({
     }
     if (step === maxStep) {
       if (!allRequired || submitting) return;
+      // Anonymous free listing: persist and send them to sign in / sign up. They
+      // return to /partner/list-free, which finalises the draft and publishes.
+      if (anonymous) {
+        try {
+          localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+        } catch {
+          /* ignore */
+        }
+        router.push(
+          `/auth/login?next=${encodeURIComponent("/partner/list-free")}`,
+        );
+        return;
+      }
       setSubmitting(true);
       setSubmitError(null);
       const result = await submitDraftForReview(opp.id);
@@ -207,6 +251,8 @@ export function WizardShell({
         onNext={handleNext}
         nextDisabled={nextDisabled}
         isLastStep={isLastStep}
+        anonymous={anonymous}
+        nextLabel={anonymous && isLastStep ? "Sign in to publish →" : undefined}
       />
 
       <main className="max-w-[1280px] mx-auto px-6 py-10 pb-24">
@@ -228,6 +274,7 @@ export function WizardShell({
             opp={opp}
             isFree={!isPipeline}
             onChange={handleBasicsChange}
+            canUploadImage={!anonymous}
           />
         )}
 

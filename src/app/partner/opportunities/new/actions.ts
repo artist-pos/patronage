@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { notifyOpportunitySubmission } from "@/lib/email";
+import { updateOpportunityPartner } from "@/app/partner/opportunities/[id]/edit/actions";
+import { pickFreeListingFields } from "@/lib/free-listing";
 
 export async function createOpportunityDraft(type: "free" | "pipeline"): Promise<{ id: string }> {
   const supabase = await createClient();
@@ -41,6 +43,38 @@ export async function createOpportunityDraft(type: "free" | "pipeline"): Promise
 
   if (error || !data) throw new Error(error?.message ?? "Could not create draft");
   return { id: data.id };
+}
+
+/**
+ * Turn an anonymous free-listing draft (collected client-side in localStorage)
+ * into a real draft owned by the now-authenticated user. Returns the new id so
+ * the client can drop them into the normal wizard to review and publish.
+ */
+export async function finalizeFreeListing(
+  raw: Record<string, unknown>,
+): Promise<{ id?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  let id: string;
+  try {
+    ({ id } = await createOpportunityDraft("free"));
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not create listing" };
+  }
+
+  const fields = pickFreeListingFields(raw);
+  if (Object.keys(fields).length > 0) {
+    try {
+      await updateOpportunityPartner(id, fields as Parameters<typeof updateOpportunityPartner>[1]);
+    } catch {
+      // Still return the id — the draft exists and they can finish it in the wizard.
+      return { id };
+    }
+  }
+
+  return { id };
 }
 
 export async function submitDraftForReview(id: string): Promise<{ error?: string; redirectTo?: string }> {

@@ -18,6 +18,7 @@ interface Props {
   nextLabel?: string;
   nextDisabled?: boolean;
   isLastStep?: boolean;
+  anonymous?: boolean;
 }
 
 export function WizardChrome({
@@ -31,9 +32,12 @@ export function WizardChrome({
   nextLabel,
   nextDisabled,
   isLastStep,
+  anonymous = false,
 }: Props) {
-  const saveLabel =
-    saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Auto-saved" : "";
+  const saveLabel = anonymous
+    ? "Saved on this device"
+    : saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Auto-saved" : "";
+  const exitHref = anonymous ? "/partners" : "/partner/dashboard";
 
   return (
     <>
@@ -42,7 +46,7 @@ export function WizardChrome({
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between gap-8">
           {/* Left: exit link */}
           <Link
-            href="/partner/dashboard"
+            href={exitHref}
             className="text-xs text-stone-400 hover:text-foreground transition-colors shrink-0 whitespace-nowrap"
           >
             ← Exit setup
@@ -90,13 +94,15 @@ export function WizardChrome({
             {saveLabel && (
               <span className="text-[11px] text-stone-400 hidden sm:block">{saveLabel}</span>
             )}
-            <Link
-              href={`/opportunities/${oppId}`}
-              target="_blank"
-              className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors hidden sm:block"
-            >
-              Preview as artist
-            </Link>
+            {!anonymous && (
+              <Link
+                href={`/opportunities/${oppId}`}
+                target="_blank"
+                className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors hidden sm:block"
+              >
+                Preview as artist
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -114,7 +120,7 @@ export function WizardChrome({
             </button>
           ) : (
             <Link
-              href="/partner/dashboard"
+              href={exitHref}
               className="text-sm text-stone-400 hover:text-foreground transition-colors"
             >
               Cancel

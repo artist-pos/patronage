@@ -69,7 +69,10 @@ export default async function SignupPage({ searchParams }: Props) {
 
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/auth/login" className="underline underline-offset-2">
+            <Link
+              href={next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
+              className="underline underline-offset-2"
+            >
               Sign in
             </Link>
           </p>
@@ -94,7 +97,10 @@ export default async function SignupPage({ searchParams }: Props) {
           </h1>
           <p className="text-sm text-muted-foreground">
             Already have one?{" "}
-            <Link href="/auth/login" className="underline underline-offset-2">
+            <Link
+              href={next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
+              className="underline underline-offset-2"
+            >
               Sign in
             </Link>
           </p>

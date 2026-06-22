@@ -218,9 +218,11 @@ interface Props {
   opp: Opportunity;
   isFree: boolean;
   onChange: (patch: Patch) => void;
+  /** Image upload needs auth (storage RLS); off for the anonymous wizard. */
+  canUploadImage?: boolean;
 }
 
-export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
+export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = true }: Props) {
   const [imageUploading, setImageUploading] = useState(false);
   const [autofillSource, setAutofillSource] = useState<string | null>(null);
   const imageRef = useRef<HTMLInputElement>(null);
@@ -457,6 +459,15 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
         </div>
 
         {/* Featured image */}
+        {!canUploadImage ? (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Featured image</label>
+            <p className="text-xs text-stone-400 border border-dashed border-black/20 px-4 py-3">
+              You can add a featured image once you&rsquo;ve signed in — everything
+              you&rsquo;ve entered will be kept.
+            </p>
+          </div>
+        ) : (
         <div className="space-y-1.5">
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium">Featured image</label>
@@ -502,6 +513,7 @@ export function StepBasics({ opp, isFree: _isFree, onChange }: Props) {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
           />
         </div>
+        )}
 
         {/* Disciplines */}
         <div className="space-y-2">
