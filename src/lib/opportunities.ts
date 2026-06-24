@@ -27,7 +27,8 @@ export async function getOpportunities(
     .eq("is_active", true)
     .eq("status", "published")
     .or(`deadline.gte.${today},deadline.is.null`) // include open-ended (no deadline)
-    .or(`opens_at.is.null,opens_at.lte.${today}`) // hide not-yet-open opportunities
+    // Not-yet-open opportunities are shown too — the card flags them with a
+    // "Not yet open" badge and an "Opens in N days" countdown.
     .order("is_featured", { ascending: false })   // featured always first
     .order("deadline", { ascending: true, nullsFirst: false });
 

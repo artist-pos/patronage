@@ -11,6 +11,10 @@ interface Props {
 const FIELD =
   "w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black";
 
+// Sensible default for the first/standard link so people know what to put.
+// It's pre-filled into the value (not just a placeholder) but stays editable.
+const DEFAULT_FIRST_LABEL = "Apply on Official Site";
+
 /**
  * Repeatable list of labelled application links. Each row becomes its own
  * button on the public listing. Always renders at least one (blank) row so a
@@ -18,7 +22,7 @@ const FIELD =
  * parent owns persistence and keeps the legacy `url` in sync with the first row.
  */
 export function ApplicationLinksEditor({ links, onChange }: Props) {
-  const rows = links.length > 0 ? links : [{ label: "", url: "" }];
+  const rows = links.length > 0 ? links : [{ label: DEFAULT_FIRST_LABEL, url: "" }];
 
   function update(index: number, patch: Partial<ApplicationLink>) {
     onChange(rows.map((l, i) => (i === index ? { ...l, ...patch } : l)));

@@ -156,7 +156,7 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     applicationLinks: opp.application_links?.length
       ? opp.application_links
       : opp.url
-      ? [{ label: "", url: opp.url }]
+      ? [{ label: "Apply on Official Site", url: opp.url }]
       : [],
     type: opp.type ?? "Grant",
     country: opp.country ?? "NZ",

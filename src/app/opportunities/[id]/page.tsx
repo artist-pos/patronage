@@ -356,17 +356,14 @@ export default async function OpportunityPage({ params }: Props) {
   // Fetch related opportunities + claimed partner profile in parallel — admin client avoids cookies() so PPR stays intact.
   const adminDb = createAdminClient();
   const RELATED_SELECT = "id, slug, title, organiser, type, country, deadline, featured_image_url, caption, funding_range, sub_categories";
-  const today = new Date().toISOString().slice(0, 10);
   const [byTypeRes, byCountryRes, partnerProfileRes] = await Promise.all([
     adminDb.from("opportunities").select(RELATED_SELECT)
       .eq("is_active", true).eq("status", "published")
       .eq("type", opp.type).neq("id", opp.id)
-      .or(`opens_at.is.null,opens_at.lte.${today}`)
       .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
     adminDb.from("opportunities").select(RELATED_SELECT)
       .eq("is_active", true).eq("status", "published")
       .eq("country", opp.country).neq("id", opp.id)
-      .or(`opens_at.is.null,opens_at.lte.${today}`)
       .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
     opp.profile_id
       ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", opp.profile_id).single()
