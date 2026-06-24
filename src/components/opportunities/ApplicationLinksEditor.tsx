@@ -34,35 +34,37 @@ export function ApplicationLinksEditor({ links, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-2">
-      {rows.map((link, i) => (
-        <div key={i} className="flex gap-2 items-start">
-          <input
-            type="text"
-            value={link.label}
-            onChange={(e) => update(i, { label: e.target.value })}
-            placeholder="Link label — e.g. Franklin Arts Centre"
-            className={`${FIELD} sm:w-1/2`}
-          />
-          <input
-            type="url"
-            value={link.url}
-            onChange={(e) => update(i, { url: e.target.value })}
-            placeholder="https://…"
-            className={`${FIELD} flex-1`}
-          />
-          {rows.length > 1 && (
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              className="border border-black/40 p-2 text-stone-400 hover:text-foreground hover:border-black transition-colors shrink-0"
-              aria-label="Remove link"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      ))}
+    <div className="space-y-3">
+      <div className="space-y-2.5">
+        {rows.map((link, i) => (
+          <div key={i} className="flex gap-2.5 items-start">
+            <input
+              type="text"
+              value={link.label}
+              onChange={(e) => update(i, { label: e.target.value })}
+              placeholder="Link label — e.g. Franklin Arts Centre"
+              className={`${FIELD} sm:w-2/5 shrink-0`}
+            />
+            <input
+              type="url"
+              value={link.url}
+              onChange={(e) => update(i, { url: e.target.value })}
+              placeholder="https://…"
+              className={`${FIELD} flex-1 min-w-0`}
+            />
+            {rows.length > 1 && (
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="border border-black/40 p-2 text-stone-400 hover:text-foreground hover:border-black transition-colors shrink-0"
+                aria-label="Remove link"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
       <button
         type="button"
         onClick={add}

@@ -234,12 +234,12 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
   const supabase = createClient();
 
   function handleLinksChange(links: ApplicationLink[]) {
-    // Keep the legacy single `url` populated from the first link so cards,
-    // SEO, and schema.org keep working. Drop fully-empty rows on the way out.
-    const cleaned = links.filter((l) => l.url.trim() || l.label.trim());
+    // Keep all rows (incl. blank ones being typed into) so "Add link" works;
+    // empty rows are stripped at save time. The legacy single `url` mirrors the
+    // first filled link so cards, SEO, and schema.org keep working.
     onChange({
-      application_links: cleaned,
-      url: cleaned.find((l) => l.url.trim())?.url.trim() || null,
+      application_links: links,
+      url: links.find((l) => l.url.trim())?.url.trim() || null,
     });
   }
 

@@ -50,6 +50,14 @@ export async function updateOpportunityAdmin(
   const admin = createAdminClient();
 
   const updateData = { ...data };
+
+  // Drop blank link rows the editor keeps around for in-progress typing.
+  if (Array.isArray(updateData.application_links)) {
+    updateData.application_links = updateData.application_links.filter(
+      (l) => l && (l.url?.trim() || l.label?.trim())
+    );
+  }
+
   const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();
   if (data.entry_fee != null && currency !== "NZD") {
     try {
