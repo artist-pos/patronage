@@ -409,6 +409,16 @@ export default async function OpportunityPage({ params }: Props) {
 
   const isPipeline = opp.routing_type === "pipeline";
 
+  // Labelled apply links → one button each. Falls back to the legacy single
+  // `url` for scraped/older listings that have no application_links.
+  const applyLinks = (
+    opp.application_links?.length
+      ? opp.application_links
+      : opp.url
+      ? [{ label: "Apply on Official Site", url: opp.url }]
+      : []
+  ).filter((l) => l.url?.trim());
+
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
   const schemaType = schemaTypeForOpp(opp.type);
   const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
@@ -696,9 +706,13 @@ export default async function OpportunityPage({ params }: Props) {
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             About
           </h2>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {opp.caption ?? opp.description ?? opp.full_description}
-          </p>
+          {/* Lead paragraph: short summary only. When there's no caption/description,
+              full_description is rendered structured below (bold/italic/bullets). */}
+          {(opp.caption ?? opp.description) && (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {opp.caption ?? opp.description}
+            </p>
+          )}
           {opp.full_description && opp.full_description !== (opp.caption ?? opp.description) && (
             <StructuredDescription text={opp.full_description} />
           )}
@@ -712,16 +726,23 @@ export default async function OpportunityPage({ params }: Props) {
         <Suspense fallback={<CTASkeleton />}>
           <UserCTA opportunityId={opp.id} opp={opp} />
         </Suspense>
-      ) : opp.url ? (
-        <div className="flex flex-wrap items-center gap-4">
-          <OpportunityCTALink
-            href={opp.url}
-            opportunityId={opp.id}
-            title={opp.title}
-            organiser={opp.organiser}
-            label="Apply on Official Site →"
-            className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
-          />
+      ) : applyLinks.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {applyLinks.map((link, i) => (
+            <OpportunityCTALink
+              key={`${link.url}-${i}`}
+              href={link.url}
+              opportunityId={opp.id}
+              title={opp.title}
+              organiser={opp.organiser}
+              label={`${link.label?.trim() || "Apply"} →`}
+              className={
+                i === 0
+                  ? "inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+                  : "inline-flex items-center gap-2 border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
+              }
+            />
+          ))}
           {opp.contact_email && (
             <a
               href={`mailto:${opp.contact_email}`}

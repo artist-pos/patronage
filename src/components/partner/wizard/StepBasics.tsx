@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Opportunity, OppTypeEnum } from "@/types/database";
+import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
+import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
+import type { ApplicationLink, Opportunity, OppTypeEnum } from "@/types/database";
 
 // ── AI Parser ─────────────────────────────────────────────────────────────────
 
@@ -192,6 +194,7 @@ export interface Patch {
   entry_fee_currency?: string | null;
   caption?: string | null;
   full_description?: string | null;
+  application_links?: ApplicationLink[] | null;
   featured_image_url?: string | null;
   sub_categories?: string[] | null;
   career_stage?: string[] | null;
@@ -224,9 +227,21 @@ interface Props {
 
 export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = true }: Props) {
   const [imageUploading, setImageUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [autofillSource, setAutofillSource] = useState<string | null>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
+
+  function handleLinksChange(links: ApplicationLink[]) {
+    // Keep the legacy single `url` populated from the first link so cards,
+    // SEO, and schema.org keep working. Drop fully-empty rows on the way out.
+    const cleaned = links.filter((l) => l.url.trim() || l.label.trim());
+    onChange({
+      application_links: cleaned,
+      url: cleaned.find((l) => l.url.trim())?.url.trim() || null,
+    });
+  }
 
   async function handleImageUpload(file: File) {
     setImageUploading(true);
@@ -425,37 +440,39 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
         {/* Description */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Full description</label>
+          <DescriptionToolbar
+            textareaRef={descriptionRef}
+            onChange={(v) => onChange({ full_description: v || null })}
+          />
           <textarea
+            ref={descriptionRef}
             rows={6}
             value={opp.full_description ?? opp.description ?? ""}
             onChange={(e) => onChange({ full_description: e.target.value || null })}
             placeholder="Eligibility criteria, what's involved, context, contact information…"
-            className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black resize-none"
+            className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black resize-none rounded-t-none"
           />
         </div>
 
-        {/* Application link + contact email */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Application link <span className="text-stone-400">optional</span></label>
-            <input
-              type="url"
-              value={(opp as unknown as { url?: string | null }).url ?? ""}
-              onChange={(e) => onChange({ url: e.target.value || null })}
-              placeholder="https://…"
-              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Contact email <span className="text-stone-400">optional</span></label>
-            <input
-              type="email"
-              value={(opp as unknown as { contact_email?: string | null }).contact_email ?? ""}
-              onChange={(e) => onChange({ contact_email: e.target.value || null })}
-              placeholder="applications@example.com"
-              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-            />
-          </div>
+        {/* Application links */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Application links <span className="text-stone-400">optional</span></label>
+          <ApplicationLinksEditor
+            links={opp.application_links ?? []}
+            onChange={handleLinksChange}
+          />
+        </div>
+
+        {/* Contact email */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Contact email <span className="text-stone-400">optional</span></label>
+          <input
+            type="email"
+            value={(opp as unknown as { contact_email?: string | null }).contact_email ?? ""}
+            onChange={(e) => onChange({ contact_email: e.target.value || null })}
+            placeholder="applications@example.com"
+            className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black sm:max-w-sm"
+          />
         </div>
 
         {/* Featured image */}
@@ -468,24 +485,12 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
             </p>
           </div>
         ) : (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium">Featured image</label>
-            {!opp.featured_image_url && (
-              <button
-                type="button"
-                onClick={() => imageRef.current?.click()}
-                disabled={imageUploading}
-                className="border border-dashed border-black/40 px-4 py-2 text-sm text-stone-500 hover:border-black hover:text-foreground transition-colors disabled:opacity-50"
-              >
-                {imageUploading ? "Uploading…" : "Upload image"}
-              </button>
-            )}
-          </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Featured image</label>
           {opp.featured_image_url && (
-            <div className="relative">
+            <div className="relative border border-black bg-[#E5E7EB] overflow-hidden flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={opp.featured_image_url} alt="" className="w-full max-h-48 object-cover border border-black" />
+              <img src={opp.featured_image_url} alt="" className="w-full max-h-56 object-contain" />
               <button
                 type="button"
                 onClick={() => onChange({ featured_image_url: null })}
@@ -495,16 +500,28 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
               </button>
             </div>
           )}
-          {opp.featured_image_url && (
-            <button
-              type="button"
-              onClick={() => imageRef.current?.click()}
-              disabled={imageUploading}
-              className="border border-dashed border-black/40 px-4 py-2 text-sm text-stone-500 hover:border-black hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              {imageUploading ? "Uploading…" : "Replace image"}
-            </button>
-          )}
+          <div
+            onClick={() => imageRef.current?.click()}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const file = e.dataTransfer.files[0];
+              if (file?.type.startsWith("image/")) handleImageUpload(file);
+            }}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            className={`border border-dashed border-black p-8 text-center cursor-pointer text-sm text-muted-foreground transition-colors ${
+              dragOver ? "bg-muted" : "hover:bg-muted/40"
+            }`}
+          >
+            {imageUploading
+              ? "Uploading…"
+              : dragOver
+              ? "Drop to upload"
+              : opp.featured_image_url
+              ? "Drop a new image or click to replace"
+              : "Drop an image here, or click to browse"}
+          </div>
           <input
             ref={imageRef}
             type="file"

@@ -97,6 +97,11 @@ export interface PostSelectionConfig {
   doc_fields: PostSelectionDocField[];
 }
 
+export interface ApplicationLink {
+  label: string;
+  url: string;
+}
+
 export interface Opportunity {
   id: string;
   title: string;
@@ -110,6 +115,7 @@ export interface Opportunity {
   opens_at: string | null;         // ISO date when applications open e.g. "2026-05-01"
   deadline: string | null;         // ISO date string e.g. "2026-06-30"
   url: string | null;
+  application_links?: ApplicationLink[] | null; // labelled apply links → buttons (migration 164)
   contact_email?: string | null;
   funding_amount: number | null;
   funding_range: string | null;    // e.g. "$25,000 – $50,000"

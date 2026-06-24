@@ -112,12 +112,15 @@ export function PartnerEditForm({ opp }: Props) {
           }
         : null;
 
+    const appLinks = d.applicationLinks.filter((l) => l.url.trim() || l.label.trim());
+
     return {
       title: d.title.trim() || opp.title,
       organiser: d.organiser.trim() || opp.organiser,
       caption: d.caption.trim() || null,
       full_description: d.fullDescription.trim() || null,
-      url: d.url.trim() || null,
+      url: appLinks.find((l) => l.url.trim())?.url.trim() || null,
+      application_links: appLinks,
       type: d.type,
       country: d.country,
       city: d.city.trim() || null,

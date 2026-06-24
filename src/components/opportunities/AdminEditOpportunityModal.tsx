@@ -55,12 +55,15 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
         terms_pdf_url: formData.termsPdfUrl,
       } : null;
 
+      const appLinks = formData.applicationLinks.filter((l) => l.url.trim() || l.label.trim());
+
       await updateOpportunityAdmin(opp.id, {
         title: formData.title.trim() || opp.title,
         organiser: formData.organiser.trim() || opp.organiser,
         caption: formData.caption.trim() || null,
         full_description: formData.fullDescription.trim() || null,
-        url: formData.url.trim() || null,
+        url: appLinks.find((l) => l.url.trim())?.url.trim() || null,
+        application_links: appLinks,
         type: formData.type,
         country: formData.country,
         city: formData.city.trim() || null,

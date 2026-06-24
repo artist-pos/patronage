@@ -14,6 +14,7 @@ export const FREE_LISTING_FIELDS = [
   "caption",
   "full_description",
   "url",
+  "application_links",
   "contact_email",
   "type",
   "country",

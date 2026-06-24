@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendApplicationConfirmation } from "@/lib/email";
-import type { OpportunityApplicationDraft } from "@/types/database";
+import type { ApplicationLink, OpportunityApplicationDraft } from "@/types/database";
 
 export async function updateOpportunityAdmin(
   id: string,
@@ -16,6 +16,7 @@ export async function updateOpportunityAdmin(
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
+    application_links?: ApplicationLink[] | null;
     type?: string;
     country?: string;
     city?: string | null;

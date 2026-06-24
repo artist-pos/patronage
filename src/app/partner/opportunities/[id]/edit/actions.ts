@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { ApplicationLink } from "@/types/database";
 
 async function getOpportunityForPartner(id: string) {
   const supabase = await createClient();
@@ -30,6 +31,7 @@ export async function updateOpportunityPartner(
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
+    application_links?: ApplicationLink[] | null;
     contact_email?: string | null;
     type?: string;
     country?: string;

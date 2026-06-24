@@ -16,7 +16,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Label } from "@/components/ui/label";
 import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
-import type { Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
+import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
+import type { ApplicationLink, Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
 import {
   FORM_TYPES,
   DISCIPLINES,
@@ -41,6 +42,7 @@ export interface OpportunityFormData {
   caption: string;
   fullDescription: string;
   url: string;
+  applicationLinks: ApplicationLink[];
   type: string;
   country: string;
   city: string;
@@ -88,6 +90,7 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     caption: "",
     fullDescription: "",
     url: "",
+    applicationLinks: [],
     type: "Grant",
     country: "NZ",
     city: "",
@@ -150,6 +153,11 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     caption: opp.caption ?? "",
     fullDescription: opp.full_description ?? "",
     url: opp.url ?? "",
+    applicationLinks: opp.application_links?.length
+      ? opp.application_links
+      : opp.url
+      ? [{ label: "", url: opp.url }]
+      : [],
     type: opp.type ?? "Grant",
     country: opp.country ?? "NZ",
     city: opp.city ?? "",
@@ -919,6 +927,15 @@ export function OpportunityForm({
 
   const set = (updates: Partial<OpportunityFormData>) => onChange(updates);
 
+  // Keep the legacy single `url` populated from the first link so cards, SEO,
+  // and schema.org keep working when an opportunity has multiple apply buttons.
+  function setLinks(links: ApplicationLink[]) {
+    set({
+      applicationLinks: links,
+      url: links.find((l) => l.url.trim())?.url.trim() ?? "",
+    });
+  }
+
   function toggleTag(tag: string, field: "selectedDisciplines" | "selectedCareerStages") {
     const current = value[field] as string[];
     set({ [field]: current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag] });
@@ -1413,31 +1430,14 @@ export function OpportunityForm({
         </Field>
       </Section>
 
-      {/* ── Section 6: Application URL (create mode, external routing only) ── */}
-      {mode === "create" && value.routingType === "external" && (
+      {/* ── Section 6: Application links (create-external + admin) ─────── */}
+      {/* Each labelled link becomes its own button on the public listing. */}
+      {((mode === "create" && value.routingType === "external") || mode === "admin") && (
         <Section label="Application">
-          <Field label="Application URL">
-            <input
-              type="url"
-              value={value.url}
-              onChange={(e) => set({ url: e.target.value })}
-              placeholder="https://…"
-              className={FIELD}
-            />
-          </Field>
-        </Section>
-      )}
-
-      {/* ── Section 6b: Application URL (admin mode) ──────────────────── */}
-      {mode === "admin" && (
-        <Section label="Application">
-          <Field label="Application URL">
-            <input
-              type="url"
-              value={value.url}
-              onChange={(e) => set({ url: e.target.value })}
-              placeholder="https://..."
-              className={FIELD}
+          <Field label="Application links">
+            <ApplicationLinksEditor
+              links={value.applicationLinks}
+              onChange={setLinks}
             />
           </Field>
         </Section>
