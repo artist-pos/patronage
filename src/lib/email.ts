@@ -132,6 +132,45 @@ export async function sendHighResRequest(
 }
 
 /**
+ * Forward a bug report submitted via the public /report-bug form to the support inbox.
+ * Reply-To is set to the reporter so the team can respond directly.
+ */
+export async function sendBugReport(params: {
+  email: string;
+  area: string;
+  message: string;
+  pageUrl?: string;
+  userId?: string;
+}): Promise<void> {
+  const to = process.env.BUG_REPORT_TO ?? "hello@patronage.nz";
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const rows = [
+    ["From", params.email],
+    ["Area", params.area],
+    ["Page", params.pageUrl || "—"],
+    ["User ID", params.userId || "—"],
+  ]
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:4px 12px 4px 0;color:#888;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:4px 0">${esc(v)}</td></tr>`
+    )
+    .join("");
+
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    replyTo: params.email,
+    subject: `Bug report: ${params.area}`,
+    html: `<div style="font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5;color:#222">
+      <h2 style="font-size:16px;margin:0 0 12px">New bug report</h2>
+      <table style="border-collapse:collapse;margin-bottom:16px">${rows}</table>
+      <div style="white-space:pre-wrap;padding:12px 16px;background:#f5f5f4;border-radius:8px">${esc(params.message)}</div>
+    </div>`,
+  });
+}
+
+/**
  * Notify a buyer that an artist has offered them an artwork via transfer request.
  */
 export async function notifyTransferRequest(
