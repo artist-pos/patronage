@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
+import { SupportWorks } from "@/components/support/SupportWorks";
+import { SUPPORT_WORKS_MAX } from "@/app/support/works-limit-actions";
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 
 export const metadata: Metadata = {
@@ -70,13 +71,25 @@ const WORKS_SELECT =
 export default async function SupportPage() {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const [
-    { data: { user } },
+    roleRes,
+    limitRes,
     works,
     { data: tierRows },
     { data: campaignRows },
   ] = await Promise.all([
-    supabase.auth.getUser(),
+    user
+      ? supabase.from("profiles").select("role").eq("id", user.id).single()
+      : Promise.resolve({ data: null as { role: string } | null }),
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "support_works_limit")
+      .maybeSingle(),
     // Available works — flickr-style justified gallery (same component as /feed)
     (async (): Promise<ArtworkForGrid[]> => {
       const { data: rows } = await supabase
@@ -87,7 +100,7 @@ export default async function SupportPage() {
         .eq("hide_price", false)
         .or("is_poa.eq.true,price_cents.gt.0")
         .order("created_at", { ascending: false })
-        .limit(24);
+        .limit(SUPPORT_WORKS_MAX);
 
       const artworkRows = (rows ?? []) as Record<string, unknown>[];
       const ids = artworkRows.map((a) => a.id as string);
@@ -154,6 +167,12 @@ export default async function SupportPage() {
   const tiers = (tierRows ?? []).filter((t) => one(t.artist)?.username);
   const campaigns = (campaignRows ?? []).filter((c) => one(c.artist)?.username);
 
+  const isAdmin =
+    !!roleRes.data &&
+    ["admin", "owner"].includes((roleRes.data as { role: string }).role);
+  const rawLimit = (limitRes.data as { value: unknown } | null)?.value;
+  const worksLimit = typeof rawLimit === "number" ? rawLimit : 12;
+
   return (
     <main className="max-w-[1600px] mx-auto px-6 py-12 md:py-16">
       {/* ── Intro ── */}
@@ -172,7 +191,11 @@ export default async function SupportPage() {
         <section className="mt-12">
           <h2 className={SECTION_HEADING}>Works for sale</h2>
           <div className="mt-5">
-            <WorksJustifiedGrid artworks={works} />
+            <SupportWorks
+              artworks={works}
+              initialLimit={worksLimit}
+              isAdmin={isAdmin}
+            />
           </div>
         </section>
       )}

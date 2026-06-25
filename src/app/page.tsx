@@ -116,7 +116,7 @@ export default async function Home() {
 
   return (
     <div>
-      <div className={`max-w-[1600px] mx-auto px-6 ${isAuthenticated ? "py-0 space-y-0" : "py-16 space-y-16"}`}>
+      <div className={`max-w-[1600px] mx-auto px-6 ${isAuthenticated ? "pt-0 pb-24 space-y-0" : "py-16 space-y-16"}`}>
 
         {/* ── Hero / Brand header (signed-out only) ── */}
         {!isAuthenticated && (
