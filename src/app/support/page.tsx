@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatPrice } from "@/lib/format-price";
+import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
+import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 
 export const metadata: Metadata = {
   title: "Support artists — Patronage",
@@ -14,20 +15,6 @@ type JoinedArtist = {
   username: string | null;
   full_name: string | null;
   avatar_url?: string | null;
-};
-
-type WorkRow = {
-  id: string;
-  slug: string | null;
-  title: string | null;
-  caption: string | null;
-  medium: string | null;
-  url: string;
-  thumb_url: string | null;
-  price_cents: number | null;
-  price_currency: "NZD" | "AUD";
-  is_poa: boolean;
-  artist: JoinedArtist | JoinedArtist[] | null;
 };
 
 type TierRow = {
@@ -77,28 +64,68 @@ function daysRemaining(endDate: string | null): string | null {
 const SECTION_HEADING =
   "text-xs font-medium uppercase tracking-widest text-stone-400";
 
+const WORKS_SELECT =
+  "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, hide_available, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)";
+
 export default async function SupportPage() {
   const supabase = await createClient();
 
   const [
     { data: { user } },
-    { data: workRows },
+    works,
     { data: tierRows },
     { data: campaignRows },
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase
-      .from("artworks")
-      .select(
-        "id, slug, title, caption, medium, url, thumb_url, price_cents, price_currency, is_poa, artist:profile_id(username, full_name)",
-      )
-      .eq("is_available", true)
-      .eq("hide_available", false)
-      .eq("hide_price", false)
-      .or("is_poa.eq.true,price_cents.gt.0")
-      .order("created_at", { ascending: false })
-      .limit(6)
-      .then(({ data }) => ({ data: (data ?? []) as unknown as WorkRow[] })),
+    // Available works — flickr-style justified gallery (same component as /feed)
+    (async (): Promise<ArtworkForGrid[]> => {
+      const { data: rows } = await supabase
+        .from("artworks")
+        .select(WORKS_SELECT)
+        .eq("is_available", true)
+        .eq("hide_available", false)
+        .eq("hide_price", false)
+        .or("is_poa.eq.true,price_cents.gt.0")
+        .order("created_at", { ascending: false })
+        .limit(24);
+
+      const artworkRows = (rows ?? []) as Record<string, unknown>[];
+      const ids = artworkRows.map((a) => a.id as string);
+
+      const { data: eds } = ids.length
+        ? await supabase
+            .from("editions")
+            .select(
+              "id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions",
+            )
+            .in("work_id", ids)
+            .eq("listed", true)
+        : { data: [] };
+
+      const editionsByWork = new Map<string, EditionOption[]>();
+      for (const ed of eds ?? []) {
+        const key = (ed as { work_id: string }).work_id;
+        if (!editionsByWork.has(key)) editionsByWork.set(key, []);
+        editionsByWork.get(key)!.push({
+          id: (ed as { id: string }).id,
+          label: (ed as { label: string | null }).label ?? "",
+          type: (ed as { type: string | null }).type ?? "",
+          price_cents: (ed as { price_cents: number | null }).price_cents,
+          currency: (ed as { currency: string | null }).currency ?? "NZD",
+          poa: (ed as { poa: boolean | null }).poa ?? false,
+          listing_mode: (ed as { listing_mode: string | null }).listing_mode ?? "",
+          listed: (ed as { listed: boolean | null }).listed ?? false,
+          sort_order: (ed as { sort_order: number | null }).sort_order ?? 0,
+          dimensions: (ed as { dimensions: string | null }).dimensions,
+        });
+      }
+
+      return artworkRows
+        .map((a) => ({ ...a, editions: editionsByWork.get(a.id as string) ?? [] }))
+        .filter(
+          (a) => (a as unknown as ArtworkForGrid).profile?.username,
+        ) as unknown as ArtworkForGrid[];
+    })(),
     supabase
       .from("support_tiers")
       .select(
@@ -124,7 +151,6 @@ export default async function SupportPage() {
       .then(({ data }) => ({ data: (data ?? []) as unknown as CampaignRow[] })),
   ]);
 
-  const works = (workRows ?? []).filter((w) => one(w.artist)?.username);
   const tiers = (tierRows ?? []).filter((t) => one(t.artist)?.username);
   const campaigns = (campaignRows ?? []).filter((c) => one(c.artist)?.username);
 
@@ -141,57 +167,12 @@ export default async function SupportPage() {
         </p>
       </header>
 
-      {/* ── Works for sale ── */}
+      {/* ── Works for sale — justified gallery (inherited from /feed) ── */}
       {works.length > 0 && (
         <section className="mt-12">
           <h2 className={SECTION_HEADING}>Works for sale</h2>
-          <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-8">
-            {works.map((w) => {
-              const artist = one(w.artist)!;
-              const title = w.title ?? w.caption ?? "Untitled";
-              const price = formatPrice(
-                w.price_cents,
-                w.price_currency ?? "NZD",
-                w.is_poa,
-              );
-              return (
-                <Link
-                  key={w.id}
-                  href={`/${artist.username}/works/${w.slug ?? w.id}`}
-                  className="group block"
-                >
-                  <div className="aspect-[4/5] overflow-hidden bg-stone-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={w.thumb_url ?? w.url}
-                      alt={title}
-                      className="h-full w-full object-cover transition-opacity duration-200 group-hover:opacity-90"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="mt-2.5 space-y-0.5">
-                    <p className="text-sm text-stone-900">
-                      {artist.full_name ?? artist.username}
-                    </p>
-                    <p className="text-sm text-stone-500 italic">{title}</p>
-                    {w.medium && (
-                      <p className="text-xs text-stone-400">{w.medium}</p>
-                    )}
-                    {price && (
-                      <p className="pt-0.5 text-sm text-stone-900">{price}</p>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-          <div className="mt-8">
-            <Link
-              href="/works"
-              className="text-sm text-stone-500 underline underline-offset-4 hover:text-stone-900 transition-colors"
-            >
-              View all works
-            </Link>
+          <div className="mt-5">
+            <WorksJustifiedGrid artworks={works} />
           </div>
         </section>
       )}
@@ -208,7 +189,7 @@ export default async function SupportPage() {
                 <Link
                   key={t.id}
                   href={`/${artist.username}?tab=support`}
-                  className="group block w-[240px] shrink-0 rounded-xl bg-stone-50 p-5 transition-colors hover:bg-stone-100 md:w-auto"
+                  className="group block w-[240px] shrink-0 border border-black p-5 transition-colors hover:bg-muted/30 md:w-auto"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-stone-200">
@@ -257,7 +238,7 @@ export default async function SupportPage() {
                 <Link
                   key={c.id}
                   href={`/live/${c.slug}`}
-                  className="group block overflow-hidden rounded-xl bg-stone-50 transition-colors hover:bg-stone-100"
+                  className="group block overflow-hidden border border-black transition-colors hover:bg-muted/30"
                 >
                   {c.cover_image_url && (
                     <div className="aspect-[16/9] overflow-hidden bg-stone-100">
@@ -292,6 +273,25 @@ export default async function SupportPage() {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* ── Patron sign-up CTA (signed-out only) ── */}
+      {!user && (
+        <section className="mt-20 border border-black p-8 text-center md:p-12">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-900">
+            Back the artists you believe in
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-stone-500">
+            Create a free account to follow practices, access studio updates,
+            and support artists monthly or one-off.
+          </p>
+          <Link
+            href="/auth/signup?role=patron"
+            className="mt-6 inline-block rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-800"
+          >
+            Become a patron
+          </Link>
         </section>
       )}
 
