@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { StudioFeedCard } from "@/components/feed/StudioFeedCard";
 import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
+import { WhoIsPatronageFor } from "@/components/home/WhoIsPatronageFor";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Profile, ProfileWithImage, Opportunity } from "@/types/database";
@@ -253,22 +254,8 @@ export default async function Home() {
 
       </div>
 
-      {/* ── Sign-up CTA – above footer, hidden for authenticated users ── */}
-      {!isAuthenticated && (
-        <div className="border-t border-border px-6 py-12 text-center">
-          <div className="max-w-md mx-auto space-y-4">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Stay across it
-            </p>
-            <p className="text-sm text-muted-foreground">
-              New opportunities in your inbox every week. Free.
-            </p>
-            <Button asChild>
-              <Link href="/get-started">Create a free account</Link>
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* ── Who is Patronage for? – above footer, hidden for authenticated users ── */}
+      {!isAuthenticated && <WhoIsPatronageFor />}
     </div>
   );
 }
