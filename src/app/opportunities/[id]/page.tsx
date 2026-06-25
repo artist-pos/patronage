@@ -15,6 +15,8 @@ import { StructuredDescription } from "@/components/opportunities/DescriptionAcc
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
+import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { buildOpportunitySharePayload } from "@/lib/opportunity-share";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 
 type RelatedOpp = Pick<Opportunity,
@@ -417,6 +419,7 @@ export default async function OpportunityPage({ params }: Props) {
   ).filter((l) => l.url?.trim());
 
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
+  const sharePayload = buildOpportunitySharePayload(opp, canonicalUrl);
   const schemaType = schemaTypeForOpp(opp.type);
   const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
   const orgNode = { "@type": "Organization", name: opp.organiser };
@@ -538,6 +541,7 @@ export default async function OpportunityPage({ params }: Props) {
           </ol>
         </nav>
         <div className="flex items-center gap-3">
+          <ShareTrigger payload={sharePayload} variant="button" />
           <Suspense fallback={<SaveButtonSkeleton />}>
             <HeaderActions opportunityId={opp.id} opp={opp} />
           </Suspense>

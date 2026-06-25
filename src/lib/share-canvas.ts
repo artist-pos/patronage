@@ -1,4 +1,4 @@
-import type { SharePayload, ShareTemplate, ShareFormat } from '@/types/share'
+import type { SharePayload, ShareTemplate, ShareFormat, OpportunityRenderOptions } from '@/types/share'
 
 const TEMPLATES = {
   dark:  { bg: '#0f0f0f', text: '#ffffff', accent: '#ffffff', sub: 'rgba(255,255,255,0.42)', light: false },
@@ -12,12 +12,12 @@ const FORMATS = {
   post:  { w: 1080, h: 1080 },
 } as const
 
-const GF = "'Geist', 'Inter', system-ui, sans-serif"
+export const GF = "'Geist', 'Inter', system-ui, sans-serif"
 
 // Cached logo elements — loaded once, reused across draws
 let _logoEl: HTMLImageElement | null = null
 let _logoLoading = false
-function getLogoEl(): Promise<HTMLImageElement | null> {
+export function getLogoEl(): Promise<HTMLImageElement | null> {
   if (_logoEl) return Promise.resolve(_logoEl)
   if (_logoLoading) return new Promise(resolve => {
     const check = setInterval(() => {
@@ -35,7 +35,7 @@ function getLogoEl(): Promise<HTMLImageElement | null> {
 
 let _logoWhiteEl: HTMLImageElement | null = null
 let _logoWhiteLoading = false
-function getWhiteLogoEl(): Promise<HTMLImageElement | null> {
+export function getWhiteLogoEl(): Promise<HTMLImageElement | null> {
   if (_logoWhiteEl) return Promise.resolve(_logoWhiteEl)
   if (_logoWhiteLoading) return new Promise(resolve => {
     const check = setInterval(() => {
@@ -51,7 +51,7 @@ function getWhiteLogoEl(): Promise<HTMLImageElement | null> {
   })
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const words = text.split(' ')
   const lines: string[] = []
   let line = ''
@@ -69,7 +69,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, max
   return lines
 }
 
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
   ctx.lineTo(x + w - r, y)
@@ -153,9 +153,18 @@ export async function drawShareCanvas(
   format: ShareFormat,
   imgEl: HTMLImageElement | null,
   showPrice: boolean,
-  caption = ''
+  caption = '',
+  oppOptions?: OpportunityRenderOptions
 ): Promise<void> {
   await document.fonts.load(`600 24px ${GF}`)
+
+  // Opportunity cards use their own multi-variant layout (A/B/C). Delegate and
+  // bail before the generic work/update/profile path below.
+  if (payload.type === 'opportunity' && payload.opportunity) {
+    const { drawOpportunityCanvas } = await import('./opportunity-share-canvas')
+    await drawOpportunityCanvas(canvas, payload, format, imgEl, oppOptions)
+    return
+  }
 
   const t = TEMPLATES[template]
   const f = FORMATS[format]

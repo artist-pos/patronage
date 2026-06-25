@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Download, Link, Check } from "lucide-react";
-import type { SharePayload, ShareTemplate, ShareFormat } from "@/types/share";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { X, Download, Link, Check, RotateCcw } from "lucide-react";
+import type {
+  SharePayload,
+  ShareTemplate,
+  ShareFormat,
+  OpportunityVariant,
+  OpportunityTheme,
+  OpportunityImageTransform,
+  OpportunityRenderOptions,
+} from "@/types/share";
 import { drawShareCanvas } from "@/lib/share-canvas";
+import { availableVariants, selectVariant, defaultThemeFor } from "@/lib/opportunity-share-canvas";
 
 interface Props {
   payload: SharePayload;
@@ -17,7 +26,18 @@ const TEMPLATES: { id: ShareTemplate; label: string; bg: string; text: string }[
   { id: "slate", label: "Slate", bg: "#1c2333", text: "#e8edf5" },
 ];
 
+const VARIANT_LABELS: { id: OpportunityVariant; label: string; hint: string }[] = [
+  { id: "A", label: "Text", hint: "Typographic — no image" },
+  { id: "B", label: "Image", hint: "Hero image accent" },
+  { id: "C", label: "Feature", hint: "Highlight the commission value" },
+];
+
+const NO_TRANSFORM: OpportunityImageTransform = { zoom: 1, ox: 0, oy: 0 };
+
 export function ShareSheet({ payload, onClose }: Props) {
+  const isOpportunity = payload.type === "opportunity";
+  const oppData = payload.opportunity ?? null;
+
   const [template, setTemplate] = useState<ShareTemplate>("light");
   const [format, setFormat] = useState<ShareFormat>("story");
   const [showPrice, setShowPrice] = useState(true);
@@ -28,26 +48,47 @@ export function ShareSheet({ payload, onClose }: Props) {
     payload.imageOptions?.[0]?.url ?? payload.imageUrl
   );
 
+  // Opportunity-only controls: layout variant (A/B/C), light/dark theme, and the
+  // pan/zoom transform applied to the Variant B hero image. Variant/theme are
+  // null until the user overrides — otherwise they auto-derive from the data.
+  const [variantOverride, setVariantOverride] = useState<OpportunityVariant | null>(null);
+  const [themeOverride, setThemeOverride] = useState<OpportunityTheme | null>(null);
+  const [imgTransform, setImgTransform] = useState<OpportunityImageTransform>(NO_TRANSFORM);
+  const dragRef = useRef<{ active: boolean; x: number; y: number }>({ active: false, x: 0, y: 0 });
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load selected image when it changes
+  // Load selected image when it changes; reset its framing on (re)load.
   useEffect(() => {
     const url = selectedImageUrl;
     if (!url) { setImgEl(null); return; }
     const img = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => setImgEl(img);
+    img.onload = () => { setImgEl(img); setImgTransform(NO_TRANSFORM); };
     img.onerror = () => setImgEl(null);
     img.src = url;
   }, [selectedImageUrl]);
+
+  // Derived layout/theme: user override wins, else auto-select from the data.
+  const autoVariant: OpportunityVariant = isOpportunity && oppData ? selectVariant(oppData, imgEl) : "A";
+  const oppVariant = variantOverride ?? autoVariant;
+  const oppTheme = themeOverride ?? defaultThemeFor(oppVariant);
+
+  const oppOptions: OpportunityRenderOptions | undefined = useMemo(
+    () =>
+      isOpportunity && oppData
+        ? { variant: oppVariant, theme: oppTheme, imageTransform: imgTransform }
+        : undefined,
+    [isOpportunity, oppData, oppVariant, oppTheme, imgTransform]
+  );
 
   const redraw = useCallback(async () => {
     if (!canvasRef.current) return;
     const effectivePayload = selectedImageUrl !== payload.imageUrl
       ? { ...payload, imageUrl: selectedImageUrl }
       : payload;
-    await drawShareCanvas(canvasRef.current, effectivePayload, template, format, imgEl, showPrice, caption);
-  }, [payload, template, format, imgEl, showPrice, caption, selectedImageUrl]);
+    await drawShareCanvas(canvasRef.current, effectivePayload, template, format, imgEl, showPrice, caption, oppOptions);
+  }, [payload, template, format, imgEl, showPrice, caption, selectedImageUrl, oppOptions]);
 
   useEffect(() => { redraw(); }, [redraw]);
 
@@ -70,7 +111,7 @@ export function ShareSheet({ payload, onClose }: Props) {
       dataUrl = canvasRef.current.toDataURL("image/png");
     } catch {
       // CORS taint — redraw without image and try again
-      await drawShareCanvas(canvasRef.current, payload, template, format, null, showPrice, caption);
+      await drawShareCanvas(canvasRef.current, payload, template, format, null, showPrice, caption, oppOptions);
       try { dataUrl = canvasRef.current.toDataURL("image/png"); } catch { return; }
       // Restore
       redraw();
@@ -89,9 +130,40 @@ export function ShareSheet({ payload, onClose }: Props) {
     setTimeout(() => setCopied(false), 2500);
   }
 
+  function pickVariant(v: OpportunityVariant) {
+    setVariantOverride(v);
+  }
+
+  function pickTheme(t: OpportunityTheme) {
+    setThemeOverride(t);
+  }
+
   const scale = format === "story" ? 0.21 : 0.31;
-  const previewW = Math.round((format === "story" ? 1080 : 1080) * scale);
-  const previewH = Math.round((format === "story" ? 1920 : 1080) * scale);
+  // Opportunity posts use a 4:5 (1080×1350) frame; everything else stays 1:1.
+  const postH = isOpportunity ? 1350 : 1080;
+  const previewW = Math.round(1080 * scale);
+  const previewH = Math.round((format === "story" ? 1920 : postH) * scale);
+
+  const canDragImage = isOpportunity && oppVariant === "B" && !!imgEl;
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!canDragImage) return;
+    dragRef.current = { active: true, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!dragRef.current.active) return;
+    // Convert screen px → canvas px (canvas is intrinsically 1080 wide).
+    const sf = 1080 / previewW;
+    const dx = (e.clientX - dragRef.current.x) * sf;
+    const dy = (e.clientY - dragRef.current.y) * sf;
+    dragRef.current.x = e.clientX;
+    dragRef.current.y = e.clientY;
+    setImgTransform((t) => ({ ...t, ox: t.ox + dx, oy: t.oy + dy }));
+  }
+  function onPointerUp() { dragRef.current.active = false; }
+
+  const avail = isOpportunity && oppData ? availableVariants(oppData, imgEl) : null;
 
   return (
     <div
@@ -112,11 +184,17 @@ export function ShareSheet({ payload, onClose }: Props) {
         <div className="flex items-center justify-center bg-stone-100 p-5 sm:p-8 shrink-0">
           <canvas
             ref={canvasRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerUp}
             style={{
               width: previewW,
               height: previewH,
               display: "block",
               boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+              cursor: canDragImage ? "grab" : "default",
+              touchAction: canDragImage ? "none" : undefined,
             }}
           />
         </div>
@@ -167,13 +245,98 @@ export function ShareSheet({ payload, onClose }: Props) {
                       format === f ? "border-black bg-black text-white" : "border-border hover:border-stone-400"
                     }`}
                   >
-                    {f === "story" ? "Story 9:16" : "Post 1:1"}
+                    {f === "story" ? "Story 9:16" : isOpportunity ? "Post 4:5" : "Post 1:1"}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Template */}
+            {/* Layout variant — opportunity cards only */}
+            {isOpportunity && avail && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Layout</p>
+                <div className="flex gap-2">
+                  {VARIANT_LABELS.map(v => {
+                    const enabled = avail[v.id];
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => enabled && pickVariant(v.id)}
+                        disabled={!enabled}
+                        title={enabled ? v.hint : `${v.label} unavailable for this listing`}
+                        className={`flex-1 py-2 text-xs border transition-colors ${
+                          oppVariant === v.id
+                            ? "border-black bg-black text-white"
+                            : enabled
+                            ? "border-border hover:border-stone-400"
+                            : "border-border text-muted-foreground/40 cursor-not-allowed"
+                        }`}
+                      >
+                        {v.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Theme — opportunity cards (light/dark, like other share types) */}
+            {isOpportunity && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Theme</p>
+                <div className="flex gap-1.5">
+                  {([
+                    { id: "dark" as OpportunityTheme, label: "Dark", bg: "#0f0f0f", text: "#ffffff" },
+                    { id: "light" as OpportunityTheme, label: "Light", bg: "#fafaf9", text: "#1a1a1a" },
+                  ]).map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => pickTheme(t.id)}
+                      className="flex-1 h-7 rounded-sm transition-all border border-border"
+                      style={{
+                        background: t.bg,
+                        color: t.text,
+                        outline: oppTheme === t.id ? "2px solid #1a1a1a" : "none",
+                        outlineOffset: 2,
+                        fontSize: 9,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Image framing — Variant B only */}
+            {canDragImage && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
+                  <button
+                    onClick={() => setImgTransform(NO_TRANSFORM)}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset
+                  </button>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.02}
+                  value={imgTransform.zoom}
+                  onChange={e => setImgTransform(t => ({ ...t, zoom: parseFloat(e.target.value) }))}
+                  className="w-full accent-black"
+                  aria-label="Zoom"
+                />
+                <p className="text-[10px] text-muted-foreground">Drag the image in the preview to reposition.</p>
+              </div>
+            )}
+
+            {/* Template — generic share types only */}
+            {!isOpportunity && (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Template</p>
               <div className="flex gap-1.5">
@@ -197,8 +360,10 @@ export function ShareSheet({ payload, onClose }: Props) {
                 ))}
               </div>
             </div>
+            )}
 
-            {/* Caption */}
+            {/* Caption — generic share types only */}
+            {!isOpportunity && (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Caption <span className="font-normal normal-case tracking-normal opacity-50">— optional</span>
@@ -213,6 +378,7 @@ export function ShareSheet({ payload, onClose }: Props) {
               />
               <p className="text-[10px] text-muted-foreground text-right">{caption.length} / 120</p>
             </div>
+            )}
 
             {/* Options */}
             {payload.price && (
