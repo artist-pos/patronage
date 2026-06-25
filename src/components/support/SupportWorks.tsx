@@ -68,7 +68,7 @@ export function SupportWorks({ artworks, initialLimit, isAdmin }: Props) {
 
       <div>
         <Link
-          href="/feed?tab=works"
+          href="/works"
           className="text-sm text-stone-500 underline underline-offset-4 transition-colors hover:text-stone-900"
         >
           View all works
