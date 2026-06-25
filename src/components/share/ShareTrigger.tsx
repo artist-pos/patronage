@@ -34,8 +34,8 @@ export function ShareTrigger({ payload, variant = "icon", className }: Props) {
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
           className={className ?? "flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 hover:bg-muted transition-colors"}
         >
-          <Share2 className="w-3.5 h-3.5" />
-          Share
+          <Share2 className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">Share</span>
         </button>
       )}
 

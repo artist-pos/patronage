@@ -519,16 +519,16 @@ export default async function OpportunityPage({ params }: Props) {
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       {/* ✕ close is static. Admin controls + save button stream in. */}
-      <div className="flex items-center justify-between">
-        <nav aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <li>
+      <div className="flex items-center justify-between gap-3">
+        <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
+          <ol className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+            <li className="hidden sm:block shrink-0">
               <Link href="/opportunities" className="hover:text-foreground transition-colors">
                 Opportunities
               </Link>
             </li>
-            <li aria-hidden="true">/</li>
-            <li>
+            <li aria-hidden="true" className="hidden sm:block shrink-0">/</li>
+            <li className="shrink-0">
               <Link
                 href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
                 className="hover:text-foreground transition-colors"
@@ -536,11 +536,11 @@ export default async function OpportunityPage({ params }: Props) {
                 {opp.type}
               </Link>
             </li>
-            <li aria-hidden="true">/</li>
-            <li className="text-foreground truncate max-w-[200px] sm:max-w-xs">{opp.title}</li>
+            <li aria-hidden="true" className="shrink-0">/</li>
+            <li className="text-foreground truncate min-w-0">{opp.title}</li>
           </ol>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <ShareTrigger payload={sharePayload} variant="button" />
           <Suspense fallback={<SaveButtonSkeleton />}>
             <HeaderActions opportunityId={opp.id} opp={opp} />
