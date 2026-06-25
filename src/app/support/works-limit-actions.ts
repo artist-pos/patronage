@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export const SUPPORT_WORKS_LIMIT_KEY = "support_works_limit";
-export const SUPPORT_WORKS_MAX = 48;
+import {
+  SUPPORT_WORKS_LIMIT_KEY,
+  SUPPORT_WORKS_MAX,
+} from "@/app/support/works-limit-constants";
 
 export async function saveSupportWorksLimit(limit: number) {
   const supabase = await createClient();

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SupportWorks } from "@/components/support/SupportWorks";
-import { SUPPORT_WORKS_MAX } from "@/app/support/works-limit-actions";
+import {
+  SUPPORT_WORKS_MAX,
+  SUPPORT_WORKS_DEFAULT,
+} from "@/app/support/works-limit-constants";
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
 
 export const metadata: Metadata = {
@@ -171,7 +174,8 @@ export default async function SupportPage() {
     !!roleRes.data &&
     ["admin", "owner"].includes((roleRes.data as { role: string }).role);
   const rawLimit = (limitRes.data as { value: unknown } | null)?.value;
-  const worksLimit = typeof rawLimit === "number" ? rawLimit : 12;
+  const worksLimit =
+    typeof rawLimit === "number" ? rawLimit : SUPPORT_WORKS_DEFAULT;
 
   return (
     <main className="max-w-[1600px] mx-auto px-6 py-12 md:py-16">
