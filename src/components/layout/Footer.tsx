@@ -30,9 +30,9 @@ const COLUMNS: FooterColumn[] = [
   {
     label: "For Partners",
     links: [
-      { text: "List an opportunity", href: "/partner/opportunities/new" },
+      { text: "List an opportunity", href: "/partner" },
       { text: "Activations", href: "/partners#activations" },
-      { text: "List for free", href: "/partner/list-free" },
+      { text: "List for free", href: "/partner" },
       { text: "How partnering works", href: "/partners" },
     ],
   },
