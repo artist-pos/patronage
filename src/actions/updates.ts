@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface UpdateUrls {
   image_url?: string | null;
@@ -37,10 +38,19 @@ export async function deleteUpdate(updateId: string, urls: UpdateUrls = {}) {
   revalidatePath("/feed");
 }
 
-/** Edit the text of an existing studio update (caption and/or written body). */
+/**
+ * Edit the editable text of an existing studio update — caption, written body,
+ * share title, and TL;DR. The media itself (image/audio/video/embed) is not editable.
+ * Authorised for the update's owner (via RLS) or an admin/owner (via the admin client).
+ */
 export async function editUpdate(
   updateId: string,
-  fields: { caption?: string | null; text_content?: string | null },
+  fields: {
+    caption?: string | null;
+    text_content?: string | null;
+    title?: string | null;
+    tldr?: string | null;
+  },
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,19 +59,38 @@ export async function editUpdate(
   const patch: Record<string, string | null> = {};
   if (fields.caption !== undefined) patch.caption = fields.caption?.trim() || null;
   if (fields.text_content !== undefined) patch.text_content = fields.text_content?.trim() || null;
+  if (fields.title !== undefined) patch.title = fields.title?.trim() || null;
+  if (fields.tldr !== undefined) patch.tldr = fields.tldr?.trim() || null;
   if (Object.keys(patch).length === 0) return {};
 
-  // RLS ("Artist updates own project_updates") restricts this to the owner.
-  const { error } = await supabase
-    .from("project_updates")
-    .update(patch)
-    .eq("id", updateId)
-    .eq("artist_id", user.id);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = profile?.role === "admin" || profile?.role === "owner";
 
-  if (error) return { error: error.message };
+  if (isAdmin) {
+    // Admins may edit any update — bypass RLS with the admin client.
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("project_updates")
+      .update(patch)
+      .eq("id", updateId);
+    if (error) return { error: error.message };
+  } else {
+    // RLS ("Artist updates own project_updates") + the artist_id filter restrict
+    // non-admins to their own updates.
+    const { error } = await supabase
+      .from("project_updates")
+      .update(patch)
+      .eq("id", updateId)
+      .eq("artist_id", user.id);
+    if (error) return { error: error.message };
+  }
 
   revalidatePath("/");
   revalidatePath("/feed");
-  revalidatePath(`/updates/${updateId}`);
+  revalidatePath(`/projects/${updateId}`);
   return {};
 }

@@ -143,7 +143,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
               isFirst={i === 0}
               projectSlug={thread.project.slug ?? thread.project.id}
               artistName={artistName}
-              isAdmin={isAdmin}
+              canEdit={isOwner || isAdmin}
               canNote={canNote}
               currentUserId={user?.id}
               currentUserName={currentUserName}
@@ -164,7 +164,7 @@ function ThreadPostItem({
   isFirst,
   projectSlug,
   artistName,
-  isAdmin,
+  canEdit,
   canNote,
   currentUserId,
   currentUserName,
@@ -175,7 +175,7 @@ function ThreadPostItem({
   isFirst: boolean;
   projectSlug: string;
   artistName: string;
-  isAdmin: boolean;
+  canEdit: boolean;
   canNote: boolean;
   currentUserId?: string;
   currentUserName?: string;
@@ -208,11 +208,14 @@ function ThreadPostItem({
             {formatTimestamp(post.created_at)}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
-            {isAdmin && (
+            {canEdit && (
               <EditUpdateModal
                 updateId={post.id}
+                contentType={post.content_type}
                 initialTitle={post.title}
                 initialTldr={post.tldr ?? null}
+                initialCaption={post.caption ?? null}
+                initialTextContent={post.text_content ?? null}
               />
             )}
             <ShareTrigger

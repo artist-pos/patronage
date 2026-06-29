@@ -162,6 +162,8 @@ export default async function ProjectPage({ params }: Props) {
   const currentUserName = currentUserProfile?.full_name ?? currentUserProfile?.username;
   const currentUserUsername = currentUserProfile?.username;
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
+  const isAdmin = currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner";
+  const canEdit = currentUserProfile?.id === update.artist_id || isAdmin;
 
   const canNote = !!user;
 
@@ -265,11 +267,14 @@ export default async function ProjectPage({ params }: Props) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner" ? (
+            {canEdit ? (
               <EditUpdateModal
                 updateId={id}
+                contentType={update.content_type}
                 initialTitle={update.title}
                 initialTldr={update.tldr ?? null}
+                initialCaption={update.caption ?? null}
+                initialTextContent={update.text_content ?? null}
               />
             ) : null}
             <ShareTrigger
