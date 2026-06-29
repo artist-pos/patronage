@@ -13,6 +13,9 @@ interface Props {
   initialTldr: string | null;
   initialCaption: string | null;
   initialTextContent: string | null;
+  /** 'button' — labelled pill (threads/projects); 'icon' — compact pencil (feed cards) */
+  variant?: "button" | "icon";
+  className?: string;
 }
 
 export function EditUpdateModal({
@@ -22,6 +25,8 @@ export function EditUpdateModal({
   initialTldr,
   initialCaption,
   initialTextContent,
+  variant = "button",
+  className,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -57,13 +62,24 @@ export function EditUpdateModal({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors text-muted-foreground"
-      >
-        <Pencil className="w-3 h-3" />
-        Edit
-      </button>
+      {variant === "icon" ? (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
+          aria-label="Edit update"
+          className={className ?? "w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0"}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className={className ?? "flex items-center gap-1.5 text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors text-muted-foreground"}
+        >
+          <Pencil className="w-3 h-3" />
+          Edit
+        </button>
+      )}
 
       {toast && (
         <span className="text-xs text-emerald-600 flex items-center gap-1">

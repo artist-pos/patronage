@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Music, Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -19,10 +20,15 @@ function formatTimestamp(iso: string): string {
 interface FeedCardProps {
   u: ProjectUpdateWithArtist;
   priority?: boolean;
+  /** id of the signed-in user — enables the inline edit pencil on their own posts */
+  currentUserId?: string;
+  /** admins/owners can edit any post */
+  isAdmin?: boolean;
 }
 
-export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCardProps) {
+export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false }: FeedCardProps) {
   const name = u.artist_full_name ?? u.artist_username;
+  const canEdit = !!currentUserId && (u.artist_id === currentUserId || isAdmin);
   const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`;
 
   const mediaSection = (() => {
@@ -233,6 +239,17 @@ export const FeedCard = memo(function FeedCard({ u, priority = false }: FeedCard
             </p>
           </div>
         </Link>
+        {canEdit && (
+          <EditUpdateModal
+            updateId={u.id}
+            contentType={u.content_type}
+            initialTitle={u.title}
+            initialTldr={u.tldr ?? null}
+            initialCaption={u.caption ?? null}
+            initialTextContent={u.text_content ?? null}
+            variant="icon"
+          />
+        )}
         <ShareTrigger payload={sharePayload} variant="icon" className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0" />
       </div>
     </div>

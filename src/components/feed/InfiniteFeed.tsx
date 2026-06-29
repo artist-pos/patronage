@@ -31,6 +31,10 @@ interface Props {
   audience?: FeedAudience;
   isLoggedIn?: boolean;
   rightSlot?: React.ReactNode;
+  /** signed-in user id — enables inline edit pencil on their own posts */
+  currentUserId?: string;
+  /** admins/owners can edit any post */
+  isAdmin?: boolean;
 }
 
 export function InfiniteFeed({
@@ -39,6 +43,8 @@ export function InfiniteFeed({
   audience = "everyone",
   isLoggedIn = false,
   rightSlot,
+  currentUserId,
+  isAdmin = false,
 }: Props) {
   const [updates, setUpdates] = useState<ProjectUpdateWithArtist[]>(initialUpdates);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -165,7 +171,7 @@ export function InfiniteFeed({
               {updates
                 .filter((_, i) => i % colCount === col)
                 .map((u, colIdx) => (
-                  <FeedCard key={u.id} u={u} priority={col < 2 && colIdx === 0} />
+                  <FeedCard key={u.id} u={u} priority={col < 2 && colIdx === 0} currentUserId={currentUserId} isAdmin={isAdmin} />
                 ))}
             </div>
           ))}

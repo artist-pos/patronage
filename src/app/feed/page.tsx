@@ -218,6 +218,8 @@ export default async function FeedPage({ searchParams }: PageProps) {
           initialHasMore={hasMore}
           audience={feedAudience}
           isLoggedIn={!!user}
+          currentUserId={user?.id}
+          isAdmin={isAdmin}
           rightSlot={
             profile ? (
               <div className="flex items-center gap-3">
