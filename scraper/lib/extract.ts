@@ -11,6 +11,15 @@ export class InsufficientCreditsError extends Error {
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+/**
+ * Run-wide extraction tally. `extractFromPage` swallows per-page failures and
+ * returns [] so one bad page doesn't abort a source — but a run where *every*
+ * call fails (e.g. an API/connection outage) would otherwise report "Done" with
+ * 0 inserts and a green CI job. run.ts reads these to fail the run loudly when
+ * the failure rate is high. See run.ts summary.
+ */
+export const extractStats = { attempts: 0, failures: 0 };
+
 // ============================================================
 // UPGRADED SYSTEM PROMPT
 // 
@@ -86,6 +95,7 @@ export async function extractFromPage(
     const prompt = `Source: ${sourceUrl}\nDefault country if not specified: ${mapCountryForPrompt(defaultCountry)}\n\nContent:\n${truncated}`;
     const estimated = estimateTokens(prompt);
 
+    extractStats.attempts++;
     try {
         const response = await withRateLimit(
             () =>
@@ -130,6 +140,7 @@ export async function extractFromPage(
         if (msg.includes("credit balance is too low")) {
             throw new InsufficientCreditsError();
         }
+        extractStats.failures++;
         console.error(`  Extract error for ${sourceUrl}:`, msg);
         return [];
     }

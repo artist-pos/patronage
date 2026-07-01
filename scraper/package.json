@@ -6,7 +6,7 @@
     "scrape": "tsx run.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
+    "@anthropic-ai/sdk": "^0.109.0",
     "@supabase/supabase-js": "^2.47.0",
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",

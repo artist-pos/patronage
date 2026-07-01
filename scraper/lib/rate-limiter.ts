@@ -54,9 +54,26 @@ export function estimateTokens(text: string): number {
 }
 
 /**
+ * Detects transient connection failures that should be retried on a fresh
+ * connection. Chief among these is undici's "Premature close" — a stale
+ * keep-alive socket the server closed while idle between our sequential calls.
+ * These surface as APIConnectionError from the SDK, or a bare fetch/undici
+ * error whose message/cause mentions the underlying socket failure.
+ */
+function isTransientConnectionError(err: any): boolean {
+  const name = err?.name ?? "";
+  if (name === "APIConnectionError" || name === "APIConnectionTimeoutError") return true;
+  const text = `${err?.message ?? ""} ${err?.cause?.message ?? err?.cause ?? ""}`;
+  return /premature close|ECONNRESET|ETIMEDOUT|EPIPE|socket hang up|terminated|fetch failed|network|other side closed/i.test(
+    text
+  );
+}
+
+/**
  * Wraps an Anthropic API call with:
  *   1. Token-budget gating (waits before calling if budget is low)
- *   2. Exponential backoff on 429 responses
+ *   2. Exponential backoff on 429s, 5xx/529 (overloaded), and transient
+ *      connection errors (e.g. "Premature close" from stale keep-alive sockets)
  */
 export async function withRateLimit<T>(
   fn: () => Promise<T>,
@@ -70,9 +87,16 @@ export async function withRateLimit<T>(
       return await fn();
     } catch (err: any) {
       const status = err?.status ?? err?.response?.status;
-      if (status === 429 && attempt < MAX_RETRIES) {
+      const retryable =
+        status === 429 ||
+        status === 529 ||
+        (typeof status === "number" && status >= 500) ||
+        isTransientConnectionError(err);
+
+      if (retryable && attempt < MAX_RETRIES) {
+        const reason = status ?? err?.name ?? "connection error";
         console.warn(
-          `  ↻ 429 received — retrying in ${delay / 1_000}s ` +
+          `  ↻ ${reason} — retrying in ${delay / 1_000}s ` +
             `(attempt ${attempt + 1}/${MAX_RETRIES})`
         );
         await sleep(delay);
@@ -82,7 +106,7 @@ export async function withRateLimit<T>(
       throw err;
     }
   }
-  throw new Error("Max retries exceeded after repeated 429 errors");
+  throw new Error("Max retries exceeded");
 }
 
 function sleep(ms: number): Promise<void> {

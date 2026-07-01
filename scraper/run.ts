@@ -10,7 +10,7 @@ import {
   closeBrowser,
   sleep,
 } from "./lib/fetch.js";
-import { extractFromPage, extractFromRssItem, InsufficientCreditsError } from "./lib/extract.js";
+import { extractFromPage, extractFromRssItem, InsufficientCreditsError, extractStats } from "./lib/extract.js";
 import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, type DedupeCache } from "./lib/upsert.js";
 import { fetchSitemap, resolveSitemapUrl } from "./lib/sitemap.js";
 import { fetchWpPosts } from "./lib/wp.js";
@@ -362,12 +362,16 @@ async function main() {
 
   const durationS = Math.round((Date.now() - startTime) / 1000);
 
+  const extractFailRate =
+    extractStats.attempts > 0 ? extractStats.failures / extractStats.attempts : 0;
+
   console.log(`\n✅ Done (${durationS}s)`);
   console.log(`   Inserted  : ${inserted}`);
   console.log(`   Updated   : ${updated}`);
   console.log(`   Skipped   : ${skipped}`);
   console.log(`   Errors    : ${errors}`);
   console.log(`   Timed out : ${timedOut}`);
+  console.log(`   Extract   : ${extractStats.failures}/${extractStats.attempts} calls failed`);
   console.log(`   Total new : ${inserted + updated}\n`);
 
   // Write stats for CI artifact collection + Slack notification
@@ -384,9 +388,23 @@ async function main() {
         errors,
         timed_out: timedOut,
         duration_s: durationS,
+        extract_attempts: extractStats.attempts,
+        extract_failures: extractStats.failures,
       }, null, 2)
     );
     console.log(`📄 Stats → ${statsPath}`);
+  }
+
+  // Fail the run loudly when most extraction calls failed. Otherwise a total
+  // API/connection outage (e.g. the "Premature close" incident) reports "Done"
+  // with 0 inserts and a green CI job — a silent failure that goes unnoticed.
+  if (extractStats.attempts >= 5 && extractFailRate > 0.5) {
+    console.error(
+      `\n❌ ${Math.round(extractFailRate * 100)}% of extraction calls failed ` +
+        `(${extractStats.failures}/${extractStats.attempts}) — likely an API or ` +
+        `connection outage. Failing the run so this doesn't pass silently.`
+    );
+    process.exit(1);
   }
 }
 
