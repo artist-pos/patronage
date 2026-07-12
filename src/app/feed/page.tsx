@@ -19,6 +19,12 @@ export const metadata: Metadata = {
 
 const INITIAL_COUNT = 10;
 
+// v2 Explore is a visual feed (studio updates + available works). Artists,
+// opportunities and articles each have a canonical browse surface — the
+// filter tabs route there instead of re-rendering them as pin walls here.
+const EXPLORE_FILTERS = ["all", "updates"] as const;
+type ExploreFilter = (typeof EXPLORE_FILTERS)[number];
+
 interface PageProps {
   searchParams: Promise<{
     tab?: string;
@@ -26,6 +32,7 @@ interface PageProps {
     medium?: string;
     wlayout?: string;
     audience?: string;
+    filter?: string;
   }>;
 }
 
@@ -36,9 +43,13 @@ export default async function FeedPage({ searchParams }: PageProps) {
     medium,
     wlayout = "justified",
     audience = "everyone",
+    filter: rawFilter = "all",
   } = await searchParams;
 
   const activeTab = tab === "works" ? "works" : "feed";
+  const filter: ExploreFilter = (EXPLORE_FILTERS as readonly string[]).includes(rawFilter)
+    ? (rawFilter as ExploreFilter)
+    : "all";
   const worksLayout = wlayout === "list" ? "list" : "justified";
   const feedAudience =
     audience === "subscribed" ? "subscribed" : audience === "following" ? "following" : "everyone";
@@ -65,11 +76,44 @@ export default async function FeedPage({ searchParams }: PageProps) {
             .then((r) => r.data))
     : Promise.resolve(null);
 
+  const wantsUpdates = filter === "all" || filter === "updates";
+
   // Start the feed fetch early for "everyone" — runs in parallel with other queries below
   const everyoneFeedPromise =
-    activeTab === "feed" && feedAudience === "everyone"
+    activeTab === "feed" && feedAudience === "everyone" && wantsUpdates
       ? getLatestUpdates(INITIAL_COUNT, 0, undefined)
       : null;
+
+  // ── Explore extras — available works thread through the update masonry so
+  // the "All" feed stays visual: studio updates + art for sale, nothing else.
+  const wantExtras = activeTab === "feed" && feedAudience === "everyone" && filter === "all";
+  const explorePinsPromise: PromiseLike<import("@/components/feed/ExplorePinCards").ExplorePin[]> =
+    wantExtras
+      ? supabase
+          .from("artworks")
+          .select("id, url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(username, full_name)")
+          .eq("is_available", true)
+          .eq("hide_available", false)
+          .not("url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(6)
+          .then(({ data }) =>
+            (data ?? []).map((w: any) => ({
+              kind: "work" as const,
+              id: w.id,
+              url: w.url,
+              title: w.title,
+              year: w.year,
+              edition: w.edition ?? null,
+              price_cents: w.price_cents,
+              price_currency: w.price_currency,
+              is_poa: w.is_poa,
+              hide_price: w.hide_price,
+              artist_name: w.profile?.full_name ?? w.profile?.username ?? null,
+              artist_username: w.profile?.username ?? null,
+            }))
+          )
+      : Promise.resolve([]);
 
   // For subscribed/following feed, fetch the relevant artist IDs (in parallel with other queries)
   const subscribedArtistIdsPromise =
@@ -92,7 +136,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
             )
         : Promise.resolve(undefined as string[] | undefined);
 
-  const [userProjects, worksResult, worksLayoutData, subscribedArtistIds] =
+  const [userProjects, worksResult, worksLayoutData, subscribedArtistIds, explorePins] =
     await Promise.all([
       profile ? getArtistProjects(profile.id) : Promise.resolve([]),
       activeTab === "works"
@@ -176,13 +220,14 @@ export default async function FeedPage({ searchParams }: PageProps) {
         : Promise.resolve(null),
       worksLayoutPromise,
       subscribedArtistIdsPromise,
+      explorePinsPromise,
     ]);
 
   // Resolve feed updates — "everyone" was already in flight; "subscribed" needs the artist IDs first
   const feedUpdates =
     everyoneFeedPromise !== null
       ? await everyoneFeedPromise
-      : activeTab === "feed"
+      : activeTab === "feed" && feedAudience !== "everyone"
         ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds)
         : [];
 
@@ -190,62 +235,81 @@ export default async function FeedPage({ searchParams }: PageProps) {
   const artworks = worksResult?.artworks ?? [];
   const mediumOptions = worksResult?.mediumOptions ?? [];
 
-  const tabCls = (t: string) =>
-    `flex flex-col items-start px-4 pb-2.5 pt-2 transition-colors border-b-2 ${
-      activeTab === t
-        ? "border-black text-foreground -mb-px"
+  // v2 filter tab — mono, teal active underline
+  const tabCls = (active: boolean) =>
+    `flex h-9 shrink-0 items-center whitespace-nowrap px-3.5 -mb-px border-b-2 font-mono text-xs transition-colors ${
+      active
+        ? "border-brand text-brand"
         : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
-  return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
+  // Explore tab set — All/Updates render here; the rest are the canonical
+  // browse surfaces for each content type.
+  const filterTabs: { label: string; href: string; active: boolean }[] = [
+    { label: "All", href: "/feed", active: activeTab === "feed" && filter === "all" },
+    { label: "Updates", href: "/feed?filter=updates", active: activeTab === "feed" && filter === "updates" },
+    { label: "For sale", href: "/works", active: activeTab === "works" },
+    { label: "Artists", href: "/artists", active: false },
+    { label: "Opportunities", href: "/opportunities", active: false },
+    { label: "Articles", href: "/blog", active: false },
+  ];
 
-      {/* Tab bar */}
-      <div className="flex gap-0 border-b border-stone-200">
-        <Link href="/feed" className={tabCls("feed")}>
-          <span className="text-2xl font-semibold tracking-tight">Feed</span>
-          <span className="text-[10px] text-stone-400">studio updates</span>
-        </Link>
-        <Link href="/works" className={tabCls("works")}>
-          <span className="text-2xl font-semibold tracking-tight">Works</span>
-          <span className="text-[10px] text-stone-400">for sale</span>
-        </Link>
+  return (
+    <div>
+      {/* ── Page header + filter tabs ── */}
+      <div className="border-b border-border">
+        <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6">
+          <h1 className="mb-4 text-2xl font-semibold tracking-[-0.025em]">Explore</h1>
+          <div className="flex items-stretch overflow-x-auto scrollbar-hide">
+            {filterTabs.map((t) => (
+              <Link key={t.label} href={t.href} className={tabCls(t.active)}>
+                {t.label}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       {activeTab === "feed" ? (
-        <InfiniteFeed
-          initialUpdates={feedUpdates}
-          initialHasMore={hasMore}
-          audience={feedAudience}
-          isLoggedIn={!!user}
-          currentUserId={user?.id}
-          isAdmin={isAdmin}
-          rightSlot={
-            profile ? (
-              <div className="flex items-center gap-3">
-                {isAdmin && (
-                  <Link
-                    href="/studio?section=feed"
-                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors shrink-0"
-                  >
-                    Manage feed →
-                  </Link>
-                )}
-                <CreateUpdateModal
-                  profileId={profile.id}
-                  label="New update +"
-                  className="shrink-0 px-6 py-2 border border-black text-sm hover:bg-black hover:text-white transition-colors"
-                  projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
-                />
-              </div>
-            ) : undefined
-          }
-        />
+        /* Feed surface — figure-ground: pins sit on #EFEEEC */
+        <div className="min-h-screen bg-feed-bg">
+          <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
+            <InfiniteFeed
+              initialUpdates={feedUpdates}
+              initialHasMore={hasMore}
+              extraPins={explorePins}
+              audience={feedAudience}
+              isLoggedIn={!!user}
+              currentUserId={user?.id}
+              isAdmin={isAdmin}
+              rightSlot={
+                profile ? (
+                  <div className="flex items-center gap-3">
+                    {isAdmin && (
+                      <Link
+                        href="/studio?section=feed"
+                        className="shrink-0 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        Manage feed →
+                      </Link>
+                    )}
+                    <CreateUpdateModal
+                      profileId={profile.id}
+                      label="New update +"
+                      className="shrink-0 bg-foreground px-5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
+                      projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+                    />
+                  </div>
+                ) : undefined
+              }
+            />
+          </div>
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6">
           {/* Works controls row: count on left, controls + layout switcher on right */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-xs text-muted-foreground">
+            <p className="font-mono text-[11px] text-muted-foreground">
               {artworks.length} work{artworks.length !== 1 ? "s" : ""} available
             </p>
             <Suspense>

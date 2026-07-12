@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChatDropdown } from "@/components/chat/ChatDropdown";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { NAV_LINKS } from "./HeaderNav";
 
 interface NavBarProps {
   isLoggedIn: boolean;
@@ -22,12 +23,6 @@ interface NavBarProps {
   signOut: () => Promise<void>;
   role?: string | null;
 }
-
-const NAV_LINKS = [
-  { href: "/feed", label: "Feed" },
-  { href: "/artists", label: "Artists" },
-  { href: "/opportunities", label: "Opportunities" },
-];
 
 export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifications, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
@@ -44,11 +39,11 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
         )}
         {isLoggedIn ? (
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
+            <DropdownMenuTrigger className="flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
               {username ?? "My Account"}
               <ChevronDown className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 border border-black">
+            <DropdownMenuContent align="end" className="w-48 border border-border">
               {username && (
                 <DropdownMenuItem asChild>
                   <Link href={`/${username}`}>Profile</Link>
@@ -92,18 +87,18 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <Link
               href="/auth/login"
-              className="px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
             >
               Sign in
             </Link>
             <Link
               href="/auth/signup"
-              className="border border-black bg-black text-white px-3 py-1.5 hover:bg-stone-800 transition-colors"
+              className="bg-brand text-white text-[13px] font-medium px-4 py-[7px] hover:opacity-85 transition-opacity"
             >
-              Sign up
+              Get started
             </Link>
           </div>
         )}
@@ -128,8 +123,10 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
 
       {/* ── Mobile drawer ─────────────────────────────── */}
       {open && (
-        <div className="sm:hidden absolute top-full right-0 bg-background border border-border shadow-md z-50 px-6 py-4 flex flex-col gap-4 text-sm min-w-[200px]">
-          {NAV_LINKS.map((l) => (
+        <div className="sm:hidden absolute top-full right-0 bg-background border border-border shadow-lg z-50 px-6 py-4 flex flex-col gap-4 text-sm min-w-[200px]">
+          {/* Signed-out: the bottom nav already covers navigation — the
+              drawer only needs the auth actions */}
+          {isLoggedIn && NAV_LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -139,7 +136,7 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
               {l.label}
             </Link>
           ))}
-          <div className="border-t border-border pt-4 flex flex-col gap-3">
+          <div className={isLoggedIn ? "border-t border-border pt-4 flex flex-col gap-3" : "flex flex-col gap-3"}>
             {isLoggedIn ? (
               <>
                 {username && (
@@ -191,8 +188,8 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                 <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                   Sign in
                 </Link>
-                <Link href="/auth/signup" onClick={() => setOpen(false)} className="font-medium hover:text-muted-foreground transition-colors">
-                  Sign up
+                <Link href="/auth/signup" onClick={() => setOpen(false)} className="bg-brand text-white text-center text-[13px] font-medium px-4 py-2 hover:opacity-85 transition-opacity">
+                  Get started
                 </Link>
               </>
             )}

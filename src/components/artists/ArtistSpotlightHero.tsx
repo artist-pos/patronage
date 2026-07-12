@@ -13,19 +13,18 @@ export function ArtistSpotlightHero({ artist }: Props) {
 
   return (
     <section className="space-y-3">
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-        Spotlight · this week
-      </p>
+      <p className="t-section-label">Spotlight · this week</p>
 
-      <Link href={href} className="group flex flex-col sm:flex-row border border-black hover:shadow-sm transition-shadow duration-150">
+      <Link href={href} className="pin group flex flex-col bg-card sm:flex-row">
         {/* Image — left, stretches to match content panel height on desktop */}
-        <div className="relative sm:w-[55%] h-56 sm:h-auto sm:min-h-72 shrink-0 overflow-hidden bg-stone-100">
+        <div className="relative h-56 shrink-0 overflow-hidden bg-stone-200 sm:h-auto sm:min-h-72 sm:w-[55%]">
           {artist.primary_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              data-pin-img
               src={artist.primary_image_url}
               alt={displayName}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : artist.avatar_url ? (
             <>
@@ -51,24 +50,22 @@ export function ArtistSpotlightHero({ artist }: Props) {
         </div>
 
         {/* Content — right */}
-        <div className="flex-1 border-t border-black sm:border-t-0 sm:border-l border-black p-6 sm:p-8 flex flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 p-6 sm:p-8">
           <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-              Featured artist
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-semibold leading-tight group-hover:underline underline-offset-2">
+            <p className="t-section-label mb-3">Featured artist</p>
+            <h2 className="text-2xl font-semibold leading-tight tracking-[-0.022em] sm:text-3xl">
               {displayName}
             </h2>
             {location && (
-              <p className="text-sm text-muted-foreground mt-1">{location}</p>
+              <p className="mt-1.5 font-mono text-xs text-muted-foreground">{location}</p>
             )}
           </div>
 
           {/* Medium tags */}
           {(artist.medium ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {(artist.medium ?? []).slice(0, 5).map((m) => (
-                <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1">
+                <span key={m} className="border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)]">
                   {m}
                 </span>
               ))}
@@ -77,16 +74,14 @@ export function ArtistSpotlightHero({ artist }: Props) {
 
           {/* Bio taster */}
           {artist.bio && (
-            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+            <p className="line-clamp-3 text-sm leading-[1.65] text-muted-foreground">
               {artist.bio}
             </p>
           )}
 
           {/* CTA */}
-          <div className="mt-auto pt-2">
-            <span className="inline-block bg-black text-white text-sm px-5 py-2 group-hover:opacity-80 transition-opacity">
-              View profile →
-            </span>
+          <div className="mt-auto border-t border-border pt-4 font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+            View profile →
           </div>
         </div>
       </Link>

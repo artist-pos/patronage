@@ -108,10 +108,11 @@ export default async function ArtistCategoryPage({
 
   const [artists, collectedResult, worksCountResult] = await Promise.all([
     getProfiles(filter),
+    // Column-to-column comparison isn't possible in a PostgREST filter —
+    // fetch both ids and compare in JS.
     supabase
       .from("artworks")
-      .select("creator_id")
-      .neq("current_owner_id", "creator_id"),
+      .select("creator_id, current_owner_id"),
     supabase
       .from("artworks")
       .select("profile_id"),
@@ -119,8 +120,9 @@ export default async function ArtistCategoryPage({
 
   const collectedSet = new Set(
     (collectedResult.data ?? [])
-      .filter((r: { creator_id: string }) => r.creator_id)
-      .map((r: { creator_id: string }) => r.creator_id)
+      .filter((r: { creator_id: string | null; current_owner_id: string | null }) =>
+        r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id)
+      .map((r: { creator_id: string | null }) => r.creator_id as string)
   );
 
   const worksCountMap = new Map<string, number>();

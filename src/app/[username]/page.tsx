@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -13,17 +13,19 @@ import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { LazyCreateUpdateModal } from "@/components/feed/LazyCreateUpdateModal";
 import { FollowButton } from "@/components/profile/FollowButton";
-import { CollectionSection } from "@/components/profile/CollectionSection";
-import { LiveOpportunitiesSection } from "@/components/profile/LiveOpportunitiesSection";
+import {
+  PartnerProfileView,
+  PatronProfileView,
+  type ArtistTileData,
+  type PastOpportunityRow,
+  type CollectedWorkTile,
+} from "@/components/profile/OrgPatronProfiles";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import dynamic from "next/dynamic";
-import { ProfileTabs } from "@/components/profile/ProfileTabs";
-import { OverviewTab } from "@/components/profile/tabs/OverviewTab";
-
-const WorksJustifiedGrid = dynamic(() =>
-  import("@/components/feed/WorksJustifiedGrid").then((m) => ({ default: m.WorksJustifiedGrid }))
-);
+import { ProfileUpdatesSection } from "@/components/profile/ProfileUpdatesSection";
+import { ProfileStickyBar } from "@/components/profile/ProfileStickyBar";
 
 const WorkTab = dynamic(() =>
   import("@/components/profile/tabs/WorkTab").then((m) => ({ default: m.WorkTab }))
@@ -35,14 +37,11 @@ const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage } from "@/types/database";
-import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
+import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { supabaseTransform } from "@/lib/image";
-import { getAvatarGradient, getBannerGradient } from "@/lib/defaults";
+import { getBannerGradient } from "@/lib/defaults";
 import { HideBlogCardToggle } from "@/components/profile/HideBlogCardToggle";
-
-const VALID_TABS = ["overview", "work", "cv", "support"] as const;
-type TabType = typeof VALID_TABS[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   visual_art: "Visual Art", music: "Music", poetry: "Poetry",
@@ -52,7 +51,7 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 
 interface Props {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ tab?: string; ptab?: string }>;
+  searchParams: Promise<{ tab?: string; ptab?: string; artwork?: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -61,6 +60,18 @@ export async function generateMetadata({ params }: Props) {
   if (!profile) return { title: "Artist not found — Patronage" };
 
   const displayName = profile.full_name ?? profile.username;
+
+  // Private supporters (migration 170): never leak the name into metadata
+  const metaIsArtist = profile.role === "artist" || profile.role === "owner";
+  if (!metaIsArtist && profile.role !== "partner" && profile.private_supporter) {
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+    return {
+      title: "Private supporter | Patronage",
+      description: "This patron supports artists on Patronage privately.",
+      alternates: { canonical: `${base}/${username}` },
+      robots: { index: false },
+    };
+  }
 
   // Discipline labels for title
   const disciplineLabels = profile.disciplines?.length
@@ -119,13 +130,13 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ArtistProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
-  const { tab: rawTab, ptab: rawPtab } = await searchParams;
-  const patronTab = rawPtab === "collection" ? "collection" : "overview";
-  // Redirect legacy ?tab=press → cv, ?tab=studio → work
-  const normalised = rawTab === "press" ? "cv" : rawTab === "studio" ? "work" : rawTab;
-  const tab: TabType = (VALID_TABS as readonly string[]).includes(normalised ?? "")
-    ? (normalised as TabType)
-    : "overview";
+  // v2: all profiles are a single scrolling page — legacy ?tab=/?ptab= links
+  // land on the page and can deep-link via #work / #cv / #support anchors.
+  const { artwork: artworkParam } = await searchParams;
+
+  // Legacy ?artwork= deep links used to scroll-and-open a modal in the
+  // available-works grid; the artwork detail page is now the canonical target.
+  if (artworkParam) redirect(`/${username}/works/${artworkParam}`);
 
   const [profile, supabase] = await Promise.all([
     getProfile(username),
@@ -199,9 +210,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             if (ids.length === 0) return [];
             const { data: artists } = await supabase
               .from("profiles")
-              .select("id, username, full_name, avatar_url")
+              .select("id, username, full_name, avatar_url, medium")
               .in("id", ids);
-            return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
+            return (artists ?? []) as Pick<Profile, "id" | "username" | "full_name" | "avatar_url" | "medium">[];
           })
       : Promise.resolve([]),
     // Non-artist: collection
@@ -254,6 +265,56 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   const viewerRole: string | null = viewerRoleResult;
 
+  // ── Partner trust signals (partner profiles only) ──────────────────────────
+  // Application rows aren't publicly readable under RLS, but aggregate counts
+  // and the identities of publicly selected artists are the partner page's
+  // trust content — resolved server-side via the admin client, never sent raw.
+  let partnerListedCount = 0;
+  let partnerPastOpps: PastOpportunityRow[] = [];
+  let partnerArtists: ArtistTileData[] = [];
+  let partnerSelectedTotal = 0;
+  if (!isArtistProfile && profile.role === "partner") {
+    const adminDb = createAdminClient();
+    const todayStr = new Date().toISOString().split("T")[0];
+    const [listedRes, pastRes, appsRes] = await Promise.all([
+      supabase
+        .from("opportunities")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", profile.id)
+        .eq("status", "published"),
+      supabase
+        .from("opportunities")
+        .select("id, slug, title, type, deadline")
+        .eq("profile_id", profile.id)
+        .eq("status", "published")
+        .lt("deadline", todayStr)
+        .order("deadline", { ascending: false })
+        .limit(8),
+      adminDb
+        .from("opportunity_applications")
+        .select("artist_id, opportunity_id, opportunities!inner(profile_id)")
+        .eq("opportunities.profile_id", profile.id)
+        .in("status", ["selected", "approved_pending_assets", "production_ready"]),
+    ]);
+    partnerListedCount = listedRes.count ?? 0;
+    const apps = (appsRes.data ?? []) as unknown as Array<{ artist_id: string; opportunity_id: string }>;
+    const selectedByOpp = new Map<string, number>();
+    for (const a of apps) {
+      selectedByOpp.set(a.opportunity_id, (selectedByOpp.get(a.opportunity_id) ?? 0) + 1);
+    }
+    partnerPastOpps = ((pastRes.data ?? []) as Array<{ id: string; slug: string | null; title: string; type: string; deadline: string | null }>)
+      .map((o) => ({ ...o, selectedCount: selectedByOpp.get(o.id) ?? 0 }));
+    const artistIds = [...new Set(apps.map((a) => a.artist_id))];
+    partnerSelectedTotal = artistIds.length;
+    if (artistIds.length > 0) {
+      const { data: selectedArtists } = await adminDb
+        .from("profiles")
+        .select("id, username, full_name, avatar_url, medium")
+        .in("id", artistIds.slice(0, 12));
+      partnerArtists = (selectedArtists ?? []) as ArtistTileData[];
+    }
+  }
+
   // ── Resolve campaign hero images ──────────────────────────────────────────
   const rawCampaigns = profileCampaigns as Array<{
     id: string;
@@ -295,17 +356,18 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     };
   });
 
-  // ── Phase 2: Tab-conditional fetches ─────────────────────────────────────
-  const needsPortfolio        = isArtistProfile && (tab === "overview" || tab === "work");
-  const needsUpdates          = isArtistProfile && (tab === "overview" || tab === "work");
-  const needsProjects         = isArtistProfile && tab === "work" && !isOwner;
-  const needsSold             = isArtistProfile && tab === "work";
-  const needsCreative         = isArtistProfile && tab === "work";
-  const needsAchievements     = isArtistProfile && (tab === "overview" || tab === "cv");
-  const needsTiers            = isArtistProfile && tab === "support" && profile.support_enabled;
-  const needsCollaborations   = isArtistProfile && tab === "work";
-  const needsArtistCollection = isArtistProfile && tab === "work";
-  const needsSeries           = isArtistProfile && (tab === "work" || tab === "overview");
+  // ── Phase 2: Section fetches — v2 profile is a single scrolling page
+  // (no tabs), so every artist section loads on the one request.
+  const needsPortfolio        = isArtistProfile;
+  const needsUpdates          = isArtistProfile;
+  const needsProjects         = isArtistProfile && !isOwner;
+  const needsSold             = isArtistProfile;
+  const needsCreative         = isArtistProfile;
+  const needsAchievements     = isArtistProfile;
+  const needsTiers            = isArtistProfile && profile.support_enabled;
+  const needsCollaborations   = isArtistProfile;
+  const needsArtistCollection = isArtistProfile;
+  const needsSeries           = isArtistProfile;
   const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
 
   const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await Promise.all([
@@ -470,17 +532,38 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
   const artistProjects = ownerProjects.length > 0 ? ownerProjects : tabProjects;
 
-  const seriesArtworkIdSet = new Set(seriesArtworkIdsRaw as string[]);
-  const images = (portfolioImages as Artwork[]).filter(img => !seriesArtworkIdSet.has(img.id));
+  // Incomplete profiles don't expose available works to the public.
+  const publicAvailableWorks = (isOwner || isProfileComplete(profile) ? enrichedAvailableWorks : []) as Artwork[];
 
-  const followingArtists = followsData as Pick<Profile, "id" | "username" | "full_name" | "avatar_url">[];
+  // The archive is the complete record — every work, availability shown as a
+  // chip. Only works represented by a series card are folded away.
+  const seriesArtworkIdSet = new Set(seriesArtworkIdsRaw as string[]);
+  const images = (portfolioImages as Artwork[]).filter(
+    (img) => !seriesArtworkIdSet.has(img.id)
+  );
+
+  const followingArtists = followsData as ArtistTileData[];
+
+  // Patron collection tiles — public works only, prices never shown
+  const publicCollectionWorks = !isArtistProfile
+    ? (collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[])
+        .filter((w) => w.collection_visible)
+    : [];
+  const showPatronCollection = (profile.collection_public ?? true) && publicCollectionWorks.length > 0;
+  const patronCollectedWorks: CollectedWorkTile[] = publicCollectionWorks.map((w) => ({
+    id: w.id,
+    url: w.url,
+    title: w.title,
+    artistName: w.creator_profile?.full_name ?? w.creator_profile?.username ?? null,
+    href: w.creator_profile
+      ? `/${w.creator_profile.username}/works/${(w as Artwork & { slug?: string | null }).slug ?? w.id}`
+      : null,
+  }));
 
   // Use full data when loaded; fall back to cheap counts for tabs that skip full fetches
   const portfolioCount = (portfolioCountResult as { count: number | null }).count ?? 0;
   const hasSoldWork = ((hasSoldWorkResult as { count: number | null }).count ?? 0) > 0;
   const isCollected = isArtistProfile && (hasSoldWork || soldWorks.length > 0);
-  // Incomplete profiles don't expose available works to the public.
-  const publicAvailableWorks = (isOwner || isProfileComplete(profile) ? enrichedAvailableWorks : []) as Artwork[];
 
   const imagesCount = images.length > 0 ? images.length : portfolioCount;
   const worksCount = isArtistProfile ? publicAvailableWorks.length + imagesCount : 0;
@@ -493,6 +576,20 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     : null;
 
   const displayName = profile.full_name ?? profile.username;
+
+  // Private supporter (migration 170): mask identity for everyone but the
+  // owner — cover, name, bio, links, collection. Following stays public.
+  const maskPatron =
+    !isArtistProfile &&
+    profile.role !== "partner" &&
+    !!profile.private_supporter &&
+    !isOwner;
+  const publicDisplayName = maskPatron ? "Private supporter" : displayName;
+
+  // Support surfaces only exist for visitors when there's something to buy —
+  // enabled with zero active tiers stays owner-only.
+  const hasActiveTiers = (supportTiers as SupportTier[]).some((t) => t.is_active);
+  const showSupport = profile.support_enabled && hasActiveTiers && !isOwner;
 
   const exhibitions = (profile.exhibition_history ?? []) as ExhibitionEntry[];
   const bibliography = (profile.press_bibliography ?? []) as BibliographyEntry[];
@@ -513,21 +610,21 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       {
         "@type": "Person",
         "@id": profileUrl,
-        name: displayName,
+        name: publicDisplayName,
         url: profileUrl,
-        ...(profile.avatar_url && { image: profile.avatar_url }),
-        ...(profile.bio && { description: profile.bio }),
-        ...(jsonLdDisciplines.length > 0 && {
+        ...(!maskPatron && profile.avatar_url && { image: profile.avatar_url }),
+        ...(!maskPatron && profile.bio && { description: profile.bio }),
+        ...(!maskPatron && jsonLdDisciplines.length > 0 && {
           jobTitle: jsonLdDisciplines.join(", "),
           knowsAbout: jsonLdDisciplines,
         }),
-        ...(profile.country && {
+        ...(!maskPatron && profile.country && {
           address: {
             "@type": "PostalAddress",
             addressCountry: profile.country,
           },
         }),
-        ...(sameAs.length > 0 && { sameAs }),
+        ...(!maskPatron && sameAs.length > 0 && { sameAs }),
       },
       ...(isArtistProfile ? [{
         "@type": "BreadcrumbList",
@@ -547,351 +644,369 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       />
       <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
 
-      {/* ── Banner ── */}
-      {/* LCP element. Served via the Supabase render endpoint at a fixed 1600px
-          (a CDN-cached WebP) rather than next/image — which would generate a
-          1920–3840px variant on demand on wide/retina screens, the slow path.
-          Plain <img> with high fetch priority so it's in the initial HTML and
-          paints without waiting on client JS. */}
-      <div className="w-full aspect-[42/9] relative overflow-hidden">
-        {profile.featured_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url}
-            alt={`${displayName} banner`}
-            fetchPriority="high"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{ background: getBannerGradient(profile.username) }}
-          />
-        )}
-      </div>
+      {/* ══ v2 Artist header — full-bleed cover with overlaid name,
+             action bar, bio + selected press. No tabs, no avatar block. ══ */}
+      {isArtistProfile && (() => {
+        const shareImageOptions = [
+          ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
+          ...sharePortfolioImages.slice(0, 3).map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
+        ];
+        const sharePayload = {
+          type: "profile" as const,
+          title: displayName,
+          sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+          price: null,
+          tag: "ARTIST",
+          handle: `@${profile.username}`,
+          imageUrl: profile.avatar_url,
+          shareUrl: `https://patronage.nz/${profile.username}`,
+          imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
+        };
+        const disciplineLabels = profile.disciplines?.length
+          ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
+          : (profile.medium ?? []);
+        const loc = [
+          (profile as Profile & { city?: string | null }).city,
+          profile.country,
+        ].filter(Boolean).join(", ");
+        const pressItems = bibliography.slice(0, 2);
+        const showBlogCard = !!featuredBlogPost && (isOwner || !profile.hide_blog_card);
+        // Only split into two columns when the aside actually has content —
+        // otherwise a short or line-broken bio sits beside a dead half-page.
+        const hasAside = showBlogCard || pressItems.length > 0;
+        const hasBadges = !!profileBadges && (profileBadges.verified || profileBadges.exhibited || profileBadges.grantRecipient || profileBadges.collected);
+        return (
+          <>
+            {/* Cover — LCP element; plain <img> via the Supabase render endpoint */}
+            <div className="relative h-[300px] w-full overflow-hidden sm:h-[380px]">
+              {profile.featured_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url}
+                  alt={`${displayName} cover`}
+                  fetchPriority="high"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
+                />
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{ background: getBannerGradient(profile.username) }}
+                />
+              )}
+              <div
+                className="absolute inset-0"
+                style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.05) 40%, rgba(0,0,0,.65) 100%)" }}
+              />
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-8 sm:px-6">
+                <Link
+                  href="/artists"
+                  className="mb-3 inline-block font-mono text-[10px] tracking-[0.12em] text-white/50 transition-colors hover:text-white/85"
+                >
+                  ← Artists
+                </Link>
+                <div className="flex items-end gap-4 sm:gap-5">
+                  {profile.avatar_url && (
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden sm:h-24 sm:w-24">
+                      <Image
+                        src={profile.avatar_url}
+                        alt={displayName}
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h1 className="mb-3 text-[40px] font-semibold leading-[0.94] tracking-[-0.045em] text-white sm:text-6xl">
+                      {displayName}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 font-mono text-xs text-white/55">
+                      {loc && <span>{loc}</span>}
+                      {loc && disciplineLabels.length > 0 && (
+                        <span aria-hidden className="text-white/25">·</span>
+                      )}
+                      {disciplineLabels.length > 0 && (
+                        <span className="lowercase">{disciplineLabels.join(" · ")}</span>
+                      )}
+                      {profile.open_for_commissions && (
+                        <>
+                          <span aria-hidden className="text-white/25">·</span>
+                          <span className="flex items-center gap-1.5 text-[color:var(--success)]">
+                            <span className="h-[6px] w-[6px] rounded-full bg-success" />
+                            open for commissions
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action bar */}
+            <div className="border-b border-border">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {hasBadges ? (
+                    <>
+                      {profileBadges!.verified && <span className="badge badge-verified">Verified</span>}
+                      {profileBadges!.exhibited && <span className="badge badge-exhibited">Exhibited</span>}
+                      {profileBadges!.grantRecipient && <span className="badge badge-grant">Grant Recipient</span>}
+                      {profileBadges!.collected && <span className="badge badge-exhibited">Collected</span>}
+                    </>
+                  ) : (
+                    <span className="font-mono text-xs text-muted-foreground">@{profile.username}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isOwner && (
+                    <Link
+                      href="/studio"
+                      className="flex h-9 items-center border border-border px-3 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                    >
+                      Edit Profile
+                    </Link>
+                  )}
+                  {isOwner && (
+                    <LazyCreateUpdateModal
+                      profileId={profile.id}
+                      label="Post a studio update +"
+                      projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+                    />
+                  )}
+                  {!isOwner && (
+                    <>
+                      <FollowButton
+                        followingId={profile.id}
+                        initialIsFollowing={alreadyFollowing}
+                        isAuthenticated={!!user}
+                      />
+                      <MessageButton otherUserId={profile.id} />
+                    </>
+                  )}
+                  {showSupport && (
+                    <a
+                      href="#support"
+                      className="inline-flex h-9 items-center bg-brand px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
+                    >
+                      Support this artist
+                    </a>
+                  )}
+                  {profile.website_url && (
+                    <TrackedLink
+                      href={profile.website_url}
+                      profileId={profile.id}
+                      username={profile.username}
+                      eventType="website_click"
+                      className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+                    >
+                      <Globe className="h-4 w-4" />
+                    </TrackedLink>
+                  )}
+                  {profile.instagram_handle && (
+                    <a
+                      href={`https://instagram.com/${profile.instagram_handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+                      title={`@${profile.instagram_handle}`}
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                  )}
+                  {profile.cv_url && (
+                    <TrackedLink
+                      href={profile.cv_url}
+                      profileId={profile.id}
+                      username={profile.username}
+                      eventType="cv_click"
+                      className="flex h-9 items-center border border-border px-2.5 font-mono text-[11px] transition-colors hover:bg-muted"
+                    >
+                      CV
+                    </TrackedLink>
+                  )}
+                  <ShareTrigger
+                    variant="icon"
+                    className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+                    payload={sharePayload}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky mini-header — keeps name + patron actions in reach once
+                the cover and action bar have scrolled away */}
+            <ProfileStickyBar name={displayName}>
+              {!isOwner && (
+                <FollowButton
+                  followingId={profile.id}
+                  initialIsFollowing={alreadyFollowing}
+                  isAuthenticated={!!user}
+                />
+              )}
+              {showSupport && (
+                <a
+                  href="#support"
+                  className="inline-flex h-9 items-center bg-brand px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
+                >
+                  Support
+                </a>
+              )}
+            </ProfileStickyBar>
+
+            {/* Bio + selected press — 2 col desktop */}
+            {(profile.bio || hasAside) && (
+              <div className="border-b border-border px-4 py-9 sm:px-6">
+                <div className={`grid items-start gap-10 ${hasAside ? "lg:grid-cols-[3fr_2fr] lg:gap-16" : ""}`}>
+                  <div>
+                    {profile.is_patronage_supported && (
+                      <p className="mb-2 font-mono text-[10px] tracking-wide text-muted-foreground opacity-70">
+                        With Patronage
+                      </p>
+                    )}
+                    {profile.bio && (
+                      <p className="max-w-[62ch] whitespace-pre-wrap text-[17px] leading-[1.72] text-[color:var(--fg-muted)]">
+                        {profile.bio}
+                      </p>
+                    )}
+                    {publicAvailableWorks.length > 0 && (
+                      <p className="mt-4">
+                        <a
+                          href="#work"
+                          className="font-mono text-[11px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                        >
+                          {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available →
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                  {hasAside && (
+                  <div className="space-y-7">
+                    {showBlogCard && (
+                      <div className="space-y-1">
+                        {!profile.hide_blog_card && (
+                          <Link
+                            href={`/blog/${featuredBlogPost.slug}`}
+                            className="group flex items-center gap-4 border border-border bg-card px-5 py-4 transition-colors hover:border-foreground"
+                          >
+                            {featuredBlogPost.image_url && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={featuredBlogPost.image_url}
+                                alt=""
+                                className="block w-auto shrink-0"
+                                style={{ height: "48px" }}
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="t-section-label mb-1.5">Featured on Patronage</p>
+                              <p className="line-clamp-2 text-sm font-semibold leading-snug group-hover:underline underline-offset-2">
+                                {featuredBlogPost.title}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-sm text-[color:var(--fg-subtle)] transition-colors group-hover:text-foreground">→</span>
+                          </Link>
+                        )}
+                        {isOwner && <HideBlogCardToggle hidden={profile.hide_blog_card} />}
+                      </div>
+                    )}
+                    {pressItems.length > 0 && (
+                      <div>
+                        <h2 className="t-section-label mb-5">Selected press</h2>
+                        <div className="flex flex-col gap-5">
+                          {pressItems.map((item, i) => (
+                            <div key={i}>
+                              <div className="mb-1.5 text-base italic leading-[1.35] tracking-[-0.014em]">
+                                {item.link ? (
+                                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-2">
+                                    &ldquo;{item.title}&rdquo;
+                                  </a>
+                                ) : (
+                                  <>&ldquo;{item.title}&rdquo;</>
+                                )}
+                              </div>
+                              <div className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                                {[item.publication, item.date].filter(Boolean).join(" · ")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
+
+      {/* ── v2 partner / patron profiles — full-width sections, own padding
+             (brief: design_handoff_partner_patron_profiles) ── */}
+      {!isArtistProfile && (profile.role === "partner" ? (
+        <PartnerProfileView
+          profile={profile}
+          displayName={displayName}
+          isOwner={isOwner}
+          canMessage={canMessage}
+          verified={!!(profile.bio && profile.avatar_url)}
+          activeOpps={profileOpportunities}
+          pastOpps={partnerPastOpps}
+          commissionedArtists={partnerArtists}
+          listedCount={partnerListedCount}
+          selectedTotal={partnerSelectedTotal}
+        />
+      ) : (
+        <PatronProfileView
+          profile={profile}
+          displayName={displayName}
+          isOwner={isOwner}
+          canMessage={canMessage}
+          isAuthenticated={!!user}
+          alreadyFollowing={alreadyFollowing}
+          followingArtists={followingArtists}
+          collectedWorks={patronCollectedWorks}
+          showCollection={showPatronCollection}
+          privateSupporter={maskPatron}
+        />
+      ))}
 
       <div className="px-4 sm:px-6 space-y-8 sm:space-y-10">
 
-        {/* ── Identity block ── */}
-        <div className="-mt-[60px] sm:-mt-[100px]">
-          {profile.avatar_url ? (
-            <div className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background overflow-hidden bg-background outline outline-1 outline-black z-10 mb-4">
-              <Image
-                src={profile.avatar_url}
-                alt={displayName}
-                fill
-                className="object-cover"
-                sizes="200px"
-              />
-            </div>
-          ) : (
-            <div
-              className="relative w-[120px] h-[120px] sm:w-[200px] sm:h-[200px] shrink-0 border-2 border-background outline outline-1 outline-black z-10 mb-4 flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg, ${getAvatarGradient(profile.username).from} 0%, ${getAvatarGradient(profile.username).to} 100%)` }}
-            >
-              <span className="text-4xl sm:text-6xl font-semibold text-white/90 select-none">
-                {displayName.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-
-          <div className="flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8">
-
-            {/* Left: name, meta line, bio, action row */}
-            <div className="space-y-3 max-w-3xl lg:flex-1">
-              <div className="space-y-1">
-                <h1 className="text-4xl font-bold tracking-tight">{displayName}</h1>
-                {profile.is_patronage_supported && (
-                  <p className="text-[10px] text-muted-foreground tracking-wide opacity-70">With Patronage</p>
-                )}
-                <p className="text-sm text-muted-foreground">@{profile.username}</p>
-              </div>
-
-              {/* Single meta line: disciplines · career stage · location */}
-              {isArtistProfile && (() => {
-                const parts: string[] = [];
-                const disciplineLabels = profile.disciplines?.length
-                  ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
-                  : (profile.medium ?? []);
-                if (disciplineLabels.length) parts.push(disciplineLabels.join(", "));
-                if (profile.career_stage) parts.push(profile.career_stage);
-                const loc = [
-                  (profile as Profile & { city?: string | null }).city,
-                  profile.country,
-                ].filter(Boolean).join(", ");
-                if (loc) parts.push(loc);
-                return parts.length > 0
-                  ? <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>
-                  : null;
-              })()}
-
-              {/* Credential badges (quiet row below meta line) */}
-              {profileBadges && (profileBadges.verified || profileBadges.exhibited || profileBadges.grantRecipient || profileBadges.collected) && (
-                <div className="flex flex-wrap gap-1.5">
-                  {profileBadges.verified && (
-                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Verified</span>
-                  )}
-                  {profileBadges.exhibited && (
-                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Exhibited</span>
-                  )}
-                  {profileBadges.grantRecipient && (
-                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Grant Recipient</span>
-                  )}
-                  {profileBadges.collected && (
-                    <span className="text-xs border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">Collected</span>
-                  )}
-                </div>
-              )}
-
-              {/* Taste chips — patron/partner only */}
-              {!isArtistProfile && (profile.medium ?? []).length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Taste</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(profile.medium ?? []).map((m) => (
-                      <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {profile.bio && (
-                <p className="text-base leading-relaxed whitespace-pre-wrap pt-1">{profile.bio}</p>
-              )}
-
-              {isArtistProfile && publicAvailableWorks.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  <Link
-                    href={`/${profile.username}?tab=work`}
-                    className="underline underline-offset-2 hover:text-foreground transition-colors"
-                  >
-                    {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available
-                  </Link>
-                </p>
-              )}
-
-              {/* Action row: owner edit / follow + message + icon links */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {isOwner && (
-                  <Link
-                    href="/studio"
-                    className="text-xs border border-border px-3 py-1.5 hover:bg-muted transition-colors"
-                  >
-                    Edit Profile
-                  </Link>
-                )}
-                {isOwner && isArtistProfile && (
-                  <LazyCreateUpdateModal
-                    profileId={profile.id}
-                    label="Post a studio update +"
-                    projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
-                  />
-                )}
-                {canMessage && (
-                  <>
-                    <FollowButton followingId={profile.id} initialIsFollowing={alreadyFollowing} />
-                    <MessageButton otherUserId={profile.id} />
-                  </>
-                )}
-                {profile.website_url && (
-                  <TrackedLink
-                    href={profile.website_url}
-                    profileId={profile.id}
-                    username={profile.username}
-                    eventType="website_click"
-                    className="p-2 border border-border hover:bg-muted transition-colors"
-                  >
-                    <Globe className="w-4 h-4" />
-                  </TrackedLink>
-                )}
-                {profile.instagram_handle && (
-                  <a
-                    href={`https://instagram.com/${profile.instagram_handle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 border border-border hover:bg-muted transition-colors"
-                    title={`@${profile.instagram_handle}`}
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                )}
-                {profile.cv_url && (
-                  <TrackedLink
-                    href={profile.cv_url}
-                    profileId={profile.id}
-                    username={profile.username}
-                    eventType="cv_click"
-                    className="p-2 border border-border hover:bg-muted transition-colors text-xs font-medium"
-                  >
-                    CV
-                  </TrackedLink>
-                )}
-                {/* Donation CTA — only renders for admin-approved charity
-                    partners. Off-site link, opens in a new tab. */}
-                {profile.role === "partner"
-                  && profile.organisation_type === "charity"
-                  && profile.donation_enabled
-                  && profile.donation_url && (
-                  <a
-                    href={profile.donation_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-2 bg-foreground text-background hover:opacity-90 transition-opacity text-xs font-medium"
-                  >
-                    Support
-                  </a>
-                )}
-                {/* Mobile-only share button — hidden on desktop where it lives top-right */}
-                {isArtistProfile && (
-                  <div className="lg:hidden">
-                    <ShareTrigger
-                      variant="icon"
-                      className="p-2 border border-border hover:bg-muted transition-colors"
-                      payload={{
-                        type: "profile",
-                        title: profile.full_name ?? profile.username,
-                        sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
-                        price: null,
-                        tag: "ARTIST",
-                        handle: `@${profile.username}`,
-                        imageUrl: profile.avatar_url,
-                        shareUrl: `https://patronage.nz/${profile.username}`,
-                        imageOptions: (() => {
-                          const opts = [
-                            ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
-                            ...sharePortfolioImages.slice(0, 3).map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
-                          ];
-                          return opts.length > 1 ? opts : undefined;
-                        })(),
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: share button (desktop) + optional featured blog post card */}
-            {isArtistProfile && (() => {
-              const shareImageOptions = [
-                ...(profile.avatar_url ? [{ url: profile.avatar_url, label: "Avatar" }] : []),
-                ...sharePortfolioImages.slice(0, 3)
-                  .map((w, i) => ({ url: w.url!, label: `Work ${i + 1}` })),
-              ];
-              const sharePayload = {
-                type: "profile" as const,
-                title: profile.full_name ?? profile.username,
-                sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
-                price: null,
-                tag: "ARTIST",
-                handle: `@${profile.username}`,
-                imageUrl: profile.avatar_url,
-                shareUrl: `https://patronage.nz/${profile.username}`,
-                imageOptions: shareImageOptions.length > 1 ? shareImageOptions : undefined,
-              };
-              return (
-                <div className="flex flex-col justify-between items-end shrink-0 gap-3">
-                  {/* Desktop-only share button — mobile version lives in the action row */}
-                  <div className="hidden lg:block">
-                    <ShareTrigger
-                      variant="icon"
-                      className="p-2 border border-border hover:bg-muted transition-colors"
-                      payload={sharePayload}
-                    />
-                  </div>
-                  {featuredBlogPost && (isOwner || !profile.hide_blog_card) && (
-                    <div className="space-y-1">
-                      {!profile.hide_blog_card && (
-                        <Link
-                          href={`/blog/${featuredBlogPost.slug}`}
-                          className="group flex items-center gap-4 border border-black px-5 py-4 hover:shadow-sm transition-shadow lg:w-80"
-                        >
-                          {featuredBlogPost.image_url && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={featuredBlogPost.image_url}
-                              alt=""
-                              className="shrink-0 block w-auto"
-                              style={{ height: "48px" }}
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                              Featured on Patronage
-                            </p>
-                            <p className="text-sm font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-                              {featuredBlogPost.title}
-                            </p>
-                          </div>
-                          <span className="text-stone-400 shrink-0 text-sm group-hover:text-foreground transition-colors">→</span>
-                        </Link>
-                      )}
-                      {isOwner && (
-                        <HideBlogCardToggle hidden={profile.hide_blog_card} />
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* ── Artist profile: tabbed layout ── */}
+        {/* ── Artist profile: single scrolling page (v2 — no tabs) ──
+            Order per the design: selected work + highlights → work & archive
+            → CV → support. Anchors keep legacy ?tab= deep links usable. */}
         {isArtistProfile && (
-          <>
-            <ProfileTabs username={profile.username} tab={tab} artistName={profile.full_name ?? profile.username} />
+          <div>
+            <section id="work" aria-label="Work and archive">
+              <WorkTab
+                portfolioImages={images}
+                availableWorks={publicAvailableWorks}
+                soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
+                collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
+                seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
+                profileId={profile.id}
+                username={profile.username}
+                artistName={displayName}
+                artistAvatarUrl={profile.avatar_url}
+                viewerRole={viewerRole}
+                isOwner={isOwner}
+                hideSoldSection={profile.hide_sold_section}
+                displayName={displayName}
+                galleryRowHeight={profile.gallery_row_height}
+                galleryGutter={profile.gallery_gutter}
+                worksRowH={profile.works_row_height}
+                worksHGap={profile.works_h_gap}
+                worksVGap={profile.works_v_gap}
+                worksLastRowAlign={profile.works_last_row_align}
+              />
+            </section>
 
-            <div>
-              {tab === "overview" && (
-                <OverviewTab
-                  exhibitions={exhibitions}
-                  bibliography={bibliography}
-                  receivedGrants={profile.received_grants ?? []}
-                  achievements={achievements}
-                  portfolioImages={images}
-                  featuredSoldWorks={featuredSoldWorks as PortfolioImage[]}
-                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
-                  studioUpdates={studioUpdates}
-                  artistName={displayName}
-                  viewerRole={viewerRole}
-                  username={profile.username}
-                  profileId={isOwner ? undefined : profile.id}
-                  isOwner={isOwner}
-                  galleryRowHeight={profile.gallery_row_height}
-                  galleryGutter={profile.gallery_gutter}
-                  campaigns={resolvedCampaigns}
-                />
-              )}
-
-              {tab === "work" && (
-                <WorkTab
-                  portfolioImages={images}
-                  availableWorks={publicAvailableWorks}
-                  soldWorks={soldWorks as (Artwork & { owner_profile: { username: string; full_name: string | null } | null })[]}
-                  collectionWorks={artistCollectionWorks as unknown as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[]}
-                  seriesList={seriesRaw as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>}
-                  profileId={profile.id}
-                  username={profile.username}
-                  artistName={displayName}
-                  artistAvatarUrl={profile.avatar_url}
-                  viewerRole={viewerRole}
-                  isOwner={isOwner}
-                  hideSoldSection={profile.hide_sold_section}
-                  displayName={displayName}
-                  galleryRowHeight={profile.gallery_row_height}
-                  galleryGutter={profile.gallery_gutter}
-                  worksRowH={profile.works_row_height}
-                  worksHGap={profile.works_h_gap}
-                  worksVGap={profile.works_v_gap}
-                  worksLastRowAlign={profile.works_last_row_align}
-                />
-              )}
-
-              {tab === "cv" && (
+            <section id="cv" aria-label="CV" className="border-t border-border">
+              <div className={profile.open_for_commissions ? "grid items-start gap-x-16 lg:grid-cols-[2fr_1fr]" : ""}>
                 <CvTab
                   exhibitions={exhibitions}
                   bibliography={bibliography}
@@ -903,9 +1018,41 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   displayName={displayName}
                   isOwner={isOwner}
                 />
-              )}
+                {profile.open_for_commissions && (
+                  <aside className="mb-8 space-y-3 bg-[color:var(--tint)] p-5 lg:mt-14">
+                    <p className="flex items-center gap-2 font-mono text-[11px] text-[color:var(--success)]">
+                      <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-success" />
+                      Currently accepting commissions
+                    </p>
+                    {profile.commission_info && (
+                      <p className="text-sm leading-relaxed text-[color:var(--fg-muted)]">
+                        {profile.commission_info}
+                      </p>
+                    )}
+                    {!isOwner && <MessageButton otherUserId={profile.id} label="Enquire" variant="solid" />}
+                    {isOwner && (
+                      <p className="text-xs text-muted-foreground">
+                        Patrons see an Enquire button here.
+                      </p>
+                    )}
+                  </aside>
+                )}
+              </div>
+            </section>
 
-              {tab === "support" && (
+            {/* Campaigns + studio updates — real feed cards, not a micro-rail */}
+            {(resolvedCampaigns.length > 0 || studioUpdates.length > 0) && (
+              <section id="updates" aria-label="Studio updates" className="border-t border-border">
+                <ProfileUpdatesSection
+                  campaigns={resolvedCampaigns}
+                  updates={studioUpdates}
+                  username={profile.username}
+                />
+              </section>
+            )}
+
+            {(showSupport || isOwner) && (
+              <section id="support" aria-label="Support" className="border-t border-border">
                 <SupportTab
                   supportEnabled={profile.support_enabled}
                   isOwner={isOwner}
@@ -914,127 +1061,23 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   userEmail={user?.email ?? undefined}
                   stripeConnected={profile.stripe_connect_status === "enabled"}
                 />
-              )}
-            </div>
-          </>
+              </section>
+            )}
+          </div>
         )}
 
-        {/* ── Patron / Partner sections ── */}
-        {!isArtistProfile && (() => {
-          // Public collection works for grid + tab visibility check
-          const publicCollectionWorks = (collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null; avatar_url: string | null } | null })[])
-            .filter((w) => w.collection_visible);
-          const showCollectionTab = (profile.collection_public ?? true) && publicCollectionWorks.length > 0;
-
-          const collectionGridWorks: ArtworkForGrid[] = publicCollectionWorks.map((w) => ({
-            id: w.id,
-            url: w.url,
-            title: w.title,
-            caption: w.caption,
-            price_cents: w.price_cents,
-            is_poa: w.is_poa,
-            price_currency: w.price_currency as "NZD" | "AUD",
-            medium: w.medium,
-            hide_price: w.hide_price,
-            profile: w.creator_profile
-              ? { username: w.creator_profile.username, full_name: w.creator_profile.full_name, avatar_url: w.creator_profile.avatar_url }
-              : null,
-          }));
-
-          return (
-            <>
-              {/* Patron tab bar — only shows Collection tab when public works exist */}
-              {(isOwner || showCollectionTab) && (
-                <nav className="flex gap-6 border-b border-border">
-                  <Link
-                    href={`/${profile.username}`}
-                    className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${patronTab === "overview" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-                  >
-                    Overview
-                  </Link>
-                  {showCollectionTab && (
-                    <Link
-                      href={`/${profile.username}?ptab=collection`}
-                      className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${patronTab === "collection" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-                    >
-                      Collection
-                    </Link>
-                  )}
-                </nav>
-              )}
-
-              {patronTab === "collection" && showCollectionTab ? (
-                <div className="py-6">
-                  <WorksJustifiedGrid artworks={collectionGridWorks} />
-                </div>
-              ) : (
-                <>
-                  {/* 1. Live Opportunities — top */}
-                  <LiveOpportunitiesSection
-                    initialOpportunities={profileOpportunities}
-                    isOwner={isOwner}
-                  />
-
-                  {/* 2. Artists I Follow */}
-                  <section className="space-y-4 border-t border-border pt-10">
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                      Artists I Follow
-                    </h2>
-                    {followingArtists.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Not following anyone yet.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-4">
-                        {followingArtists.map((a) => (
-                          <Link
-                            key={a.id}
-                            href={`/${a.username}`}
-                            className="flex flex-col items-center gap-1.5 group"
-                          >
-                            <div className="relative w-14 h-14 border border-black overflow-hidden bg-muted">
-                              {a.avatar_url ? (
-                                <Image
-                                  src={a.avatar_url}
-                                  alt={a.full_name ?? a.username}
-                                  fill
-                                  className="object-cover"
-                                  sizes="56px"
-                                />
-                              ) : (
-                                <div className="absolute inset-0 flex items-center justify-center text-lg font-medium text-muted-foreground">
-                                  {(a.full_name ?? a.username).charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors text-center leading-tight">
-                              {a.full_name ?? a.username}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-
-                  {/* 3. Collection */}
-                  <CollectionSection
-                    initialWorks={collectionWorks as (Artwork & { creator_profile: { username: string; full_name: string | null } | null })[]}
-                    isOwner={isOwner}
-                    collectionPublic={profile.collection_public ?? true}
-                  />
-                </>
-              )}
-            </>
-          );
-        })()}
-
-        {/* ── Back link ── */}
-        <div className="border-t border-border pt-6 pb-12">
-          <Link
-            href="/artists"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to artists
-          </Link>
-        </div>
+        {/* ── Back link — artist profiles only; the partner/patron covers
+               carry their own navigation ── */}
+        {isArtistProfile && (
+          <div className="border-t border-border pt-6 pb-12">
+            <Link
+              href="/artists"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to artists
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,9 +6,12 @@ import { initializeInquiryThread } from "@/app/messages/actions";
 
 interface Props {
   otherUserId: string;
+  label?: string;
+  /** "solid" = black CTA (commissions Enquire block) */
+  variant?: "default" | "solid";
 }
 
-export function MessageButton({ otherUserId }: Props) {
+export function MessageButton({ otherUserId, label = "Message", variant = "default" }: Props) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -27,9 +30,13 @@ export function MessageButton({ otherUserId }: Props) {
     <button
       onClick={handleClick}
       disabled={isPending}
-      className="bg-white text-gray-700 border border-gray-300 px-4 py-1.5 text-xs hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className={
+        variant === "solid"
+          ? "inline-flex h-9 items-center bg-foreground text-background px-5 text-[13px] font-medium hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          : "inline-flex h-9 items-center bg-white text-gray-700 border border-gray-300 px-5 text-[13px] font-medium hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      }
     >
-      {isPending ? "…" : "Message"}
+      {isPending ? "…" : label}
     </button>
   );
 }

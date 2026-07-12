@@ -61,90 +61,89 @@ export function OpportunityFilters() {
     updateParam("type", currentType === type ? null : type);
   }
 
+  // v2 type tab — mono 12px, teal underline active
+  const typeTabCls = (active: boolean) =>
+    `-mb-px shrink-0 whitespace-nowrap border-b-2 px-3.5 py-2 font-mono text-xs transition-colors ${
+      active
+        ? "border-brand text-brand"
+        : "border-transparent text-muted-foreground hover:text-foreground"
+    }`;
+
   return (
-    <div className="space-y-2 pb-6 border-b border-border">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex overflow-x-auto gap-x-5 scrollbar-none shrink min-w-0 pb-0.5">
+    <div>
+      {/* Type filter tabs */}
+      <div className="flex items-stretch overflow-x-auto border-b border-border scrollbar-none">
+        <button onClick={() => updateParam("type", null)} className={typeTabCls(!currentType)}>
+          All
+        </button>
+        {OPP_TYPES.map((t) => (
+          <button key={t} onClick={() => toggleType(t)} className={typeTabCls(currentType === t)}>
+            {TYPE_LABELS[t] ?? t}
+          </button>
+        ))}
+      </div>
+
+      {/* Secondary filters + view toggle */}
+      <div className="flex items-center justify-between gap-3 py-3.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={currentCountry ?? "all"} onValueChange={(v) => updateParam("country", v)}>
+            <SelectTrigger className="w-40 font-mono text-xs">
+              <SelectValue placeholder="All countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All countries</SelectItem>
+              {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={currentDiscipline ?? "all"} onValueChange={(v) => updateParam("discipline", v)}>
+            <SelectTrigger className="w-44 font-mono text-xs">
+              <SelectValue placeholder="All disciplines" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All disciplines</SelectItem>
+              {DISCIPLINES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={currentCareerStage ?? "all"} onValueChange={(v) => updateParam("careerStage", v)}>
+            <SelectTrigger className="w-44 font-mono text-xs">
+              <SelectValue placeholder="All career stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All career stages</SelectItem>
+              {CAREER_STAGE_TAGS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
           <button
-            onClick={() => updateParam("type", null)}
-            className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-              !currentType ? "font-semibold border-b border-black" : "text-muted-foreground hover:text-foreground"
+            onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
+            className={`border px-3 py-1.5 font-mono text-xs transition-colors ${
+              currentFreeEntry
+                ? "border-foreground bg-foreground text-white"
+                : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
             }`}
           >
-            All
+            Free Entry
           </button>
-          {OPP_TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => toggleType(t)}
-              className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-                currentType === t ? "font-semibold border-b border-black" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {TYPE_LABELS[t] ?? t}
-            </button>
-          ))}
         </div>
 
-        <div className="flex items-center border border-black shrink-0">
+        <div className="flex shrink-0 items-center border border-border">
           <button
             onClick={() => updateParam("view", "gallery")}
             aria-label="Gallery view"
-            className={`p-2 transition-colors ${currentView === "gallery" ? "bg-black text-white" : "hover:bg-muted"}`}
+            className={`p-2 transition-colors ${currentView === "gallery" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             <GridIcon />
           </button>
           <button
             onClick={() => updateParam("view", "list")}
             aria-label="List view"
-            className={`p-2 border-l border-black transition-colors ${currentView === "list" ? "bg-black text-white" : "hover:bg-muted"}`}
+            className={`border-l border-border p-2 transition-colors ${currentView === "list" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             <ListIcon />
           </button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3 items-center">
-        <Select value={currentCountry ?? "all"} onValueChange={(v) => updateParam("country", v)}>
-          <SelectTrigger className="w-40 text-sm">
-            <SelectValue placeholder="All countries" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All countries</SelectItem>
-            {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={currentDiscipline ?? "all"} onValueChange={(v) => updateParam("discipline", v)}>
-          <SelectTrigger className="w-44 text-sm">
-            <SelectValue placeholder="All disciplines" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All disciplines</SelectItem>
-            {DISCIPLINES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={currentCareerStage ?? "all"} onValueChange={(v) => updateParam("careerStage", v)}>
-          <SelectTrigger className="w-44 text-sm">
-            <SelectValue placeholder="All career stages" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All career stages</SelectItem>
-            {CAREER_STAGE_TAGS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <button
-          onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
-          className={`text-sm px-3 py-1.5 border transition-colors ${
-            currentFreeEntry
-              ? "bg-black text-white border-black"
-              : "border-border text-muted-foreground hover:text-foreground hover:border-black"
-          }`}
-        >
-          Free Entry
-        </button>
       </div>
     </div>
   );

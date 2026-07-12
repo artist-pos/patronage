@@ -266,8 +266,8 @@ export function PortfolioGrid({
                   </div>
                 )}
                 {artwork.is_available && (
-                  <span style={{ position:"absolute",top:8,left:8,fontSize:10,fontWeight:500,padding:"2px 8px",borderRadius:9999,background:"rgba(28,28,30,0.85)",color:"white",letterSpacing:"0.02em" }}>
-                    For sale
+                  <span style={{ position:"absolute",top:8,left:8,fontFamily:"var(--font-geist-mono), monospace",fontSize:9,fontWeight:600,padding:"3px 7px",background:"#000",color:"white",letterSpacing:"0.06em",textTransform:"uppercase" }}>
+                    Available
                   </span>
                 )}
               </a>

@@ -6,6 +6,7 @@ import { getProfileById } from "@/lib/profiles";
 import { getUnreadCount } from "@/lib/messages";
 import { getUnreadNotificationCount } from "@/lib/notifications";
 import { NavBar } from "./NavBar";
+import { HeaderNav } from "./HeaderNav";
 import { SearchCommand } from "@/components/search/SearchCommand";
 
 async function signOut() {
@@ -14,12 +15,6 @@ async function signOut() {
   await supabase.auth.signOut();
   redirect("/");
 }
-
-const NAV_LINKS = [
-  { href: "/feed", label: "Feed" },
-  { href: "/artists", label: "Artists" },
-  { href: "/opportunities", label: "Opportunities" },
-];
 
 export async function Header() {
   const supabase = await createClient();
@@ -34,33 +29,29 @@ export async function Header() {
   ]);
 
   return (
-    <header className="border-b border-stone-100 sticky top-0 z-40 bg-white/90 backdrop-blur-sm">
-      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-6">
+    <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-lg">
+      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 h-[52px] flex items-stretch gap-4 sm:gap-6">
 
         {/* ── Logo ── */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 text-base font-semibold tracking-tight">
-          <Image src="/Favicon_Bleed_512.png" alt="Patronage" width={24} height={24} />
+        <Link href="/" className="flex items-center gap-2 shrink-0 sm:mr-2 text-[15px] font-semibold tracking-tight">
+          <Image src="/Favicon_Bleed_512.png" alt="Patronage" width={22} height={22} />
           <span className="hidden sm:inline">Patronage</span>
         </Link>
 
-        {/* ── Search bar ── */}
-        <SearchCommand />
+        {/* ── Primary nav (desktop, left-aligned mono, role-aware) ── */}
+        <HeaderNav role={profile?.role ?? null} isLoggedIn={!!user} />
 
-        {/* ── Center nav (desktop only, absolutely centered) ── */}
-        <nav className="hidden sm:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 text-sm pointer-events-auto">
-          {NAV_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors whitespace-nowrap"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        {/* ── Search bar — dead-centre of the header on desktop (inner div is
+               absolutely centred; the outer keeps its flex slot so the
+               account column stays pinned right), in-flow below xl ── */}
+        <div className="flex min-w-0 flex-1 items-center">
+          <div className="flex w-full items-center xl:absolute xl:left-1/2 xl:top-0 xl:h-full xl:max-w-sm xl:-translate-x-1/2">
+            <SearchCommand />
+          </div>
+        </div>
 
         {/* ── Account + mobile hamburger ── */}
-        <div className="ml-auto">
+        <div className="flex items-center">
           <NavBar
             isLoggedIn={!!user}
             username={profile?.username ?? null}

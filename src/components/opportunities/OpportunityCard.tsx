@@ -82,11 +82,16 @@ function jitterScore(score: number, oppId: string): number {
   return Math.max(0, Math.min(100, score + (val % 5) - 2));
 }
 
+// v2 match pill — mono/600, tinted bg, square (see globals .pill-match-*)
 function matchBadgeCls(score: number): string {
-  if (score >= 70) return "text-emerald-700 bg-emerald-50 border-emerald-200";
-  if (score >= 50) return "text-amber-700 bg-amber-50 border-amber-200";
-  return "text-stone-500 bg-stone-50 border-stone-200";
+  if (score >= 70) return "pill pill-match-strong";
+  if (score >= 50) return "pill pill-match-partial";
+  return "pill pill-match-weak";
 }
+
+// v2 square bordered mono tag
+const TAG_CLS =
+  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
 
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
   const rawScore = "match_score" in opp ? opp.match_score : undefined;
@@ -111,12 +116,19 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
     opp.funding_range?.trim() ||
     (opp.funding_amount != null ? formatFunding(opp.funding_amount) : null);
 
+  // Deadline urgency colour — urgent red, ≤7 days amber, otherwise muted
+  const daysCls = urgent
+    ? "text-[color:var(--urgent)]"
+    : closing
+      ? "text-[color:var(--warning)]"
+      : "text-muted-foreground";
+
   /* ── List row ── */
   if (view === "list") {
     const row = (
-      <div className={`flex items-center gap-4 border-b py-3 px-2 hover:bg-muted/30 transition-colors group ${opp.is_featured ? "border-b-[3px] border-black" : "border-black"}`}>
+      <div className={`group flex items-center gap-4 border-b bg-card px-3 py-3 transition-colors hover:bg-[color:var(--tint)] ${opp.is_featured ? "border-b-2 border-foreground" : "border-border"}`}>
         {/* Thumbnail */}
-        <div className="relative w-14 h-14 shrink-0 overflow-hidden bg-white border border-black flex items-center justify-center">
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-border bg-white">
           {opp.featured_image_url ? (
             <Image
               src={opp.featured_image_url}
@@ -129,47 +141,45 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
               sizes="56px"
             />
           ) : (
-            <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest text-center px-1">
+            <span className="px-1 text-center font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
               {opp.type}
             </span>
           )}
         </div>
 
         {/* Title + organiser */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm leading-snug truncate group-hover:underline underline-offset-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold leading-snug group-hover:underline underline-offset-2">
             {opp.title}
           </p>
-          <p className="text-xs text-muted-foreground truncate">{opp.organiser}</p>
+          <p className="truncate font-mono text-[11px] text-muted-foreground">{opp.organiser}</p>
         </div>
 
         {/* Type tag */}
-        <span className="hidden sm:block text-xs border border-black px-1.5 py-0.5 leading-none whitespace-nowrap shrink-0">
-          {opp.type}
-        </span>
+        <span className={`hidden shrink-0 sm:block ${TAG_CLS}`}>{opp.type}</span>
 
         {/* Recurring badge */}
         {recurringLabel && (
-          <span className="hidden md:block text-xs bg-stone-800 text-white px-1.5 py-0.5 leading-none whitespace-nowrap shrink-0">
+          <span className="hidden shrink-0 whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-white md:block">
             {recurringLabel}
           </span>
         )}
 
         {/* Funding */}
         {fundingLabel && (
-          <span className="hidden md:block font-mono text-xs font-bold whitespace-nowrap shrink-0">
+          <span className="hidden shrink-0 whitespace-nowrap font-mono text-xs font-semibold md:block">
             {fundingLabel}
           </span>
         )}
 
         {/* Days left */}
-        <span className="font-mono text-xs text-muted-foreground whitespace-nowrap shrink-0">
+        <span className={`shrink-0 whitespace-nowrap font-mono text-xs ${daysCls}`}>
           {days}
         </span>
 
         {/* Match score — list view */}
         {matchScore !== undefined && matchScore >= 30 && (
-          <span className={`text-xs font-medium border px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${matchBadgeCls(matchScore)}`}>
+          <span className={`shrink-0 whitespace-nowrap ${matchBadgeCls(matchScore)}`}>
             {matchScore}%
           </span>
         )}
@@ -184,9 +194,11 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
     );
   }
 
-  /* ── Gallery card ── */
+  /* ── Gallery card — v2 opportunity pin: white surface, teal tint reveal
+     on hover. Featured adds a border-strong outline. No radius, no shadow,
+     no lift. ── */
   const inner = (
-    <article className={`overflow-hidden flex flex-row md:flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-150 ${opp.is_featured ? "border-[3px] border-black" : "border border-black"}`}>
+    <article className={`flex h-full flex-row overflow-hidden bg-card transition-colors duration-150 hover:bg-[color:var(--tint)] md:flex-col ${opp.is_featured ? "border border-foreground" : ""}`}>
 
       {/* ── Image / Logo ── */}
       {/* Mobile: narrow left column; Desktop: full-width top section */}
@@ -208,36 +220,24 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
       {/* ── Content ── */}
       <div className="p-3 md:p-5 flex flex-col gap-1.5 md:gap-2 flex-1 min-w-0">
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1 md:gap-1.5">
+        {/* Tags — square bordered mono chips */}
+        <div className="flex flex-wrap gap-1">
           {matchScore !== undefined && matchScore >= 30 && (
-            <span className={`text-xs font-medium border rounded-full px-2 md:px-3 py-1 leading-none ${matchBadgeCls(matchScore)}`}>
-              {matchScore}%
-            </span>
+            <span className={matchBadgeCls(matchScore)}>{matchScore}%</span>
           )}
-          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
-            {opp.type}
-          </span>
-          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
-            {opp.country}
-          </span>
+          <span className={TAG_CLS}>{opp.type}</span>
+          <span className={TAG_CLS}>{opp.country}</span>
           {recurringLabel && (
-            <span className="text-xs bg-stone-800 text-white rounded-full px-2 md:px-3 py-1 leading-none">
+            <span className="whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-white">
               {recurringLabel}
             </span>
           )}
-          {opp.entry_fee === 0 && (
-            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 md:px-3 py-1 leading-none">
-              Free to enter
-            </span>
-          )}
+          {opp.entry_fee === 0 && <span className={TAG_CLS}>Free to enter</span>}
           {opp.grant_type && (
-            <span className="hidden md:inline-block text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
-              {opp.grant_type}
-            </span>
+            <span className={`hidden md:inline-flex ${TAG_CLS}`}>{opp.grant_type}</span>
           )}
           {opp.recipients_count != null && (
-            <span className="hidden md:inline-block text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+            <span className={`hidden md:inline-flex ${TAG_CLS}`}>
               {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
             </span>
           )}
@@ -245,16 +245,18 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Funding label — mobile only (desktop uses image overlay) */}
         {fundingLabel && (
-          <span className="md:hidden font-mono text-xs font-bold">{fundingLabel}</span>
+          <span className="font-mono text-xs font-semibold md:hidden">{fundingLabel}</span>
         )}
 
         {/* Title */}
-        <h2 className="text-sm font-semibold leading-snug line-clamp-2">{opp.title}</h2>
+        <h2 className="line-clamp-2 text-[15px] font-semibold leading-[1.3] tracking-[-0.015em]">
+          {opp.title}
+        </h2>
 
         {/* Organiser + days */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-xs truncate">{opp.organiser}</span>
-          <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate font-mono text-[11px] text-muted-foreground">{opp.organiser}</span>
+          <span className={`whitespace-nowrap font-mono text-[11px] ${daysCls}`}>
             {days}
           </span>
         </div>
@@ -266,34 +268,27 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           const overflow = visible.length - shown.length;
           if (shown.length === 0) return null;
           return (
-            <div className="hidden md:flex flex-wrap gap-1.5">
+            <div className="hidden flex-wrap gap-1 md:flex">
               {shown.map((cat) => (
-                <span
-                  key={cat}
-                  className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none"
-                >
+                <span key={cat} className={TAG_CLS}>
                   {cat}
                 </span>
               ))}
-              {overflow > 0 && (
-                <span className="text-xs bg-stone-50 text-stone-500 border border-stone-200 rounded-full px-3 py-1 leading-none">
-                  +{overflow} more
-                </span>
-              )}
+              {overflow > 0 && <span className={TAG_CLS}>+{overflow} more</span>}
             </div>
           );
         })()}
 
         {/* Match reason — desktop only, shown in For You tab */}
         {matchReason && matchScore !== undefined && (
-          <p className={`hidden md:block text-xs leading-relaxed ${matchScore >= 70 ? "text-emerald-700" : matchScore >= 50 ? "text-amber-700" : "text-stone-500"}`}>
+          <p className={`hidden text-xs leading-relaxed md:block ${matchScore >= 70 ? "text-[color:var(--success)]" : matchScore >= 50 ? "text-[color:var(--warning)]" : "text-muted-foreground"}`}>
             {matchReason}
           </p>
         )}
 
         {/* Caption — desktop only */}
         {!matchReason && (opp.caption || opp.description) && (
-          <p className="hidden md:block text-xs text-muted-foreground leading-relaxed flex-1">
+          <p className="hidden flex-1 text-[13px] leading-[1.55] text-muted-foreground md:line-clamp-2 md:block">
             {opp.caption ?? opp.description}
           </p>
         )}

@@ -21,11 +21,17 @@ export async function GET(req: NextRequest) {
       )
       .order("deadline", { ascending: true, nullsFirst: false })
       .limit(5),
+    // PostgREST can't ilike a text[] column (and ::text casts aren't allowed
+    // in filters — this errored with `operator does not exist: text[] ~~*`).
+    // Match whole tags instead, trying the query as typed plus Title Case.
     supabase
       .from("opportunities")
       .select(oppSelect)
       .eq("is_active", true)
-      .filter("sub_categories::text", "ilike", p)
+      .overlaps("sub_categories", [
+        q.trim(),
+        q.trim().charAt(0).toUpperCase() + q.trim().slice(1).toLowerCase(),
+      ])
       .order("deadline", { ascending: true, nullsFirst: false })
       .limit(5),
     supabase

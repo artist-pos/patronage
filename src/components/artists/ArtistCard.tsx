@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
 import type { ProfileWithImage } from "@/types/database";
 import type { BadgeSet } from "@/lib/badges";
 import { getAvatarGradient, getBannerGradient } from "@/lib/defaults";
@@ -12,28 +11,26 @@ function locationLabel(artist: ProfileWithImage & { city?: string | null }): str
 
 interface Props {
   artist: ProfileWithImage;
-  view?: "gallery" | "list";
+  view?: "gallery" | "list" | "portrait";
   compact?: boolean; // fixed 200px height for landing page
   badges?: BadgeSet;
 }
 
+/* v2 achievement badges — mono 9px/600, tinted bg, square */
 function SecondaryBadges({ badges }: { badges: BadgeSet }) {
   const pills = [
-    badges.verified && "Verified",
-    badges.exhibited && "Exhibited",
-    badges.grantRecipient && "Grant Recipient",
-    badges.collected && "Collected",
-  ].filter(Boolean) as string[];
+    badges.verified && (["Verified", "badge-verified"] as const),
+    badges.exhibited && (["Exhibited", "badge-exhibited"] as const),
+    badges.grantRecipient && (["Grant", "badge-grant"] as const),
+    badges.collected && (["Collected", "badge-exhibited"] as const),
+  ].filter(Boolean) as (readonly [string, string])[];
 
   if (pills.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {pills.map((label) => (
-        <span
-          key={label}
-          className="text-[10px] border border-black/50 text-muted-foreground px-1.5 py-0.5 leading-none"
-        >
+    <div className="mt-1 flex flex-wrap gap-1">
+      {pills.map(([label, cls]) => (
+        <span key={label} className={`badge ${cls}`}>
           {label}
         </span>
       ))}
@@ -41,22 +38,86 @@ function SecondaryBadges({ badges }: { badges: BadgeSet }) {
   );
 }
 
+/* v2 square bordered mono tag */
+const TAG_CLS =
+  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+
+/* Green commission-availability status — the artist's status colour */
+function CommissionsDot() {
+  return (
+    <span className="flex items-center gap-1 whitespace-nowrap font-mono text-[10px] text-[color:var(--success)]">
+      <span className="h-[5px] w-[5px] rounded-full bg-success" />
+      open for commissions
+    </span>
+  );
+}
+
 export function ArtistCard({ artist, view = "gallery", compact = false, badges }: Props) {
   const displayName = artist.full_name ?? artist.username;
-  const bioTaster = artist.bio
-    ? artist.bio.slice(0, 120) + (artist.bio.length > 120 ? "…" : "")
-    : null;
+
+  /* ── Portrait card — the Artists canvas format: tall work image, then a
+     white info strip. Only used for image-complete (featured) profiles. ── */
+  if (view === "portrait") {
+    const img = artist.primary_image_url ?? artist.avatar_url;
+    return (
+      <Link href={`/${artist.username}`} className="pin flex flex-col overflow-hidden bg-card">
+        <div className="relative aspect-[4/5] overflow-hidden">
+          {img ? (
+            <Image
+              data-pin-img
+              src={img}
+              alt={displayName}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center text-4xl font-semibold text-white/80"
+              style={{ background: getBannerGradient(artist.username) }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <div className="px-3.5 pb-3.5 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-[15px] font-semibold leading-tight">{displayName}</span>
+            {badges?.verified && <span className="badge badge-verified">Verified</span>}
+            {badges?.grantRecipient && <span className="badge badge-grant">Grant</span>}
+          </div>
+          {(locationLabel(artist) || artist.open_for_commissions) && (
+            <div className="mt-1 flex items-center gap-2.5">
+              {locationLabel(artist) && (
+                <span className="truncate font-mono text-[11px] text-muted-foreground">
+                  {locationLabel(artist)}
+                </span>
+              )}
+              {artist.open_for_commissions && <CommissionsDot />}
+            </div>
+          )}
+          {(artist.medium ?? []).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {(artist.medium ?? []).slice(0, 2).map((m) => (
+                <span key={m} className={`${TAG_CLS} lowercase`}>{m}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </Link>
+    );
+  }
 
   /* ── List row ── */
   if (view === "list") {
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex items-center gap-4 border-b border-black py-3 px-2 hover:bg-stone-50 transition-colors duration-100"
+        className="group flex items-center gap-4 border-b border-border bg-card px-3 py-3 transition-colors duration-100 hover:bg-muted"
       >
         {/* Avatar */}
         {artist.avatar_url ? (
-          <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden">
             <Image
               src={artist.avatar_url}
               alt={displayName}
@@ -67,7 +128,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
           </div>
         ) : (
           <div
-            className="w-10 h-10 shrink-0 border border-black flex items-center justify-center text-sm font-semibold text-white/90"
+            className="flex h-10 w-10 shrink-0 items-center justify-center text-sm font-semibold text-white/90"
             style={{ background: `linear-gradient(135deg, ${getAvatarGradient(artist.username).from} 0%, ${getAvatarGradient(artist.username).to} 100%)` }}
           >
             {displayName.charAt(0).toUpperCase()}
@@ -75,23 +136,26 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         )}
 
         {/* Name + handle */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm leading-snug truncate">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold leading-snug">
             {displayName}
             {artist.is_patronage_supported && (
-              <Badge className="ml-2 text-xs font-normal bg-foreground text-background align-middle">
+              <span className="ml-2 inline-flex bg-foreground px-1.5 py-0.5 align-middle font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
                 With Patronage
-              </Badge>
+              </span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground truncate">@{artist.username}</p>
+          <div className="flex items-center gap-2.5">
+            <p className="truncate font-mono text-[11px] text-muted-foreground">@{artist.username}</p>
+            {artist.open_for_commissions && <CommissionsDot />}
+          </div>
           {badges && <SecondaryBadges badges={badges} />}
         </div>
 
         {/* Medium tags */}
-        <div className="hidden sm:flex flex-wrap gap-1 justify-end shrink-0 max-w-[40%]">
+        <div className="hidden max-w-[40%] shrink-0 flex-wrap justify-end gap-1 sm:flex">
           {(artist.medium ?? []).slice(0, 3).map((m) => (
-            <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none whitespace-nowrap">
+            <span key={m} className={TAG_CLS}>
               {m}
             </span>
           ))}
@@ -99,7 +163,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
 
         {/* Location */}
         {locationLabel(artist) && (
-          <span className="hidden md:block text-xs text-muted-foreground whitespace-nowrap shrink-0">
+          <span className="hidden shrink-0 whitespace-nowrap font-mono text-[11px] text-muted-foreground md:block">
             {locationLabel(artist)}
           </span>
         )}
@@ -107,21 +171,22 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
     );
   }
 
-  /* ── Compact card (homepage landing, side-by-side) ── */
+  /* ── Compact card (landing-style, side-by-side) ── */
   if (compact) {
     return (
       <Link
         href={`/${artist.username}`}
-        className="group flex flex-col sm:flex-row border border-black sm:h-[130px] lg:h-full hover:shadow-sm transition-shadow duration-150"
+        className="pin group flex flex-col overflow-hidden bg-card sm:h-[130px] sm:flex-row lg:h-full"
       >
         {/* Image (desktop only) */}
-        <div className="relative hidden sm:block sm:w-1/2 overflow-hidden">
+        <div className="relative hidden overflow-hidden sm:block sm:w-1/2">
           {artist.primary_image_url ? (
             <Image
+              data-pin-img
               src={artist.primary_image_url}
               alt={displayName}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover"
               sizes="50vw"
             />
           ) : (
@@ -135,64 +200,67 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         </div>
 
         {/* Info */}
-        <div className="bg-white border-t border-black sm:border-t-0 sm:border-l flex flex-col overflow-hidden sm:w-1/2 p-3 gap-2">
+        <div className="flex flex-col gap-2 overflow-hidden bg-card p-3.5 sm:w-1/2">
           <div className="flex items-start gap-2">
             {artist.avatar_url && (
-              <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden">
                 <Image src={artist.avatar_url} alt={displayName} fill className="object-cover" sizes="40px" />
               </div>
             )}
-            <div className="flex flex-col gap-1 pt-1 min-w-0">
-              <p className="font-bold leading-snug truncate">{displayName}</p>
+            <div className="flex min-w-0 flex-col gap-1 pt-1">
+              <p className="truncate text-sm font-semibold leading-snug">{displayName}</p>
               {artist.is_patronage_supported && (
-                <Badge className="text-xs font-normal bg-foreground text-background w-fit">With Patronage</Badge>
+                <span className="inline-flex w-fit bg-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
+                  With Patronage
+                </span>
               )}
               {badges && <SecondaryBadges badges={badges} />}
-              {locationLabel(artist) && <span className="text-xs text-muted-foreground">{locationLabel(artist)}</span>}
+              {locationLabel(artist) && (
+                <span className="font-mono text-[11px] text-muted-foreground">{locationLabel(artist)}</span>
+              )}
             </div>
           </div>
           {(artist.medium ?? []).length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {(artist.medium ?? []).slice(0, 2).map((m) => (
-                <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">{m}</span>
+                <span key={m} className={TAG_CLS}>{m}</span>
               ))}
             </div>
           ) : artist.career_stage ? (
-            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">{artist.career_stage}</span>
+            <span className={`w-fit ${TAG_CLS}`}>{artist.career_stage}</span>
           ) : null}
         </div>
       </Link>
     );
   }
 
-  /* ── Gallery card — horizontal bar, avatar inside info block ── */
+  /* ── Gallery card — v2: white surface, containerless, image strip left,
+     hover dims the image. No borders, no radius, no shadow. ── */
   return (
     <Link
       href={`/${artist.username}`}
-      className="group flex flex-row border border-black h-auto sm:h-[154px] hover:shadow-sm transition-shadow duration-150"
+      className="pin group flex h-auto flex-row overflow-hidden bg-card sm:h-[154px]"
     >
       {/* Left: image strip — 40% width */}
-      <div className="relative w-2/5 shrink-0 overflow-hidden bg-stone-100">
+      <div className="relative w-2/5 shrink-0 overflow-hidden bg-stone-200">
         {artist.primary_image_url ? (
           <Image
+            data-pin-img
             src={artist.primary_image_url}
             alt={displayName}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover"
             sizes="(max-width: 1024px) 25vw, 17vw"
           />
         ) : artist.avatar_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={artist.avatar_url}
-              alt=""
-              aria-hidden
-              className="absolute inset-0 w-full h-full object-cover scale-110"
-              style={{ filter: "blur(20px) brightness(0.7)" }}
-            />
-            <div className="absolute inset-0 bg-black/30" />
-          </>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            data-pin-img
+            src={artist.avatar_url}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         ) : (
           <div
             className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-white/80"
@@ -203,11 +271,11 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         )}
       </div>
 
-      {/* Right: info block — 60% width, 12px left padding */}
-      <div className="bg-white border-l border-black flex flex-col w-3/5 pl-3 pr-2 pt-6 pb-2 sm:pb-3 gap-2 sm:overflow-hidden">
+      {/* Right: info block — 60% width */}
+      <div className="flex w-3/5 flex-col gap-2 bg-card py-4 pl-4 pr-3 sm:overflow-hidden">
         <div className="flex items-start gap-2">
           {artist.avatar_url ? (
-            <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden">
               <Image
                 src={artist.avatar_url}
                 alt={displayName}
@@ -218,30 +286,30 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
             </div>
           ) : (
             <div
-              className="w-10 h-10 shrink-0 border border-black flex items-center justify-center text-sm font-semibold text-white/90"
+              className="flex h-10 w-10 shrink-0 items-center justify-center text-sm font-semibold text-white/90"
               style={{ background: `linear-gradient(135deg, ${getAvatarGradient(artist.username).from} 0%, ${getAvatarGradient(artist.username).to} 100%)` }}
             >
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="flex flex-col gap-1 pt-1 min-w-0">
-            <p className="font-bold leading-snug break-words text-sm">{displayName}</p>
+          <div className="flex min-w-0 flex-col gap-1 pt-1">
+            <p className="break-words text-[15px] font-semibold leading-snug">{displayName}</p>
             {artist.is_patronage_supported && (
-              <Badge className="text-xs font-normal bg-foreground text-background w-fit">
+              <span className="inline-flex w-fit bg-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
                 With Patronage
-              </Badge>
+              </span>
             )}
             {badges && <SecondaryBadges badges={badges} />}
             {locationLabel(artist) && (
-              <span className="text-xs text-muted-foreground truncate">{locationLabel(artist)}</span>
+              <span className="truncate font-mono text-[11px] text-muted-foreground">{locationLabel(artist)}</span>
             )}
           </div>
         </div>
 
         {(artist.medium ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {(artist.medium ?? []).slice(0, 3).map((m) => (
-              <span key={m} className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1 leading-none">
+              <span key={m} className={TAG_CLS}>
                 {m}
               </span>
             ))}

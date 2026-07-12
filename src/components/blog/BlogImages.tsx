@@ -22,7 +22,7 @@ export function BlogImages({ imageUrl, imageUrl2 }: Props) {
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex gap-[2px] bg-feed-bg">
         <img
           src={imageUrl}
           alt=""

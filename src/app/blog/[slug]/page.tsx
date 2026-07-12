@@ -19,7 +19,7 @@ const getPost = cache(async (slug: string) => {
   const now = new Date().toISOString();
   return supabase
     .from("blog_posts")
-    .select("*, featured_profile:profiles(id, username, full_name, bio, avatar_url)")
+    .select("*, featured_profile:profiles(id, username, full_name, bio, avatar_url, city, country, disciplines, medium)")
     .eq("slug", slug)
     .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${now})`)
     .single();
@@ -109,7 +109,7 @@ export default async function BlogPostPage({ params }: Props) {
         url: canonicalUrl,
         ...(description && { description }),
         datePublished: post.published_at ?? post.created_at,
-        dateModified: (post as any).updated_at ?? post.published_at ?? post.created_at,
+        dateModified: (post as { updated_at?: string | null }).updated_at ?? post.published_at ?? post.created_at,
         ...(post.image_url && {
           image: { "@type": "ImageObject", url: post.image_url, width: 1200, height: 630 },
         }),
@@ -134,107 +134,154 @@ export default async function BlogPostPage({ params }: Props) {
     ],
   };
 
+  // Meta lines (Practitioner / Location / Discipline) — feature-artist posts only
+  const fp = post.featured_profile as {
+    id: string; username: string; full_name: string | null; bio: string | null;
+    avatar_url: string | null; city?: string | null; country?: string | null;
+    disciplines?: string[] | null; medium?: string[] | null;
+  } | null;
+  const metaLines: Array<[string, string]> = [];
+  if (fp) {
+    metaLines.push(["Practitioner", fp.full_name ?? fp.username]);
+    const loc = [fp.city, fp.country].filter(Boolean).join(", ");
+    if (loc) metaLines.push(["Location", loc]);
+    const disciplines = (fp.disciplines?.length ? fp.disciplines : fp.medium ?? [])
+      .map((d) => d.replace(/_/g, " "))
+      .join(" / ");
+    if (disciplines) metaLines.push(["Discipline", disciplines]);
+  }
+
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-16 space-y-10">
+    <div className="mx-auto max-w-[1280px] px-5 pb-16 pt-5 sm:px-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Back link */}
       <Link
         href="/blog"
-        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className="text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
       >
         ← Blog
       </Link>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-12 lg:gap-16 items-start">
+      <div className="mt-5 grid grid-cols-1 items-start gap-12 lg:grid-cols-[2.2fr_1fr]">
 
         {/* ── Left: article ── */}
-        <article className="space-y-8 min-w-0">
+        <article className="min-w-0">
           {/* Featured image(s) */}
           {post.image_url && (
-            <div className="overflow-hidden">
+            <div className="mb-6 overflow-hidden">
               <BlogImages imageUrl={post.image_url} imageUrl2={post.image_url_2} />
             </div>
           )}
 
           {/* Header */}
-          <div className="space-y-2 max-w-[720px]">
-            <div className="flex items-start gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight leading-tight flex-1">
-                {post.title}
-              </h1>
-              {post.image_url && (() => {
-                const imageOptions = [
-                  { url: post.image_url, label: "Image 1" },
-                  ...(post.image_url_2 ? [{ url: post.image_url_2, label: "Image 2" }] : []),
-                ];
-                return (
-                  <ShareTrigger
-                    variant="icon"
-                    payload={{
-                      type: "blog",
-                      title: post.title,
-                      sub: "",
-                      price: null,
-                      tag: "Blog",
-                      handle: "patronage.nz",
-                      imageUrl: post.image_url,
-                      shareUrl: canonicalUrl,
-                      imageOptions: imageOptions.length > 1 ? imageOptions : undefined,
-                    }}
-                    className="mt-1 w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-muted transition-colors shrink-0"
-                  />
-                );
-              })()}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {formatDate(post.published_at ?? post.created_at)}
-            </p>
+          <div className="mb-1.5 flex items-start justify-between gap-4">
+            <h1 className="flex-1 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em]">
+              {post.title}
+            </h1>
+            {post.image_url && (() => {
+              const imageOptions = [
+                { url: post.image_url, label: "Image 1" },
+                ...(post.image_url_2 ? [{ url: post.image_url_2, label: "Image 2" }] : []),
+              ];
+              return (
+                <ShareTrigger
+                  variant="icon"
+                  payload={{
+                    type: "blog",
+                    title: post.title,
+                    sub: "",
+                    price: null,
+                    tag: "Blog",
+                    handle: "patronage.nz",
+                    imageUrl: post.image_url,
+                    shareUrl: canonicalUrl,
+                    imageOptions: imageOptions.length > 1 ? imageOptions : undefined,
+                  }}
+                  className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+                />
+              );
+            })()}
           </div>
+          <p className="mb-[22px] text-[13px] text-[color:var(--fg-subtle)]">
+            {formatDate(post.published_at ?? post.created_at)}
+          </p>
 
-          {/* Featured artist card */}
-          {post.featured_profile && (
+          {/* Byline box — featured artist, or the house author for essays */}
+          {fp ? (
             <Link
-              href={`/${post.featured_profile.username}`}
-              className="flex items-center gap-4 max-w-[720px] p-4 border-[3px] border-black rounded-xl hover:bg-muted/30 transition-colors"
+              href={`/${fp.username}`}
+              className="mb-7 flex items-start gap-3.5 bg-feed-bg px-[18px] py-4 transition-opacity hover:opacity-85"
             >
-              {post.featured_profile.avatar_url ? (
+              {fp.avatar_url ? (
                 <Image
-                  src={post.featured_profile.avatar_url}
-                  alt={post.featured_profile.full_name ?? post.featured_profile.username}
-                  width={56}
-                  height={56}
-                  className="rounded-full object-cover shrink-0"
+                  src={fp.avatar_url}
+                  alt={fp.full_name ?? fp.username}
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 shrink-0 object-cover"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-full bg-stone-200 shrink-0" />
+                <div
+                  className="h-11 w-11 shrink-0"
+                  style={{ background: "linear-gradient(145deg,#333,#555)" }}
+                />
               )}
               <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
-                  Featured Artist
+                <p className="mb-[3px] text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+                  Featured artist
                 </p>
-                <p className="text-sm font-semibold leading-snug">
-                  {post.featured_profile.full_name ?? post.featured_profile.username}
+                <p className="mb-[3px] text-[14.5px] font-semibold leading-snug">
+                  {fp.full_name ?? fp.username}
                 </p>
-                {post.featured_profile.bio && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                    {post.featured_profile.bio}
+                {fp.bio && (
+                  <p className="line-clamp-2 text-[12.5px] leading-[1.55] text-[color:var(--fg-muted)]">
+                    {fp.bio}
                   </p>
                 )}
               </div>
             </Link>
+          ) : (
+            <div className="mb-7 flex items-start gap-3.5 bg-feed-bg px-[18px] py-4">
+              <div
+                className="h-11 w-11 shrink-0"
+                style={{ background: "linear-gradient(145deg,#333,#555)" }}
+              />
+              <div className="min-w-0">
+                <p className="mb-[3px] text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+                  Written by
+                </p>
+                <p className="mb-[3px] text-[14.5px] font-semibold leading-snug">Blake Aitken</p>
+                <p className="text-[12.5px] leading-[1.55] text-[color:var(--fg-muted)]">
+                  I&rsquo;m an artist working across public interventions and cultural
+                  infrastructure. I&rsquo;m currently building Patronage to help artists find
+                  funding, share their work, and connect with the people who support it.
+                </p>
+              </div>
+            </div>
           )}
 
-          {/* Body — capped at comfortable reading width */}
+          {/* Meta lines — feature posts only */}
+          {metaLines.length > 0 && (
+            <div className="mb-5 text-[13.5px] leading-[1.9] text-[color:var(--fg-muted)]">
+              {metaLines.map(([label, value]) => (
+                <div key={label}>
+                  <strong className="font-semibold text-foreground">{label}:</strong> {value}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Body */}
           {post.body && (
             <div
               className="
-                max-w-[720px]
-                text-sm leading-relaxed text-foreground
+                text-foreground
                 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-8 [&_h1]:mb-3
-                [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-2
+                [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:mt-8 [&_h2]:mb-3
                 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2
-                [&_p]:mb-4
+                [&_p]:text-[15.5px] [&_p]:leading-[1.75] [&_p]:mb-[18px]
+                [&_li]:text-[15.5px] [&_li]:leading-[1.75]
                 [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-4 [&_ul>li]:mb-1
                 [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-4 [&_ol>li]:mb-1
                 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:opacity-70
@@ -248,33 +295,35 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </article>
 
-        {/* ── Right: sidebar ── */}
+        {/* ── Right: sidebar — thumbnail rows, hairline dividers ── */}
         {sidebar.length > 0 && (
-          <aside className="lg:sticky lg:top-6 lg:self-start space-y-5">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <aside className="border-t border-border pt-6 lg:sticky lg:top-[72px] lg:self-start lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               More from the blog
             </p>
-            <div className="space-y-4">
+            <div>
               {sidebar.map(p => (
                 <Link
                   key={p.slug}
                   href={`/blog/${p.slug}`}
-                  className="group flex flex-col gap-2"
+                  className="flex gap-3 border-b border-border py-3 transition-opacity hover:opacity-80"
                 >
-                  <div className="aspect-video overflow-hidden rounded-lg bg-stone-100 flex items-center justify-center">
+                  <div className="h-[76px] w-[76px] shrink-0 overflow-hidden bg-feed-bg">
                     {p.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={p.image_url}
                         alt=""
-                        className="w-full h-full object-contain group-hover:opacity-85 transition-opacity"
+                        className="h-full w-full object-cover"
+                        loading="lazy"
                       />
                     )}
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium leading-snug group-hover:underline group-hover:underline-offset-2">
+                  <div className="min-w-0">
+                    <p className="mb-1 text-[13px] font-semibold leading-[1.35]">
                       {p.title}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[11.5px] text-[color:var(--fg-subtle)]">
                       {formatDate(p.published_at ?? p.created_at)}
                     </p>
                   </div>

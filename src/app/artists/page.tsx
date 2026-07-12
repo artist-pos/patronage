@@ -1,9 +1,10 @@
 import { Suspense } from "react";
-import { getProfiles } from "@/lib/profiles";
+import { getProfiles, getProfileById } from "@/lib/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
+import { AdminSpotlightMenu } from "@/components/artists/AdminSpotlightMenu";
 import { computeBadges } from "@/lib/badges";
 import type { CountryEnum, CareerStageEnum } from "@/types/database";
 
@@ -14,7 +15,7 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string }>;
+  searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string; commissions?: string }>;
 }
 
 export default async function ArtistsPage({ searchParams }: PageProps) {
@@ -22,23 +23,25 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const country = params.country as CountryEnum | undefined;
   const career_stage = params.stage as CareerStageEnum | undefined;
   const medium = params.medium;
+  const openForCommissions = params.commissions === "1";
   const view = params.view === "list" ? "list" : params.view === "gallery" ? "gallery" : "spotlight";
 
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [artists, collectedResult, worksCountResult, spotlightResult] = await Promise.all([
-    getProfiles({ country, career_stage, medium }),
-    // IDs of artists who have had at least one work transferred
+  const [artists, collectedResult, worksCountResult, blogSpotlightResult, profileSpotlightResult, { data: { user } }] = await Promise.all([
+    getProfiles({ country, career_stage, medium, openForCommissions }),
+    // IDs of artists who have had at least one work transferred.
+    // PostgREST can't compare two columns in a filter — fetch both and
+    // compare in JS (a literal "creator_id" string was a uuid cast error).
     supabase
       .from("artworks")
-      .select("creator_id")
-      .neq("current_owner_id", "creator_id"),
+      .select("creator_id, current_owner_id"),
     // Works count per artist profile
     supabase
       .from("artworks")
       .select("profile_id"),
-    // Active spotlight from blog posts
+    // Fallback spotlight from blog posts (legacy mechanism)
     supabase
       .from("blog_posts")
       .select("featured_profile_id")
@@ -48,13 +51,26 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
       .order("spotlight_until", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Admin-set spotlight (profiles.spotlight_until) — takes precedence
+    supabase
+      .from("profiles")
+      .select("id")
+      .gte("spotlight_until", today)
+      .order("spotlight_until", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.auth.getUser(),
   ]);
+
+  const viewerProfile = user ? await getProfileById(user.id) : null;
+  const isAdmin = viewerProfile?.role === "admin" || viewerProfile?.role === "owner";
 
   // Build sets for O(1) lookups
   const collectedSet = new Set(
     (collectedResult.data ?? [])
-      .filter((r: { creator_id: string }) => r.creator_id)
-      .map((r: { creator_id: string }) => r.creator_id)
+      .filter((r: { creator_id: string | null; current_owner_id: string | null }) =>
+        r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id)
+      .map((r: { creator_id: string | null }) => r.creator_id as string)
   );
 
   const worksCountMap = new Map<string, number>();
@@ -63,10 +79,14 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
     worksCountMap.set(r.profile_id, (worksCountMap.get(r.profile_id) ?? 0) + 1);
   }
 
-  const hasFilters = !!(country || career_stage || medium);
+  const hasFilters = !!(country || career_stage || medium || openForCommissions);
 
-  // Spotlight artist — derived from the most recent published blog post with a future spotlight_until date
-  const spotlightProfileId = spotlightResult.data?.featured_profile_id ?? null;
+  // Spotlight artist — admin-set (profiles.spotlight_until) wins; the legacy
+  // blog-post spotlight remains as fallback
+  const spotlightProfileId =
+    profileSpotlightResult.data?.id ??
+    blogSpotlightResult.data?.featured_profile_id ??
+    null;
   const spotlightArtist =
     view === "spotlight" && !hasFilters && spotlightProfileId
       ? (artists.find((a) => a.id === spotlightProfileId) ?? null)
@@ -76,6 +96,26 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
     ? artists.filter((a) => a.id !== spotlightArtist.id)
     : artists;
 
+  // ── Two tiers below the (single, admin-set) spotlight. A directory is a
+  // list, not a mosaic:
+  // Directory: everyone presentable (a name or an image) as clean rows.
+  // Recently joined: bare signups as mono handles — never fake directory entries.
+  const completeness = (a: (typeof artists)[number]) => {
+    const hasImage = !!(a.primary_image_url || a.avatar_url);
+    const hasName = !!a.full_name;
+    const hasBio = !!a.bio;
+    return { hasImage, hasName, hasBio, score: (hasImage ? 2 : 0) + (hasName ? 2 : 0) + (hasBio ? 1 : 0) };
+  };
+
+  const directoryArtists = gridArtists
+    .filter((a) => { const c = completeness(a); return c.hasName || c.hasImage; })
+    .sort((a, b) => completeness(b).score - completeness(a).score);
+
+  const recentlyJoined = gridArtists.filter((a) => {
+    const c = completeness(a);
+    return !c.hasName && !c.hasImage;
+  });
+
   const activeFilters = [
     country,
     career_stage,
@@ -83,66 +123,133 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Artists</h1>
-        <p className="text-sm text-muted-foreground">
-          {artists.length} artist{artists.length !== 1 ? "s" : ""}
-          {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
-        </p>
+    <div>
+      {/* ══ Page header — title, count, filters ══ */}
+      <div className="border-b border-border">
+        <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6">
+          <div className="mb-4 flex items-baseline gap-3">
+            <h1 className="text-2xl font-semibold tracking-[-0.025em]">Artists</h1>
+            <span className="font-mono text-xs text-muted-foreground">
+              {artists.length} artist{artists.length !== 1 ? "s" : ""}
+              {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
+            </span>
+          </div>
+
+          <Suspense>
+            <ArtistFilters />
+          </Suspense>
+        </div>
       </div>
 
-      <Suspense>
-        <ArtistFilters />
-      </Suspense>
-
-      {/* Spotlight hero — only in spotlight view with no active filters */}
-      {spotlightArtist && (
-        <ArtistSpotlightHero artist={spotlightArtist} />
-      )}
-
-      {gridArtists.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-12 text-center">
-          No artists match those filters.
-        </p>
-      ) : view === "list" ? (
-        <div className="border-t border-black">
-          {gridArtists.map((artist) => (
-            <ArtistCard
-              key={artist.id}
-              artist={artist}
-              view="list"
-              badges={computeBadges(
-                { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-                worksCountMap.get(artist.id) ?? 0,
-                collectedSet.has(artist.id)
-              )}
-            />
-          ))}
-        </div>
-      ) : (
-        <>
+      {/* ══ Content — on the feed surface ══ */}
+      <div className="min-h-screen bg-feed-bg">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6">
+          {/* Spotlight hero — only in spotlight view with no active filters */}
           {spotlightArtist && (
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground -mb-4">
-              All artists · {gridArtists.length}
-            </p>
+            <div className="relative">
+              <ArtistSpotlightHero artist={spotlightArtist} />
+              {isAdmin && (
+                <div className="absolute right-2 top-2 z-10">
+                  <AdminSpotlightMenu
+                    profileId={spotlightArtist.id}
+                    artistName={spotlightArtist.full_name ?? spotlightArtist.username}
+                    isSpotlit
+                  />
+                </div>
+              )}
+            </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gridArtists.map((artist) => (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                view="gallery"
-                badges={computeBadges(
-                  { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-                  worksCountMap.get(artist.id) ?? 0,
-                  collectedSet.has(artist.id)
-                )}
-              />
-            ))}
-          </div>
-        </>
-      )}
+
+          {gridArtists.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No artists match those filters.
+            </p>
+          ) : view === "list" ? (
+            <div className="border-t border-border">
+              {gridArtists.map((artist) => (
+                <ArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  view="list"
+                  badges={computeBadges(
+                    { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+                    worksCountMap.get(artist.id) ?? 0,
+                    collectedSet.has(artist.id)
+                  )}
+                />
+              ))}
+            </div>
+          ) : view === "gallery" ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {gridArtists.map((artist) => (
+                <ArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  view="gallery"
+                  badges={computeBadges(
+                    { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+                    worksCountMap.get(artist.id) ?? 0,
+                    collectedSet.has(artist.id)
+                  )}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Directory — everyone presentable, as rows */}
+              {directoryArtists.length > 0 && (
+                <div className="space-y-3">
+                  <p className="t-section-label">All artists · {directoryArtists.length}</p>
+                  <div>
+                    {directoryArtists.map((artist) => (
+                      <div key={artist.id} className="flex items-stretch">
+                        <div className="min-w-0 flex-1">
+                          <ArtistCard
+                            artist={artist}
+                            view="list"
+                            badges={computeBadges(
+                              { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+                              worksCountMap.get(artist.id) ?? 0,
+                              collectedSet.has(artist.id)
+                            )}
+                          />
+                        </div>
+                        {isAdmin && (
+                          <div className="flex items-center border-b border-border bg-card pr-1.5">
+                            <AdminSpotlightMenu
+                              profileId={artist.id}
+                              artistName={artist.full_name ?? artist.username}
+                              isSpotlit={artist.id === spotlightProfileId}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recently joined — bare signups as handles, not directory entries */}
+              {recentlyJoined.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <p className="t-section-label">Recently joined</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recentlyJoined.map((artist) => (
+                      <a
+                        key={artist.id}
+                        href={`/${artist.username}`}
+                        className="border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                      >
+                        @{artist.username}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

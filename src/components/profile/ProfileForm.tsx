@@ -176,6 +176,39 @@ export function ProfileForm({ profile, role }: Props) {
         </div>
       </div>
 
+      {/* ── Commissions (artists) ── */}
+      {isArtist && (
+        <div className="space-y-3 border-t border-border pt-6">
+          <input type="hidden" name="has_commission_fields" value="1" />
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              name="open_for_commissions"
+              defaultChecked={profile?.open_for_commissions ?? false}
+              className="border-black"
+            />
+            Open for commissions
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Shows a green status on your profile and lets patrons filter the
+            artist directory for artists taking commissions.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="commission_info">
+              Commission details <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <textarea
+              id="commission_info"
+              name="commission_info"
+              defaultValue={profile?.commission_info ?? ""}
+              rows={3}
+              placeholder="What you take commissions for, typical lead time, price guidance…"
+              className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── Demographics (opt-in, private, for anonymised reporting) ── */}
       <div className="space-y-5 border-t border-border pt-6">
         <div className="space-y-1">

@@ -20,6 +20,8 @@ interface Props {
   initialVGap?: number;
   initialLastRowAlign?: "left" | "center" | "right";
   noBorder?: boolean;
+  /** Section label — "Available" when an archive grid follows it */
+  heading?: string;
 }
 
 function AvailableWorksSectionInner({
@@ -35,6 +37,7 @@ function AvailableWorksSectionInner({
   initialVGap,
   initialLastRowAlign,
   noBorder,
+  heading = "Available works",
 }: Props) {
   const [works, setWorks] = useState<Artwork[]>(initialWorks);
   const router = useRouter();
@@ -96,8 +99,8 @@ function AvailableWorksSectionInner({
   return (
     <section ref={sectionRef} className={`space-y-4 ${noBorder ? "pt-0" : "border-t border-border pt-10"}`}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          Available Works
+        <h2 className="t-section-label">
+          {heading}
         </h2>
         {isOwner && works.length > 0 && (
           <AddAvailableWorkModal profileId={profileId} onSuccess={handleWorkAdded} />

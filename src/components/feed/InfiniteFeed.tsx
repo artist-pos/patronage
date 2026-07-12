@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FeedCard } from "@/components/feed/FeedCard";
+import { renderExplorePin, type ExplorePin } from "@/components/feed/ExplorePinCards";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 const PAGE_SIZE = 10;
@@ -28,6 +29,12 @@ function useColumnCount(): number {
 interface Props {
   initialUpdates: ProjectUpdateWithArtist[];
   initialHasMore: boolean;
+  /** v2 Explore — available-work pins interleaved with updates */
+  extraPins?: ExplorePin[];
+  /** Full-width band (e.g. closing-soon opportunities) inserted after `bandAfter` items */
+  band?: React.ReactNode;
+  /** How many masonry items render before the band. Default 8. */
+  bandAfter?: number;
   audience?: FeedAudience;
   isLoggedIn?: boolean;
   rightSlot?: React.ReactNode;
@@ -40,6 +47,9 @@ interface Props {
 export function InfiniteFeed({
   initialUpdates,
   initialHasMore,
+  extraPins = [],
+  band,
+  bandAfter = 8,
   audience = "everyone",
   isLoggedIn = false,
   rightSlot,
@@ -99,48 +109,71 @@ export function InfiniteFeed({
     router.push(`/feed?${next.toString()}`, { scroll: false });
   }
 
-  const isEmpty = updates.length === 0;
+  const isEmpty = updates.length === 0 && extraPins.length === 0;
+
+  // Interleave: every fourth update is followed by a work pin so art for sale
+  // threads through the masonry without dominating it. Leftover pins only
+  // render when there are no updates at all — never dumped below the feed.
+  const items: React.ReactNode[] = [];
+  {
+    const extras = [...extraPins];
+    updates.forEach((u, i) => {
+      items.push(
+        <FeedCard
+          key={u.id}
+          u={u}
+          priority={i < 4}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+        />
+      );
+      if ((i + 1) % 4 === 0 && extras.length > 0) {
+        items.push(<div key={`x-${extras.length}`} className="mb-2">{renderExplorePin(extras.shift()!)}</div>);
+      }
+    });
+    if (updates.length === 0) {
+      extras.forEach((p, i) => items.push(<div key={`r-${i}`} className="mb-2">{renderExplorePin(p)}</div>));
+    }
+  }
+
+  // Split around the full-width band (if provided)
+  const seg1 = band ? items.slice(0, bandAfter) : items;
+  const seg2 = band ? items.slice(bandAfter) : [];
+
+  const renderColumns = (segment: React.ReactNode[]) => (
+    <div className="flex gap-2 items-start">
+      {Array.from({ length: colCount }, (_, col) => (
+        <div key={col} className="flex flex-col gap-2 flex-1 min-w-0">
+          {segment.filter((_, i) => i % colCount === col)}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Audience filter */}
-        <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
-          <button
-            onClick={() => updateParam("audience", "everyone")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              audience === "everyone"
-                ? "bg-white text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Everyone
-          </button>
-          {isLoggedIn && (
+        {/* Audience filter — logged-in only (a lone "all" button is noise) */}
+        <div className={`flex items-stretch ${isLoggedIn ? "" : "hidden"}`}>
+          {([
+            ["everyone", "all"],
+            ...(isLoggedIn
+              ? ([["following", "following"], ["subscribed", "subscribed"]] as const)
+              : []),
+          ] as [FeedAudience, string][]).map(([value, label]) => (
             <button
-              onClick={() => updateParam("audience", "following")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                audience === "following"
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+              key={value}
+              onClick={() => updateParam("audience", value)}
+              className={`h-9 border-b-2 px-3.5 font-mono text-xs lowercase transition-colors ${
+                audience === value
+                  ? "border-brand text-brand"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Following
+              {label}
             </button>
-          )}
-          {isLoggedIn && (
-            <button
-              onClick={() => updateParam("audience", "subscribed")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                audience === "subscribed"
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Subscribed
-            </button>
-          )}
+          ))}
         </div>
 
         {/* Right slot (e.g. New update button) */}
@@ -164,18 +197,13 @@ export function InfiniteFeed({
       {!isEmpty && (
         /* Round-robin column distribution — items fill left-to-right then down,
            matching reading order. CSS `columns` fills top-to-bottom per column
-           which reverses this, so we manually assign items to columns instead. */
-        <div className="flex gap-2 items-start">
-          {Array.from({ length: colCount }, (_, col) => (
-            <div key={col} className="flex flex-col gap-2 flex-1 min-w-0">
-              {updates
-                .filter((_, i) => i % colCount === col)
-                .map((u, colIdx) => (
-                  <FeedCard key={u.id} u={u} priority={col < 2 && colIdx === 0} currentUserId={currentUserId} isAdmin={isAdmin} />
-                ))}
-            </div>
-          ))}
-        </div>
+           which reverses this, so we manually assign items to columns instead.
+           A full-width band (opportunities) splits the masonry in two. */
+        <>
+          {renderColumns(seg1)}
+          {band}
+          {seg2.length > 0 && renderColumns(seg2)}
+        </>
       )}
 
       {/* Sentinel — triggers next load when scrolled into view */}

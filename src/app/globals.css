@@ -2,13 +2,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Institutional Minimalist — light only */
+/* ═══════════════════════════════════════════════════════════════════════
+   Patronage Design System v2 — "Warm infrastructure. Kill the card."
+   Light only, no dark mode. Containerless: content is the element.
+   Structure comes from 1px gaps, type hierarchy, and hover attribution.
+   Tokens ported from design-system/colors_and_type.css.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
+  /* ─── shadcn semantic colours (utilities: bg-background, text-primary, …) ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -25,37 +29,107 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: 0.125rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
+
+  /* ─── Brand — Civic Teal (bg-brand, text-brand, border-brand) ─────────── */
+  /* Kept separate from shadcn `accent` so neutral menu/hover surfaces stay
+     neutral. Teal is reserved for CTAs, active states, opportunity marks. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-sub: var(--brand-sub);
+  --color-feed-bg: var(--feed-bg);
+
+  /* ─── Semantic status (bg-success, text-warning, …) ───────────────────── */
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-urgent: var(--urgent);
+  --color-urgent-bg: var(--urgent-bg);
+
+  /* ─── Typefaces — wired to next/font (layout.tsx) ─────────────────────── */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* ─── Border radii — v2 is 0px. "Kill the card." ─────────────────────────
+     Content, surfaces, buttons, inputs, pills, dropdowns: all square.
+     `rounded-full` (Tailwind built-in) remains for genuine circles only —
+     the status dot, and any avatar explicitly kept round. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
 :root {
-  --radius: 0.375rem;
+  --radius: 0px;    /* v2 — square everything (see radius scale below) */
 
-  /* Warm off-white background */
-  --background: #FAFAF9;          /* warm off-white */
-  --foreground: oklch(0 0 0);          /* black */
-  --card: oklch(1 0 0);               /* white */
-  --card-foreground: oklch(0 0 0);     /* black */
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0 0 0);
-  --primary: oklch(0 0 0);             /* black */
-  --primary-foreground: oklch(1 0 0);  /* white */
-  --secondary: oklch(0.97 0 0);        /* near-white */
-  --secondary-foreground: oklch(0 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.533 0 0); /* approx #888 */
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);          /* light grey */
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.533 0 0);            /* #888 */
+  /* ─── Backgrounds / Surfaces ─────────────────────────────────────────── */
+  --background: #FAFAF9;              /* warm off-white — app bg */
+  --surface: #FFFFFF;                 /* card / popover surface */
+  --surface-muted: #F5F5F4;           /* secondary surfaces, inset areas */
+  --feed-bg: #EFEEEC;                 /* masonry feed surface — non-image pins
+                                         sit white on this; 8px gap shows it */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+
+  /* ─── Foregrounds ────────────────────────────────────────────────────── */
+  --foreground: #0a0a0a;              /* primary text */
+  --fg-muted: oklch(0.53 0 0);        /* ~#808080 — secondary text */
+  --fg-subtle: oklch(0.65 0 0);       /* ~#A3A3A3 — placeholder / disabled */
+
+  /* ─── Brand accent — Civic Teal ──────────────────────────────────────── */
+  /* SCARCITY RULE: teal appears ONLY on interactive/functional marks —
+     active nav, buttons/CTAs, focus rings, opportunity 3px left-border,
+     match scores. NEVER decorative. Section labels and metadata/update tags
+     stay on --fg-subtle / stone-400, never teal. Overusing a low-chroma
+     accent makes it read as arbitrary; scarcity is what makes it considered. */
+  --brand: oklch(0.42 0.075 190);            /* civic teal */
+  --brand-foreground: #ffffff;
+  --brand-sub: oklch(0.96 0.015 190);        /* tint bg for brand pills/states */
+  --tint: oklch(0.42 0.075 190 / 0.04);      /* 4% teal — text/audio pin bg */
+
+  /* ─── Borders ────────────────────────────────────────────────────────── */
+  --border: oklch(0.91 0 0);          /* default: card, dividers, inputs */
+  --border-mid: oklch(0.83 0 0);      /* hover state border */
+  --border-strong: #000000;           /* outline buttons, featured cards */
+  --input: var(--border);
+  --ring: var(--border-strong);
+
+  /* ─── Interactive / Primary ──────────────────────────────────────────── */
+  --primary: var(--foreground);       /* black — buttons, links */
+  --primary-foreground: #ffffff;
+
+  /* ─── Muted / Secondary / Accent (shadcn — neutral) ──────────────────── */
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--fg-muted);
+  --accent: var(--surface-muted);     /* neutral hover surface (NOT teal) */
+  --accent-foreground: var(--foreground);
+
+  /* ─── Semantic / Status ──────────────────────────────────────────────── */
+  --success: #10B981;   /* emerald — verified badges, "open for commissions" */
+  --success-bg: #ECFDF5;
+  --warning: #D97706;   /* amber — approaching deadline (≤14 days) */
+  --warning-bg: #FFFBEB;
+  --urgent: #DC2626;    /* red — closing today/tomorrow */
+  --urgent-bg: #FEF2F2;
+  --destructive: #DC2626;
+
+  /* ─── Shadows ────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);     /* default card */
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.11);    /* hover / elevated */
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.15);   /* modal / popover */
+
+  /* ─── Spacing scale ──────────────────────────────────────────────────── */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
 }
 
 @layer base {
@@ -65,11 +139,342 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-    line-height: 1.625;
+    font-size: 1rem;          /* 16px — up from 14px in v1 */
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    text-wrap: pretty;
   }
-  h1, h2, h3 {
+  h1, h2, h3, h4 {
     letter-spacing: -0.025em;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TYPE SCALE — two-voice system
+   Geist Sans = content · Geist Mono = interface/data
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  .t-display {
+    font-size: 48px;
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.032em;
+  }
+  .t-title {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+  .t-heading {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
+  .t-body {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .t-body-sm {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg-muted);
+  }
+  .t-caption {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg-muted);
+  }
+  /* Section label — MONO voice. "SELECTED WORK · STUDIO UPDATES". Never teal. */
+  .t-section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-subtle);
+    line-height: 1;
+  }
+
+  /* Pin-type kicker — the one mono label allowed in teal (functional mark):
+     GRANT / STUDIO UPDATE / AUDIO inside pins. */
+  .t-kicker {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand);
+    line-height: 1;
+  }
+
+  /* ─── Mono — funding amounts · handles · timestamps · countdowns ──────── */
+  .t-mono {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .t-mono-sm {
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .t-mono-amount {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     PIN SYSTEM — containerless. No border/radius/shadow on content.
+     ═════════════════════════════════════════════════════════════════════ */
+
+  .pin {
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .pin [data-pin-img] {
+    transition: opacity 300ms ease;
+  }
+  .pin:hover [data-pin-img]     { opacity: 0.85; }
+  .pin:hover [data-pin-overlay] { opacity: 1; }
+
+  /* Attribution bar — crisp black (never frosted) */
+  [data-pin-overlay] {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 14px;
+    background: #000;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  /* v2 hover: NO scale, NO lift, NO glass. Image dims 0.85 + attribution
+     bar only (handled by .pin rules above). */
+
+  /* Opportunity pin — white on the feed surface; hover reveals the 4% teal
+     tint. (The 3px teal left border was removed as visual clutter — the teal
+     kicker inside the pin is the opportunity mark.) */
+  .pin-opportunity {
+    background: var(--surface);
+    padding: 18px;
+    transition: background 200ms ease;
+  }
+  .pin-opportunity:hover {
+    background: var(--tint);
+  }
+
+  /* Text / audio pin — white surface (sits on --feed-bg; the 8px gap is the
+     separation). The 4% teal --tint is reserved for opportunity-pin hover
+     reveal and the commission-availability block. */
+  .pin-text,
+  .pin-audio {
+    background: var(--surface);
+  }
+
+  /* Modal / popover — the only place elevation is functional */
+  .modal,
+  .popover {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     TAG / PILL SYSTEM — v2: square bordered mono chips. No fills, no radius.
+     ═════════════════════════════════════════════════════════════════════ */
+
+  /* Default tag — "NZ" · "visual art" · "free" */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+
+  /* Legacy alias — same treatment as .tag (v1 filled pills are gone) */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .pill-subdued {
+    color: var(--fg-subtle);
+  }
+  /* Dark chip — AVAILABLE badge on for-sale pins (always visible, top-left) */
+  .pill-dark {
+    background: #000;
+    border-color: #000;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .pill-brand {
+    background: var(--brand-sub);
+    border-color: transparent;
+    color: var(--brand);
+  }
+  .pill-match-strong {
+    font-weight: 600;
+    background: var(--success-bg);
+    border-color: transparent;
+    color: var(--success);
+  }
+  .pill-match-partial {
+    font-weight: 600;
+    background: var(--warning-bg);
+    border-color: transparent;
+    color: var(--warning);
+  }
+  .pill-match-weak {
+    font-weight: 600;
+    background: var(--surface-muted);
+    border-color: transparent;
+    color: var(--fg-subtle);
+  }
+
+  /* ─── Status indicators ──────────────────────────────────────────────── */
+  .status-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 0;
+    font-size: 12px;
+    background: var(--success-bg);
+    color: var(--success);
+  }
+  .status-open::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+  .status-warning { background: var(--warning-bg); color: var(--warning); }
+  .status-urgent  { background: var(--urgent-bg);  color: var(--urgent); }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     BADGE SYSTEM — artist achievements
+     ═════════════════════════════════════════════════════════════════════ */
+
+  /* Mono 9px/600, tinted bg, square — VERIFIED · EXHIBITED · GRANT RECIPIENT */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    padding: 3px 7px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-radius: 0;
+  }
+  .badge-verified {
+    color: var(--success);
+    background: var(--success-bg);
+  }
+  .badge-exhibited {
+    color: var(--fg-muted);
+    background: var(--surface-muted);
+  }
+  .badge-grant {
+    color: var(--warning);
+    background: var(--warning-bg);
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     BUTTON SYSTEM
+     ═════════════════════════════════════════════════════════════════════ */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: var(--radius-lg);
+    border: none;
+    cursor: pointer;
+    transition: opacity 120ms ease;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+  .btn-primary { background: var(--foreground); color: #ffffff; }
+  .btn-primary:hover { opacity: 0.82; }
+  .btn-brand { background: var(--brand); color: #ffffff; }
+  .btn-brand:hover { opacity: 0.88; }
+  /* Outline / ghost — interface voice (mono), per canvases:
+     "follow" · "view brief template" · "Save draft" · "@handle" */
+  .btn-outline {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: transparent;
+    color: var(--foreground);
+    border: 1px solid var(--foreground);
+    transition: background 100ms ease;
+  }
+  .btn-outline:hover { background: var(--surface-muted); }
+  .btn-ghost {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: transparent;
+    color: var(--fg-muted);
+    border: 1px solid var(--border);
+    transition: border-color 100ms ease, color 100ms ease;
+  }
+  .btn-ghost:hover { border-color: var(--foreground); color: var(--foreground); }
+  .btn-sm { font-size: 11px; padding: 6px 12px; }
+
+  /* ─── Skeleton loading ───────────────────────────────────────────────── */
+  .skeleton {
+    background: var(--color-stone-200, #E7E5E4);
+    border-radius: 3px;
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ANIMATIONS — no bounce, no spring, no page transitions
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  60%      { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+@keyframes pin-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.82; }
+}
+/* Discipline marquee (home) — content duplicated once, so -50% loops seamlessly */
+@keyframes scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+/* Audio pin waveform */
+@keyframes wave-bob {
+  0%, 100% { transform: scaleY(0.18); }
+  50%      { transform: scaleY(1); }
 }
 
 @utility scrollbar-hide {

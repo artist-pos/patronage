@@ -39,7 +39,7 @@ export function FoundOpportunityButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 transition-colors hover:border-black"
+        className="border border-border px-3.5 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
       >
         Submit an opportunity
       </button>

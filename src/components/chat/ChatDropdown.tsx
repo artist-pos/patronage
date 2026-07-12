@@ -498,8 +498,10 @@ export function ChatDropdown({ userId, username }: Props) {
           </div>
         )}
 
-        {/* Main message area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Main message area — min-h-0 lets the messages pane actually
+            shrink inside the flex column so its own scrollbar activates
+            (without it, mobile clips instead of scrolling) */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Mobile: horizontal channel tabs */}
           {isMobile && (
             <div className="flex items-center gap-1 px-3 py-2 border-b border-stone-100 overflow-x-auto">
@@ -564,7 +566,7 @@ export function ChatDropdown({ userId, username }: Props) {
           </div>
 
           {/* Messages */}
-          <div ref={messagesRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div ref={messagesRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-3">
             {messages.length === 0 && (
               <p className="text-xs text-stone-400 text-center py-4">No messages yet. Say hello!</p>
             )}

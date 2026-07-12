@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { MobileTabBarServer } from "@/components/layout/MobileTabBarServer";
 import { PostHogProvider } from "@/components/PostHogProvider";
 
 const geistSans = Geist({
@@ -46,6 +47,23 @@ export const metadata: Metadata = {
   ],
   verification: { google: "b1uNttMPg-mggBe-7YRYuCrdH_qyy0fWGTdCQX3fY30" },
   metadataBase: new URL("https://patronage.nz"),
+  manifest: "/manifest.json",
+  // Apple standalone (Add to Home Screen). Renders:
+  //   <meta name="apple-mobile-web-app-capable" content="yes">
+  //   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  //   <meta name="apple-mobile-web-app-title" content="Patronage">
+  appleWebApp: {
+    capable: true,
+    title: "Patronage",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
@@ -58,6 +76,10 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 const siteSchema = {
@@ -114,6 +136,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <MobileTabBarServer />
           {modal}
           <Toaster position="bottom-center" />
         </PostHogProvider>

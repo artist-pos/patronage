@@ -138,7 +138,7 @@ export function OverviewTab({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {selectedExhibitions.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              <h3 className="t-section-label">
                 Selected Exhibitions
               </h3>
               <div className="space-y-1.5">
@@ -153,7 +153,7 @@ export function OverviewTab({
               </div>
               {exhibitions.length > 3 && (
                 <Link
-                  href={`/${username}?tab=cv`}
+                  href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   View full CV →
@@ -164,7 +164,7 @@ export function OverviewTab({
 
           {selectedBib.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              <h3 className="t-section-label">
                 Selected Press
               </h3>
               <div className="space-y-1.5">
@@ -184,7 +184,7 @@ export function OverviewTab({
               </div>
               {bibliography.length > 3 && (
                 <Link
-                  href={`/${username}?tab=cv`}
+                  href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   View all press →
@@ -195,7 +195,7 @@ export function OverviewTab({
 
           {allGrantItems.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              <h3 className="t-section-label">
                 Grants &amp; Awards
               </h3>
               <div className="space-y-1.5">
@@ -205,7 +205,7 @@ export function OverviewTab({
                       <span className="font-semibold">{item.data.opportunity_title}</span>
                       <span className="text-muted-foreground">{item.data.organisation}</span>
                       {item.data.verified && (
-                        <span className="text-[10px] uppercase tracking-widest text-emerald-600 border border-emerald-600/40 px-1.5 py-0.5 leading-none">
+                        <span className="badge badge-grant">
                           Verified
                         </span>
                       )}
@@ -217,7 +217,7 @@ export function OverviewTab({
               </div>
               {totalGrantCount > 3 && (
                 <Link
-                  href={`/${username}?tab=cv`}
+                  href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   View all grants →
@@ -245,11 +245,11 @@ export function OverviewTab({
         return (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+              <h3 className="t-section-label">
                 Selected Work
               </h3>
               <Link
-                href={`/${username}?tab=work`}
+                href="#work"
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 {isFiltered

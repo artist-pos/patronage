@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Music, Play, ExternalLink } from "lucide-react";
+import { Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
@@ -17,6 +17,34 @@ function formatTimestamp(iso: string): string {
   return `${hh}:${mm}, ${dd} ${mon}`;
 }
 
+/* Three content voices so the feed is scannable by type:
+   teal kicker = process (studio updates), black chip = finished work,
+   outlined chip = editorial (articles). */
+function TypeKicker({ u }: { u: ProjectUpdateWithArtist }) {
+  if (u.embed_provider === "Patronage") {
+    return (
+      <span className="inline-block border border-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em]">
+        Article
+      </span>
+    );
+  }
+  if (u.update_tag === "complete") {
+    return (
+      <span className="inline-block bg-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
+        New work
+      </span>
+    );
+  }
+  const label =
+    u.content_type === "audio" ? "Audio"
+    : u.content_type === "video" ? "Video"
+    : u.content_type === "embed" ? "Embed"
+    : u.update_tag === "milestone" ? "Milestone"
+    : u.update_tag === "concept" ? "Concept"
+    : "Studio update";
+  return <span className="t-kicker">{label}</span>;
+}
+
 interface FeedCardProps {
   u: ProjectUpdateWithArtist;
   priority?: boolean;
@@ -26,45 +54,155 @@ interface FeedCardProps {
   isAdmin?: boolean;
 }
 
+/**
+ * v2 pin vocabulary — containerless.
+ * Image pins: edge-to-edge image, hover dims 0.85 + crisp #000 attribution bar.
+ * All other types: white surface on the feed bg, teal mono kicker, footer
+ * attribution row with a border-top divider. No borders, no radius, no shadow.
+ */
 export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false }: FeedCardProps) {
   const name = u.artist_full_name ?? u.artist_username;
   const canEdit = !!currentUserId && (u.artist_id === currentUserId || isAdmin);
   const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`;
 
-  const mediaSection = (() => {
-    if (u.content_type === "image" && u.image_url) {
-      const hasAspect = u.image_width && u.image_height;
+  const SITE_URL = "https://patronage.nz";
+  const sharePayload = {
+    type: "update" as const,
+    title: u.title ?? u.caption?.slice(0, 60) ?? "Studio Update",
+    sub: u.tldr ?? `${name} · ${formatTimestamp(u.created_at)}`,
+    price: null,
+    tag: "STUDIO UPDATE",
+    handle: `@${u.artist_username}`,
+    imageUrl: u.content_type === "image" ? u.image_url : null,
+    shareUrl: `${SITE_URL}${href}`,
+  };
+
+  const controls = (
+    <span className="flex shrink-0 items-center gap-0.5">
+      {canEdit && (
+        <EditUpdateModal
+          updateId={u.id}
+          contentType={u.content_type}
+          initialTitle={u.title}
+          initialTldr={u.tldr ?? null}
+          initialCaption={u.caption ?? null}
+          initialTextContent={u.text_content ?? null}
+          variant="icon"
+        />
+      )}
+      <ShareTrigger
+        payload={sharePayload}
+        variant="icon"
+        className="flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted"
+      />
+    </span>
+  );
+
+  /* Footer attribution row for surface pins (text/audio/video/embed) */
+  const attributionRow = (
+    <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
+      <Link
+        href={`/${u.artist_username}`}
+        className="group/artist flex min-w-0 flex-1 items-baseline gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="truncate text-[13px] font-medium group-hover/artist:underline underline-offset-2">
+          {name}
+        </span>
+        <span className="shrink-0 font-mono text-[10px] text-[color:var(--fg-subtle)]">
+          {formatTimestamp(u.created_at)}
+        </span>
+      </Link>
+      {controls}
+    </div>
+  );
+
+  /* ── IMAGE PINS ──
+     Without caption: containerless — image edge-to-edge, hover attribution.
+     With caption/title: white surface pin so the words are always visible
+     (captions are content, not chrome — they must not hide behind hover). */
+  if (u.content_type === "image" && u.image_url) {
+    const hasAspect = u.image_width && u.image_height;
+    const hasWords = !!(u.title || u.caption);
+
+    if (!hasWords) {
       return (
-        <div
-          className="overflow-hidden bg-muted"
-          style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={u.image_url}
-            alt={u.caption ?? `Update by ${name}`}
-            loading={priority ? "eager" : "lazy"}
-            style={{ width: "100%", height: "auto", display: "block" }}
-            className="transition-transform duration-500 group-hover:scale-105"
-          />
+        <div className="pin relative mb-2 break-inside-avoid">
+          <Link href={href} scroll={false} className="block">
+            <div
+              className="overflow-hidden"
+              style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                data-pin-img
+                src={u.image_url}
+                alt={`Update by ${name}`}
+                loading={priority ? "eager" : "lazy"}
+                style={{ width: "100%", height: "auto", display: "block" }}
+              />
+            </div>
+            <div data-pin-overlay>
+              <div className="font-mono text-[10px] text-white/60">
+                {name} · {formatTimestamp(u.created_at)}
+              </div>
+            </div>
+          </Link>
+          {/* Controls — revealed on hover, top-right, over the image */}
+          <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 bg-black/60 opacity-0 transition-opacity duration-200 [.pin:hover_&]:opacity-100 text-white">
+            {controls}
+          </div>
         </div>
       );
     }
 
+    // Captioned studio update — image on a white surface, caption below
+    return (
+      <div className="mb-2 break-inside-avoid bg-card">
+        <Link href={href} scroll={false} className="pin block">
+          <div
+            className="overflow-hidden"
+            style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              data-pin-img
+              src={u.image_url}
+              alt={u.caption ?? `Update by ${name}`}
+              loading={priority ? "eager" : "lazy"}
+              style={{ width: "100%", height: "auto", display: "block" }}
+            />
+          </div>
+          <div className="px-4 pb-1 pt-3">
+            <div className="mb-2">
+              <TypeKicker u={u} />
+            </div>
+            {u.title && (
+              <div className="mb-1 text-[15px] font-medium leading-[1.35]">{u.title}</div>
+            )}
+            {u.caption && (
+              <p className="line-clamp-4 text-[13px] leading-[1.55] text-[color:var(--fg-muted)]">
+                {u.caption}
+              </p>
+            )}
+          </div>
+        </Link>
+        <div className="px-4 pb-4 pt-2">{attributionRow}</div>
+      </div>
+    );
+  }
+
+  /* ── SURFACE PINS — white on feed bg ── */
+
+  const media = (() => {
     if (u.content_type === "audio") {
       return (
-        <div className="bg-zinc-900 text-white p-5 flex flex-col gap-3 min-h-[120px]">
-          <Music className="w-6 h-6 opacity-50" />
-          {u.discipline && (
-            <span className="text-[9px] uppercase tracking-widest opacity-40">
-              {u.discipline.replace(/_/g, " ")}
-            </span>
-          )}
+        <div className="mb-3.5">
           {u.audio_url && (
             // eslint-disable-next-line jsx-a11y/media-has-caption
             <audio
               controls
-              className="w-full h-8"
+              className="h-8 w-full"
               src={u.audio_url}
               onClick={(e) => e.preventDefault()}
             />
@@ -86,75 +224,52 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     if (u.content_type === "video") {
       if (u.embed_url) {
         return (
-          <div className="relative bg-black aspect-video overflow-hidden">
-            {/* Decorative play overlay — outer card Link handles navigation.
-                Do NOT nest a Link here: nested <a> tags are invalid HTML and
-                cause browsers to extract the inner element, breaking the layout. */}
-            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+          <div className="relative -mx-5 -mt-1 mb-3.5 aspect-video overflow-hidden bg-black">
+            {/* Decorative play overlay — outer Link handles navigation. */}
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+              <div className="flex h-11 w-11 items-center justify-center bg-black/70">
+                <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
               </div>
             </div>
             <iframe
               src={u.embed_url}
               title={u.caption ?? `Video by ${name}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              className="w-full h-full pointer-events-none"
+              className="pointer-events-none h-full w-full"
             />
           </div>
         );
       }
       if (u.video_url) {
         return (
-          // stopPropagation lets users interact with video controls
-          // without triggering the outer card Link's navigation.
-          <div className="bg-black overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="-mx-5 -mt-1 mb-3.5 bg-black" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video
-              className="w-full max-h-[300px]"
-              src={u.video_url}
-              controls
-            />
+            <video className="max-h-[300px] w-full" src={u.video_url} controls />
           </div>
         );
       }
       return (
-        <div className="bg-zinc-900 text-white p-5 flex items-center justify-center min-h-[120px]">
-          <Play className="w-8 h-8 opacity-40" />
+        <div className="mb-3.5 flex min-h-[100px] items-center justify-center bg-foreground text-white">
+          <Play className="h-8 w-8 opacity-40" />
         </div>
       );
     }
 
     if (u.content_type === "embed" && u.embed_url) {
       return (
-        <div className="relative bg-muted overflow-hidden">
+        <div className="relative -mx-5 -mt-1 mb-3.5 overflow-hidden bg-muted">
           <Link href={href} className="absolute inset-0 z-10 flex items-center justify-center">
-            <div className="bg-background/80 backdrop-blur-sm border border-border px-3 py-1.5 flex items-center gap-1.5">
-              <ExternalLink className="w-3 h-3" />
-              <span className="text-xs">{u.embed_provider ?? "View embed"}</span>
+            <div className="flex items-center gap-1.5 border border-border bg-background/90 px-3 py-1.5">
+              <ExternalLink className="h-3 w-3" />
+              <span className="font-mono text-[11px]">{u.embed_provider ?? "View embed"}</span>
             </div>
           </Link>
           <iframe
             src={u.embed_url}
             title={u.caption ?? `Embed by ${name}`}
-            className="w-full pointer-events-none"
+            className="pointer-events-none w-full"
             style={{ height: 240 }}
           />
-        </div>
-      );
-    }
-
-    if (u.content_type === "text") {
-      return (
-        <div className="px-4 pt-4 bg-background">
-          {u.discipline && (
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-              {u.discipline.replace(/_/g, " ")}
-            </p>
-          )}
-          {u.text_content && (
-            <p className="text-sm leading-relaxed line-clamp-6">{u.text_content}</p>
-          )}
         </div>
       );
     }
@@ -162,95 +277,50 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     return null;
   })();
 
-  const SITE_URL = "https://patronage.nz";
-  const sharePayload = {
-    type: "update" as const,
-    title: u.title ?? u.caption?.slice(0, 60) ?? "Studio Update",
-    sub: u.tldr ?? `${name} · ${formatTimestamp(u.created_at)}`,
-    price: null,
-    tag: "STUDIO UPDATE",
-    handle: `@${u.artist_username}`,
-    imageUrl: u.content_type === "image" ? u.image_url : null,
-    shareUrl: `${SITE_URL}${href}`,
-  };
+  const bodyText =
+    u.content_type === "text"
+      ? u.text_content
+      : u.caption && u.content_type !== "embed"
+        ? u.caption
+        : null;
 
   return (
-    <div className="break-inside-avoid mb-2">
-      <Link
-        href={href}
-        scroll={false}
-        className="group block border border-border bg-background border-b-0"
-      >
-        {mediaSection}
-
-        {(u.caption && u.content_type !== "text") || u.embed_provider === "Patronage" ? (
-          <div className="px-2.5 py-2 space-y-1 border-t border-border">
-            {u.caption && u.content_type !== "text" && (
-              <p className="text-xs text-muted-foreground leading-snug line-clamp-3">
-                {u.caption}
-              </p>
-            )}
-            {u.embed_provider === "Patronage" && u.embed_url && (
-              <span
-                role="link"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); }}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
-                className="flex items-center gap-1.5 pt-0.5 group/blog cursor-pointer"
-              >
-                <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">Patronage</span>
-                <span className="text-stone-300">·</span>
-                <span className="text-[10px] text-stone-500 group-hover/blog:text-foreground transition-colors underline underline-offset-2">
-                  Read article →
-                </span>
-              </span>
-            )}
+    <div className="mb-2 break-inside-avoid">
+      <div className="flex flex-col bg-card p-5">
+        <Link href={href} scroll={false} className="block">
+          <div className="mb-3">
+            <TypeKicker u={u} />
           </div>
-        ) : null}
-      </Link>
-
-      {/* Artist identity + share — outside the card link so name is linkable */}
-      <div className="flex items-center gap-2 border border-border border-t-0 px-2.5 py-1.5 bg-background">
-        <Link
-          href={`/${u.artist_username}`}
-          className="flex items-center gap-2 min-w-0 flex-1 group/artist"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {u.artist_avatar_url ? (
-            <div className="relative w-6 h-6 shrink-0 overflow-hidden border border-black">
-              <Image
-                src={u.artist_avatar_url}
-                alt={name}
-                fill
-                className="object-cover"
-                sizes="24px"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <div className="w-6 h-6 shrink-0 border border-black bg-muted flex items-center justify-center text-[9px] font-semibold">
-              {name.charAt(0).toUpperCase()}
+          {media}
+          {u.content_type !== "text" && (u.title || (u.content_type === "audio" && u.caption)) && (
+            <div className="mb-1 text-[15px] font-medium leading-[1.35]">
+              {u.title ?? u.caption}
             </div>
           )}
-          <div className="min-w-0">
-            <p className="text-xs font-semibold truncate leading-tight group-hover/artist:underline underline-offset-2">{name}</p>
-            <p className="text-[10px] text-muted-foreground leading-tight font-mono">
-              {formatTimestamp(u.created_at)}
+          {bodyText && (
+            <p
+              className={
+                u.content_type === "text"
+                  ? "mb-4 line-clamp-[8] text-[17px] leading-[1.62] tracking-[-0.01em]"
+                  : "mb-3 line-clamp-3 text-[13px] leading-[1.55] text-[color:var(--fg-muted)]"
+              }
+            >
+              {bodyText}
             </p>
-          </div>
+          )}
+          {u.embed_provider === "Patronage" && u.embed_url && (
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
+              className="mb-3 block cursor-pointer font-mono text-[11px] text-[color:var(--fg-muted)] underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              Read article →
+            </span>
+          )}
         </Link>
-        {canEdit && (
-          <EditUpdateModal
-            updateId={u.id}
-            contentType={u.content_type}
-            initialTitle={u.title}
-            initialTldr={u.tldr ?? null}
-            initialCaption={u.caption ?? null}
-            initialTextContent={u.text_content ?? null}
-            variant="icon"
-          />
-        )}
-        <ShareTrigger payload={sharePayload} variant="icon" className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded transition-colors text-muted-foreground shrink-0" />
+        {attributionRow}
       </div>
     </div>
   );

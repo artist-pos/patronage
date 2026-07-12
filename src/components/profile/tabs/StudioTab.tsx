@@ -36,7 +36,7 @@ export function StudioTab({ updates, artistUsername, isOwner, projects, profileI
       {(isOwner || hasUpdates) && (
         <section className={hasCreativeWork ? "border-t border-border pt-12" : ""}>
           {hasCreativeWork && (
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-6">
+            <p className="t-section-label mb-6">
               Studio Updates
             </p>
           )}

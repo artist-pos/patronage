@@ -141,7 +141,7 @@ export function SearchCommand() {
   }
 
   const resultsPanel = (
-    <div className="absolute top-full left-0 mt-1 w-[440px] max-w-[calc(100vw-2rem)] border border-black bg-background z-50 max-h-[60vh] overflow-y-auto">
+    <div className="absolute top-full left-0 mt-1 w-[440px] max-w-[calc(100vw-2rem)] border border-border shadow-lg bg-background z-50 max-h-[60vh] overflow-y-auto">
       {!query && (
         <div className="px-4 py-3 flex items-center justify-between text-xs text-muted-foreground">
           <span>Try: &ldquo;Auckland&rdquo;, &ldquo;Photography&rdquo;, &ldquo;residency&rdquo;</span>
@@ -166,7 +166,7 @@ export function SearchCommand() {
                   onClick={closeAndNavigate}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-b border-border last:border-0"
                 >
-                  <div className="w-8 h-8 shrink-0 border border-black bg-white overflow-hidden flex items-center justify-center">
+                  <div className="w-8 h-8 shrink-0 border border-border bg-white overflow-hidden flex items-center justify-center">
                     {opp.featured_image_url ? (
                       <Image
                         src={opp.featured_image_url}
@@ -207,7 +207,7 @@ export function SearchCommand() {
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-b border-border last:border-0"
                 >
                   {artist.avatar_url ? (
-                    <div className="relative w-8 h-8 shrink-0 border border-black overflow-hidden">
+                    <div className="relative w-8 h-8 shrink-0 border border-border overflow-hidden">
                       <Image
                         src={artist.avatar_url}
                         alt={artist.full_name ?? artist.username}
@@ -217,7 +217,7 @@ export function SearchCommand() {
                       />
                     </div>
                   ) : (
-                    <div className="w-8 h-8 shrink-0 border border-black bg-muted flex items-center justify-center text-xs font-medium">
+                    <div className="w-8 h-8 shrink-0 border border-border bg-muted flex items-center justify-center text-xs font-medium">
                       {(artist.full_name ?? artist.username).charAt(0).toUpperCase()}
                     </div>
                   )}

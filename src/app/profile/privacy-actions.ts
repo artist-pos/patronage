@@ -49,7 +49,8 @@ export async function updateProfilePrivacy(
     | "show_location"
     | "show_previously_collected"
     | "show_supporting"
-    | "hide_blog_card",
+    | "hide_blog_card"
+    | "private_supporter",
   value: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient();

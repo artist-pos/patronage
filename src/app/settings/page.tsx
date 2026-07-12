@@ -12,6 +12,7 @@ import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { DigestToggle } from "@/components/profile/DigestToggle";
+import { PrivateSupporterToggle } from "@/components/profile/PrivateSupporterToggle";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import type { Metadata } from "next";
@@ -302,6 +303,19 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                   autoSync={isArtist && profile.weekly_digest === null}
                 />
               </section>
+
+              {/* Patron — private supporter mode (migration 170) */}
+              {role === "patron" && (
+                <section className="space-y-4 border-t border-border pt-10 max-w-lg">
+                  <div className="space-y-1">
+                    <h2 className="text-base font-semibold">Profile Privacy</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Control how you appear on your public profile.
+                    </p>
+                  </div>
+                  <PrivateSupporterToggle initial={profile.private_supporter ?? false} />
+                </section>
+              )}
 
               <section className="space-y-4 border-t border-black pt-10 max-w-lg">
                 <div className="space-y-1">

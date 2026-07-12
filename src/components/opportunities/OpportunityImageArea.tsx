@@ -109,7 +109,7 @@ export function OpportunityImageArea({
 
   return (
     <div
-      className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-black md:border-r-0 md:border-b"
+      className="relative shrink-0 w-24 md:w-full md:h-[200px] overflow-hidden border-r border-border md:border-r-0 md:border-b"
       style={{ backgroundColor: bgColor }}
     >
       {imageUrl ? (
@@ -128,18 +128,18 @@ export function OpportunityImageArea({
         </span>
       )}
 
-      {/* Overlays — desktop only */}
+      {/* Overlays — desktop only. v2: flush ribbons, mono */}
       {fundingLabel && (
-        <div className="hidden md:block absolute top-0 right-0 bg-black text-white font-mono font-bold text-sm px-3 py-1.5 leading-none">
-          {fundingLabel}
+        <div className="absolute right-0 top-0 hidden max-w-[65%] truncate bg-black px-2.5 py-1.5 font-mono text-[11px] font-semibold leading-none text-white md:block">
+          {fundingLabel.split(" (")[0]}
         </div>
       )}
       {preOpen ? (
-        <div className="hidden md:block absolute top-2 left-2 z-10 bg-white text-black border border-black font-mono text-xs px-3 py-1 leading-none">
+        <div className="absolute left-0 top-0 z-10 hidden border border-border bg-white px-2.5 py-1.5 font-mono text-[10px] font-semibold leading-none tracking-[0.04em] text-black md:block">
           Not yet open
         </div>
       ) : closing && (
-        <div className={`hidden md:block absolute top-2 left-2 z-10 font-mono text-xs px-3 py-1 leading-none ${urgent ? "bg-red-600 text-white" : "bg-black text-white"}`}>
+        <div className={`absolute left-0 top-0 z-10 hidden px-2.5 py-1.5 font-mono text-[10px] font-semibold leading-none tracking-[0.04em] text-white md:block ${urgent ? "bg-[color:var(--urgent)]" : "bg-black"}`}>
           {urgent ? "Closes today" : "Closing soon"}
         </div>
       )}

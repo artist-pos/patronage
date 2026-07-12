@@ -18,6 +18,8 @@ interface FeaturedProfile {
   avatar_url: string | null;
 }
 
+type BlogCategory = "feature" | "data" | "essay";
+
 interface Post {
   id: string;
   title: string;
@@ -25,6 +27,7 @@ interface Post {
   body: string | null;
   image_url: string | null;
   image_url_2: string | null;
+  category: BlogCategory | null;
   status: "draft" | "published" | "scheduled";
   published_at: string | null;
   featured_profile_id: string | null;
@@ -90,6 +93,7 @@ export function BlogEditor({ post, userId }: Props) {
   const [title, setTitle] = useState(post?.title ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(post?.image_url ?? null);
   const [imageUrl2, setImageUrl2] = useState<string | null>(post?.image_url_2 ?? null);
+  const [category, setCategory] = useState<BlogCategory | null>(post?.category ?? null);
   const [status, setStatus] = useState<"draft" | "published" | "scheduled">(
     post?.status ?? "draft"
   );
@@ -209,6 +213,7 @@ export function BlogEditor({ post, userId }: Props) {
         body: editor?.getHTML() ?? "",
         image_url: imageUrl,
         image_url_2: imageUrl2,
+        category,
         status: targetStatus,
         existingPublishedAt: post?.published_at,
         featured_profile_id: featuredProfile?.id ?? null,
@@ -651,6 +656,34 @@ export function BlogEditor({ post, userId }: Props) {
           </div>
           <EditorContent editor={editor} />
         </div>
+      </div>
+
+      {/* Category — drives the index card eyebrow and byline */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          Category
+        </label>
+        <div className="flex gap-2">
+          {(["feature", "data", "essay"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(category === c ? null : c)}
+              className={`text-xs font-medium px-4 py-2 rounded-lg transition-colors capitalize ${
+                category === c
+                  ? "bg-black text-white"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        {!category && (
+          <p className="text-xs text-muted-foreground">
+            None set — the blog index derives one (featured artist → Feature, otherwise Essay).
+          </p>
+        )}
       </div>
 
       {/* Status */}

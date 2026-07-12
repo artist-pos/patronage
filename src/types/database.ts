@@ -359,6 +359,14 @@ export interface Profile {
   marketing_subscription: boolean | null;
   weekly_digest: boolean | null;
   support_enabled: boolean;
+  // Migration 167: commission availability status + blurb
+  open_for_commissions: boolean;
+  commission_info: string | null;
+  // Migration 168: admin-set featured artist (latest unexpired date wins)
+  spotlight_until: string | null;
+  // Migration 170: patron identity masked on the public profile ("donor wall"
+  // stays, name/bio/collection hidden; Following list remains public)
+  private_supporter: boolean;
   disciplines: DisciplineEnum[] | null;
   // Demographic fields — internal only, never shown on public profile
   year_of_birth: number | null;
@@ -923,6 +931,7 @@ export interface ProfileFilters {
   career_stage?: CareerStageEnum;
   medium?: string;
   discipline?: DisciplineEnum;
+  openForCommissions?: boolean;
 }
 
 export interface Conversation {

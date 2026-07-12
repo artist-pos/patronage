@@ -118,11 +118,10 @@ export function NotificationBell({ userId, initialUnreadCount }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-stone-200 shadow-md rounded-xl z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-stone-100">
-            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
-              Notifications
-            </p>
+        /* Popover — the one place elevation is functional (border + shadow-lg) */
+        <div className="absolute right-0 top-full mt-2 w-80 overflow-hidden border border-border bg-card shadow-lg z-50">
+          <div className="border-b border-border px-4 py-3">
+            <p className="t-section-label">Notifications</p>
           </div>
 
           {loading ? (

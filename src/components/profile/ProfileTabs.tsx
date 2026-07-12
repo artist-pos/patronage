@@ -28,10 +28,10 @@ export function ProfileTabs({ username, tab, artistName }: Props) {
           <button
             key={t}
             onClick={() => router.replace(`/${username}?tab=${t}`, { scroll: false })}
-            className={`px-4 py-3 text-sm whitespace-nowrap transition-colors ${
+            className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 font-mono text-xs transition-colors ${
               tab === t
-                ? "font-semibold border-b-2 border-black"
-                : "text-muted-foreground hover:text-foreground"
+                ? "border-brand text-brand"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {TAB_LABELS[t]}

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,7 +14,7 @@ import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALin
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
+import { supabaseTransform } from "@/lib/image";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { buildOpportunitySharePayload } from "@/lib/opportunity-share";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
@@ -39,6 +39,74 @@ function scoreRelated(c: RelatedOpp, opp: Opportunity): number {
   return s;
 }
 
+
+function isDeadlineUrgent(deadline: string | null): boolean {
+  if (!deadline) return false;
+  return (
+    Math.ceil((new Date(deadline + "T23:59:59").getTime() - Date.now()) / 86_400_000) <= 14
+  );
+}
+
+// Deadline annotation for related-opportunity rows (per the v2 handoff:
+// red "Xd left" when imminent, amber "Closing soon" inside ten days)
+function relatedDeadline(deadline: string | null): { label: string; cls: string } | null {
+  if (!deadline) return null;
+  const days = Math.ceil(
+    (new Date(deadline + "T23:59:59").getTime() - Date.now()) / 86_400_000
+  );
+  if (days <= 0) return null;
+  if (days <= 3) return { label: `${days}d left`, cls: "text-[color:var(--urgent)]" };
+  if (days <= 10) return { label: "Closing soon", cls: "text-[color:var(--warning)]" };
+  return null;
+}
+
+// Key-fact cell — label over value, vertical hairline between cells (no box)
+function Fact({ label, value, urgent = false }: { label: string; value: ReactNode; urgent?: boolean }) {
+  return (
+    <div className="mr-8 border-r border-border pr-8 last:mr-0 last:border-r-0 last:pr-0">
+      <div className="mb-[5px] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+        {label}
+      </div>
+      <div className={`text-base font-semibold ${urgent ? "text-[color:var(--urgent)]" : ""}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// Related-opportunity row — white surface on the feed-bg gap backdrop, tint hover
+function RelatedRow({ r }: { r: RelatedOpp }) {
+  const img = r.featured_image_url
+    ? supabaseTransform(r.featured_image_url, { width: 128, quality: 80 }) ?? r.featured_image_url
+    : null;
+  const d = relatedDeadline(r.deadline);
+  return (
+    <Link
+      href={`/opportunities/${r.slug ?? r.id}`}
+      className="flex gap-3 bg-card p-3 transition-colors hover:bg-[color:var(--tint)]"
+    >
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden bg-white">
+        {img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={img} alt="" className="h-full w-full object-contain" loading="lazy" />
+        ) : (
+          <span className="px-1 text-center font-mono text-[8px] font-semibold uppercase text-[color:var(--fg-subtle)]">
+            {r.type}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <div className="mb-1 text-[13px] font-semibold leading-[1.35]">
+          {r.title}
+          {d && <span className={`font-medium ${d.cls}`}> · {d.label}</span>}
+        </div>
+        <div className="truncate font-mono text-[11px] text-[color:var(--fg-subtle)]">
+          {r.organiser}
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function schemaTypeForOpp(type: string): string {
   switch (type) {
@@ -199,11 +267,11 @@ async function SocialProof({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {isTrending && (
-        <span className="text-xs border border-black bg-black text-white px-1.5 py-0.5 leading-none">
+        <span className="bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-none text-background">
           Trending
         </span>
       )}
-      <p className="text-xs text-muted-foreground">
+      <p className="font-mono text-[11.5px] text-[color:var(--fg-subtle)]">
         {saveCount > 0 && `Saved by ${saveCount} artist${saveCount !== 1 ? "s" : ""}`}
         {saveCount > 0 && viewCount > 0 && " · "}
         {viewCount > 0 && `Viewed ${viewCount} time${viewCount !== 1 ? "s" : ""}`}
@@ -227,12 +295,12 @@ async function UserCTA({
 
   if (!user) {
     return (
-      <a
+      <Link
         href="/get-started"
-        className="inline-flex items-center gap-2 border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
       >
         Create an account to apply →
-      </a>
+      </Link>
     );
   }
 
@@ -402,6 +470,7 @@ export default async function OpportunityPage({ params }: Props) {
         year: "numeric",
       })
     : null;
+  const deadlineUrgent = isDeadlineUrgent(opp.deadline);
 
   const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
   const location = rawLocation === "Global" ? "Open to all countries" : rawLocation;
@@ -497,7 +566,7 @@ export default async function OpportunityPage({ params }: Props) {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-12">
+    <div className="max-w-[1600px] mx-auto px-6 pb-16 pt-[18px]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -514,21 +583,17 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-12 lg:gap-16 items-start">
-      <div className="space-y-8 min-w-0">
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      {/* ✕ close is static. Admin controls + save button stream in. */}
-      <div className="flex items-center justify-between gap-3">
+      {/* ── Breadcrumb + actions row — full width, above the split ──────── */}
+      <div className="mb-5 flex items-center justify-between gap-3">
         <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
-          <ol className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+          <ol className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-[color:var(--fg-subtle)]">
             <li className="hidden sm:block shrink-0">
               <Link href="/opportunities" className="hover:text-foreground transition-colors">
                 Opportunities
               </Link>
             </li>
             <li aria-hidden="true" className="hidden sm:block shrink-0">/</li>
-            <li className="shrink-0">
+            <li className="shrink-0 text-[color:var(--fg-muted)]">
               <Link
                 href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
                 className="hover:text-foreground transition-colors"
@@ -540,59 +605,74 @@ export default async function OpportunityPage({ params }: Props) {
             <li className="text-foreground truncate min-w-0">{opp.title}</li>
           </ol>
         </nav>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <ShareTrigger payload={sharePayload} variant="button" />
+        <div className="flex items-center gap-2 shrink-0">
+          <ShareTrigger
+            payload={sharePayload}
+            variant="button"
+            className="flex items-center gap-1.5 border border-border px-3 py-[7px] font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+          />
           <Suspense fallback={<SaveButtonSkeleton />}>
             <HeaderActions opportunityId={opp.id} opp={opp} />
           </Suspense>
-          <Link
-            href="/opportunities"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors leading-none"
-            aria-label="Close"
-          >
-            ✕
-          </Link>
         </div>
       </div>
 
-      {/* ── Featured image — STATIC ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[2.1fr_1fr] items-start">
+      <div className="min-w-0">
+
+      {/* ── Featured image — STATIC, borderless per v2 ──────────────────── */}
       {opp.featured_image_url ? (
-        <div className="relative w-full border border-black overflow-hidden bg-white">
+        <div className="mb-6 w-full overflow-hidden bg-white">
           <Image
             src={opp.featured_image_url}
             alt={opp.title}
             width={1200}
             height={630}
             priority
-            className="w-full h-auto max-h-[360px] object-contain"
+            className="w-full h-auto max-h-[420px] object-contain"
           />
         </div>
       ) : (
-        <div className="w-full h-48 bg-[#E5E7EB] border border-black" />
+        /* No image: gradient hero with type + organiser overlay (per handoff) */
+        <div
+          className="relative mb-6 w-full overflow-hidden aspect-[16/8]"
+          style={{ background: "linear-gradient(135deg,#1a3540,#2d5560,#173038)" }}
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            <div className="mb-1 text-2xl italic tracking-[-0.01em] text-white/90 line-clamp-2">
+              {opp.title}
+            </div>
+            <div className="text-[40px] font-bold uppercase leading-none tracking-[-0.02em] text-white sm:text-[52px]">
+              {opp.type}
+            </div>
+          </div>
+          <div className="absolute bottom-4 left-6">
+            <span className="font-mono text-[10px] uppercase text-white/60">{opp.organiser}</span>
+          </div>
+        </div>
       )}
 
-      {/* ── Tags — STATIC ───────────────────────────────────────────────── */}
-      {/* isTrending requires a save count query — it streams in via SocialProof below */}
-      <div className="flex flex-wrap gap-1.5">
-        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.type}</span>
-        <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.country}</span>
+      {/* ── Tags — solid brand pill for the type, outlined for the rest ─── */}
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        <span className="bg-brand px-2.5 py-1 font-mono text-[11px] text-white">{opp.type}</span>
+        <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">{opp.country}</span>
         {opp.grant_type && (
-          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">{opp.grant_type}</span>
+          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">{opp.grant_type}</span>
         )}
         {opp.recipients_count != null && (
-          <span className="text-xs border border-black px-1.5 py-0.5 leading-none">
+          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">
             {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
           </span>
         )}
         {opp.is_recurring && (
-          <span className="text-xs border border-stone-700 bg-stone-800 text-white px-1.5 py-0.5 leading-none">
+          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">
             {opp.recurrence_pattern ? RECURRENCE_LABELS[opp.recurrence_pattern] : "Recurring"}
           </span>
         )}
         {(opp.sub_categories ?? []).map((cat) => (
           <span
             key={cat}
-            className="text-xs border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none"
+            className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]"
           >
             {cat}
           </span>
@@ -600,117 +680,93 @@ export default async function OpportunityPage({ params }: Props) {
       </div>
 
       {/* ── Title + organiser — STATIC ──────────────────────────────────── */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">{opp.title}</h1>
-        {partnerProfile ? (
-          <Link
-            href={`/${partnerProfile.username}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground font-mono hover:text-foreground transition-colors"
-          >
-            {partnerProfile.avatar_url && (
-              <div className="relative w-5 h-5 shrink-0 border border-black overflow-hidden">
-                <Image
-                  src={partnerProfile.avatar_url}
-                  alt={opp.organiser}
-                  fill
-                  className="object-cover"
-                  sizes="20px"
-                />
-              </div>
-            )}
-            {opp.organiser}
-          </Link>
-        ) : (
-          <p className="text-sm text-muted-foreground font-mono">{opp.organiser}</p>
-        )}
-      </div>
+      <h1 className="mb-1.5 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em]">{opp.title}</h1>
+      {partnerProfile ? (
+        <Link
+          href={`/${partnerProfile.username}`}
+          className="mb-6 inline-flex items-center gap-2 text-[14.5px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
+        >
+          {partnerProfile.avatar_url && (
+            <div className="relative w-5 h-5 shrink-0 overflow-hidden">
+              <Image
+                src={partnerProfile.avatar_url}
+                alt={opp.organiser}
+                fill
+                className="object-cover"
+                sizes="20px"
+              />
+            </div>
+          )}
+          {opp.organiser}
+        </Link>
+      ) : (
+        <p className="mb-6 text-[14.5px] text-[color:var(--fg-muted)]">{opp.organiser}</p>
+      )}
 
-      {/* ── Vital stats — STATIC ────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border border-black p-5">
-        {fundingLabel && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Funding</p>
-            <p className="font-mono font-bold text-sm">{fundingLabel}</p>
-          </div>
-        )}
+      {/* ── Key facts — no box, vertical hairlines only (per handoff) ───── */}
+      <div className="mb-5 flex flex-wrap gap-y-4">
+        {fundingLabel && <Fact label="Funding" value={fundingLabel} />}
         {opp.opens_at && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Opens</p>
-            <p className="font-mono text-sm">
-              {new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", {
-                day: "numeric", month: "long", year: "numeric",
-              })}
-            </p>
-          </div>
+          <Fact
+            label="Opens"
+            value={new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", {
+              day: "numeric", month: "long", year: "numeric",
+            })}
+          />
         )}
-        {deadline && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Deadline</p>
-            <p className="font-mono text-sm">{deadline}</p>
-          </div>
-        )}
-        {location && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Location</p>
-            <p className="font-mono text-sm">{location}</p>
-          </div>
-        )}
+        {deadline && <Fact label="Deadline" value={deadline} urgent={deadlineUrgent} />}
+        {location && <Fact label="Location" value={location} />}
         {opp.entry_fee !== null && opp.entry_fee !== undefined && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Entry Fee</p>
-            <p className="font-mono text-sm">
-              {opp.entry_fee === 0
+          <Fact
+            label="Entry Fee"
+            value={
+              opp.entry_fee === 0
                 ? "Free"
                 : opp.entry_fee_currency && opp.entry_fee_local != null
                   ? `NZD ~${Math.round(opp.entry_fee)} (${opp.entry_fee_currency} ${opp.entry_fee_local})`
-                  : `NZD ${opp.entry_fee}`}
-            </p>
-          </div>
+                  : `NZD ${opp.entry_fee}`
+            }
+          />
         )}
-        {opp.artist_payment_type && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Artist Payment</p>
-            <p className="font-mono text-sm">{opp.artist_payment_type}</p>
-          </div>
-        )}
+        {opp.artist_payment_type && <Fact label="Artist Payment" value={opp.artist_payment_type} />}
         {opp.travel_support !== null && opp.travel_support !== undefined && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Travel Support</p>
-            <p className="font-mono text-sm">
-              {opp.travel_support ? "Yes" : "No"}
-              {opp.travel_support && opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""}
-            </p>
-          </div>
+          <Fact
+            label="Travel Support"
+            value={`${opp.travel_support ? "Yes" : "No"}${
+              opp.travel_support && opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""
+            }`}
+          />
         )}
         {opp.is_recurring && opp.recurrence_pattern && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Schedule</p>
-            <p className="font-mono text-sm">
-              {RECURRENCE_LABELS[opp.recurrence_pattern]}
-              {opp.recurrence_open_day && opp.recurrence_close_day
+          <Fact
+            label="Schedule"
+            value={`${RECURRENCE_LABELS[opp.recurrence_pattern]}${
+              opp.recurrence_open_day && opp.recurrence_close_day
                 ? ` · opens ${opp.recurrence_open_day}, closes ${opp.recurrence_close_day}`
-                : ""}
-            </p>
-          </div>
+                : ""
+            }`}
+          />
         )}
       </div>
 
       {/* ── Social proof — DYNAMIC (save count + trending badge) ────────── */}
       {/* fallback=null: this line is decorative; no layout shift risk */}
-      <Suspense fallback={null}>
-        <SocialProof opportunityId={opp.id} viewCount={opp.view_count} />
-      </Suspense>
+      <div className="mb-7">
+        <Suspense fallback={null}>
+          <SocialProof opportunityId={opp.id} viewCount={opp.view_count} />
+        </Suspense>
+      </div>
 
       {/* ── Description — STATIC ────────────────────────────────────────── */}
       {(opp.caption || opp.full_description || opp.description) && (
-        <div className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <div className="mb-8 space-y-3">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             About
           </h2>
           {/* Lead paragraph: short summary only. When there's no caption/description,
               full_description is rendered structured below (bold/italic/bullets). */}
           {(opp.caption ?? opp.description) && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="text-[14.5px] leading-[1.7] whitespace-pre-wrap">
               {opp.caption ?? opp.description}
             </p>
           )}
@@ -739,8 +795,8 @@ export default async function OpportunityPage({ params }: Props) {
               label={`${link.label?.trim() || "Apply"} →`}
               className={
                 i === 0
-                  ? "inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
-                  : "inline-flex items-center gap-2 border border-black px-6 py-3 text-sm font-semibold hover:bg-black hover:text-white transition-colors"
+                  ? "inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
+                  : "inline-flex items-center gap-2 border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
               }
             />
           ))}
@@ -756,37 +812,38 @@ export default async function OpportunityPage({ params }: Props) {
       ) : opp.contact_email ? (
         <a
           href={`mailto:${opp.contact_email}`}
-          className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
+          className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
         >
           Apply via email →
         </a>
       ) : null}
 
       {/* ── Back link — STATIC ──────────────────────────────────────────── */}
-      <div className="border-t border-border pt-6">
+      <div className="mt-9 border-t border-border pt-5">
         <Link
           href="/opportunities"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
         >
           ← Back to opportunities
         </Link>
       </div>
       </div>{/* end main column */}
 
-      {/* ── Related opportunities sidebar ───────────────────────────────── */}
+      {/* ── Related opportunities sidebar — pin rows on a feed-bg gap
+             backdrop, hairline left divider on desktop ─────────────────── */}
       {related.length > 0 && (
-        <aside className="lg:sticky lg:top-6 lg:self-start space-y-5">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+        <aside className="border-t border-border pt-6 lg:sticky lg:top-[72px] lg:self-start lg:border-t-0 lg:border-l lg:pl-8 lg:pt-0">
+          <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             Related opportunities
           </p>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-[2px] bg-feed-bg">
             {related.map((r) => (
-              <OpportunityMiniCard key={r.id} opp={r as unknown as Opportunity} />
+              <RelatedRow key={r.id} r={r} />
             ))}
           </div>
           <Link
             href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
-            className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="mt-3.5 block text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
           >
             More {opp.type.toLowerCase()} opportunities →
           </Link>

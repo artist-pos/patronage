@@ -62,6 +62,7 @@ export function ArtistFilters() {
   const currentStage = searchParams.get("stage") as CareerStageEnum | null;
   const currentMedium = searchParams.get("medium");
   const currentView = searchParams.get("view") ?? "spotlight";
+  const commissionsOnly = searchParams.get("commissions") === "1";
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -84,44 +85,82 @@ export function ArtistFilters() {
     updateParam("medium", currentMedium === medium ? null : medium);
   }
 
+  // v2 discipline tab — mono 12px, black underline active (per Artists mockup)
+  const tabCls = (active: boolean) =>
+    `-mb-px shrink-0 whitespace-nowrap border-b-2 px-3.5 py-2 font-mono text-xs transition-colors ${
+      active
+        ? "border-foreground text-foreground"
+        : "border-transparent text-muted-foreground hover:text-foreground"
+    }`;
+
   return (
-    <div className="space-y-4 pb-6 border-b border-border">
-      {/* Medium pills + view switcher on same row */}
-      <div className="flex items-center justify-between gap-4">
-        {/* Medium filter pills — horizontal scroll on small screens */}
-        <div className="flex overflow-x-auto gap-x-5 scrollbar-none shrink min-w-0 pb-0.5">
+    <div>
+      {/* Discipline tab row */}
+      <div className="flex items-stretch overflow-x-auto border-b border-border scrollbar-none">
+        <button onClick={() => updateParam("medium", null)} className={tabCls(!currentMedium)}>
+          All
+        </button>
+        {MEDIUMS.map((m) => (
+          <button key={m} onClick={() => toggleMedium(m)} className={tabCls(currentMedium === m)}>
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {/* Secondary filters + view switcher */}
+      <div className="flex items-center justify-between gap-3 py-3.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={currentCountry ?? "all"}
+            onValueChange={(v) => updateParam("country", v)}
+          >
+            <SelectTrigger className="w-40 font-mono text-xs">
+              <SelectValue placeholder="All countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All countries</SelectItem>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={currentStage ?? "all"}
+            onValueChange={(v) => updateParam("stage", v)}
+          >
+            <SelectTrigger className="w-44 font-mono text-xs">
+              <SelectValue placeholder="All stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All stages</SelectItem>
+              {STAGES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Commission availability — green = the artist's status colour */}
           <button
-            onClick={() => updateParam("medium", null)}
-            className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-              !currentMedium
-                ? "font-semibold border-b border-black"
-                : "text-muted-foreground hover:text-foreground"
+            onClick={() => updateParam("commissions", commissionsOnly ? null : "1")}
+            className={`flex items-center gap-1.5 border px-3 py-2 font-mono text-xs transition-colors ${
+              commissionsOnly
+                ? "border-[color:var(--success)] text-[color:var(--success)]"
+                : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
-            All
+            <span className={`h-[6px] w-[6px] rounded-full ${commissionsOnly ? "bg-success" : "bg-border"}`} />
+            Open for commissions
           </button>
-          {MEDIUMS.map((m) => (
-            <button
-              key={m}
-              onClick={() => toggleMedium(m)}
-              className={`text-sm whitespace-nowrap transition-colors pb-0.5 shrink-0 ${
-                currentMedium === m
-                  ? "font-semibold border-b border-black"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
         </div>
 
         {/* View switcher */}
-        <div className="flex items-center border border-black shrink-0">
+        <div className="flex shrink-0 items-center border border-border">
           <button
             onClick={() => updateParam("view", "spotlight")}
             aria-label="Spotlight view"
             className={`p-2 transition-colors ${
-              currentView === "spotlight" ? "bg-black text-white" : "hover:bg-muted"
+              currentView === "spotlight" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <SpotlightIcon />
@@ -129,8 +168,8 @@ export function ArtistFilters() {
           <button
             onClick={() => updateParam("view", "gallery")}
             aria-label="Gallery view"
-            className={`p-2 border-l border-black transition-colors ${
-              currentView === "gallery" ? "bg-black text-white" : "hover:bg-muted"
+            className={`border-l border-border p-2 transition-colors ${
+              currentView === "gallery" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <GridIcon />
@@ -138,46 +177,13 @@ export function ArtistFilters() {
           <button
             onClick={() => updateParam("view", "list")}
             aria-label="List view"
-            className={`p-2 border-l border-black transition-colors ${
-              currentView === "list" ? "bg-black text-white" : "hover:bg-muted"
+            className={`border-l border-border p-2 transition-colors ${
+              currentView === "list" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <ListIcon />
           </button>
         </div>
-      </div>
-
-      {/* Secondary filters: country + stage dropdowns */}
-      <div className="flex flex-wrap gap-3">
-        <Select
-          value={currentCountry ?? "all"}
-          onValueChange={(v) => updateParam("country", v)}
-        >
-          <SelectTrigger className="w-40 text-sm">
-            <SelectValue placeholder="All countries" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All countries</SelectItem>
-            {COUNTRIES.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={currentStage ?? "all"}
-          onValueChange={(v) => updateParam("stage", v)}
-        >
-          <SelectTrigger className="w-44 text-sm">
-            <SelectValue placeholder="All stages" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All stages</SelectItem>
-            {STAGES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );

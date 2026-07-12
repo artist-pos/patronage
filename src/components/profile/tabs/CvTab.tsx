@@ -60,18 +60,18 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
 
       {sortedExhibitions.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          <h3 className="t-section-label">
             Exhibition History
           </h3>
-          <div className="space-y-2">
+          <div className="border-t border-border">
             {sortedExhibitions.map((ex, i) => (
-              <div key={i} className="flex gap-4 text-sm">
+              <div key={i} className="flex gap-4 border-b border-border py-2.5 text-sm">
                 <span className="font-mono text-muted-foreground w-10 shrink-0">{ex.year}</span>
                 <div>
                   <span className="font-semibold">{ex.title}</span>
                   {ex.venue && <span className="text-muted-foreground">, {ex.venue}</span>}
                   {ex.location && <span className="text-muted-foreground">, {ex.location}</span>}
-                  <span className="ml-2 text-[10px] uppercase tracking-widest text-stone-400">{ex.type}</span>
+                  <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{ex.type}</span>
                 </div>
               </div>
             ))}
@@ -81,7 +81,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
 
       {bibliography.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          <h3 className="t-section-label">
             Bibliography
           </h3>
           <div className="space-y-3">
@@ -107,7 +107,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
                 {item.publication && <span className="italic text-muted-foreground">, {item.publication}</span>}
                 {item.date && <span className="text-muted-foreground">, {item.date}</span>}
                 {item.type && (
-                  <span className="ml-2 text-[10px] uppercase tracking-widest text-stone-400">{item.type}</span>
+                  <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{item.type}</span>
                 )}
               </div>
             ))}
@@ -117,18 +117,18 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
 
       {(achievements.length > 0 || receivedGrants.length > 0) && (
         <section className="space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          <h3 className="t-section-label">
             Grants &amp; Awards
           </h3>
-          <div className="space-y-2">
+          <div className="border-t border-border">
             {achievements.map((a) => (
-              <div key={a.id} className="flex items-baseline gap-3 text-sm">
+              <div key={a.id} className="flex items-baseline gap-3 border-b border-border py-2.5 text-sm">
                 <span className="font-mono text-muted-foreground w-10 shrink-0">{a.year}</span>
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="font-semibold">{a.opportunity_title}</span>
                   <span className="text-muted-foreground">{a.organisation}</span>
                   {a.verified && (
-                    <span className="text-[10px] uppercase tracking-widest text-emerald-600 border border-emerald-600/40 px-1.5 py-0.5 leading-none">
+                    <span className="badge badge-grant">
                       Verified
                     </span>
                   )}

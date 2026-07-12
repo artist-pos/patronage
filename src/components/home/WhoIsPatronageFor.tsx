@@ -10,7 +10,7 @@ interface Card {
 
 const CARDS: Card[] = [
   {
-    label: "Artist / Creative",
+    label: "Artist",
     headline: "One URL for your whole practice.",
     body: "Profile, CV, studio feed, available works — free to join.",
     features: [
@@ -47,82 +47,51 @@ const CARDS: Card[] = [
   },
 ];
 
+/* v2 "Three roles" — feed-bg section, white containerless-adjacent cards
+   (actual UI components keep a surface), mono kickers, outline mono CTAs
+   that invert on hover. */
 export function WhoIsPatronageFor() {
   return (
-    <section className="border-t border-border px-6 pt-20 pb-24">
+    <section className="bg-feed-bg border-t border-b border-border px-6 py-16">
       <div className="max-w-[1600px] mx-auto">
-        <div className="text-center space-y-3">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
-            Who is Patronage for?
-          </p>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-stone-900">
-            One platform, three relationships.
-          </h2>
-        </div>
+        <h2 className="text-[28px] md:text-4xl font-semibold tracking-[-0.028em] leading-[1.06] max-w-[480px] mb-12">
+          One platform, three relationships.
+        </h2>
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch max-w-5xl mx-auto">
-          {CARDS.map((card) => {
-            const inverted = card.label === "Artist / Creative";
-            return (
-              <div
-                key={card.label}
-                className={`flex flex-col rounded-xl p-6 ${
-                  inverted
-                    ? "bg-stone-900"
-                    : "bg-stone-50 border border-stone-100"
-                }`}
-              >
-                <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
-                  {card.label}
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch">
+          {CARDS.map((card) => (
+            <div key={card.label} className="flex flex-col bg-card p-7">
+              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+                {card.label}
+              </p>
 
-                <h3
-                  className={`mt-3 text-base font-semibold leading-snug ${
-                    inverted ? "text-white" : "text-stone-900"
-                  }`}
-                >
-                  {card.headline}
-                </h3>
+              <h3 className="mt-3.5 text-lg font-semibold tracking-[-0.018em] leading-tight">
+                {card.headline}
+              </h3>
 
-                <p
-                  className={`mt-1.5 text-[13px] leading-relaxed ${
-                    inverted ? "text-stone-300" : "text-stone-500"
-                  }`}
-                >
-                  {card.body}
-                </p>
+              <p className="mt-2 text-sm leading-[1.65] text-[color:var(--fg-muted)]">
+                {card.body}
+              </p>
 
-                <ul className="mt-5 space-y-2">
-                  {card.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className={`flex gap-2 text-[13px] leading-relaxed ${
-                        inverted ? "text-stone-300" : "text-stone-600"
-                      }`}
-                    >
-                      <span className="text-stone-300 select-none">—</span>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-auto pt-6">
-                  <Link
-                    href={card.cta.href}
-                    className={`block w-full rounded-lg px-4 py-2 text-center text-[13px] font-medium transition-colors ${
-                      inverted
-                        ? "bg-white text-stone-900 hover:bg-stone-100"
-                        : card.label === "Patron"
-                          ? "bg-stone-900 text-white hover:bg-stone-800"
-                          : "border border-stone-900 text-stone-900 hover:bg-stone-900 hover:text-white"
-                    }`}
+              <ul className="mt-4.5 flex flex-col gap-[7px] mb-6">
+                {card.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="text-[13px] leading-relaxed text-[color:var(--fg-muted)]"
                   >
-                    {card.cta.text}
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
+                    — {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={card.cta.href}
+                className="mt-auto block w-full border border-foreground px-4 py-2.5 text-center font-mono text-xs text-foreground transition-colors hover:bg-foreground hover:text-white"
+              >
+                {card.cta.text}
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
     </section>

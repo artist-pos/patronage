@@ -126,6 +126,14 @@ export async function upsertProfileAction(
     profileData.disciplines = disciplines;
   }
 
+  // Commission fields — only written when the submitting form carried them
+  // (guards against other forms that share this action resetting the flag).
+  if (formData.get("has_commission_fields")) {
+    profileData.open_for_commissions = formData.get("open_for_commissions") === "on";
+    profileData.commission_info =
+      (formData.get("commission_info") as string)?.trim() || null;
+  }
+
   const { error } = await supabase.from("profiles").upsert(profileData);
 
   if (error) return { error: error.message };

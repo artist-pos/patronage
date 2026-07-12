@@ -43,7 +43,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
           </p>
           <button
             onClick={handleToggle}
-            className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
+            className="border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
           >
             Enable support
           </button>
@@ -61,6 +61,9 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
 
   return (
     <div className="py-8 space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="t-section-label">Support</h2>
+      </div>
       {isOwner && (
         <div className="flex justify-end items-center gap-4">
           <a
@@ -92,56 +95,65 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
           )}
         </div>
       ) : (
-        activeTiers.map(tier => (
-          <div
-            key={tier.id}
-            className="border border-border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-          >
-            <div className="flex items-start gap-4">
-              {tier.tier_image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={tier.tier_image_url}
-                  alt={tier.title}
-                  className="w-16 h-16 object-cover flex-shrink-0"
-                />
-              )}
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold">{tier.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  NZD {tier.price.toLocaleString("en-NZ")}
-                  {tier.description ? ` — ${tier.description}` : ""}
-                </p>
-              </div>
-            </div>
-            {isOwner ? (
-              <a
-                href="/studio?section=support"
-                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
-              >
-                Configure →
-              </a>
-            ) : tier.tier_type === "service" || tier.tier_type === "project" ? (
-              <a
-                href="/messages"
-                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
-              >
-                Get in touch →
-              </a>
-            ) : stripeConnected ? (
-              <button
-                onClick={() => setSelectedTier(tier)}
-                className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap"
-              >
-                {`Support ${artistName}`}
-              </button>
-            ) : (
-              <span className="text-xs text-muted-foreground whitespace-nowrap sm:text-right">
-                Support payments coming soon
-              </span>
+        /* Tier cards — white pins in a grid: name, mono price, description,
+           CTA anchored to the bottom edge */
+        <div className="grid grid-cols-1 gap-2 bg-feed-bg p-2 sm:grid-cols-2 lg:grid-cols-3">
+        {activeTiers.map(tier => {
+          const isRecurring = tier.tier_type === "recurring";
+          return (
+          <div key={tier.id} className="flex flex-col bg-card p-5">
+            {tier.tier_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tier.tier_image_url}
+                alt={tier.title}
+                className="mb-4 h-32 w-full object-cover"
+              />
             )}
+            <h3 className="text-[15px] font-semibold leading-snug">{tier.title}</h3>
+            <p className="mt-1.5 font-mono text-lg font-semibold">
+              NZD {tier.price.toLocaleString("en-NZ")}
+              {isRecurring && (
+                <span className="text-[11px] font-normal text-muted-foreground"> / month</span>
+              )}
+            </p>
+            {tier.description && (
+              <p className="mt-2 text-[13px] leading-[1.55] text-[color:var(--fg-muted)]">
+                {tier.description}
+              </p>
+            )}
+            <div className="mt-auto pt-4">
+              {isOwner ? (
+                <a
+                  href="/studio?section=support"
+                  className="inline-block border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
+                >
+                  Configure →
+                </a>
+              ) : tier.tier_type === "service" || tier.tier_type === "project" ? (
+                <a
+                  href="/messages"
+                  className="inline-block border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
+                >
+                  Get in touch →
+                </a>
+              ) : stripeConnected ? (
+                <button
+                  onClick={() => setSelectedTier(tier)}
+                  className="w-full bg-brand px-4 py-2.5 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
+                >
+                  {`Support ${artistName}`}
+                </button>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Support payments coming soon
+                </span>
+              )}
+            </div>
           </div>
-        ))
+          );
+        })}
+        </div>
       )}
 
       {!isOwner && selectedTier && (

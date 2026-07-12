@@ -24,31 +24,31 @@ export function OpportunitiesTabSwitch({ activeTab, matchCount }: Props) {
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  // Segmented control — this is a MODE switch, not another filter row.
+  // Solid fill for the active segment separates it from the underline
+  // filter tabs beneath it.
+  const segCls = (active: boolean) =>
+    `px-5 py-2.5 font-mono text-[13px] transition-colors ${
+      active
+        ? "bg-foreground text-white"
+        : "bg-card text-muted-foreground hover:text-foreground"
+    }`;
+
   return (
-    <div className="inline-flex items-center gap-1 bg-stone-100 rounded-full p-1">
-      <button
-        type="button"
-        onClick={() => switchTab("all")}
-        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
-          activeTab === "all"
-            ? "bg-white text-foreground shadow-sm"
-            : "text-stone-500 hover:text-foreground"
-        }`}
-      >
+    <div className="inline-flex items-stretch self-start border border-border">
+      <button type="button" onClick={() => switchTab("all")} className={segCls(activeTab === "all")}>
         All Opportunities
       </button>
       <button
         type="button"
         onClick={() => switchTab("for-you")}
-        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
-          activeTab === "for-you"
-            ? "bg-white text-foreground shadow-sm"
-            : "text-stone-500 hover:text-foreground"
-        }`}
+        className={`border-l border-border ${segCls(activeTab === "for-you")}`}
       >
         For You
         {matchCount > 0 && (
-          <span className="ml-1.5 text-xs text-stone-400">{matchCount}</span>
+          <span className={`ml-1.5 text-xs ${activeTab === "for-you" ? "text-white/60" : "text-[color:var(--fg-subtle)]"}`}>
+            {matchCount}
+          </span>
         )}
       </button>
     </div>
