@@ -19,10 +19,11 @@ function fmt(n: number) {
 
 interface Props {
   tiers: TierDef[];
+  defaultQtys: number[];
 }
 
-export function TrancheCalculator({ tiers }: Props) {
-  const [qtys, setQtys] = useState<number[]>([20, 6, 4, 0]);
+export function TrancheCalculator({ tiers, defaultQtys }: Props) {
+  const [qtys, setQtys] = useState<number[]>(defaultQtys);
   const [stationQty, setStationQty] = useState(0);
   const [stationPrice, setStationPrice] = useState(15_000);
 
@@ -38,7 +39,6 @@ export function TrancheCalculator({ tiers }: Props) {
     .map((t, i) => ({ tier: t, qty: qtys[i], subtotal: qtys[i] * perBox(t) }))
     .filter((r) => r.qty > 0);
 
-  const totalBoxes = qtys.reduce((s, q) => s + q, 0);
   const totalArtistFees = tiers.reduce(
     (s, t, i) => s + qtys[i] * t.artistFee,
     0
@@ -71,11 +71,11 @@ export function TrancheCalculator({ tiers }: Props) {
             {/* Qty controls */}
             <div className="flex items-center justify-center gap-2">
               <button
-                onClick={() => setQty(i, qtys[i] + 1)}
+                onClick={() => setQty(i, qtys[i] - 1)}
                 className="w-7 h-7 flex items-center justify-center rounded-full bg-white border border-border hover:bg-stone-100 transition-colors text-sm font-medium"
-                aria-label={`Increase ${tier.name}`}
+                aria-label={`Decrease ${tier.name}`}
               >
-                +
+                −
               </button>
               <input
                 type="text"
@@ -86,11 +86,11 @@ export function TrancheCalculator({ tiers }: Props) {
                 className="w-14 text-center bg-white border border-border rounded-lg py-1.5 text-lg font-semibold focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <button
-                onClick={() => setQty(i, qtys[i] - 1)}
+                onClick={() => setQty(i, qtys[i] + 1)}
                 className="w-7 h-7 flex items-center justify-center rounded-full bg-white border border-border hover:bg-stone-100 transition-colors text-sm font-medium"
-                aria-label={`Decrease ${tier.name}`}
+                aria-label={`Increase ${tier.name}`}
               >
-                −
+                +
               </button>
             </div>
 
@@ -189,11 +189,12 @@ export function TrancheCalculator({ tiers }: Props) {
         </div>
       )}
 
-      {/* Stats */}
-      {totalBoxes > 0 && (
-        <div className="flex flex-wrap gap-8 pt-2">
+      {/* Stats — always visible so the figures read as live */}
+      <div className="flex flex-wrap gap-8 pt-2">
           <div>
-            <p className="text-3xl font-semibold tabular-nums">{pctToArtists}%</p>
+            <p className="text-3xl font-semibold tabular-nums">
+              {totalBoxCost > 0 ? `${pctToArtists}%` : "—"}
+            </p>
             <p className="font-mono text-xs uppercase tracking-wider text-stone-400 mt-1">
               To artists
             </p>
@@ -211,7 +212,6 @@ export function TrancheCalculator({ tiers }: Props) {
             </p>
           </div>
         </div>
-      )}
 
       {/* Footnote */}
       <p className="font-mono text-[10px] text-stone-400">

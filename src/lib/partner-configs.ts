@@ -10,8 +10,14 @@ export type PartnerConfig = {
   eyebrow: string;
   title: string;
   subtitle: string;
+  /** Brand accent colour for the eyebrow */
+  accent: string;
   /** Full Supabase Storage public URL for the proposal PDF */
   pdfUrl: string;
+  /** Intro line under the calculator heading */
+  calculatorIntro: string;
+  /** Starting box counts per tier (same order as tiers) */
+  defaultQtys: number[];
   tiers: TierDef[];
 };
 
@@ -24,7 +30,29 @@ export const PARTNER_CONFIGS: Record<string, PartnerConfig> = {
     title: "Activating network assets through commissioned artwork.",
     subtitle:
       "Commissioned artwork across WEL's street-level assets. Coated, reported on, and managed end-to-end by Patronage.",
+    accent: "#00355F",
     pdfUrl: "https://vftehndhobjecumphupx.supabase.co/storage/v1/object/public/partner-proposals/WEL%20x%20Patronage.pdf",
+    calculatorIntro:
+      "Adjust the number of boxes per tier. Artist fees, materials, and management are fixed.",
+    defaultQtys: [20, 6, 4, 0],
+    tiers: [
+      { name: "Small",  area: "≤1.7 m²",     artistFee: 900,  materials: 130 },
+      { name: "Medium", area: "1.8–2.9 m²",   artistFee: 1500, materials: 170 },
+      { name: "Large",  area: "3–6 m²",        artistFee: 2000, materials: 370 },
+      { name: "XL",     area: "6–9 m²",        artistFee: 2700, materials: 560 },
+    ],
+  },
+  WAIPA: {
+    slug: "WAIPA",
+    eyebrow: "Patronage × Waipā Networks",
+    title: "Activating network assets through commissioned artwork.",
+    subtitle:
+      "Commissioned artwork across Waipā's street-level assets. Coated, reported on, and managed end-to-end by Patronage.",
+    accent: "#004B9B",
+    pdfUrl: "https://vftehndhobjecumphupx.supabase.co/storage/v1/object/public/partner-proposals/WAIPA%20x%20Patronage.pdf",
+    calculatorIntro:
+      "Adjust the number of boxes per tier. Artist fees, materials, and management are fixed. Start with the busiest corners in Cambridge and Te Awamutu, or spread across both.",
+    defaultQtys: [0, 0, 0, 0],
     tiers: [
       { name: "Small",  area: "≤1.7 m²",     artistFee: 900,  materials: 130 },
       { name: "Medium", area: "1.8–2.9 m²",   artistFee: 1500, materials: 170 },

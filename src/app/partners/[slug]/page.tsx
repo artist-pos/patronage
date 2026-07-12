@@ -33,7 +33,10 @@ export default async function PartnerProposalPage({ params }: Props) {
       <div className="max-w-[1280px] mx-auto px-6 py-12 space-y-16">
         {/* ── Hero ───────────────────────────────────────────────────────── */}
         <section className="space-y-4 pb-12 border-b border-border">
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#00355F]">
+          <p
+            className="font-mono text-xs uppercase tracking-[0.14em]"
+            style={{ color: config.accent }}
+          >
             {config.eyebrow}
           </p>
           <h1 className="text-4xl md:text-5xl font-light leading-[1.05] tracking-tight max-w-[14ch]">
@@ -62,10 +65,10 @@ export default async function PartnerProposalPage({ params }: Props) {
               Model your first tranche.
             </h2>
             <p className="text-sm text-muted-foreground">
-              Adjust the number of boxes per tier. Artist fees, materials, and management are fixed.
+              {config.calculatorIntro}
             </p>
           </div>
-          <TrancheCalculator tiers={config.tiers} />
+          <TrancheCalculator tiers={config.tiers} defaultQtys={config.defaultQtys} />
         </section>
 
         {/* ── Footer CTA ─────────────────────────────────────────────────── */}
