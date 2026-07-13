@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { BlogMasonry } from "@/components/blog/BlogMasonry";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -48,8 +49,9 @@ export default async function BlogPage() {
       {(!posts || posts.length === 0) ? (
         <p className="text-muted-foreground">No posts yet — check back soon.</p>
       ) : (
-        /* 2px warm-grey gaps are the only separation between cards — no borders */
-        <div className="grid grid-cols-1 gap-[2px] bg-feed-bg p-[2px] sm:grid-cols-2">
+        /* Cards sit directly on the page background, separated by gap alone,
+           packed into masonry columns so short cards don't leave dead space. */
+        <BlogMasonry>
           {posts.map((post) => {
             const category: string =
               post.category ??
@@ -61,19 +63,20 @@ export default async function BlogPage() {
               <Link
                 key={post.id}
                 href={`/blog/${post.slug}`}
-                className="group block bg-card"
+                className="group block bg-card transition-[transform,box-shadow] duration-150 ease-in-out hover:-translate-y-[2px] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
               >
-                <div className="h-[240px] w-full overflow-hidden bg-feed-bg">
-                  {post.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.image_url}
-                      alt=""
-                      className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-[.88]"
-                      loading="lazy"
-                    />
-                  )}
-                </div>
+                {/* Covers render at the image's own aspect ratio — never cropped */}
+                {post.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={post.image_url}
+                    alt=""
+                    className="h-auto w-full transition-opacity duration-150 group-hover:opacity-[.88]"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="aspect-video w-full bg-feed-bg" />
+                )}
                 <div className="px-5 pb-[22px] pt-[18px]">
                   <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-brand">
                     {category}
@@ -100,7 +103,7 @@ export default async function BlogPage() {
               </Link>
             );
           })}
-        </div>
+        </BlogMasonry>
       )}
     </div>
   );
