@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PendingButton } from "@/components/auth/PendingButton";
 import { verifyEmail, resendConfirmation } from "./actions";
 
 export const metadata = { title: "Confirm Your Email — Patronage" };
@@ -13,6 +14,7 @@ interface Props {
     code?: string;
     status?: string;
     resend?: string;
+    email?: string;
   }>;
 }
 
@@ -57,23 +59,27 @@ export default async function ConfirmPage({ searchParams }: Props) {
             name="email"
             type="email"
             required
+            defaultValue={sp.email}
             placeholder="you@example.com"
             className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
           />
           {sp.resend === "invalid-email" && (
             <p className="text-xs text-destructive">Enter a valid email address.</p>
           )}
+          {sp.resend === "rate-limit" && (
+            <p className="text-xs text-destructive">
+              An email was sent to this address in the last minute. Wait a
+              moment, then try again — and check your spam folder.
+            </p>
+          )}
           {sp.resend === "error" && (
             <p className="text-xs text-destructive">
               Couldn&rsquo;t resend just now. Please try again.
             </p>
           )}
-          <button
-            type="submit"
-            className="w-full text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity"
-          >
+          <PendingButton className="w-full text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity disabled:opacity-60">
             Resend confirmation email
-          </button>
+          </PendingButton>
         </form>
         <p className="text-xs text-muted-foreground">
           Already verified?{" "}
@@ -98,12 +104,9 @@ export default async function ConfirmPage({ searchParams }: Props) {
         <input type="hidden" name="type" value={sp.type} />
         {sp.role && <input type="hidden" name="role" value={sp.role} />}
         {sp.next && <input type="hidden" name="next" value={sp.next} />}
-        <button
-          type="submit"
-          className="w-full text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity"
-        >
+        <PendingButton className="w-full text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity disabled:opacity-60">
           Confirm email
-        </button>
+        </PendingButton>
       </form>
     </Shell>
   );

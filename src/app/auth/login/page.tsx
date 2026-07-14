@@ -42,6 +42,11 @@ export default async function LoginPage({ searchParams }: Props) {
             Confirmation email sent. Check your inbox (and spam) for the link.
           </p>
         )}
+        {message === "already-confirmed" && (
+          <p className="text-xs text-muted-foreground border border-black px-3 py-2 bg-muted">
+            Your email is already confirmed — sign in below.
+          </p>
+        )}
         {error === "callback" && (
           <div className="text-xs text-destructive space-y-1">
             <p>

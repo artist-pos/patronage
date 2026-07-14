@@ -67,13 +67,23 @@ export async function verifyEmail(formData: FormData): Promise<void> {
 export async function resendConfirmation(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = (formData.get("role") as string) || null;
+  const validRole = role && VALID_ROLES.includes(role) ? role : null;
+
+  // Error redirects land back on this page — keep the chosen role and the
+  // typed email so retrying doesn't silently lose them.
+  function retryUrl(resend: string): string {
+    const p = new URLSearchParams({ status: "expired", resend });
+    if (validRole) p.set("role", validRole);
+    if (email) p.set("email", email);
+    return `/auth/confirm?${p.toString()}`;
+  }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    redirect("/auth/confirm?status=expired&resend=invalid-email");
+    redirect(retryUrl("invalid-email"));
   }
 
   const params = new URLSearchParams();
-  if (role && VALID_ROLES.includes(role)) params.set("role", role);
+  if (validRole) params.set("role", validRole);
   params.set("next", "/onboarding/role");
   const emailRedirectTo = `${siteUrl()}/auth/confirm?${params.toString()}`;
 
@@ -84,7 +94,18 @@ export async function resendConfirmation(formData: FormData): Promise<void> {
     options: { emailRedirectTo },
   });
   if (error) {
-    redirect("/auth/confirm?status=expired&resend=error");
+    const detail = `${error.code ?? ""} ${error.message}`;
+    // Supabase allows one email per address per 60s — "try again" is the
+    // wrong advice there, so tell the user to wait instead.
+    if (/over_email_send_rate_limit|rate limit|security purposes|after \d+ seconds/i.test(detail)) {
+      redirect(retryUrl("rate-limit"));
+    }
+    // Resend for an already-confirmed address fails every time — the user
+    // is actually verified and just needs to sign in.
+    if (/already|exists|confirmed/i.test(detail)) {
+      redirect("/auth/login?message=already-confirmed");
+    }
+    redirect(retryUrl("error"));
   }
 
   redirect("/auth/login?message=confirm-sent");
