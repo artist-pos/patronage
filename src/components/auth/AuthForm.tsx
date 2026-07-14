@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { signInAction, signUpAction } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,19 @@ interface FieldErrors {
   password?: string;
 }
 
+const NETWORK_ERROR_MSG =
+  "Couldn't reach the server. Check your connection and try again.";
+
+// Server action invocations reject with a fetch TypeError when the user's
+// connection drops mid-request. Retry once before surfacing the error.
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return await fn();
+  }
+}
+
 export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -31,10 +45,9 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
 
   // Carry both the post-auth destination and the chosen role through the auth
   // redirect. Role is a top-level param (not nested in `next`) so it survives
-  // the OAuth provider round-trip. OAuth uses /auth/callback (PKCE code flow);
-  // email signup uses /auth/confirm (token_hash flow) so the link survives
-  // email prefetch/scanners and works across devices.
-  function buildAuthUrl(path: "/auth/callback" | "/auth/confirm") {
+  // the OAuth provider round-trip via /auth/callback (PKCE code flow). Email
+  // signup builds its /auth/confirm URL server-side in signUpAction.
+  function buildAuthUrl(path: "/auth/callback") {
     const params = new URLSearchParams();
     if (role) params.set("role", role);
     if (next) params.set("next", next);
@@ -67,7 +80,11 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
       },
     });
     if (error) {
-      setError(error.message);
+      // "Load failed" / "Failed to fetch" are the browser's raw network
+      // errors — translate them for humans.
+      setError(/load failed|failed to fetch|network/i.test(error.message)
+        ? NETWORK_ERROR_MSG
+        : error.message);
       setLoading(false);
     }
     // On success the browser navigates to Google — no further action needed
@@ -79,39 +96,31 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
     if (!validate()) return;
     setLoading(true);
 
-    if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: buildAuthUrl("/auth/confirm") },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        router.push("/auth/verify");
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("That email and password combination didn't work. Try again or reset your password.");
-      } else {
-        // Check if the user has completed onboarding (has a profile row)
-        const { data: { user: authedUser } } = await supabase.auth.getUser();
-        if (authedUser) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", authedUser.id)
-            .maybeSingle();
-          if (!profile) {
-            router.push("/onboarding/role");
-            router.refresh();
-            return;
-          }
+    // Auth runs through same-origin server actions — direct browser→Supabase
+    // fetches fail behind content blockers and some in-app browsers.
+    try {
+      if (mode === "signup") {
+        const result = await withRetry(() =>
+          signUpAction({ email, password, role, next })
+        );
+        if (result.error) {
+          setError(result.error);
+        } else {
+          router.push("/auth/verify");
+          return;
         }
-        router.push(next);
-        router.refresh();
+      } else {
+        const result = await withRetry(() => signInAction({ email, password, next }));
+        if (result.error) {
+          setError(result.error);
+        } else {
+          router.push(result.redirectTo ?? next);
+          router.refresh();
+          return;
+        }
       }
+    } catch {
+      setError(NETWORK_ERROR_MSG);
     }
 
     setLoading(false);
