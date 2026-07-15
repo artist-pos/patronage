@@ -180,7 +180,7 @@ export function WorkTab({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       data-pin-img
-                      src={gridImageSrc(hero.url!, hero.thumb_url ?? null, 1600, 80)}
+                      src={gridImageSrc(hero.url!, hero.thumb_url ?? null)}
                       alt={hero.title ?? "Featured work"}
                       className="block h-auto w-full"
                     />
@@ -247,7 +247,7 @@ export function WorkTab({
                     viewerRole={viewerRole}
                     profileId={isOwner ? undefined : profileId}
                     isOwner={isOwner}
-                    savedRowHeight={160}
+                    savedRowHeight={320}
                     savedGutter={galleryGutter ?? 6}
                     noControls
                   />

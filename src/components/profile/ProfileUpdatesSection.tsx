@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { supabaseTransform } from "@/lib/image";
+import { Play } from "lucide-react";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
@@ -40,11 +40,14 @@ function StripCard({ u }: { u: ProjectUpdateWithArtist }) {
     : u.update_tag && u.update_tag !== "update" ? u.update_tag : "Studio update";
 
   const isImage = (u.content_type === "image" || !u.content_type) && !!u.image_url;
+  const isVideo = u.content_type === "video" && !!(u.video_url || u.embed_url);
   const ar =
     isImage && u.image_width && u.image_height
       ? Math.min(Math.max(u.image_width / u.image_height, 0.6), 2.2)
-      : 1;
-  const width = isImage ? Math.round(IMG_H * ar) : TEXT_W;
+      : isVideo
+        ? 16 / 9
+        : 1;
+  const width = isImage || isVideo ? Math.round(IMG_H * ar) : TEXT_W;
 
   const footer = (
     <div
@@ -75,11 +78,46 @@ function StripCard({ u }: { u: ProjectUpdateWithArtist }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             data-pin-img
-            src={supabaseTransform(u.image_url!, { width: 700, quality: 78 }) ?? u.image_url!}
+            src={u.image_url!}
             alt={u.caption ?? `Update by ${name}`}
             loading="lazy"
             className="h-full w-full object-cover"
           />
+        </div>
+        {footer}
+      </Link>
+    );
+  }
+
+  // Video — first-frame preview with a play overlay; click-through opens the
+  // update where the full player (feed-style) lives. preload="metadata" pulls
+  // just the poster frame, and the image_url thumbnail is used when present.
+  if (isVideo) {
+    return (
+      <Link href={href} scroll={false} className="pin flex shrink-0 flex-col bg-card">
+        <div className="relative overflow-hidden bg-black" style={{ height: IMG_H, width }}>
+          {u.video_url ? (
+            <video
+              className="h-full w-full object-cover"
+              src={u.video_url}
+              preload="metadata"
+              muted
+              playsInline
+            />
+          ) : u.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={u.image_url}
+              alt={u.caption ?? `Video update by ${name}`}
+              loading="lazy"
+              className="h-full w-full object-cover opacity-80"
+            />
+          ) : null}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="flex h-11 w-11 items-center justify-center bg-black/70">
+              <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
+            </div>
+          </div>
         </div>
         {footer}
       </Link>
@@ -149,7 +187,7 @@ export function ProfileUpdatesSection({ campaigns, updates, username }: Props) {
                   {campaign.hero_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={supabaseTransform(campaign.hero_image_url, { width: 200, quality: 70 }) ?? campaign.hero_image_url}
+                      src={campaign.hero_image_url}
                       alt={campaign.title}
                       loading="lazy"
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}

@@ -117,7 +117,7 @@ src/
 │   ├── email.ts                # Resend templates + send functions (uses admin client)
 │   ├── stripe.ts               # Stripe client + CheckoutPurpose type + checkout helpers
 │   ├── commerce-fee.ts         # CommerceSurface type + fee calculation
-│   ├── image.ts                # supabaseTransform(), detectOrientation(), orientationClass()
+│   ├── image.ts                # gridImageSrc(), detectOrientation(), orientationClass()
 │   ├── badges.ts               # computeBadges()
 │   └── saved-opportunities.ts  # getSavedOpportunities, categorizeSaved
 │
@@ -145,6 +145,9 @@ supabase/migrations/            # 156+ SQL migrations (run manually in Supabase 
 ## Component Conventions
 
 - **Server components** (default): async functions in `src/app/` that fetch data directly
+- **Auth in RSCs**: never call `supabase.auth.getUser()` directly — use `getServerUser()` (`src/lib/supabase/get-server-user.ts`). It's React.cache'd, so Header, MobileTabBarServer, and the page share ONE auth round-trip per request. Middleware (`src/proxy.ts`) still calls getUser itself (required for token refresh) — leave it.
+- **Shared public reads** (same data for every visitor — browse lists, stats, directory aggregates): wrap in `unstable_cache` with a 5-min revalidate + tag, using `createPublicClient()` (cookie-free — `cookies()` inside `unstable_cache` throws). Pattern: `getCachedHomeData` in `src/app/page.tsx`.
+- **Vercel region**: `vercel.json` pins `"regions": ["syd1"]` to co-locate functions with Supabase (Sydney) and ANZ users. Do not remove — the default (iad1, US East) adds ~200ms per query round-trip.
 - **Client components**: `"use client"` at top; live in `src/components/`
 - **Server actions**: `"use server"` in `src/app/*/actions.ts` or `src/actions/`; return `{ error?: string }` objects
 - **Props**: Typed with inline `interface Props {}` in the same file
@@ -189,9 +192,15 @@ Migrations are plain SQL files in `supabase/migrations/`. There is no CLI migrat
 
 The Next.js `<Image>` component requires known `width` and `height` props. In masonry/flex-wrap grids where dimensions vary, it fights with inline styles and produces incorrect sizing. Use plain `<img>` tags instead.
 
-### `supabaseTransform(url, { width, quality })` — `src/lib/image.ts`
+### Image sizing: our own compressor is the single source of truth
 
-Converts Supabase Storage URLs from `/storage/v1/object/public/` to `/storage/v1/render/image/public/` with `?width=&quality=` params. Use this for images where you want server-side resizing (profile banners, thumbnails). Returns `null` if the URL is not a Supabase storage URL.
+Do **NOT** use Supabase's render/image transform endpoint (`/storage/v1/render/image/...` or `?width=&quality=&resize=` on storage URLs). Every image is already resized + re-encoded to WebP on upload by our own compressor (`src/lib/image-processing.ts` → `/api/upload/image`), which also generates a thumbnail. Running Supabase's transform on top of that is redundant and was removed.
+
+Serve the **stored object URL directly**. For grid/feed tiles use `gridImageSrc(fullUrl, thumbUrl)` (`src/lib/image.ts`) — it prefers the pre-generated thumbnail, else the compressed original. `detectOrientation()` / `orientationClass()` also live in `image.ts`.
+
+### Zoomable artwork viewer — `src/components/ui/ZoomableImage.tsx`
+
+Artwork lightboxes use `<ZoomableImage>` for pinch / double-tap / wheel zoom. It sets `touch-action: none` (`.zoom-surface`) so the page-level pinch-zoom lock in `globals.css` (`body { touch-action: pan-x pan-y }`) doesn't swallow the gesture. The viewport meta stays zoom-permissive — never add `user-scalable=no` / `maximum-scale=1`.
 
 ### Portfolio Grid — `src/components/profile/PortfolioGrid.tsx`
 
@@ -218,7 +227,7 @@ Converts Supabase Storage URLs from `/storage/v1/object/public/` to `/storage/v1
 
 ### Profile Banners — `src/app/[username]/page.tsx`
 
-- `supabaseTransform(url, { width: 1600, quality: 85 })` for the featured banner
+- Featured banner: plain `<img>` served from the stored (already-compressed) URL — no transform
 - Avatar: Next.js `<Image>` with `fill` + `object-cover`
 
 ---

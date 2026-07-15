@@ -155,3 +155,19 @@ Let partners who run their intake/relationship management in an external CRM (e.
 - Collector geography (map view of `current_owner_id` profiles by region)
 
 **Foundation:** The Stripe earnings dashboard. Build on top of existing transfer/sale data in `artworks` and `messages`.
+
+---
+
+## #25 · "NZ art for sale" SEO — remaining structural work
+
+**Context:** Long-tail commercial SEO for queries like "nz art for sale", "mixed media art for sale nz". Competitors: The Poi Room, Look NZ, Fishmob, Saatchi Art NZ. Realistic timeline 3–6 months; win the long-tail first, the head term follows. **Already shipped (2026-07):** dedicated server-rendered `/works` page with indexable H1 + intro copy + title/meta (replaced the old `/works → /feed?tab=works` rewrite); Product JSON-LD (price/availability/image) on `/[username]/works/[slug]` detail pages (these were already SSR with generateMetadata). `/works` is already in the sitemap.
+
+**Remaining:**
+
+1. **Category landing pages** — the real long-tail weapons: `/works/paintings`, `/works/contemporary`, `/works/mixed-media`, `/works/sculpture`. Each = the `/works` grid with a `medium_category` filter pre-applied + a unique title tag, H1, and 2–3 sentences of descriptive copy. Decision needed before building: static `/works/[category]/page.tsx` with a hardcoded slug→`medium_category`→copy map (recommended — controllable copy, `generateStaticParams`), vs a generic filtered view. Requires confirming the actual `medium_category` taxonomy values in the DB so slugs map to real filters. Titles e.g. "Paintings for Sale NZ | Patronage", "Mixed Media Art for Sale NZ | Patronage".
+
+2. **Purchase-intent blog posts** (content, needs Blake's copy or sign-off — don't auto-generate): "How to buy art from NZ artists online", "What to look for when buying original art in NZ", "Emerging NZ artists to watch in 2026", "How to commission a NZ artist". Each links to `/works` and specific artist profiles to build topical authority around "NZ art".
+
+3. **Internal linking:** footer "Works for Sale" / "Buy Art" link → `/works` (Footer.tsx); every artist profile links to their works-for-sale; home feed preview already surfaces work-for-sale pins (WorkSalePin) — keep. Anchor text matters.
+
+**Note:** the Explore "For sale" filter tab and `WorksControls`/`SupportWorks` already point at `/works`, so the new dedicated page is the canonical for-sale surface (parallel to `/artists`, `/opportunities`). The feed's own `?tab=works` branch is now vestigial (still functional, shares the `getAvailableWorksForGrid` lib) — safe to remove later if desired.
