@@ -16,19 +16,18 @@ export const NAV_LINKS = [
  * inline after the logo. Active route carries the civic-teal 2px underline
  * (the only place teal appears in the header nav — interactive marks only).
  *
- * Role-aware: artists get their studio in the primary nav; partners get
- * their dashboard; logged-out visitors get the organisations funnel.
+ * Role-aware: artists get their studio in the primary nav. The Partners link
+ * always goes to /partners — partners reach their dashboard from the account
+ * menu (NavBar), same as artists reach settings.
  */
 export function HeaderNav({ role, isLoggedIn = false }: { role?: string | null; isLoggedIn?: boolean }) {
   const pathname = usePathname();
 
   const isArtist = role === "artist" || role === "owner";
-  const isPartner = role === "partner" || role === "admin";
   const links = [
     ...NAV_LINKS,
     ...(isArtist ? [{ href: "/studio", label: "Studio" }] : []),
-    ...(isPartner ? [{ href: "/partner/dashboard", label: "Partner" }] : []),
-    ...(!isLoggedIn ? [{ href: "/partners", label: "Partners" }] : []),
+    { href: "/partners", label: "Partners" },
   ];
 
   return (
