@@ -80,6 +80,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0a",
+  // Required for env(safe-area-inset-*) to resolve on iPhone — without it the
+  // mobile tab bar's safe-area padding computes to 0 and icons sit in the
+  // curved corner / home-indicator zone.
+  viewportFit: "cover",
 };
 
 const siteSchema = {

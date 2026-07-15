@@ -119,26 +119,28 @@ export function WorkPurchaseModal({
       </button>
 
       <div
-        className="flex overflow-hidden shadow-2xl"
+        className="flex flex-col sm:flex-row overflow-hidden shadow-2xl bg-white w-[95vw] sm:w-auto sm:max-w-[95vw]"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image panel */}
+        {/* Image panel. On mobile it's a fixed-height, full-width letterbox
+            (object-contain — never cropped or squished). On desktop the box
+            auto-sizes to the artwork's natural aspect, capped by max-height /
+            max-width so wide works can't distort. */}
         {imageUrl && (
-          <div className="relative flex-shrink-0 self-stretch flex items-center bg-stone-100">
+          <div className="relative shrink-0 flex items-center justify-center bg-stone-100 w-full h-[42vh] sm:h-auto sm:w-auto">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
               alt={title}
-              style={{ height: "90vh", width: "auto", maxWidth: "70vw", display: "block" }}
+              className="block w-auto h-auto max-w-full sm:max-w-[60vw] max-h-[42vh] sm:max-h-[85vh]"
             />
           </div>
         )}
 
         {/* Info panel */}
         <div
-          className="bg-white flex flex-col"
-          style={{ width: 280, overflowY: "auto" }}
+          className="bg-white flex flex-col w-full sm:w-[300px] shrink-0 min-h-0 overflow-y-auto"
         >
           <div className="flex-1 p-6 space-y-4">
             {/* Title + artist + meta */}

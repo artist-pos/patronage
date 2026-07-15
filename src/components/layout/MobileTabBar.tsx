@@ -124,8 +124,8 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
 
   return (
     <>
-      {/* Spacer — reserves the bar's height in normal flow */}
-      <div aria-hidden className="h-12 sm:hidden" />
+      {/* Spacer — reserves the bar's height (incl. safe area) in normal flow */}
+      <div aria-hidden className="h-[calc(48px+env(safe-area-inset-bottom))] sm:hidden" />
 
       <nav
         aria-label="Mobile navigation"
@@ -133,7 +133,8 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
           hidden ? "translate-y-full" : "translate-y-0"
         }`}
       >
-        <div className="flex items-center justify-around">
+        {/* px pulls the outer icons in from the curved screen edges */}
+        <div className="mx-auto flex max-w-sm items-center justify-around px-8">
           <Link href="/feed" aria-label="Explore" className="px-3.5 py-1">
             <MasonryIcon active={exploreActive} />
           </Link>

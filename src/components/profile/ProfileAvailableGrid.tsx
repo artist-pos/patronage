@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { saveAvailableWorksLayout } from "@/app/profile/gallery-actions";
 import { formatPrice } from "@/lib/format-price";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import type { Artwork } from "@/types/database";
 
 const WorkDetailActions = dynamic(
@@ -312,15 +313,12 @@ export function ProfileAvailableGrid({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {/* Image */}
-              <div style={{ background: "#FAFAF9", display: "flex", alignItems: "center", justifyContent: "center", maxHeight: "60vh", overflow: "hidden" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={lightboxArtwork.url}
-                  alt={lightboxArtwork.title ?? lightboxArtwork.caption ?? ""}
-                  style={{ maxWidth: "100%", maxHeight: "60vh", objectFit: "contain", display: "block" }}
-                />
-              </div>
+              {/* Image — pinch / double-tap zoomable */}
+              <ZoomableImage
+                src={lightboxArtwork.url}
+                alt={lightboxArtwork.title ?? lightboxArtwork.caption ?? ""}
+                style={{ height: "60vh", background: "#FAFAF9" }}
+              />
 
               {/* Details */}
               <div style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 8 }}>

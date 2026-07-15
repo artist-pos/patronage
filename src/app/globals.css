@@ -144,6 +144,29 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     text-wrap: pretty;
+    /* Suppress pinch-zoom on the page chrome while keeping normal scroll.
+       Reliable on Android Chrome; best-effort on iOS Safari (which may still
+       allow a system pinch for accessibility). Individual artwork viewers opt
+       back into gestures with `touch-action: none` (see .zoom-surface). The
+       viewport meta stays zoom-permissive on purpose — we never set
+       user-scalable=no, so assistive zoom is never disabled. */
+    touch-action: pan-x pan-y;
+  }
+  /* Elements that own their own pinch/zoom handling (the artwork lightbox
+     viewer). `none` hands all touch gestures to our JS instead of the browser. */
+  .zoom-surface {
+    touch-action: none;
+  }
+  /* iOS Safari auto-zooms the page when a text field with font-size < 16px is
+     focused — regardless of the touch-action lock above. Force ≥16px on form
+     controls at mobile widths so focusing a checkout / backend field never
+     triggers that zoom. Desktop keeps the design's smaller field text. */
+  @media (max-width: 640px) {
+    input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
   h1, h2, h3, h4 {
     letter-spacing: -0.025em;
