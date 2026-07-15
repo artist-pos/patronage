@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { supabaseTransform } from "@/lib/image";
 import { adminResolveAppeal } from "@/app/admin/dispute-resolution/actions";
 import type {
   Artwork,
@@ -53,8 +52,7 @@ function AppealCard({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const thumb =
-    supabaseTransform(row.artwork.url, { width: 600, quality: 80 }) ?? row.artwork.url;
+  const thumb = row.artwork.url;
 
   function handleResolve(
     decision: "uphold_decline" | "override_to_confirmed" | "resolved_by_patronage",

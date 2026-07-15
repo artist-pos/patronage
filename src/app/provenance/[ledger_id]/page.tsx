@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getLedgerByLedgerId, type OwnerInfo } from "@/lib/provenance";
 import { listDocPhotos, listDocPhotosWithUrls } from "@/lib/artwork-documentation";
 import { DocumentationGallery } from "./DocumentationGallery";
-import { supabaseTransform } from "@/lib/image";
 import { ProvenanceClient } from "./ProvenanceClient";
 import { getTrustTier } from "@/lib/trust-tier";
 import type { Metadata } from "next";
@@ -92,7 +91,7 @@ export default async function ProvenancePage({ params }: PageProps) {
   const docPhotosExist = canPrivateView ? docPhotos.length > 0 : docPhotosCount.length > 0;
 
   const thumbUrl = artwork.url
-    ? (supabaseTransform(artwork.url, { width: 200, quality: 85 }) ?? artwork.url)
+    ? artwork.url
     : null;
 
   const workHref = `/${artist.username}/works/${artwork.id}`;

@@ -760,10 +760,9 @@ export async function generateCertificatePdf(data: CertificateGenerationData): P
     margin: 1,
   });
 
-  const imageUrl = data.workImageUrl?.includes("/storage/v1/object/public/")
-    ? data.workImageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") +
-      "?width=800&quality=85"
-    : data.workImageUrl ?? null;
+  // Stored object served directly — already compressed by our own upload
+  // pipeline; no Supabase transform pass.
+  const imageUrl = data.workImageUrl ?? null;
 
   const transferDate = new Date().toLocaleDateString("en-NZ", {
     day: "numeric", month: "long", year: "numeric",

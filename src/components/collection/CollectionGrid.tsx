@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabaseTransform } from "@/lib/image";
 import {
   bulkSetPublic,
   removeFromCollection,
@@ -137,7 +136,7 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
   const [isPending, startTransition] = useTransition();
 
   const artistName = entry.attributedArtist?.full_name ?? "Unknown artist";
-  const thumb = supabaseTransform(entry.artwork.url, { width: 600, quality: 80 }) ?? entry.artwork.url;
+  const thumb = entry.artwork.url;
 
   function handleTogglePublic() {
     const next = !isPublic;

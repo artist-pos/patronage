@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { supabaseTransform } from "@/lib/image";
 import {
   togglePublic,
   updateMembership,
@@ -66,9 +65,7 @@ export function CollectionDetailEditor({ entry, sourceDocs, groups }: Props) {
   const [isPending, startTransition] = useTransition();
   const [isPublicPending, startPublicTransition] = useTransition();
 
-  const thumb =
-    supabaseTransform(entry.artwork.url, { width: 1200, quality: 85 }) ??
-    entry.artwork.url;
+  const thumb = entry.artwork.url;
   const artistName = entry.attributedArtist?.full_name ?? "Unknown artist";
 
   function handleTogglePublic() {

@@ -5,7 +5,6 @@ import { MessageButton } from "@/components/profile/MessageButton";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
-import { supabaseTransform } from "@/lib/image";
 import { getBannerGradient } from "@/lib/defaults";
 import type { Profile, Opportunity } from "@/types/database";
 
@@ -58,7 +57,7 @@ function deadlineLabel(deadline: string | null): { label: string; cls: string } 
 // Shared thumbnail tile — image dims on hover, dark caption overlay fades in
 function ArtistTile({ a }: { a: ArtistTileData }) {
   const img = a.avatar_url
-    ? supabaseTransform(a.avatar_url, { width: 400, quality: 80 }) ?? a.avatar_url
+    ? a.avatar_url
     : null;
   return (
     <Link href={`/${a.username}`} className="group relative block overflow-hidden">
@@ -159,7 +158,7 @@ export function PartnerProfileView({
   activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal,
 }: PartnerProps) {
   const cover = profile.featured_image_url
-    ? supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url
+    ? profile.featured_image_url
     : null;
   const loc = [profile.city, profile.country].filter(Boolean).join(", ");
   const sinceYear = profile.created_at ? new Date(profile.created_at).getFullYear() : null;
@@ -433,7 +432,7 @@ export function PatronProfileView({
   followingArtists, collectedWorks, showCollection, privateSupporter = false,
 }: PatronProps) {
   const cover = !privateSupporter && profile.featured_image_url
-    ? supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url
+    ? profile.featured_image_url
     : null;
   const loc = privateSupporter ? "" : [profile.city, profile.country].filter(Boolean).join(", ");
   const since = profile.created_at
@@ -592,7 +591,7 @@ export function PatronProfileView({
             <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
               {collectedWorks.map((w) => {
                 const img = w.url
-                  ? supabaseTransform(w.url, { width: 600, quality: 80 }) ?? w.url
+                  ? w.url
                   : null;
                 const tile = (
                   <>

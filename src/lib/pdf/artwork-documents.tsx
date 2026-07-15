@@ -518,9 +518,8 @@ export async function generateConsignmentPdf(data: ConsignmentData): Promise<Buf
 // ── Image URL helper ──────────────────────────────────────────────────────────
 
 function resolveImageUrl(url: string | null): string | null {
-  if (!url) return null;
-  if (url.includes("/storage/v1/object/public/")) {
-    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=800&quality=85";
-  }
-  return url;
+  // Serve the stored object directly — it's already compressed by our own
+  // image pipeline on upload. (Previously routed through Supabase's transform
+  // endpoint, which we no longer use.)
+  return url ?? null;
 }

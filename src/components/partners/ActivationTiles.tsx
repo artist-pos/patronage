@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Pencil, X, Check, ChevronUp, ChevronDown, EyeOff, Eye } from "lucide-react";
 import { uploadImage } from "@/lib/upload-image";
 import { updateActivationType } from "@/app/partners/actions";
-import { supabaseTransform } from "@/lib/image";
 import type { ActivationType } from "@/app/partners/page";
 
 // "Art on your surfaces" grid on /partners. Public users see active tiles;
@@ -139,9 +138,7 @@ export function ActivationTiles({ tiles: initial, isAdmin }: Props) {
       {visible.map((tile, i) => {
         const editing = editingId === tile.id;
         const imgSrc = editing ? draftImage : tile.image_url;
-        const img = imgSrc
-          ? supabaseTransform(imgSrc, { width: 800, quality: 80 }) ?? imgSrc
-          : null;
+        const img = imgSrc ?? null;
         return (
           <div
             key={tile.id}

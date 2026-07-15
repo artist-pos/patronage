@@ -282,7 +282,7 @@ function Tile({
           {isImage && u.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={gridImageSrc(u.image_url, u.thumb_url, 480, 70)}
+              src={gridImageSrc(u.image_url, u.thumb_url)}
               alt={du.caption ?? "Studio update"}
               loading="lazy"
               style={{ height: CAROUSEL_H, width: "auto", display: "block" }}

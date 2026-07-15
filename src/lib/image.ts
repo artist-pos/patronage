@@ -19,53 +19,20 @@ export function orientationClass(orientation: ImageOrientation | null | undefine
 }
 
 /**
- * Converts a Supabase Storage object URL to its image render/transform URL.
- * Falls back to the original URL for non-Supabase URLs.
- *
- * Supabase transform endpoint:
- * /storage/v1/object/public/... → /storage/v1/render/image/public/...
- * with optional ?width= and ?quality= params.
- */
-export function supabaseTransform(
-  url: string | null | undefined,
-  opts: { width?: number; quality?: number } = {}
-): string | null {
-  if (!url) return null;
-
-  const transformed = url.replace(
-    "/storage/v1/object/public/",
-    "/storage/v1/render/image/public/"
-  );
-
-  // Not a Supabase object URL — return as-is
-  if (transformed === url) return url;
-
-  const params = new URLSearchParams();
-  if (opts.width) params.set("width", String(opts.width));
-  if (opts.quality) params.set("quality", String(opts.quality));
-  // The render endpoint's default resize mode (cover) stretches the image to the
-  // requested width while keeping the ORIGINAL height — distorting the aspect
-  // ratio (a 1600×1600 square comes back 800×1600). resize=contain scales
-  // proportionally to fit the requested width. Required whenever we resize.
-  if (opts.width) params.set("resize", "contain");
-  return params.size > 0 ? `${transformed}?${params}` : transformed;
-}
-
-/**
  * Best `src` for a grid/feed tile, in priority order:
- *   1. the pre-generated thumbnail (a static CDN file — free + fast),
- *   2. a read-time render-endpoint resize of the original (fallback for rows not
- *      yet backfilled, or where the thumb upload failed),
- *   3. the original URL.
- * Keeps grids off full-resolution originals while never producing a broken image.
+ *   1. the pre-generated thumbnail (a static CDN file, produced at upload time by
+ *      our own compressor — free + fast),
+ *   2. the stored original (already compressed to WebP on upload).
+ *
+ * We deliberately do NOT use Supabase's render/image transform endpoint: every
+ * stored object is already resized + re-encoded by our own compressor
+ * (`src/lib/image-processing.ts`, via `/api/upload/image`), so a second
+ * transform pass is redundant. Our compressor is the single source of truth for
+ * sizing and quality.
  */
 export function gridImageSrc(
   fullUrl: string | null | undefined,
-  thumbUrl: string | null | undefined,
-  width: number,
-  quality = 72
+  thumbUrl: string | null | undefined
 ): string | undefined {
-  if (thumbUrl) return thumbUrl;
-  if (!fullUrl) return undefined;
-  return supabaseTransform(fullUrl, { width, quality }) ?? fullUrl;
+  return thumbUrl ?? fullUrl ?? undefined;
 }

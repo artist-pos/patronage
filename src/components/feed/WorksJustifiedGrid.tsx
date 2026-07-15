@@ -1058,7 +1058,7 @@ export function WorksJustifiedGrid({
                 <div className="w-14 h-14 flex-shrink-0 overflow-hidden bg-stone-100 relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={gridImageSrc(artwork.url, artwork.thumb_url, 200, 70)}
+                    src={gridImageSrc(artwork.url, artwork.thumb_url)}
                     alt={title}
                     loading="lazy"
                     className="w-full h-full object-contain"
@@ -1117,7 +1117,7 @@ export function WorksJustifiedGrid({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={gridImageSrc(artwork.url, artwork.thumb_url, 800, 75)}
+                    src={gridImageSrc(artwork.url, artwork.thumb_url)}
                     alt={title}
                     loading="lazy"
                     onLoad={(e) => handleLoad(artwork.id, e)}
@@ -1221,7 +1221,7 @@ export function WorksJustifiedGrid({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={gridImageSrc(artwork.url, artwork.thumb_url, 800, 75)}
+                        src={gridImageSrc(artwork.url, artwork.thumb_url)}
                         alt={title}
                         loading="lazy"
                         onLoad={(e) => handleLoad(artwork.id, e)}

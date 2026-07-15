@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { supabaseTransform } from "@/lib/image";
 import {
   createGroup,
   updateGroup,
@@ -185,7 +184,7 @@ export function CollectionGroupsManager({ groups: initialGroups, entries, userna
                   {entries.map(entry => {
                     const id = entry.membership.id;
                     const checked = selection.has(id);
-                    const thumb = supabaseTransform(entry.artwork.url, { width: 200, quality: 70 }) ?? entry.artwork.url;
+                    const thumb = entry.artwork.url;
                     return (
                       <li key={id}>
                         <button

@@ -189,7 +189,7 @@ export function PortfolioGrid({
                     {img.hero_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={gridImageSrc(img.hero_image_url, null, 800, 75)}
+                        src={gridImageSrc(img.hero_image_url, null)}
                         alt={img.title}
                         loading="lazy"
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -227,7 +227,7 @@ export function PortfolioGrid({
                 {(ct === "image" || ct === "document") && artwork.url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={gridImageSrc(artwork.url, artwork.thumb_url, 800, 75)}
+                    src={gridImageSrc(artwork.url, artwork.thumb_url)}
                     alt={label ?? "Portfolio work"}
                     loading="lazy"
                     onLoad={(e) => handleImageLoad(artwork.id, e)}

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { supabaseTransform } from "@/lib/image";
 import { TrustTierChip } from "@/components/provenance/TrustTierChip";
 import type { PublicCollectionEntry } from "@/lib/collection";
 
@@ -22,9 +21,7 @@ export function PublicCollectionGrid({ entries }: Props) {
           entry.attributedArtist?.username
             ? `/${entry.attributedArtist.username}`
             : null;
-        const thumb =
-          supabaseTransform(entry.artwork.url, { width: 800, quality: 80 })
-          ?? entry.artwork.url;
+        const thumb = entry.artwork.url;
         const ledgerHref = entry.artwork.ledger_id
           ? `/provenance/${entry.artwork.ledger_id}`
           : null;
