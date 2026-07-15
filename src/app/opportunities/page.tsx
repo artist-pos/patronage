@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArtistScoreMap } from "@/lib/opportunities";
 import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
@@ -7,7 +8,8 @@ import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportun
 import { FeaturedOpportunityHero } from "@/components/opportunities/FeaturedOpportunityHero";
 import { OpportunitiesTabSwitch } from "@/components/opportunities/OpportunitiesTabSwitch";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
+import { getProfileById } from "@/lib/profiles";
 import type { CountryEnum, OppTypeEnum } from "@/types/database";
 import Link from "next/link";
 
@@ -24,6 +26,22 @@ export const metadata = {
       "Browse art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Updated regularly with the latest arts funding opportunities.",
   },
 };
+
+// ── Cached public browse data — identical for every visitor. Listings change
+// via the weekly scrape + admin publishes, so a 5-minute revalidate is safe.
+// Keyed by day so the deadline cutoff rolls over. Filtered/searched queries
+// stay live (many key combos, each already a single indexed query).
+const getCachedBrowseData = unstable_cache(
+  async (_today: string) => {
+    const [stats, opps] = await Promise.all([
+      getMarketplaceStats(),
+      getOpportunities({}),
+    ]);
+    return { stats, opps };
+  },
+  ["opportunities-browse-v1"],
+  { revalidate: 300, tags: ["opportunities"] }
+);
 
 interface PageProps {
   searchParams: Promise<{
@@ -50,18 +68,14 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const search = params.search?.trim() || undefined;
   const view = params.view === "list" ? "list" : "gallery";
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Request-deduped auth + profile — shares the Header's round-trips.
+  const { user } = await getServerUser();
 
   // Check if this is an artist with disciplines set
   let isArtist = false;
   let hasDisciplines = false;
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, disciplines")
-      .eq("id", user.id)
-      .single();
+    const profile = await getProfileById(user.id);
     isArtist = profile?.role === "artist" || profile?.role === "owner";
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
@@ -71,14 +85,21 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
   const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
 
-  // Fetch data — only what the active tab needs
-  const [stats, matchedOpps, rawAllOpps, scoreMap] = await Promise.all([
-    getMarketplaceStats(),
+  // Fetch data — only what the active tab needs. The unfiltered browse view
+  // (stats + full list) is served from the shared cache; only filtered
+  // queries and per-user match data hit the database live.
+  const today = new Date().toISOString().split("T")[0];
+  const wantsAllList = tab === "all" || !isArtist;
+  const [browse, filteredOpps, matchedOpps, scoreMap] = await Promise.all([
+    getCachedBrowseData(today),
+    (wantsAllList && hasManualFilters)
+      ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search })
+      : Promise.resolve(null),
     (tab === "for-you" && isArtist && hasDisciplines) ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
-    (tab === "all" || !isArtist) ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search }) : Promise.resolve([]),
     (tab === "all" && isArtist && hasDisciplines) ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
-    Promise.resolve([]),
   ]);
+  const stats = browse.stats;
+  const rawAllOpps = wantsAllList ? (filteredOpps ?? browse.opps) : [];
 
   // Merge scores onto all-tab results (score only, no reason — reason is For You only)
   const allOpps = scoreMap.size > 0

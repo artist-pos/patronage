@@ -40,11 +40,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
-  async rewrites() {
-    return [
-      { source: "/works", destination: "/feed?tab=works" },
-    ];
-  },
   async redirects() {
     return [
       // Legacy/marketing URLs still hit by crawlers and cached links. Redirect

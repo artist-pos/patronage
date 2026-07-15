@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfile } from "@/lib/profiles";
 import { WorkDetailViewer } from "@/components/profile/WorkDetailViewer";
 import { AvailableWorkPill } from "@/components/profile/AvailableWorkPill";
@@ -32,9 +33,14 @@ type WorkRow = {
 
 const WORK_SELECT = "id, url, caption, description, title, year, medium, dimensions, hide_from_archive, content_type, audio_url, video_url, text_content, embed_url, embed_provider, price_cents, is_poa, price_currency, is_available, hide_available, hide_price, current_owner_id, creator_id, listing_mode, acquisition_mode, ledger_id, slug";
 
-async function getWorkData(username: string, slug: string) {
-  const supabase = await createClient();
-  const profile = await getProfile(username);
+// React.cache — generateMetadata and the page both call this; without the
+// cache every query in here ran TWICE per request.
+const getWorkData = cache(async function getWorkData(username: string, slug: string) {
+  // Profile and (request-deduped) auth resolve in one wave.
+  const [profile, { supabase, user }] = await Promise.all([
+    getProfile(username),
+    getServerUser(),
+  ]);
   if (!profile) return null;
 
   const isUUID = UUID_RE.test(slug);
@@ -54,13 +60,10 @@ async function getWorkData(username: string, slug: string) {
 
   if (!work) return null;
 
-  const [galleryResult, authResult, editionsResult] = await Promise.all([
+  // All five lookups depend only on work.id — one wave, not two.
+  const [galleryResult, editionsResult, projectResult, selectedEntryResult] = await Promise.all([
     supabase.from("work_images").select("*").eq("artwork_id", work.id).order("position", { ascending: true }),
-    supabase.auth.getUser(),
     supabase.from("editions").select("id, label, type, price_cents, currency, poa, listing_mode, listed, dimensions, sort_order").eq("work_id", work.id).eq("listed", true).order("sort_order", { ascending: true }),
-  ]);
-
-  const [projectResult, selectedEntryResult] = await Promise.all([
     supabase
       .from("projects")
       .select("id, title, description, opportunity_id, opportunity:opportunity_id(title, organiser, type)")
@@ -118,9 +121,9 @@ async function getWorkData(username: string, slug: string) {
     updates,
     selectedEntry,
     linkedCampaign,
-    viewer: authResult.data.user,
+    viewer: user,
   };
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, slug } = await params;
@@ -160,8 +163,54 @@ export default async function WorkDetailPage({ params }: Props) {
     work.dimensions,
   ].filter(Boolean).join(" · ");
 
+  // ── Product structured data — lets Google show price/availability/image as a
+  // rich result for image-based works. Only emitted when there's something real
+  // to describe (an image), and priced offers only when the work is for sale.
+  const productSchema =
+    work.content_type === "image" || !work.content_type
+      ? (() => {
+          const schema: Record<string, unknown> = {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: displayTitle,
+            ...(work.description || metaLine
+              ? { description: work.description ?? metaLine }
+              : {}),
+            ...(work.url ? { image: work.url } : {}),
+            brand: { "@type": "Person", name: artistName },
+            url: `${SITE_URL}/${username}/works/${work.slug ?? work.id}`,
+          };
+          if (isAvailable) {
+            const priced = !work.is_poa && !work.hide_price && work.price_cents != null;
+            schema.offers = {
+              "@type": "Offer",
+              availability: "https://schema.org/InStock",
+              url: `${SITE_URL}/${username}/works/${work.slug ?? work.id}`,
+              ...(priced
+                ? {
+                    price: String((work.price_cents as number) / 100),
+                    priceCurrency: work.price_currency ?? "NZD",
+                  }
+                : {}),
+            };
+          } else if (isSold) {
+            schema.offers = {
+              "@type": "Offer",
+              availability: "https://schema.org/SoldOut",
+            };
+          }
+          return schema;
+        })()
+      : null;
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
+      {productSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+        />
+      )}
       {!isOwner && <WorkEngagementTracker workId={work.id} />}
       <div className="mb-8 flex items-center gap-3 text-sm text-muted-foreground">
         <Link href={`/${username}?tab=work`} className="hover:text-foreground transition-colors">

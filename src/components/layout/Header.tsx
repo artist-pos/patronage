@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
 import { getUnreadCount } from "@/lib/messages";
 import { getUnreadNotificationCount } from "@/lib/notifications";
@@ -17,13 +18,12 @@ async function signOut() {
 }
 
 export async function Header() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Request-deduped auth — Header, MobileTabBarServer, and the page share one
+  // auth.getUser() network round-trip per request instead of 3-4.
+  const { user } = await getServerUser();
 
-  const profile = user ? await getProfileById(user.id) : null;
-  const [unreadCount, unreadNotifications] = await Promise.all([
+  const [profile, unreadCount, unreadNotifications] = await Promise.all([
+    user ? getProfileById(user.id) : Promise.resolve(null),
     user ? getUnreadCount() : Promise.resolve(0),
     user ? getUnreadNotificationCount(user.id) : Promise.resolve(0),
   ]);

@@ -13,8 +13,8 @@ import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { supabaseTransform } from "@/lib/image";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { buildOpportunitySharePayload } from "@/lib/opportunity-share";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
@@ -77,7 +77,7 @@ function Fact({ label, value, urgent = false }: { label: string; value: ReactNod
 // Related-opportunity row — white surface on the feed-bg gap backdrop, tint hover
 function RelatedRow({ r }: { r: RelatedOpp }) {
   const img = r.featured_image_url
-    ? supabaseTransform(r.featured_image_url, { width: 128, quality: 80 }) ?? r.featured_image_url
+    ? r.featured_image_url
     : null;
   const d = relatedDeadline(r.deadline);
   return (
@@ -202,8 +202,7 @@ async function HeaderActions({
   opportunityId: string;
   opp: Opportunity;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getServerUser();
 
   let isSaved = false;
   let adminUser = false;
@@ -290,8 +289,7 @@ async function UserCTA({
   opportunityId: string;
   opp: Opportunity;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getServerUser();
 
   if (!user) {
     return (

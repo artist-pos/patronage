@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
 import { getLatestUpdates } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
@@ -9,7 +10,7 @@ import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { InfiniteFeed } from "@/components/feed/InfiniteFeed";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import { WorksControls } from "@/components/feed/WorksControls";
-import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
+import { getAvailableWorksForGrid, type WorksSort } from "@/lib/works";
 
 export const metadata: Metadata = {
   title: "Feed | Patronage",
@@ -55,7 +56,56 @@ export default async function FeedPage({ searchParams }: PageProps) {
     audience === "subscribed" ? "subscribed" : audience === "following" ? "following" : "everyone";
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const wantsUpdates = filter === "all" || filter === "updates";
+
+  // ── Public queries — none of these depend on auth, so they start BEFORE
+  // the auth + profile round-trips instead of queuing behind them.
+  const everyoneFeedPromise =
+    activeTab === "feed" && feedAudience === "everyone" && wantsUpdates
+      ? getLatestUpdates(INITIAL_COUNT, 0, undefined)
+      : null;
+
+  // ── Explore extras — available works thread through the update masonry so
+  // the "All" feed stays visual: studio updates + art for sale, nothing else.
+  const wantExtras = activeTab === "feed" && feedAudience === "everyone" && filter === "all";
+  const explorePinsPromise: PromiseLike<import("@/components/feed/ExplorePinCards").ExplorePin[]> =
+    wantExtras
+      ? supabase
+          .from("artworks")
+          .select("id, url, thumb_url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(username, full_name)")
+          .eq("is_available", true)
+          .eq("hide_available", false)
+          .not("url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(6)
+          .then(({ data }) =>
+            (data ?? []).map((w: any) => ({
+              kind: "work" as const,
+              id: w.id,
+              url: w.url,
+              thumb_url: w.thumb_url ?? null,
+              title: w.title,
+              year: w.year,
+              edition: w.edition ?? null,
+              price_cents: w.price_cents,
+              price_currency: w.price_currency,
+              is_poa: w.is_poa,
+              hide_price: w.hide_price,
+              artist_name: w.profile?.full_name ?? w.profile?.username ?? null,
+              artist_username: w.profile?.username ?? null,
+            }))
+          )
+      : Promise.resolve([]);
+
+  // Available works for the "works" tab — shared query, also starts pre-auth.
+  const worksPromise = activeTab === "works"
+    ? getAvailableWorksForGrid({ medium, sort: sort as WorksSort })
+    : Promise.resolve(null);
+
+  // ── Auth — request-deduped with the Header; runs concurrently with the
+  // public queries started above ──
+  const { user } = await getServerUser();
   const profile = user ? await getProfileById(user.id) : null;
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
 
@@ -75,45 +125,6 @@ export default async function FeedPage({ searchParams }: PageProps) {
             .single()
             .then((r) => r.data))
     : Promise.resolve(null);
-
-  const wantsUpdates = filter === "all" || filter === "updates";
-
-  // Start the feed fetch early for "everyone" — runs in parallel with other queries below
-  const everyoneFeedPromise =
-    activeTab === "feed" && feedAudience === "everyone" && wantsUpdates
-      ? getLatestUpdates(INITIAL_COUNT, 0, undefined)
-      : null;
-
-  // ── Explore extras — available works thread through the update masonry so
-  // the "All" feed stays visual: studio updates + art for sale, nothing else.
-  const wantExtras = activeTab === "feed" && feedAudience === "everyone" && filter === "all";
-  const explorePinsPromise: PromiseLike<import("@/components/feed/ExplorePinCards").ExplorePin[]> =
-    wantExtras
-      ? supabase
-          .from("artworks")
-          .select("id, url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(username, full_name)")
-          .eq("is_available", true)
-          .eq("hide_available", false)
-          .not("url", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(6)
-          .then(({ data }) =>
-            (data ?? []).map((w: any) => ({
-              kind: "work" as const,
-              id: w.id,
-              url: w.url,
-              title: w.title,
-              year: w.year,
-              edition: w.edition ?? null,
-              price_cents: w.price_cents,
-              price_currency: w.price_currency,
-              is_poa: w.is_poa,
-              hide_price: w.hide_price,
-              artist_name: w.profile?.full_name ?? w.profile?.username ?? null,
-              artist_username: w.profile?.username ?? null,
-            }))
-          )
-      : Promise.resolve([]);
 
   // For subscribed/following feed, fetch the relevant artist IDs (in parallel with other queries)
   const subscribedArtistIdsPromise =
@@ -139,85 +150,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
   const [userProjects, worksResult, worksLayoutData, subscribedArtistIds, explorePins] =
     await Promise.all([
       profile ? getArtistProjects(profile.id) : Promise.resolve([]),
-      activeTab === "works"
-        ? (async () => {
-            let q = supabase
-              .from("artworks")
-              .select(
-                "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)"
-              )
-              .eq("is_available", true)
-              .eq("hide_available", false);
-
-            if (medium) q = (q as typeof q).contains("medium_category", [medium]);
-
-            if (sort === "price_asc") {
-              q = (q as typeof q)
-                .order("price_cents", { ascending: true, nullsFirst: false })
-                .order("created_at", { ascending: false });
-            } else if (sort === "price_desc") {
-              q = (q as typeof q)
-                .order("price_cents", { ascending: false, nullsFirst: false })
-                .order("created_at", { ascending: false });
-            } else {
-              q = (q as typeof q).order("created_at", { ascending: false });
-            }
-
-            const [artworksRes, mediumsRes] = await Promise.all([
-              q,
-              supabase
-                .from("artworks")
-                .select("medium_category")
-                .eq("is_available", true)
-                .eq("hide_available", false)
-                .not("medium_category", "is", null),
-            ]);
-
-            const artworkRows = artworksRes.data ?? [];
-            const artworkIds = artworkRows.map((a: { id: string }) => a.id);
-
-            const editionsRes = artworkIds.length > 0
-              ? await supabase
-                  .from("editions")
-                  .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
-                  .in("work_id", artworkIds)
-                  .eq("listed", true)
-              : { data: [] };
-
-            const editionsByWork = new Map<string, EditionOption[]>();
-            for (const ed of editionsRes.data ?? []) {
-              const key = (ed as { work_id: string }).work_id;
-              if (!editionsByWork.has(key)) editionsByWork.set(key, []);
-              editionsByWork.get(key)!.push({
-                id: (ed as { id: string }).id,
-                label: (ed as { label: string | null }).label ?? "",
-                type: (ed as { type: string | null }).type ?? "",
-                price_cents: (ed as { price_cents: number | null }).price_cents,
-                currency: ((ed as { currency: string | null }).currency) ?? "NZD",
-                poa: (ed as { poa: boolean | null }).poa ?? false,
-                listing_mode: (ed as { listing_mode: string | null }).listing_mode ?? "",
-                listed: (ed as { listed: boolean | null }).listed ?? false,
-                sort_order: (ed as { sort_order: number | null }).sort_order ?? 0,
-                dimensions: (ed as { dimensions: string | null }).dimensions,
-              });
-            }
-
-            const artworks = artworkRows.map((a: Record<string, unknown>) => ({
-              ...a,
-              editions: editionsByWork.get(a.id as string) ?? [],
-            })) as unknown as ArtworkForGrid[];
-
-            const mediumOptions = [
-              ...new Set(
-                (mediumsRes.data ?? [])
-                  .flatMap((r: { medium_category: string[] | null }) => r.medium_category ?? [])
-                  .filter(Boolean)
-              ),
-            ].sort();
-
-            return { artworks, mediumOptions };
-          })()
-        : Promise.resolve(null),
+      worksPromise,
       worksLayoutPromise,
       subscribedArtistIdsPromise,
       explorePinsPromise,

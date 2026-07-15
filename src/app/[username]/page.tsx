@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfile } from "@/lib/profiles";
 import { isProfileComplete } from "@/lib/profile-completion";
 import { getArtistUpdates } from "@/lib/feed";
@@ -39,7 +39,6 @@ const SupportTab = dynamic(() =>
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage } from "@/types/database";
 import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
-import { supabaseTransform } from "@/lib/image";
 import { getBannerGradient } from "@/lib/defaults";
 import { HideBlogCardToggle } from "@/components/profile/HideBlogCardToggle";
 
@@ -138,17 +137,195 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   // available-works grid; the artwork detail page is now the canonical target.
   if (artworkParam) redirect(`/${username}/works/${artworkParam}`);
 
-  const [profile, supabase] = await Promise.all([
+  // Profile and auth resolve in one wave; getServerUser is request-deduped
+  // with the Header so this adds no extra auth round-trip.
+  const [profile, { supabase, user }] = await Promise.all([
     getProfile(username),
-    createClient(),
+    getServerUser(),
   ]);
   if (!profile) notFound();
 
-  const { data: { user } } = await supabase.auth.getUser();
   const canMessage = !!user && user.id !== profile.id;
   const isOwner = !!user && user.id === profile.id;
 
   const isArtistProfile = profile.role === "artist" || profile.role === "owner";
+
+  // ── Section-fetch flags — v2 profile is a single scrolling page (no tabs),
+  // so every artist section loads on the one request.
+  const needsPortfolio        = isArtistProfile;
+  const needsUpdates          = isArtistProfile;
+  const needsProjects         = isArtistProfile && !isOwner;
+  const needsSold             = isArtistProfile;
+  const needsCreative         = isArtistProfile;
+  const needsAchievements     = isArtistProfile;
+  const needsTiers            = isArtistProfile && profile.support_enabled;
+  const needsCollaborations   = isArtistProfile;
+  const needsArtistCollection = isArtistProfile;
+  const needsSeries           = isArtistProfile;
+  const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
+
+  // Available works — extracted as a named promise so the editions lookup can
+  // chain on its result instead of gating a second sequential wave.
+  const availableWorksPromise: PromiseLike<Artwork[]> = isArtistProfile
+    ? (() => {
+        const q = supabase
+          .from("artworks")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .eq("is_available", true);
+        return (!isOwner ? q.eq("hide_available", false) : q)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []) as Artwork[]);
+      })()
+    : Promise.resolve([]);
+
+  // ── Phase 2 (started FIRST, unawaited): section fetches. These depend only
+  // on the profile row, so they run concurrently with Phase 1 below instead of
+  // as a second sequential wave.
+  const phase2Promise = Promise.all([
+    needsPortfolio
+      ? supabase
+          .from("artworks")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .eq("creator_id", profile.id)
+          .eq("current_owner_id", profile.id)
+          .eq("hide_from_archive", false)
+          .order("position", { ascending: true })
+          .then(({ data }) => data ?? [])
+      : Promise.resolve([]),
+    needsUpdates ? getArtistUpdates(profile.id) : Promise.resolve([]),
+    needsProjects ? getArtistProjects(profile.id) : Promise.resolve([]),
+    needsSold
+      ? supabase
+          .from("artworks")
+          .select("*, owner_profile:current_owner_id(username, full_name), editions(id, type)")
+          .eq("creator_id", profile.id)
+          .neq("current_owner_id", profile.id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => (data ?? []).filter((w) => {
+            // Only show originals in the artist's sold section.
+            // Print editions (limited/open/product) appear in patron collections instead.
+            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
+            return eds.length === 0 || eds.every(e => e.type === "original");
+          }))
+      : Promise.resolve([]),
+    needsCreative
+      ? supabase
+          .from("creative_works")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []) as CreativeWork[])
+      : Promise.resolve([] as CreativeWork[]),
+    needsAchievements
+      ? supabase
+          .from("profile_achievements")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("year", { ascending: false })
+          .then(({ data }) => (data ?? []) as ProfileAchievement[])
+      : Promise.resolve([] as ProfileAchievement[]),
+    needsTiers
+      ? supabase
+          .from("support_tiers")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("sort_order", { ascending: true })
+          .then(({ data }) => (data ?? []) as SupportTier[])
+      : Promise.resolve([] as SupportTier[]),
+    needsCollaborations
+      ? supabase
+          .from("artworks")
+          .select("id, url, caption, creator_profile:profile_id(username, full_name)")
+          .contains("collaborator_ids", [profile.id])
+          .eq("is_available", false)
+          .order("created_at", { ascending: false })
+          .limit(24)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data }) => (data ?? []) as unknown as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>)
+      : Promise.resolve([] as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>),
+    // Latest blog post featuring this artist (shown in identity block on all tabs)
+    isArtistProfile
+      ? supabase
+          .from("blog_posts")
+          .select("slug, title, image_url, published_at")
+          .eq("featured_profile_id", profile.id)
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => data as { slug: string; title: string; image_url: string | null; published_at: string | null } | null)
+      : Promise.resolve(null),
+    // Editions for available works — chained on the availableWorks promise so
+    // it fires the moment the IDs exist rather than a full wave later.
+    availableWorksPromise.then((works) =>
+      isArtistProfile && works.length > 0
+        ? supabase
+            .from("editions")
+            .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
+            .in("work_id", works.map((w) => w.id))
+            .then(({ data }) => data ?? [])
+        : Promise.resolve([])
+    ),
+    // Works in this artist's collection (queried via collection_membership.is_public)
+    needsArtistCollection
+      ? supabase
+          .from("collection_membership")
+          .select("position, artwork:artwork_id(*, creator_profile:creator_id(username, full_name, avatar_url))")
+          .eq("holder_id", profile.id)
+          .eq("is_public", true)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []).map((m) => m.artwork).filter(Boolean))
+      : Promise.resolve([]),
+    // Series — for the Work tab series row
+    needsSeries
+      ? supabase
+          .from("series")
+          .select("id, title, slug, hero_image_url, is_featured, position, year, series_artworks(count)")
+          .eq("artist_id", profile.id)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []).map(s => ({
+            id: s.id,
+            title: s.title,
+            slug: s.slug,
+            hero_image_url: s.hero_image_url as string | null,
+            is_featured: s.is_featured as boolean,
+            position: s.position as number,
+            year: (s.year as number | null) ?? undefined,
+            artworkCount: Array.isArray(s.series_artworks)
+              ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
+              : 0,
+          })))
+      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>),
+    // Series artwork IDs — to exclude from the portfolio gallery
+    needsSeriesArtworkIds
+      ? supabase
+          .from("series")
+          .select("series_artworks(artwork_id)")
+          .eq("artist_id", profile.id)
+          .then(({ data }) =>
+            (data ?? []).flatMap(s =>
+              (s.series_artworks as { artwork_id: string }[]).map(sa => sa.artwork_id)
+            )
+          )
+      : Promise.resolve([] as string[]),
+    // Featured works the artist has sold — surfaced in the Overview "Selected Work" strip
+    needsPortfolio
+      ? supabase
+          .from("artworks")
+          .select("*, editions(id, type)")
+          .eq("creator_id", profile.id)
+          .neq("current_owner_id", profile.id)
+          .eq("is_featured", true)
+          .eq("hide_from_archive", false)
+          .order("position", { ascending: true })
+          .then(({ data }) => (data ?? []).filter((w) => {
+            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
+            return eds.length === 0 || eds.every(e => e.type === "original");
+          }))
+      : Promise.resolve([]),
+  ]);
 
   // ── Phase 1: Always-needed (identity block, badges, follow button) ──────────
   const [
@@ -165,18 +342,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     sharePortfolioImages,
   ] = await Promise.all([
     // Available works: always needed for "X works available" badge
-    isArtistProfile
-      ? (() => {
-          const q = supabase
-            .from("artworks")
-            .select("*")
-            .eq("profile_id", profile.id)
-            .eq("is_available", true);
-          return (!isOwner ? q.eq("hide_available", false) : q)
-            .order("position", { ascending: true })
-            .then(({ data }) => data ?? []);
-        })()
-      : Promise.resolve([]),
+    availableWorksPromise,
     // Cheap count for portfolio badge when full images not loaded
     isArtistProfile
       ? supabase
@@ -356,161 +522,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     };
   });
 
-  // ── Phase 2: Section fetches — v2 profile is a single scrolling page
-  // (no tabs), so every artist section loads on the one request.
-  const needsPortfolio        = isArtistProfile;
-  const needsUpdates          = isArtistProfile;
-  const needsProjects         = isArtistProfile && !isOwner;
-  const needsSold             = isArtistProfile;
-  const needsCreative         = isArtistProfile;
-  const needsAchievements     = isArtistProfile;
-  const needsTiers            = isArtistProfile && profile.support_enabled;
-  const needsCollaborations   = isArtistProfile;
-  const needsArtistCollection = isArtistProfile;
-  const needsSeries           = isArtistProfile;
-  const needsSeriesArtworkIds = isArtistProfile && needsPortfolio;
-
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await Promise.all([
-    needsPortfolio
-      ? supabase
-          .from("artworks")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .eq("creator_id", profile.id)
-          .eq("current_owner_id", profile.id)
-          .eq("hide_from_archive", false)
-          .order("position", { ascending: true })
-          .then(({ data }) => data ?? [])
-      : Promise.resolve([]),
-    needsUpdates ? getArtistUpdates(profile.id) : Promise.resolve([]),
-    needsProjects ? getArtistProjects(profile.id) : Promise.resolve([]),
-    needsSold
-      ? supabase
-          .from("artworks")
-          .select("*, owner_profile:current_owner_id(username, full_name), editions(id, type)")
-          .eq("creator_id", profile.id)
-          .neq("current_owner_id", profile.id)
-          .order("created_at", { ascending: false })
-          .then(({ data }) => (data ?? []).filter((w) => {
-            // Only show originals in the artist's sold section.
-            // Print editions (limited/open/product) appear in patron collections instead.
-            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
-            return eds.length === 0 || eds.every(e => e.type === "original");
-          }))
-      : Promise.resolve([]),
-    needsCreative
-      ? supabase
-          .from("creative_works")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .order("position", { ascending: true })
-          .then(({ data }) => (data ?? []) as CreativeWork[])
-      : Promise.resolve([] as CreativeWork[]),
-    needsAchievements
-      ? supabase
-          .from("profile_achievements")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .order("year", { ascending: false })
-          .then(({ data }) => (data ?? []) as ProfileAchievement[])
-      : Promise.resolve([] as ProfileAchievement[]),
-    needsTiers
-      ? supabase
-          .from("support_tiers")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .order("sort_order", { ascending: true })
-          .then(({ data }) => (data ?? []) as SupportTier[])
-      : Promise.resolve([] as SupportTier[]),
-    needsCollaborations
-      ? supabase
-          .from("artworks")
-          .select("id, url, caption, creator_profile:profile_id(username, full_name)")
-          .contains("collaborator_ids", [profile.id])
-          .eq("is_available", false)
-          .order("created_at", { ascending: false })
-          .limit(24)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .then(({ data }) => (data ?? []) as unknown as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>)
-      : Promise.resolve([] as Array<{ id: string; url: string | null; caption: string | null; creator_profile: { username: string; full_name: string | null } | null }>),
-    // Latest blog post featuring this artist (shown in identity block on all tabs)
-    isArtistProfile
-      ? supabase
-          .from("blog_posts")
-          .select("slug, title, image_url, published_at")
-          .eq("featured_profile_id", profile.id)
-          .eq("status", "published")
-          .order("published_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-          .then(({ data }) => data as { slug: string; title: string; image_url: string | null; published_at: string | null } | null)
-      : Promise.resolve(null),
-    // Editions for available works — direct join on work_id
-    isArtistProfile && (availableWorks as Artwork[]).length > 0
-      ? supabase
-          .from("editions")
-          .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
-          .in("work_id", (availableWorks as Artwork[]).map((w) => w.id))
-          .then(({ data }) => data ?? [])
-      : Promise.resolve([]),
-    // Works in this artist's collection (queried via collection_membership.is_public)
-    needsArtistCollection
-      ? supabase
-          .from("collection_membership")
-          .select("position, artwork:artwork_id(*, creator_profile:creator_id(username, full_name, avatar_url))")
-          .eq("holder_id", profile.id)
-          .eq("is_public", true)
-          .order("position", { ascending: true })
-          .then(({ data }) => (data ?? []).map((m) => m.artwork).filter(Boolean))
-      : Promise.resolve([]),
-    // Series — for the Work tab series row
-    needsSeries
-      ? supabase
-          .from("series")
-          .select("id, title, slug, hero_image_url, is_featured, position, year, series_artworks(count)")
-          .eq("artist_id", profile.id)
-          .order("position", { ascending: true })
-          .then(({ data }) => (data ?? []).map(s => ({
-            id: s.id,
-            title: s.title,
-            slug: s.slug,
-            hero_image_url: s.hero_image_url as string | null,
-            is_featured: s.is_featured as boolean,
-            position: s.position as number,
-            year: (s.year as number | null) ?? undefined,
-            artworkCount: Array.isArray(s.series_artworks)
-              ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
-              : 0,
-          })))
-      : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>),
-    // Series artwork IDs — to exclude from the portfolio gallery
-    needsSeriesArtworkIds
-      ? supabase
-          .from("series")
-          .select("series_artworks(artwork_id)")
-          .eq("artist_id", profile.id)
-          .then(({ data }) =>
-            (data ?? []).flatMap(s =>
-              (s.series_artworks as { artwork_id: string }[]).map(sa => sa.artwork_id)
-            )
-          )
-      : Promise.resolve([] as string[]),
-    // Featured works the artist has sold — surfaced in the Overview "Selected Work" strip
-    needsPortfolio
-      ? supabase
-          .from("artworks")
-          .select("*, editions(id, type)")
-          .eq("creator_id", profile.id)
-          .neq("current_owner_id", profile.id)
-          .eq("is_featured", true)
-          .eq("hide_from_archive", false)
-          .order("position", { ascending: true })
-          .then(({ data }) => (data ?? []).filter((w) => {
-            const eds = (w.editions as { id: string; type: string }[] | null) ?? [];
-            return eds.length === 0 || eds.every(e => e.type === "original");
-          }))
-      : Promise.resolve([]),
-  ]);
+  // ── Phase 2 results — started before Phase 1 above; by now the queries have
+  // been running concurrently with Phase 1, so this await is (near) free.
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await phase2Promise;
 
   // Build map: artworks.id → listed editions sorted by sort_order
   const artworkEditionsMap: Record<string, EditionOption[]> = {};
@@ -682,7 +696,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               {profile.featured_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={supabaseTransform(profile.featured_image_url, { width: 1600, quality: 80 }) ?? profile.featured_image_url}
+                  src={profile.featured_image_url}
                   alt={`${displayName} cover`}
                   fetchPriority="high"
                   decoding="async"

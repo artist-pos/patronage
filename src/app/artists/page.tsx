@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { getProfiles, getProfileById } from "@/lib/profiles";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
+import { createPublicClient } from "@/lib/supabase/public";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
@@ -14,6 +16,65 @@ export const metadata = {
   alternates: { canonical: "https://patronage.nz/artists" },
 };
 
+// ── Cached directory extras — identical for every visitor, revalidated every
+// 5 min. Replaces two unbounded full-table artworks fetches per request.
+const getCachedDirectoryData = unstable_cache(
+  async (today: string) => {
+    const supabase = createPublicClient();
+    const [collectedResult, worksCountResult, blogSpotlightResult, profileSpotlightResult] =
+      await Promise.all([
+        // IDs of artists who have had at least one work transferred.
+        // PostgREST can't compare two columns in a filter — fetch both and
+        // compare in JS (a literal "creator_id" string was a uuid cast error).
+        supabase.from("artworks").select("creator_id, current_owner_id"),
+        // Works count per artist profile
+        supabase.from("artworks").select("profile_id"),
+        // Fallback spotlight from blog posts (legacy mechanism)
+        supabase
+          .from("blog_posts")
+          .select("featured_profile_id")
+          .eq("status", "published")
+          .not("featured_profile_id", "is", null)
+          .gte("spotlight_until", today)
+          .order("spotlight_until", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        // Admin-set spotlight (profiles.spotlight_until) — takes precedence
+        supabase
+          .from("profiles")
+          .select("id")
+          .gte("spotlight_until", today)
+          .order("spotlight_until", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+    const collectedIds = [...new Set(
+      (collectedResult.data ?? [])
+        .filter((r: { creator_id: string | null; current_owner_id: string | null }) =>
+          r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id)
+        .map((r: { creator_id: string | null }) => r.creator_id as string)
+    )];
+
+    const worksCounts: Record<string, number> = {};
+    for (const row of worksCountResult.data ?? []) {
+      const r = row as { profile_id: string };
+      worksCounts[r.profile_id] = (worksCounts[r.profile_id] ?? 0) + 1;
+    }
+
+    return {
+      collectedIds,
+      worksCounts,
+      spotlightProfileId:
+        profileSpotlightResult.data?.id ??
+        blogSpotlightResult.data?.featured_profile_id ??
+        null,
+    };
+  },
+  ["artists-directory-v1"],
+  { revalidate: 300, tags: ["artists-directory"] }
+);
+
 interface PageProps {
   searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string; commissions?: string }>;
 }
@@ -26,67 +87,22 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const openForCommissions = params.commissions === "1";
   const view = params.view === "list" ? "list" : params.view === "gallery" ? "gallery" : "spotlight";
 
-  const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [artists, collectedResult, worksCountResult, blogSpotlightResult, profileSpotlightResult, { data: { user } }] = await Promise.all([
+  const [artists, { collectedIds, worksCounts, spotlightProfileId }, { user }] = await Promise.all([
     getProfiles({ country, career_stage, medium, openForCommissions }),
-    // IDs of artists who have had at least one work transferred.
-    // PostgREST can't compare two columns in a filter — fetch both and
-    // compare in JS (a literal "creator_id" string was a uuid cast error).
-    supabase
-      .from("artworks")
-      .select("creator_id, current_owner_id"),
-    // Works count per artist profile
-    supabase
-      .from("artworks")
-      .select("profile_id"),
-    // Fallback spotlight from blog posts (legacy mechanism)
-    supabase
-      .from("blog_posts")
-      .select("featured_profile_id")
-      .eq("status", "published")
-      .not("featured_profile_id", "is", null)
-      .gte("spotlight_until", today)
-      .order("spotlight_until", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    // Admin-set spotlight (profiles.spotlight_until) — takes precedence
-    supabase
-      .from("profiles")
-      .select("id")
-      .gte("spotlight_until", today)
-      .order("spotlight_until", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.auth.getUser(),
+    getCachedDirectoryData(today),
+    getServerUser(),
   ]);
 
   const viewerProfile = user ? await getProfileById(user.id) : null;
   const isAdmin = viewerProfile?.role === "admin" || viewerProfile?.role === "owner";
 
   // Build sets for O(1) lookups
-  const collectedSet = new Set(
-    (collectedResult.data ?? [])
-      .filter((r: { creator_id: string | null; current_owner_id: string | null }) =>
-        r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id)
-      .map((r: { creator_id: string | null }) => r.creator_id as string)
-  );
-
-  const worksCountMap = new Map<string, number>();
-  for (const row of worksCountResult.data ?? []) {
-    const r = row as { profile_id: string };
-    worksCountMap.set(r.profile_id, (worksCountMap.get(r.profile_id) ?? 0) + 1);
-  }
+  const collectedSet = new Set(collectedIds);
+  const worksCountMap = new Map<string, number>(Object.entries(worksCounts));
 
   const hasFilters = !!(country || career_stage || medium || openForCommissions);
-
-  // Spotlight artist — admin-set (profiles.spotlight_until) wins; the legacy
-  // blog-post spotlight remains as fallback
-  const spotlightProfileId =
-    profileSpotlightResult.data?.id ??
-    blogSpotlightResult.data?.featured_profile_id ??
-    null;
   const spotlightArtist =
     view === "spotlight" && !hasFilters && spotlightProfileId
       ? (artists.find((a) => a.id === spotlightProfileId) ?? null)
@@ -129,10 +145,11 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
         <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6">
           <div className="mb-4 flex items-baseline gap-3">
             <h1 className="text-2xl font-semibold tracking-[-0.025em]">Artists</h1>
-            <span className="font-mono text-xs text-muted-foreground">
-              {artists.length} artist{artists.length !== 1 ? "s" : ""}
-              {activeFilters.length > 0 ? ` · ${activeFilters.join(" · ")}` : ""}
-            </span>
+            {activeFilters.length > 0 && (
+              <span className="font-mono text-xs text-muted-foreground">
+                {activeFilters.join(" · ")}
+              </span>
+            )}
           </div>
 
           <Suspense>
@@ -199,7 +216,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
               {/* Directory — everyone presentable, as rows */}
               {directoryArtists.length > 0 && (
                 <div className="space-y-3">
-                  <p className="t-section-label">All artists · {directoryArtists.length}</p>
+                  <p className="t-section-label">Directory · {directoryArtists.length}</p>
                   <div>
                     {directoryArtists.map((artist) => (
                       <div key={artist.id} className="flex items-stretch">

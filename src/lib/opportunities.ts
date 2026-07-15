@@ -17,7 +17,9 @@ export async function getOpportunities(
   filters: OpportunityFilters = {},
   limit = 200
 ): Promise<Opportunity[]> {
-  const supabase = await createClient();
+  // Cookie-free public client: only published rows are read (public RLS), and
+  // this keeps the function callable inside unstable_cache (no cookies()).
+  const supabase = createPublicClient();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -123,7 +125,8 @@ export async function getMarketplaceStats(): Promise<{
   closingThisWeek: number;
   freeToEnter: number;
 }> {
-  const supabase = await createClient();
+  // Cookie-free public client — same data for every visitor; cacheable.
+  const supabase = createPublicClient();
   const today = new Date().toISOString().split("T")[0];
   const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 

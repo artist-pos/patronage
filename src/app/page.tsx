@@ -3,9 +3,8 @@ import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { WhoIsPatronageFor } from "@/components/home/WhoIsPatronageFor";
 import { FeedCard } from "@/components/feed/FeedCard";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createPublicClient } from "@/lib/supabase/public";
-import { supabaseTransform } from "@/lib/image";
 import { getBannerGradient } from "@/lib/defaults";
 import type { ProfileWithImage, Opportunity } from "@/types/database";
 import type { ProjectUpdateWithArtist } from "@/types/database";
@@ -128,12 +127,12 @@ const getCachedHomeData = unstable_cache(
 export const metadata: Metadata = {
   title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
   description:
-    "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Browse 500+ live opportunities updated weekly.",
+    "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Live opportunities updated weekly.",
   alternates: { canonical: "https://patronage.nz" },
   openGraph: {
     title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
     description:
-      "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Browse 500+ live opportunities updated weekly.",
+      "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Live opportunities updated weekly.",
     url: "https://patronage.nz",
     type: "website",
   },
@@ -177,7 +176,7 @@ const DISCIPLINES = [
 function OppRow({ opp, last = false }: { opp: Opportunity; last?: boolean }) {
   const d = deadlineInfo(opp.deadline);
   const money = moneyLabel(opp);
-  const img = supabaseTransform(opp.featured_image_url ?? "", { width: 104, quality: 80 }) ?? opp.featured_image_url;
+  const img = opp.featured_image_url;
   return (
     <Link
       href={`/opportunities/${opp.slug ?? opp.id}`}
@@ -226,14 +225,12 @@ function OppRow({ opp, last = false }: { opp: Opportunity; last?: boolean }) {
   );
 }
 
-function artistImage(a: ProfileWithImage, width: number): string | null {
-  const src = a.featured_image_url ?? a.avatar_url;
-  if (!src) return null;
-  return supabaseTransform(src, { width, quality: 80 }) ?? src;
+function artistImage(a: ProfileWithImage): string | null {
+  return a.featured_image_url ?? a.avatar_url ?? null;
 }
 
 function ArtistFeature({ a, spotlit = false }: { a: ProfileWithImage; spotlit?: boolean }) {
-  const img = artistImage(a, 1200);
+  const img = artistImage(a);
   return (
     <Link href={`/${a.username}`} className="pin flex flex-col overflow-hidden">
       <div className="relative min-h-[320px] flex-1 overflow-hidden">
@@ -287,7 +284,7 @@ function ArtistFeature({ a, spotlit = false }: { a: ProfileWithImage; spotlit?: 
 }
 
 function ArtistStripTile({ a }: { a: ProfileWithImage }) {
-  const img = artistImage(a, 160);
+  const img = artistImage(a);
   return (
     <Link href={`/${a.username}`} className="w-[76px] shrink-0">
       <div className="relative mb-1.5 aspect-square w-full overflow-hidden">
@@ -316,7 +313,7 @@ function ArtistStripTile({ a }: { a: ProfileWithImage }) {
 }
 
 function ArtistCompact({ a }: { a: ProfileWithImage }) {
-  const img = artistImage(a, 400);
+  const img = artistImage(a);
   return (
     <Link href={`/${a.username}`} className="pin flex flex-1 overflow-hidden bg-card">
       {/* Square image — width tracks the card height */}
@@ -367,9 +364,9 @@ function ArtistCompact({ a }: { a: ProfileWithImage }) {
 
 export default async function Home() {
   const today = new Date().toISOString().split("T")[0];
-  const [supabase, { artists, recentArtists, spotlightArtist, opportunities, updates, oppCount, artistCount }] =
-    await Promise.all([createClient(), getCachedHomeData(today)]);
-  const { data: { user } } = await supabase.auth.getUser();
+  // Auth (request-deduped with Header) and cached home data run concurrently.
+  const [{ user }, { artists, recentArtists, spotlightArtist, opportunities, updates, oppCount, artistCount }] =
+    await Promise.all([getServerUser(), getCachedHomeData(today)]);
   const isAuthenticated = !!user;
   const isNewUser = !!user && !!user.created_at &&
     (Date.now() - new Date(user.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
@@ -613,7 +610,7 @@ export default async function Home() {
               href="/artists"
               className="font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground"
             >
-              All {artistCount} →
+              All artists →
             </Link>
           </div>
           {artists.length > 0 ? (
