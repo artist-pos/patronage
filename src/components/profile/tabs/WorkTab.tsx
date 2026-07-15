@@ -120,6 +120,17 @@ export function WorkTab({
       : null;
   const selectedRest = hero ? selectedItems.slice(1) : selectedItems;
 
+  // ── Available — the storefront. Featured works already carry their
+  // AVAILABLE chip in Selected, and when nothing is curated Selected itself
+  // falls back to available works — so this section shows only the for-sale
+  // works not already on screen. Without it, a non-featured sale listing
+  // (e.g. an edition hidden from the archive) was counted in "N works
+  // available" but rendered nowhere.
+  const selectedIds = new Set(selectedItems.map((i) => (i as { id: string }).id));
+  const forSaleItems: GridItem[] = hasCuration
+    ? (availableWorks.filter((w) => !selectedIds.has(w.id)) as unknown as GridItem[])
+    : [];
+
   // ── Archive: everything, grouped by year (newest first, undated last)
   const archiveItems: GridItem[] = [
     ...publicSeries.map(toSeriesItem),
@@ -211,6 +222,33 @@ export function WorkTab({
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {/* ── Available — for-sale works not already surfaced above ── */}
+      {forSaleItems.length > 0 && (
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="t-section-label">Available</h2>
+            {isOwner && (
+              <Link
+                href="/studio?section=works"
+                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Manage in Studio →
+              </Link>
+            )}
+          </div>
+          <GalleryWithControls
+            images={forSaleItems}
+            username={username}
+            viewerRole={viewerRole}
+            profileId={isOwner ? undefined : profileId}
+            isOwner={isOwner}
+            savedRowHeight={galleryRowHeight ?? 300}
+            savedGutter={galleryGutter}
+            noControls
+          />
         </section>
       )}
 
