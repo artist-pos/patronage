@@ -19,6 +19,81 @@ interface Props {
   isOwner: boolean;
 }
 
+/** One storefront tile — the tile's width IS the image's rendered width
+ *  (stored natural dims when present, else measured onLoad, same pattern as
+ *  StudioUpdateTile). The caption wraps to that width and the price pill pins
+ *  to the image's own corner — no white gutter beside narrow works. */
+function Tile({ work, onOpen, detailHref }: {
+  work: AvailableArtwork;
+  onOpen?: () => void;
+  detailHref?: string;
+}) {
+  const dims = work as { natural_width?: number | null; natural_height?: number | null };
+  const [tileW, setTileW] = useState<number | null>(
+    dims.natural_width && dims.natural_height
+      ? Math.round(TILE_H * (dims.natural_width / dims.natural_height))
+      : null
+  );
+
+  // Stored natural dims are only a pre-load estimate — they can be stale
+  // (e.g. the image was replaced). The loaded file's real dimensions win.
+  function measure(img: HTMLImageElement) {
+    if (img.naturalWidth && img.naturalHeight) {
+      const measured = Math.round(TILE_H * (img.naturalWidth / img.naturalHeight));
+      setTileW((prev) => (prev === measured ? prev : measured));
+    }
+  }
+
+  // Cached images finish loading before hydration, so onLoad never fires for
+  // them — the ref callback catches already-complete images on mount.
+  function imgRef(node: HTMLImageElement | null) {
+    if (node?.complete) measure(node);
+  }
+
+  const title = work.title ?? work.caption ?? "Untitled";
+  const price = !work.hide_price ? formatPrice(work.price_cents, work.price_currency, work.is_poa) : null;
+
+  const inner = (
+    <>
+      <div className="relative overflow-hidden bg-card" style={{ height: TILE_H }}>
+        {work.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            ref={imgRef}
+            src={work.url}
+            alt={title}
+            loading="lazy"
+            onLoad={(e) => measure(e.currentTarget)}
+            className="block w-auto max-w-none"
+            style={{ height: TILE_H }}
+          />
+        )}
+        {price && (
+          <span className="absolute bottom-1.5 right-1.5 bg-white/90 px-2 py-0.5 font-mono text-[10px] font-medium text-stone-800">
+            {price}
+          </span>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-medium">
+        {title}
+        {work.year ? <span className="font-normal text-muted-foreground">, {work.year}</span> : null}
+      </p>
+    </>
+  );
+
+  const style = tileW ? { width: tileW } : undefined;
+
+  return detailHref ? (
+    <Link href={detailHref} className="block text-left" style={style}>
+      {inner}
+    </Link>
+  ) : (
+    <button type="button" onClick={onOpen} className="block text-left" style={style}>
+      {inner}
+    </button>
+  );
+}
+
 /**
  * The profile storefront grid — every available work as a tile. Clicking a
  * tile opens the commerce modal (WorkPurchaseModal: image + price + buy/
@@ -36,50 +111,17 @@ export function AvailableWorksGrid({ artworks, artistId, artistName, username, i
   return (
     <>
       <div className="flex flex-wrap items-start gap-3">
-        {artworks.map((w) => {
-          const title = w.title ?? w.caption ?? "Untitled";
-          const price = !w.hide_price ? formatPrice(w.price_cents, w.price_currency, w.is_poa) : null;
-
-          const tile = (
-            <>
-              <div className="relative overflow-hidden bg-card" style={{ height: TILE_H }}>
-                {w.url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={w.url}
-                    alt={title}
-                    loading="lazy"
-                    className="block w-auto"
-                    style={{ height: TILE_H }}
-                  />
-                )}
-                {price && (
-                  <span className="absolute bottom-1.5 right-1.5 bg-white/90 px-2 py-0.5 font-mono text-[10px] font-medium text-stone-800">
-                    {price}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1.5 text-xs font-medium">
-                {title}
-                {w.year ? <span className="font-normal text-muted-foreground">, {w.year}</span> : null}
-              </p>
-            </>
-          );
-
-          return isOwner ? (
-            <Link
+        {artworks.map((w) =>
+          isOwner ? (
+            <Tile
               key={w.id}
-              href={`/${username}/works/${(w as { slug?: string | null }).slug ?? w.id}`}
-              className="block text-left"
-            >
-              {tile}
-            </Link>
+              work={w}
+              detailHref={`/${username}/works/${(w as { slug?: string | null }).slug ?? w.id}`}
+            />
           ) : (
-            <button key={w.id} type="button" onClick={() => setActiveId(w.id)} className="block text-left">
-              {tile}
-            </button>
-          );
-        })}
+            <Tile key={w.id} work={w} onOpen={() => setActiveId(w.id)} />
+          )
+        )}
       </div>
 
       {active && (
