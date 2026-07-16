@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GalleryWithControls } from "@/components/profile/GalleryWithControls";
+import { AvailableWorksGrid } from "@/components/profile/AvailableWorksGrid";
 import type { GridItem, GridSeriesItem } from "@/components/profile/PortfolioGrid";
 import { SoldWorksSection } from "@/components/profile/SoldWorksSection";
 import { CollectionSection } from "@/components/profile/CollectionSection";
@@ -83,6 +84,7 @@ export function WorkTab({
   collectionWorks,
   profileId,
   username,
+  artistName,
   viewerRole,
   isOwner,
   hideSoldSection,
@@ -120,16 +122,11 @@ export function WorkTab({
       : null;
   const selectedRest = hero ? selectedItems.slice(1) : selectedItems;
 
-  // ── Available — the storefront. Featured works already carry their
-  // AVAILABLE chip in Selected, and when nothing is curated Selected itself
-  // falls back to available works — so this section shows only the for-sale
-  // works not already on screen. Without it, a non-featured sale listing
-  // (e.g. an edition hidden from the archive) was counted in "N works
-  // available" but rendered nowhere.
-  const selectedIds = new Set(selectedItems.map((i) => (i as { id: string }).id));
-  const forSaleItems: GridItem[] = hasCuration
-    ? (availableWorks.filter((w) => !selectedIds.has(w.id)) as unknown as GridItem[])
-    : [];
+  // ── Available — the storefront: EVERY work for sale, so the disclosure's
+  // count always matches the profile's "N works available" badge. Featured
+  // for-sale works appear here too (as well as in Selected with their chip) —
+  // a buyer opening "Available" must see the full inventory, not a remainder.
+  const forSaleWorks = availableWorks;
 
   // ── Archive: everything, grouped by year (newest first, undated last)
   const archiveItems: GridItem[] = [
@@ -274,14 +271,14 @@ export function WorkTab({
              the other wraps below. Available holds every for-sale work not
              already surfaced in Selected — without it, a non-featured sale
              listing was counted in "N works available" but rendered nowhere. */}
-      {(forSaleItems.length > 0 || soldWorks.length > 0 || isOwner) && (
+      {(forSaleWorks.length > 0 || soldWorks.length > 0 || isOwner) && (
         <div className="flex flex-wrap items-start gap-3">
-          {forSaleItems.length > 0 && (
+          {forSaleWorks.length > 0 && (
             <details className="group/avail w-fit open:w-full">
               <summary className="inline-flex cursor-pointer list-none items-center gap-3 border border-border bg-card px-4 py-2.5 transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden">
                 <h2 className="t-section-label">Available</h2>
                 <span className="font-mono text-[11px] text-muted-foreground">
-                  {forSaleItems.length} work{forSaleItems.length !== 1 ? "s" : ""}
+                  {forSaleWorks.length} work{forSaleWorks.length !== 1 ? "s" : ""}
                 </span>
                 <svg
                   aria-hidden
@@ -303,15 +300,14 @@ export function WorkTab({
                     </Link>
                   </div>
                 )}
-                <GalleryWithControls
-                  images={forSaleItems}
+                {/* Tiles open the commerce modal (buy/enquire), not the
+                    artwork detail page — this is the storefront. */}
+                <AvailableWorksGrid
+                  artworks={forSaleWorks}
+                  artistId={profileId}
+                  artistName={artistName}
                   username={username}
-                  viewerRole={viewerRole}
-                  profileId={isOwner ? undefined : profileId}
                   isOwner={isOwner}
-                  savedRowHeight={galleryRowHeight ?? 300}
-                  savedGutter={galleryGutter}
-                  noControls
                 />
               </div>
             </details>
