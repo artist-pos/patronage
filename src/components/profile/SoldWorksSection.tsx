@@ -406,20 +406,35 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
         />
       )}
 
-      <section className="space-y-4 border-t border-border pt-10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-            Sold Works
-          </h2>
-          {isOwner && (
+      {/* Disclosure bar — matches the Archive/Available treatment so the two
+          market sections sit side-by-side in WorkTab's flex row. */}
+      <details className="group/sold w-fit open:w-full">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-3 border border-border bg-card px-4 py-2.5 transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden">
+          <h2 className="t-section-label">Sold</h2>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {visibleWorks.length} work{visibleWorks.length !== 1 ? "s" : ""}
+            {isOwner && sectionHidden ? " · hidden" : ""}
+          </span>
+          <svg
+            aria-hidden
+            width="10" height="10" viewBox="0 0 10 10" fill="none"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+            className="text-muted-foreground transition-transform group-open/sold:rotate-180"
+          >
+            <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+          </svg>
+        </summary>
+        <div className="space-y-4 pt-6">
+        {isOwner && (
+          <div className="flex justify-end">
             <button
               onClick={toggleSectionVisibility}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {sectionHidden ? "Show sold section" : "Hide sold section"}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {visibleWorks.length === 0 ? (
           <p className="text-sm text-muted-foreground">No sold works to display.</p>
@@ -511,7 +526,8 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
             })}
           </div>
         )}
-      </section>
+        </div>
+      </details>
     </>
   );
 }

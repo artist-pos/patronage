@@ -225,33 +225,6 @@ export function WorkTab({
         </section>
       )}
 
-      {/* ── Available — for-sale works not already surfaced above ── */}
-      {forSaleItems.length > 0 && (
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="t-section-label">Available</h2>
-            {isOwner && (
-              <Link
-                href="/studio?section=works"
-                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-              >
-                Manage in Studio →
-              </Link>
-            )}
-          </div>
-          <GalleryWithControls
-            images={forSaleItems}
-            username={username}
-            viewerRole={viewerRole}
-            profileId={isOwner ? undefined : profileId}
-            isOwner={isOwner}
-            savedRowHeight={galleryRowHeight ?? 300}
-            savedGutter={galleryGutter}
-            noControls
-          />
-        </section>
-      )}
-
       {/* ── Archive — the complete record, an optional disclosure. Starts
              open when there's no Selected section (otherwise the profile
              would show no work at all until a click). ── */}
@@ -296,12 +269,61 @@ export function WorkTab({
         </details>
       )}
 
-      {/* ── Sold / In collection (market proof at the bottom) ── */}
-      <SoldWorksSection
-        initialWorks={soldWorks}
-        isOwner={isOwner}
-        hideSoldSection={hideSoldSection}
-      />
+      {/* ── Market row — Available and Sold sit side-by-side as disclosures
+             (same treatment as Archive). An opened one expands to full width;
+             the other wraps below. Available holds every for-sale work not
+             already surfaced in Selected — without it, a non-featured sale
+             listing was counted in "N works available" but rendered nowhere. */}
+      {(forSaleItems.length > 0 || soldWorks.length > 0 || isOwner) && (
+        <div className="flex flex-wrap items-start gap-3">
+          {forSaleItems.length > 0 && (
+            <details className="group/avail w-fit open:w-full">
+              <summary className="inline-flex cursor-pointer list-none items-center gap-3 border border-border bg-card px-4 py-2.5 transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden">
+                <h2 className="t-section-label">Available</h2>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {forSaleItems.length} work{forSaleItems.length !== 1 ? "s" : ""}
+                </span>
+                <svg
+                  aria-hidden
+                  width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+                  className="text-muted-foreground transition-transform group-open/avail:rotate-180"
+                >
+                  <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+                </svg>
+              </summary>
+              <div className="space-y-4 pt-6">
+                {isOwner && (
+                  <div className="flex justify-end">
+                    <Link
+                      href="/studio?section=works"
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      Manage in Studio →
+                    </Link>
+                  </div>
+                )}
+                <GalleryWithControls
+                  images={forSaleItems}
+                  username={username}
+                  viewerRole={viewerRole}
+                  profileId={isOwner ? undefined : profileId}
+                  isOwner={isOwner}
+                  savedRowHeight={galleryRowHeight ?? 300}
+                  savedGutter={galleryGutter}
+                  noControls
+                />
+              </div>
+            </details>
+          )}
+
+          <SoldWorksSection
+            initialWorks={soldWorks}
+            isOwner={isOwner}
+            hideSoldSection={hideSoldSection}
+          />
+        </div>
+      )}
 
       {/* ── Collection — works owned but not created by this artist ── */}
       {(isOwner || collectionWorks.some(w => w.collection_visible)) && (
