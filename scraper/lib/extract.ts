@@ -39,9 +39,22 @@ Return ONLY a valid JSON array. No markdown fences, no explanation, no trailing 
 RELEVANCE FILTER — apply BEFORE extracting:
 - YES: grants, prizes, residencies, open calls, commissions, exhibitions, public art opportunities, studio/space access, fellowships for individual artists or small collectives
 - NO: commercial job listings (marketing manager, gallery director, production coordinator), internships, volunteer roles, institutional funding for organisations/councils/universities, calls restricted to a specific institution's own students/staff/members, film/TV production crew calls, corporate sponsorship opportunities
-- GEOGRAPHY SKIP — do NOT extract an opportunity if it is clearly restricted to a single country other than NZ or Australia AND there is no indication of international eligibility anywhere on the page. Eligibility signals to look for: tags like "International", "Open to all", "Worldwide"; filter labels; phrases like "artists from outside [country] are welcome"; or no explicit residency/citizenship restriction at all. When in doubt, include it with confidence "medium" — many prizes accept international entrants even if the organiser is based overseas.
 - If unsure about anything other than geography, include it but set "confidence" to "low"
 - If a page has NO relevant opportunities, return []
+
+GEOGRAPHY — Patronage serves artists based in NZ and Australia. An opportunity is only useful if such an artist can actually enter. Classify every opportunity's "geo_eligibility":
+- "nz" — restricted to NZ-based artists, residents, or citizens
+- "aus" — restricted to Australia-based artists, residents, or citizens
+- "worldwide_explicit" — the page explicitly states international eligibility: "international", "worldwide", "open to all artists", "any nationality", "artists from anywhere", or an explicit list of eligible countries that includes NZ or Australia
+- "worldwide_likely" — no residency/citizenship restriction stated anywhere, AND entry/submission is fully online (digital images, online form, email), AND nothing ties participation to being physically present in one region
+- "local_only" — ANY of the following, regardless of what else the page says:
+  * residency or citizenship restricted to a single country/state/region other than NZ/AUS ("US residents", "UK-based artists", "artists of the Pacific Northwest")
+  * work must be hand-delivered or dropped off, or collected in person, with no mention of shipped/international entries
+  * a community/regional show, fair, festival, or guild exhibition serving one locality (county shows, city art trails, member exhibitions)
+  * a job, teaching role, or paid position located outside NZ/Australia
+  * funding from a national arts body available only to that country's residents (e.g. Arts Council England, Creative Scotland funds)
+- DO NOT EXTRACT "local_only" opportunities at all — leave them out of the array entirely.
+- Organiser being based in the US/UK/EU is NOT evidence of international eligibility. Without explicit signals, prefer "local_only" over "worldwide_likely" for gallery shows and juried exhibitions; physical group shows are usually local affairs.
 
 Each item in the array:
 {
@@ -57,15 +70,14 @@ Each item in the array:
   "full_description": "Structured plain-text description for the detail page. Use short section headings on their own line, always ending with a colon (e.g. 'Eligibility:', 'Prize:', 'How to Apply:', 'About the Residency:', 'Who can apply:'). Headings must be Title Case followed by colon — never ALL CAPS, never without colon. Write content after each heading as plain text on the next line(s). No markdown bold/italic. Max 1500 characters. Null if the source page has no substantive detail beyond the caption.",
   "sub_categories": ["string array — relevant tags for discipline, medium, career stage, identity, focus. Include whatever applies from the content. Examples: Painting, Sculpture, Photography, Ceramics, Digital, Printmaking, Drawing, Textile, Film & Video, Performance, Installation, Sound, Poetry, Writing, Mixed Media, Early Career, Emerging, Mid-Career, Established, Māori, Pasifika, Indigenous, First Nations, Youth, Women, LGBTQ+, International, Travel, Research, Community, Environmental, Public Art, Experimental. Add any other relevant tags not in this list."],
   "disciplines": ["string array from: visual_art, music, poetry, writing, dance, film, photography, craft, performance, other"],
+  "geo_eligibility": "nz" | "aus" | "worldwide_explicit" | "worldwide_likely",
   "confidence": "high" | "medium" | "low"
 }
 
-COUNTRY RULES — use eligibility, not organiser location:
-- "Global" — open to international applicants, OR uses phrases like "open to all", "international artists welcome", "worldwide", "any nationality". Also use "Global" for US/UK/EU opportunities that accept international applicants.
-- "NZ" — explicitly restricted to NZ-based artists, residents, or citizens
-- "AUS" — explicitly restricted to Australia-based artists, residents, or citizens
-- SKIP entirely if restricted to a single country outside NZ/AUS with no international eligibility
-- When unsure, use "Global" — many prizes and residencies accept international applicants even if their organiser is in a specific country
+COUNTRY RULES — derive from geo_eligibility, never from organiser location:
+- geo_eligibility "nz" → country "NZ"
+- geo_eligibility "aus" → country "AUS"
+- geo_eligibility "worldwide_explicit" or "worldwide_likely" → country "Global"
 
 CAPTION STYLE — NZ spelling (organisation, programme, recognised):
 GOOD: "Three-month residency in Titirangi with a $10,000 stipend. Open to NZ visual artists at any career stage."
@@ -85,10 +97,49 @@ TYPE MAPPING:
 If a page lists multiple opportunities, return all of them (applying filters to each).
 Return ONLY the JSON array.`;
 
+export interface ExtractOptions {
+    /**
+     * Source is dominated by local/regional listings (US show platforms, UK
+     * aggregators): keep only opportunities with EXPLICIT international
+     * eligibility (or NZ/AUS), dropping "worldwide_likely" inferences.
+     */
+    strictGeo?: boolean;
+}
+
+type ParsedOpp = ScrapedOpportunity & { confidence?: string; geo_eligibility?: string };
+
+/**
+ * Post-parse gate for extracted opportunities. Pure — exported for tests.
+ */
+export function applyExtractionFilters(parsed: ParsedOpp[], opts: ExtractOptions = {}): ScrapedOpportunity[] {
+    return parsed
+        // Must have title and organiser
+        .filter((o) => o.title && o.organiser)
+        // The AI wasn't sure it's a real opportunity
+        .filter((o) => o.confidence !== "low")
+        // Geo gate: local-only should never have been emitted, but drop any
+        // stragglers; under strictGeo an unstated-eligibility inference isn't
+        // good enough — demand explicit evidence (or NZ/AUS eligibility).
+        .filter((o) => {
+            const geo = o.geo_eligibility ?? "";
+            if (geo === "local_only") return false;
+            if (opts.strictGeo) return geo === "worldwide_explicit" || geo === "nz" || geo === "aus";
+            return true;
+        })
+        // Map country to DB-safe values
+        .map((o) => ({
+            ...o,
+            country: mapCountryForDb(o.country),
+            // Ensure caption doesn't exceed DB limit
+            caption: o.caption?.slice(0, 400) ?? null,
+        }));
+}
+
 export async function extractFromPage(
     text: string,
     sourceUrl: string,
-    defaultCountry: string
+    defaultCountry: string,
+    opts: ExtractOptions = {}
 ): Promise<ScrapedOpportunity[]> {
     // Truncate to ~12k chars to stay within context limits while allowing more content than before
     const truncated = text.slice(0, 12000);
@@ -120,20 +171,8 @@ export async function extractFromPage(
         const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
         if (!jsonMatch) return [];
 
-        const parsed = JSON.parse(jsonMatch[0]) as (ScrapedOpportunity & { confidence?: string })[];
-
-        return parsed
-            // Must have title and organiser
-            .filter((o) => o.title && o.organiser)
-            // Filter out low-confidence items (the AI wasn't sure it's a real opportunity)
-            .filter((o) => o.confidence !== "low")
-            // Map country to DB-safe values
-            .map((o) => ({
-                ...o,
-                country: mapCountryForDb(o.country),
-                // Ensure caption doesn't exceed DB limit
-                caption: o.caption?.slice(0, 400) ?? null,
-            }));
+        const parsed = JSON.parse(jsonMatch[0]) as ParsedOpp[];
+        return applyExtractionFilters(parsed, opts);
     } catch (err: any) {
         const msg = err instanceof Error ? err.message : String(err);
         // Credit exhaustion is fatal for the whole run — propagate immediately
@@ -149,10 +188,11 @@ export async function extractFromPage(
 export async function extractFromRssItem(
     item: RssItem,
     sourceUrl: string,
-    defaultCountry: string
+    defaultCountry: string,
+    opts: ExtractOptions = {}
 ): Promise<ScrapedOpportunity[]> {
     const content = `Title: ${item.title}\nLink: ${item.link}\nDate: ${item.pubDate}\nContent: ${item.content}`;
-    return extractFromPage(content, sourceUrl, defaultCountry);
+    return extractFromPage(content, sourceUrl, defaultCountry, opts);
 }
 
 // ============================================================

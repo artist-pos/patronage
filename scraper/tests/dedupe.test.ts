@@ -68,6 +68,26 @@ test("isLikelyDuplicate rejects same title outside the deadline window", () => {
     assert.ok(!isLikelyDuplicate(a, b));
 });
 
+test("isLikelyDuplicate catches subset-style cross-posts (token_set_ratio)", () => {
+    const short = {
+        titleNorm: normTitle("TaDA Residency 2027"),
+        organiserNorm: normOrganiser("TaDA – Textile and Design Alliance"),
+        deadline: "2026-09-30",
+    };
+    const long = {
+        titleNorm: normTitle("TaDA Residency 2027 – Textile Art Residency Switzerland"),
+        organiserNorm: normOrganiser("TaDA Textile and Design Alliance"),
+        deadline: "2026-09-30",
+    };
+    assert.ok(isLikelyDuplicate(short, long));
+});
+
+test("generic short titles do not subset-match everything", () => {
+    const a = { titleNorm: normTitle("Open Call"), organiserNorm: normOrganiser("Gallery X"), deadline: "2026-09-30" };
+    const b = { titleNorm: normTitle("Open Call for Large-Scale Sculpture Commissions"), organiserNorm: normOrganiser("Gallery X"), deadline: "2026-09-30" };
+    assert.ok(!isLikelyDuplicate(a, b));
+});
+
 test("authorityRank: org pages beat aggregators, explicit authority wins", () => {
     assert.equal(authorityRank({}), 1);
     assert.equal(authorityRank({ isAggregator: true }), 2);

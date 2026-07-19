@@ -84,6 +84,47 @@ export function tokenSortRatio(a: string, b: string): number {
     return ratio(sa, sb);
 }
 
+/**
+ * rapidfuzz-style token_set_ratio: tolerant of one title being a subset of
+ * the other ("TaDA Residency 2027" vs "TaDA Residency 2027 – Textile Art
+ * Residency Switzerland" → 100). To avoid generic short titles ("open call")
+ * matching everything, callers should gate on a minimum shared-token count —
+ * see isLikelyDuplicate.
+ */
+export function tokenSetRatio(a: string, b: string): number {
+    const ta = new Set(a.split(" ").filter(Boolean));
+    const tb = new Set(b.split(" ").filter(Boolean));
+    const common = [...ta].filter((t) => tb.has(t)).sort();
+    const onlyA = [...ta].filter((t) => !tb.has(t)).sort();
+    const onlyB = [...tb].filter((t) => !ta.has(t)).sort();
+    const t0 = common.join(" ");
+    const t1 = [t0, ...onlyA].filter(Boolean).join(" ");
+    const t2 = [t0, ...onlyB].filter(Boolean).join(" ");
+    return Math.max(ratio(t0, t1), ratio(t0, t2), ratio(t1, t2));
+}
+
+/** Number of tokens the two normalised strings share. */
+export function sharedTokenCount(a: string, b: string): number {
+    const tb = new Set(b.split(" ").filter(Boolean));
+    return a.split(" ").filter(Boolean).filter((t) => tb.has(t)).length;
+}
+
+// Art-world boilerplate that says nothing about WHICH opportunity this is.
+const GENERIC_TOKENS = new Set([
+    "open", "call", "calls", "for", "the", "of", "and", "a", "an", "to", "in",
+    "art", "arts", "artist", "artists", "artwork", "works",
+    "exhibition", "show", "prize", "award", "awards", "grant", "grants",
+    "residency", "residencies", "fellowship", "opportunity", "opportunities",
+    "entries", "entry", "submission", "submissions", "competition", "annual",
+    "international", "juried", "gallery", "festival", "new",
+]);
+
+/** True when the shared vocabulary includes something identity-bearing. */
+export function hasDistinctiveSharedToken(a: string, b: string): boolean {
+    const tb = new Set(b.split(" ").filter(Boolean));
+    return a.split(" ").filter(Boolean).some((t) => tb.has(t) && !GENERIC_TOKENS.has(t));
+}
+
 // ── Duplicate decision ───────────────────────────────────────────────────────
 
 export interface DedupeCandidate {
@@ -109,7 +150,13 @@ export function deadlinesCompatible(a: string | null, b: string | null, windowDa
  */
 export function isLikelyDuplicate(a: DedupeCandidate, b: DedupeCandidate): boolean {
     if (!deadlinesCompatible(a.deadline, b.deadline)) return false;
-    const titleScore = tokenSortRatio(a.titleNorm, b.titleNorm);
+    // token_set_ratio catches subset-style cross-posts, but only counts when
+    // the shared vocabulary carries identity (≥2 shared tokens, at least one
+    // non-generic) — otherwise "open call" would match every open call.
+    let titleScore = tokenSortRatio(a.titleNorm, b.titleNorm);
+    if (sharedTokenCount(a.titleNorm, b.titleNorm) >= 2 && hasDistinctiveSharedToken(a.titleNorm, b.titleNorm)) {
+        titleScore = Math.max(titleScore, tokenSetRatio(a.titleNorm, b.titleNorm));
+    }
     if (titleScore < DEDUPE_TITLE_THRESHOLD) return false;
     if (!a.organiserNorm || !b.organiserNorm) return true;
     if (tokenSortRatio(a.organiserNorm, b.organiserNorm) >= DEDUPE_ORGANISER_THRESHOLD) return true;

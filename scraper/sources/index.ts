@@ -22,38 +22,38 @@ export const sources: Source[] = [
   { name: "Contemporary Performance", url: "https://contemporaryperformance.com", country: "Global", disciplines: ["performance"], feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
   // a-n The Artists Information Company rebranded to Artists Now (artistsnow.com);
   // full opportunities listing is members-only — public jobs page only.
-  { name: "Artists Now (a-n) Jobs", url: "https://www.artistsnow.com/jobs/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "Artists Now (a-n) Jobs", url: "https://www.artistsnow.com/jobs/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, strictGeo: true },
   // Artquest moved opportunities to a custom post type — posts feed is empty
-  { name: "Artquest Opportunities", url: "https://artquest.org.uk", country: "Global", feedUrl: "/wp-json/wp/v2/opportunity", isAggregator: true },
+  { name: "Artquest Opportunities", url: "https://artquest.org.uk", country: "Global", feedUrl: "/wp-json/wp/v2/opportunity", isAggregator: true, strictGeo: true },
   { name: "Aesthetica Magazine", url: "https://aestheticamagazine.com", country: "Global", feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
   { name: "Art Guide Australia", url: "https://www.artguide.com.au", country: "AUS", feedUrl: "/wp-json/wp/v2/posts" },
   { name: "ANAT Opportunities", url: "https://anat.org.au", country: "AUS", feedUrl: "/wp-json/wp/v2/posts" },
   { name: "ResArtis Open Calls", url: "https://resartis.org/open-calls/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, isAggregator: true },
-  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 25, isAggregator: true },
+  { name: "CaFE / Call for Entry", url: "https://www.callforentry.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 25, isAggregator: true, strictGeo: true },
   { name: "Trans Artists", url: "https://www.transartists.org/en/air", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, isAggregator: true },
   { name: "Open Calls", url: "https://opencalls.net/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, isAggregator: true },
-  { name: "Art Deadline List", url: "https://artdeadline.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 1000, pages: 10, paginationUrl: "https://artdeadline.com/page/{page}/", detailBudget: 60, isAggregator: true },
+  { name: "Art Deadline List", url: "https://artdeadline.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 1000, pages: 10, paginationUrl: "https://artdeadline.com/page/{page}/", detailBudget: 60, isAggregator: true, strictGeo: true },
   { name: "Apply For Art", url: "https://www.applyforart.com/", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
-  { name: "Open Call for Artists", url: "https://opencallforartists.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true },
+  { name: "Open Call for Artists", url: "https://opencallforartists.com", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true, strictGeo: true },
   { name: "ArtInfoLand Australia", url: "https://artinfoland.com/location/australia/", country: "AUS", isListPage: true, followLinks: true, maxLinks: 150, pages: 13, paginationUrl: "https://artinfoland.com/location/australia/page/{page}/", detailBudget: 60, isAggregator: true, linkPattern: /\/opportunities\// },
   { name: "ArtInfoLand New Zealand", url: "https://artinfoland.com/location/new-zealand/", country: "NZ", isListPage: true, followLinks: true, maxLinks: 30, pages: 3, paginationUrl: "https://artinfoland.com/location/new-zealand/page/{page}/", isAggregator: true, linkPattern: /\/opportunities\// },
   // ArtConnect moved /open-calls → /opportunities
   { name: "ArtConnect Open Calls", url: "https://www.artconnect.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
-  { name: "ArtRabbit Opportunities", url: "https://www.artrabbit.com/artist-opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
+  { name: "ArtRabbit Opportunities", url: "https://www.artrabbit.com/artist-opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true, strictGeo: true },
   { name: "On the Move", url: "https://www.on-the-move.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
   // 403s from CI (datacenter IP) — browser fetch passes the JS challenge
-  { name: "ArtJobs", url: "https://www.artjobs.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, isAggregator: true },
+  { name: "ArtJobs", url: "https://www.artjobs.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, isAggregator: true, strictGeo: true },
   { name: "e-flux Announcements", url: "https://www.e-flux.com/announcements/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10, isAggregator: true },
-  { name: "CuratorSpace", url: "https://curatorspace.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 25, isAggregator: true },
+  { name: "CuratorSpace", url: "https://curatorspace.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 25, isAggregator: true, strictGeo: true },
   { name: "Alliance of Artists Communities", url: "https://www.artistcommunities.org/", country: "Global", isListPage: true, followLinks: true },
 
   // Secondary aggregators — heavy overlap with CaFE/ZAPP/ArtCall listings;
   // the fuzzy dedupe pass collapses the cross-posts (authority: 3).
-  { name: "EntryThingy Calls", url: "https://www.entrythingy.com/calls/deadlines", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, linkPattern: /\/calls\//, isAggregator: true, authority: 3 },
-  { name: "ZAPPlication", url: "https://www.zapplication.org/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3 },
-  { name: "ArtCall", url: "https://artcall.org/calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, allowExternalDomains: true, linkPattern: /\.artcall\.org/, isAggregator: true, authority: 3 },
-  { name: "ShowSubmit", url: "https://showsubmit.com/shows", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3 },
-  { name: "Reviewed by Artists", url: "https://www.reviewedbyartists.com/open-calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3 },
+  { name: "EntryThingy Calls", url: "https://www.entrythingy.com/calls/deadlines", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, linkPattern: /\/calls\//, isAggregator: true, authority: 3, strictGeo: true },
+  { name: "ZAPPlication", url: "https://www.zapplication.org/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
+  { name: "ArtCall", url: "https://artcall.org/calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, allowExternalDomains: true, linkPattern: /\.artcall\.org/, isAggregator: true, authority: 3, strictGeo: true },
+  { name: "ShowSubmit", url: "https://showsubmit.com/shows", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
+  { name: "Reviewed by Artists", url: "https://www.reviewedbyartists.com/open-calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
 
   // ── Tier 1: RSS Feeds ────────────────────────────────────────────────────
 
@@ -180,9 +180,9 @@ export const sources: Source[] = [
   { name: "Firstdraft Sydney", url: "https://firstdraft.org.au/", country: "AUS", needsBrowser: true },
   { name: "Bus Projects Melbourne", url: "https://www.busprojects.org.au/", country: "AUS" },
   { name: "Gasworks London", url: "https://www.gasworks.org.uk/opportunities/", country: "UK", isListPage: true, followLinks: true },
-  { name: "Arts Council England", url: "https://www.artscouncil.org.uk/our-open-funds", country: "UK", isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Creative Scotland", url: "https://www.creativescotland.com/funding/", country: "UK", isListPage: true, followLinks: true },
-  { name: "Jerwood Arts UK", url: "https://jerwoodarts.org/", country: "UK", isListPage: true, needsBrowser: true, followLinks: true },
+  { name: "Arts Council England", url: "https://www.artscouncil.org.uk/our-open-funds", country: "UK", isListPage: true, needsBrowser: true, followLinks: true, strictGeo: true },
+  { name: "Creative Scotland", url: "https://www.creativescotland.com/funding/", country: "UK", isListPage: true, followLinks: true, strictGeo: true },
+  { name: "Jerwood Arts UK", url: "https://jerwoodarts.org/", country: "UK", isListPage: true, needsBrowser: true, followLinks: true, strictGeo: true },
 
   // ── NZ Regional Arts Development Organisations ───────────────────────────
 
@@ -212,9 +212,9 @@ export const sources: Source[] = [
   { name: "SOUNZ Opportunities", url: "https://www.sounz.org.nz/opportunities", country: "NZ", disciplines: ["music"], isListPage: true, needsBrowser: true, followLinks: true },
   { name: "Creative NZ Music Grants", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding?category=music", country: "NZ", disciplines: ["music"], isListPage: true, needsBrowser: true, followLinks: true },
   { name: "APRA AMCOS", url: "https://www.apraamcos.com.au/", country: "Global", disciplines: ["music"], isListPage: true, needsBrowser: true, followLinks: true },
-  { name: "Sound and Music", url: "https://soundandmusic.org/opportunities/", country: "UK", disciplines: ["music", "sound_art"], isListPage: true, followLinks: true },
-  { name: "Musical Chairs", url: "https://www.musicalchairs.info/", country: "Global", disciplines: ["music"], isListPage: true, followLinks: true, maxLinks: 15 },
-  { name: "New Music USA", url: "https://www.newmusicusa.org/grants/", country: "Global", disciplines: ["music"], isListPage: true, followLinks: true },
+  { name: "Sound and Music", url: "https://soundandmusic.org/opportunities/", country: "UK", disciplines: ["music", "sound_art"], isListPage: true, followLinks: true, strictGeo: true },
+  { name: "Musical Chairs", url: "https://www.musicalchairs.info/", country: "Global", disciplines: ["music"], isListPage: true, followLinks: true, maxLinks: 15, strictGeo: true },
+  { name: "New Music USA", url: "https://www.newmusicusa.org/grants/", country: "Global", disciplines: ["music"], isListPage: true, followLinks: true, strictGeo: true },
   { name: "Chamber Music NZ", url: "https://www.chambermusic.co.nz/opportunities/", country: "NZ", disciplines: ["music"], needsBrowser: true },
 
   // ── Writing & Poetry ─────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ export const sources: Source[] = [
   { name: "Queensland Writers Centre", url: "https://qwc.com.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
   { name: "Varuna Writers House", url: "https://varuna.com.au/residencies/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
   { name: "Emerging Writers Festival", url: "https://emergingwritersfestival.org.au/opportunities/", country: "AUS", disciplines: ["writing"], isListPage: true, followLinks: true },
-  { name: "Poets & Writers", url: "https://www.pw.org/grants", country: "Global", disciplines: ["writing", "poetry"], isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, linkPattern: /\/(grants|content|writing_contests)\// },
+  { name: "Poets & Writers", url: "https://www.pw.org/grants", country: "Global", disciplines: ["writing", "poetry"], isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, linkPattern: /\/(grants|content|writing_contests)\//, strictGeo: true },
 
   // ── Dance & Performance ───────────────────────────────────────────────────
 

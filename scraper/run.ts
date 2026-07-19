@@ -90,7 +90,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
     console.log(`  ↳ ${posts.length} WP posts, ${fresh.length} new/updated within ${WP_MAX_AGE_DAYS}d`);
 
     for (const post of fresh) {
-      const opps = await extractFromPage(post.content, post.link, source.country);
+      const opps = await extractFromPage(post.content, post.link, source.country, { strictGeo: source.strictGeo });
       for (const opp of opps) {
         if (!opp.url) opp.url = post.link;
         if (!opp.featured_image_url && post.featuredImageUrl) opp.featured_image_url = post.featuredImageUrl;
@@ -103,7 +103,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
     const items = await fetchRssFeed(source.url);
     console.log(`  ↳ ${items.length} RSS items`);
     for (const item of items) {
-      const opps = await extractFromRssItem(item, source.url, source.country);
+      const opps = await extractFromRssItem(item, source.url, source.country, { strictGeo: source.strictGeo });
       for (const opp of opps) {
         if (!opp.url && item.link) opp.url = item.link;
         const enriched = applySourceMeta(opp, source);
@@ -189,7 +189,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           continue;
         }
 
-        const opps = await extractFromPage(fetchResult.text, entry.loc, source.country);
+        const opps = await extractFromPage(fetchResult.text, entry.loc, source.country, { strictGeo: source.strictGeo });
         const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, entry.loc) : null;
         for (const opp of opps) {
           if (outbound) opp.url = outbound;
@@ -313,7 +313,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
             continue;
           }
 
-          const opps = await extractFromPage(fetchResult.text, link, source.country);
+          const opps = await extractFromPage(fetchResult.text, link, source.country, { strictGeo: source.strictGeo });
           // For aggregator sources, prefer the outbound provider link over the aggregator URL
           const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, link) : null;
           for (const opp of opps) {
@@ -330,7 +330,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
         await sleep(RATE_LIMIT_MS);
       }
     } else {
-      const opps = await extractFromPage(text, source.url, source.country);
+      const opps = await extractFromPage(text, source.url, source.country, { strictGeo: source.strictGeo });
       console.log(`  ↳ ${opps.length} opportunities extracted`);
       for (const opp of opps) {
         const enriched = applySourceMeta(opp, source);

@@ -20,6 +20,7 @@ export interface Source {
   detailBudget?: number;    // per-source cap on detail pages (overrides SOURCE_DETAIL_BUDGET env var)
   feedUrl?: string;         // WordPress REST endpoint path e.g. "/wp-json/wp/v2/posts"
   allowExternalDomains?: boolean; // followLinks may leave the source's hostname (e.g. artcall.org → *.artcall.org)
+  strictGeo?: boolean;      // source is dominated by local/regional listings — only keep opps with EXPLICIT international (or NZ/AUS) eligibility
   authority?: number;       // dedupe canonical priority: 1 = original org page, 2 = primary aggregator, 3 = secondary aggregator. Defaults: isAggregator ? 2 : 1
 }
 
