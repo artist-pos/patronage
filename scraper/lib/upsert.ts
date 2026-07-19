@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import type { ScrapedOpportunity } from "../types.js";
+import { normTitle, normOrganiser, isLikelyDuplicate } from "./dedupe.js";
 
 const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -25,10 +26,21 @@ export interface DedupeMeta {
     hash: string | null;
 }
 
+export interface FuzzyRecord {
+    id: string;
+    titleNorm: string;
+    organiserNorm: string;
+    deadline: string | null;
+}
+
 export interface DedupeCache {
     urls: Map<string, DedupeMeta>; // normalised URL → scraper metadata
     titleKeys: Set<string>;        // normalised "title||organiser" keys
+    fuzzy: FuzzyRecord[];          // for cross-source near-duplicate matching
 }
+
+/** Run-wide tally of fuzzy-collapsed duplicates — reported in the run summary. */
+export const dedupeStats = { fuzzyCollapsed: 0 };
 
 /** Compute sha256 of page content for change detection. */
 export function hashContent(text: string): string {
@@ -58,28 +70,7 @@ export function normalizeUrl(raw: string): string {
     }
 }
 
-/**
- * Normalise a title for fuzzy dedup:
- * - lowercase
- * - strip punctuation and years (20xx / 19xx)
- * - collapse whitespace
- */
-function normTitle(title: string): string {
-    return title
-        .toLowerCase()
-        .replace(/\b(19|20)\d{2}\b/g, "")        // remove years
-        .replace(/[^a-z0-9\s]/g, " ")            // strip punctuation
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-function normOrganiser(organiser: string): string {
-    return organiser
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
+// Title/organiser normalisation lives in dedupe.ts (shared with the fuzzy pass)
 
 function makeTitleKey(title: string, organiser: string): string {
     return `${normTitle(title)}||${normOrganiser(organiser)}`;
@@ -92,16 +83,26 @@ function makeTitleKey(title: string, organiser: string): string {
 export async function loadDedupeCache(): Promise<DedupeCache> {
     const urls = new Map<string, DedupeMeta>();
     const titleKeys = new Set<string>();
+    const fuzzy: FuzzyRecord[] = [];
+    const today = new Date().toISOString().slice(0, 10);
 
     // Paginate through all rows (Supabase default limit is 1000)
     let from = 0;
     const PAGE = 1000;
+    let hasAltColumn = true; // pre-migration-172 databases lack alternate_source_urls
     while (true) {
+        const columns = hasAltColumn
+            ? "id, url, title, organiser, deadline, status, last_seen_at, source_etag, source_content_hash, alternate_source_urls"
+            : "id, url, title, organiser, deadline, status, last_seen_at, source_etag, source_content_hash";
         const { data, error } = await supabase
             .from("opportunities")
-            .select("url, title, organiser, last_seen_at, source_etag, source_content_hash")
-            .range(from, from + PAGE - 1);
+            .select(columns)
+            .range(from, from + PAGE - 1) as { data: any[] | null; error: { message: string } | null };
 
+        if (error && hasAltColumn && /alternate_source_urls/.test(error.message)) {
+            hasAltColumn = false;
+            continue;
+        }
         if (error) {
             console.error(`  [dedup] Cache load error: ${error.message}`);
             break;
@@ -116,15 +117,33 @@ export async function loadDedupeCache(): Promise<DedupeCache> {
                     hash: row.source_content_hash ?? null,
                 });
             }
+            // Aggregator detail pages live in alternate_source_urls (the record's
+            // url is the outbound provider link) — index them too, so those
+            // pages aren't re-fetched and re-extracted on every run.
+            for (const alt of (row.alternate_source_urls as string[] | null) ?? []) {
+                const norm = normalizeUrl(alt);
+                if (!urls.has(norm)) {
+                    urls.set(norm, { last_seen_at: row.last_seen_at ?? null, etag: null, hash: null });
+                }
+            }
             titleKeys.add(makeTitleKey(row.title, row.organiser));
+            // Fuzzy matching only needs live records (deadline still open / undated)
+            if (row.status !== "rejected" && (!row.deadline || row.deadline >= today)) {
+                fuzzy.push({
+                    id: row.id,
+                    titleNorm: normTitle(row.title),
+                    organiserNorm: normOrganiser(row.organiser),
+                    deadline: row.deadline ?? null,
+                });
+            }
         }
 
         if (data.length < PAGE) break;
         from += PAGE;
     }
 
-    console.log(`  [dedup] Cache loaded — ${urls.size} URLs, ${titleKeys.size} title keys`);
-    return { urls, titleKeys };
+    console.log(`  [dedup] Cache loaded — ${urls.size} URLs, ${titleKeys.size} title keys, ${fuzzy.length} fuzzy records`);
+    return { urls, titleKeys, fuzzy };
 }
 
 export async function upsertOpportunity(
@@ -132,7 +151,14 @@ export async function upsertOpportunity(
     sourceUrl: string,
     ogImage: string | null,
     sourceMeta?: SourceMeta,
-    cache?: DedupeCache
+    cache?: DedupeCache,
+    /**
+     * The page the opp was actually scraped from when it differs from opp.url
+     * (aggregator detail pages — opp.url holds the outbound provider link).
+     * Recorded in alternate_source_urls so the next run's dedupe cache knows
+     * the page and doesn't re-fetch + re-extract it.
+     */
+    seenAtUrl?: string | null
 ): Promise<"inserted" | "updated" | "skipped"> {
     // Region filter — skip anything not open to NZ/AUS artists
     const country = mapCountry(opp.country);
@@ -151,6 +177,25 @@ export async function upsertOpportunity(
     if (cache) {
         if (normalisedUrl && cache.urls.has(normalisedUrl)) return "skipped";
         if (cache.titleKeys.has(titleKey)) return "skipped";
+
+        // Fuzzy cross-source check: same opp cross-posted with a near-identical
+        // title within the deadline window. Keep the existing (canonical) record
+        // and retain this source's URL on it for attribution.
+        const candidate = {
+            titleNorm: normTitle(opp.title),
+            organiserNorm: normOrganiser(opp.organiser),
+            deadline: opp.deadline ?? null,
+        };
+        const dupe = cache.fuzzy.find((r) => isLikelyDuplicate(candidate, r));
+        if (dupe) {
+            dedupeStats.fuzzyCollapsed++;
+            if (opp.url) await appendAlternateUrl(dupe.id, opp.url);
+            if (seenAtUrl) await appendAlternateUrl(dupe.id, seenAtUrl);
+            if (normalisedUrl) cache.urls.set(normalisedUrl, { last_seen_at: null, etag: null, hash: null });
+            if (seenAtUrl) cache.urls.set(normalizeUrl(seenAtUrl), { last_seen_at: null, etag: null, hash: null });
+            cache.titleKeys.add(titleKey);
+            return "skipped";
+        }
     }
 
     const emptyMeta: DedupeMeta = { last_seen_at: null, etag: null, hash: null };
@@ -166,6 +211,10 @@ export async function upsertOpportunity(
         if (byUrl) {
             if (normalisedUrl) cache?.urls.set(normalisedUrl, emptyMeta);
             cache?.titleKeys.add(titleKey);
+            if (seenAtUrl && normalizeUrl(seenAtUrl) !== normalisedUrl) {
+                await appendAlternateUrl(byUrl.id, seenAtUrl);
+                cache?.urls.set(normalizeUrl(seenAtUrl), emptyMeta);
+            }
             if (byUrl.status === "published" || byUrl.status === "rejected") return "skipped";
             const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
             // Archive rows whose deadline has now passed
@@ -215,12 +264,43 @@ export async function upsertOpportunity(
     if (inserted?.id) {
         const slug = toSlug(record.title, record.organiser ?? null, record.deadline ?? null);
         await supabase.from("opportunities").update({ slug, last_seen_at: new Date().toISOString() }).eq("id", inserted.id);
+        if (seenAtUrl && normalizeUrl(seenAtUrl) !== normalisedUrl) {
+            await appendAlternateUrl(inserted.id, seenAtUrl);
+            cache?.urls.set(normalizeUrl(seenAtUrl), emptyMeta);
+        }
         // Update cache so subsequent sources don't re-insert this
         if (normalisedUrl) cache?.urls.set(normalisedUrl, emptyMeta);
         cache?.titleKeys.add(titleKey);
+        cache?.fuzzy.push({
+            id: inserted.id,
+            titleNorm: normTitle(opp.title),
+            organiserNorm: normOrganiser(opp.organiser),
+            deadline: opp.deadline ?? null,
+        });
     }
 
     return "inserted";
+}
+
+/**
+ * Retain a duplicate's source URL on the canonical record. No-ops gracefully
+ * until migration 172 (alternate_source_urls column) has been run.
+ */
+export async function appendAlternateUrl(canonicalId: string, url: string): Promise<void> {
+    const { data, error } = await supabase
+        .from("opportunities")
+        .select("url, alternate_source_urls")
+        .eq("id", canonicalId)
+        .maybeSingle();
+    if (error || !data) return;
+    const existing: string[] = data.alternate_source_urls ?? [];
+    const norm = normalizeUrl(url);
+    if (data.url && normalizeUrl(data.url) === norm) return;
+    if (existing.some((u) => normalizeUrl(u) === norm)) return;
+    await supabase
+        .from("opportunities")
+        .update({ alternate_source_urls: [...existing, url] })
+        .eq("id", canonicalId);
 }
 
 /**

@@ -11,8 +11,8 @@ import {
   sleep,
 } from "./lib/fetch.js";
 import { extractFromPage, extractFromRssItem, InsufficientCreditsError, extractStats } from "./lib/extract.js";
-import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, type DedupeCache } from "./lib/upsert.js";
-import { fetchSitemap, resolveSitemapUrl } from "./lib/sitemap.js";
+import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, dedupeStats, type DedupeCache } from "./lib/upsert.js";
+import { fetchSitemap, resolveSitemapUrl, filterByLastmodAge } from "./lib/sitemap.js";
 import { fetchWpPosts } from "./lib/wp.js";
 import { isAllowedByRobots } from "./lib/robots.js";
 import { filterLinks } from "./lib/filter-links.js";
@@ -20,7 +20,9 @@ import type { Source, ScrapedOpportunity } from "./types.js";
 
 const RATE_LIMIT_MS = 2_000;
 const PAGINATION_RATE_LIMIT_MS = 1_000; // lighter delay between list pages vs detail pages
-const SOURCE_TIMEOUT_MS = 360_000;      // 6 min — deep sources (40 pages) need more headroom
+const SOURCE_TIMEOUT_MS = 900_000;      // 15 min — the 6-min cap was killing the deepest (highest-yield) sources mid-run
+const WP_MAX_AGE_DAYS = parseInt(process.env.WP_MAX_AGE_DAYS ?? "120", 10); // skip WP posts not modified in this window
+const SITEMAP_MAX_AGE_DAYS = parseInt(process.env.SITEMAP_MAX_AGE_DAYS ?? "365", 10);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,12 +61,12 @@ interface SourceResult {
 async function processSource(source: Source, cache: DedupeCache): Promise<SourceResult> {
   let inserted = 0, updated = 0, skipped = 0, errors = 0;
 
-  async function upsert(opp: ScrapedOpportunity, image: string | null) {
+  async function upsert(opp: ScrapedOpportunity, image: string | null, seenAtUrl?: string | null) {
     const result = await upsertOpportunity(opp, source.url, image, {
       disciplines: source.disciplines,
       is_recurring: source.is_recurring,
       recurrence_pattern: source.recurrence_pattern,
-    }, cache);
+    }, cache, seenAtUrl);
     if (result === "inserted") inserted++;
     else if (result === "updated") updated++;
     else skipped++;
@@ -73,8 +75,21 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
   if (source.feedUrl) {
     // ── WordPress REST API ───────────────────────────────────────────────────
     const posts = await fetchWpPosts(source.url, { feedPath: source.feedUrl });
-    console.log(`  ↳ ${posts.length} WP posts`);
-    for (const post of posts) {
+
+    // Only run extraction on posts we haven't seen and that were modified
+    // recently. Re-extracting the full 200-post backlog every week was burning
+    // the whole source timeout (and Claude budget) on known content.
+    const cutoff = new Date(Date.now() - WP_MAX_AGE_DAYS * 86_400_000).toISOString();
+    const fresh = posts.filter((post) => {
+      if (post.modified && post.modified < cutoff) return false;
+      const meta = cache.urls.get(normalizeUrl(post.link));
+      if (!meta) return true;
+      // Known URL — only reprocess if the post was modified since we last saw it
+      return Boolean(post.modified && meta.last_seen_at && post.modified > meta.last_seen_at);
+    });
+    console.log(`  ↳ ${posts.length} WP posts, ${fresh.length} new/updated within ${WP_MAX_AGE_DAYS}d`);
+
+    for (const post of fresh) {
       const opps = await extractFromPage(post.content, post.link, source.country);
       for (const opp of opps) {
         if (!opp.url) opp.url = post.link;
@@ -83,6 +98,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
         await upsert(enriched, enriched.featured_image_url ?? null);
       }
     }
+    skipped += posts.length - fresh.length;
   } else if (source.isRss) {
     const items = await fetchRssFeed(source.url);
     console.log(`  ↳ ${items.length} RSS items`);
@@ -99,8 +115,17 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
     const sitemapAbsUrl = resolveSitemapUrl(source.sitemapUrl, source.url);
     const entries = await fetchSitemap(sitemapAbsUrl);
 
-    // Filter by linkPattern if provided, then apply dedup cache
-    const filtered = entries.filter(({ loc }) => {
+    if (entries.length === 0) {
+      // Sitemap unreachable (bot wall) or empty — fall back to HTML discovery
+      // rather than silently yielding nothing.
+      console.warn(`  ⚠ sitemap ${sitemapAbsUrl} yielded 0 entries — falling back to list-page discovery`);
+      await processListPage();
+      return { inserted, updated, skipped, errors };
+    }
+
+    // Filter by linkPattern if provided, drop stale lastmods, then apply dedup cache
+    const maxAge = source.sitemapMaxAgeDays ?? SITEMAP_MAX_AGE_DAYS;
+    const filtered = filterByLastmodAge(entries, maxAge).filter(({ loc }) => {
       if (source.linkPattern) {
         const pat = typeof source.linkPattern === "string" ? new RegExp(source.linkPattern) : source.linkPattern;
         if (!pat.test(loc)) return false;
@@ -170,7 +195,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           if (outbound) opp.url = outbound;
           else if (!opp.url) opp.url = entry.loc;
           const enriched = applySourceMeta(opp, source);
-          await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? null);
+          await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? null, entry.loc);
         }
         // Store hash for next run (update the in-memory cache entry too)
         if (norm && cache.urls.has(norm)) {
@@ -184,6 +209,13 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       await sleep(RATE_LIMIT_MS);
     }
   } else {
+    await processListPage();
+  }
+
+  return { inserted, updated, skipped, errors };
+
+  // ── List-page discovery (also the fallback when a sitemap is blocked/empty) ──
+  async function processListPage(): Promise<void> {
     let text: string;
     let mainOgImage: string | null;
     let page1Links: string[];
@@ -238,6 +270,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
         baseUrl: source.url,
         linkPattern: source.linkPattern,
         maxLinks: source.maxLinks ?? 10,
+        allowExternalDomains: source.allowExternalDomains,
       });
 
       // Pre-filter: skip links whose URLs are already in the dedup cache
@@ -287,7 +320,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
             if (outbound) opp.url = outbound;
             else if (!opp.url) opp.url = link;
             const enriched = applySourceMeta(opp, source);
-            await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? ogImage ?? null);
+            await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? ogImage ?? null, link);
           }
         } catch (err) {
           if (err instanceof InsufficientCreditsError) throw err;
@@ -305,8 +338,6 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
       }
     }
   }
-
-  return { inserted, updated, skipped, errors };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -328,6 +359,7 @@ async function main() {
   const cache = await loadDedupeCache();
 
   let inserted = 0, updated = 0, skipped = 0, errors = 0, timedOut = 0;
+  const perSource: Record<string, SourceResult & { failed?: string }> = {};
 
   for (const [i, source] of activeSources.entries()) {
     const prefix = `[${i + 1}/${activeSources.length}]`;
@@ -335,6 +367,7 @@ async function main() {
 
     try {
       const result = await withTimeout(processSource(source, cache), SOURCE_TIMEOUT_MS);
+      perSource[source.name] = result;
       inserted += result.inserted;
       updated  += result.updated;
       skipped  += result.skipped;
@@ -346,6 +379,7 @@ async function main() {
         break;
       }
       const msg = err instanceof Error ? err.message : String(err);
+      perSource[source.name] = { inserted: 0, updated: 0, skipped: 0, errors: 1, failed: msg.slice(0, 120) };
       if (msg.startsWith("Timed out")) {
         console.warn(`  ⏱ ${source.name} — timed out, skipping`);
         timedOut++;
@@ -372,6 +406,7 @@ async function main() {
   console.log(`   Errors    : ${errors}`);
   console.log(`   Timed out : ${timedOut}`);
   console.log(`   Extract   : ${extractStats.failures}/${extractStats.attempts} calls failed`);
+  console.log(`   Dupes     : ${dedupeStats.fuzzyCollapsed} cross-source duplicates collapsed`);
   console.log(`   Total new : ${inserted + updated}\n`);
 
   // Write stats for CI artifact collection + Slack notification
@@ -390,6 +425,8 @@ async function main() {
         duration_s: durationS,
         extract_attempts: extractStats.attempts,
         extract_failures: extractStats.failures,
+        dupes_collapsed: dedupeStats.fuzzyCollapsed,
+        per_source: perSource,
       }, null, 2)
     );
     console.log(`📄 Stats → ${statsPath}`);

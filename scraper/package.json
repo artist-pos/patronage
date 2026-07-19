@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "scrape": "tsx run.ts"
+    "scrape": "tsx run.ts",
+    "diagnose": "tsx tools/diagnose.ts",
+    "guard": "tsx tools/yield-guard.ts",
+    "dedupe": "tsx tools/dedupe-pass.ts",
+    "test": "tsx --test \"tests/*.test.ts\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.0",

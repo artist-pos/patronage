@@ -302,10 +302,18 @@ export function getHeadersForUrl(url: string): Record<string, string> {
 // ============================================================
 
 /**
- * Checks whether a cookie array contains a valid WordPress session token.
+ * Checks whether a cookie array contains a still-valid WordPress session token.
+ * WP embeds the session expiry in the cookie value (`user|expiry|token|hash`) —
+ * a merely *present* but expired token used to satisfy this check, so expired
+ * sessions were never auto-refreshed and requests silently ran logged-out.
  */
 function hasWordPressSession(cookies: CookieEntry[]): boolean {
-  return cookies.some((c) => c.name.startsWith("wordpress_logged_in_"));
+  return cookies.some((c) => {
+    if (!c.name.startsWith("wordpress_logged_in_")) return false;
+    const expiry = parseInt(decodeURIComponent(c.value).split("|")[1] ?? "", 10);
+    if (Number.isNaN(expiry)) return true; // unparseable — assume valid, requests will tell
+    return expiry * 1000 > Date.now();
+  });
 }
 
 /**

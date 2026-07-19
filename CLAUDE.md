@@ -31,9 +31,13 @@ npx tsc --noEmit     # Type-check without building
 # Scraper (run from scraper/ directory)
 cd scraper
 SCRAPER_TIER=1 npm run scrape   # Run one tier (1–4); omit SCRAPER_TIER to run all
+npm run diagnose                # Discovery-level dry run per source (no Claude, no DB writes)
+npm run guard                   # Zero-yield regression guard vs tools/yield-baseline.json
+npm run dedupe -- --dry-run     # Cross-source duplicate collapse (drop --dry-run to apply)
+npm test                        # Scraper unit tests (sitemap parser, dedupe, yield guard)
 ```
 
-There are no automated tests. Type-checking (`npx tsc --noEmit`) is the primary correctness signal.
+The app itself has no automated tests — type-checking (`npx tsc --noEmit`) is the primary correctness signal. The scraper has unit tests in `scraper/tests/`.
 
 ---
 
@@ -321,9 +325,11 @@ Source URL
   → upsertOpportunity() [dedup by URL or title+organiser; insert/update/skip]
 ```
 
-**CI**: GitHub Actions matrix runs 4 parallel jobs (`tier: [1,2,3,4]`), each with 55-minute timeout. Do NOT run all sources in a single job — it will time out.
+**CI**: GitHub Actions matrix runs 4 parallel jobs (`tier: [1,2,3,4]`), each with 80-minute timeout, followed by a `dedupe` job (collapses cross-posted duplicates) and a `yield-guard` job (fails the workflow when a source that historically yielded >5 discovers 0 — the silent-selector-break signal). Do NOT run all sources in a single job — it will time out.
 
-**Source definition**: `scraper/sources/index.ts` — each source has `name, url, country, disciplines[], needsBrowser, isRss, followLinks, maxLinks`.
+**Source definition**: `scraper/sources/index.ts` — each source has `name, url, country, disciplines[], needsBrowser, isRss, followLinks, maxLinks`, plus optional `sitemapUrl/sitemapLastmodOnly/sitemapMaxAgeDays` (sitemap-first discovery — preferred where a usable sitemap exists; run.ts falls back to list-page discovery when a sitemap is blocked or empty), `allowExternalDomains` (multi-tenant hosts like *.artcall.org), and `authority` (dedupe canonical rank: 1 org page, 2 primary aggregator, 3 secondary aggregator).
+
+**Dedupe**: insert-time fuzzy check in `lib/upsert.ts` + retro pass `tools/dedupe-pass.ts` (both use `lib/dedupe.ts` — token_sort_ratio ≥90 within a ±3-day deadline window). Canonical record keeps other sources' URLs in `opportunities.alternate_source_urls` (migration 172). `needsBrowser: true` is also the standard fix for WAF 403s (TLS-fingerprint blocks).
 
 ---
 

@@ -39,9 +39,15 @@ export function extractLinksFromHtml(html: string, baseUrl: string): string[] {
         if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) return;
         try {
             const url = new URL(href, baseUrl);
-            if (url.hostname !== base.hostname) return;
+            // Same host, or a subdomain of the source's registrable domain
+            // (artcall.org hosts each call at <slug>.artcall.org). filterLinks
+            // still enforces exact-host unless the source opts in.
+            const baseDomain = base.hostname.replace(/^www\./, "");
+            const isSubdomain = url.hostname !== base.hostname;
+            if (isSubdomain && !url.hostname.endsWith(`.${baseDomain}`)) return;
             const path = url.pathname;
-            if (path === "/" || path === base.pathname) return;
+            // A subdomain root IS the content page on multi-tenant hosts (ArtCall)
+            if (!isSubdomain && (path === "/" || path === base.pathname)) return;
             if (SKIP_PATH.test(path) || SKIP_EXT.test(path)) return;
             const clean = url.origin + path;
             if (seen.has(clean)) return;
@@ -183,7 +189,11 @@ async function buildContext(browser: Browser, url: string) {
 async function fetchPageWithContext(context: import("playwright").BrowserContext, url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
     const page = await context.newPage();
     try {
-        await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+        // "networkidle" never fires on pages holding a connection open (analytics
+        // beacons, websockets — this is what broke opencalls.net). Land on
+        // domcontentloaded, then wait for idle only as a best effort.
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForLoadState("networkidle", { timeout: 12000 }).catch(() => {});
         const ogImage = await page
             .$eval('meta[property="og:image"], meta[name="twitter:image"]', (el) => el.getAttribute("content"))
             .catch(() => null);
@@ -201,6 +211,23 @@ export async function fetchWithBrowser(url: string): Promise<{ text: string; ogI
     const context = await buildContext(browser, url);
     try {
         return await fetchPageWithContext(context, url);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
+ * Fetch a JSON endpoint through a real browser page (for hosts whose WAF
+ * blocks axios by TLS fingerprint). Returns the parsed body.
+ */
+export async function fetchJsonWithBrowser(url: string): Promise<unknown> {
+    const browser = await getBrowser();
+    const context = await buildContext(browser, url);
+    try {
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        const body = await page.evaluate(() => document.body?.innerText ?? "");
+        return JSON.parse(body);
     } finally {
         await context.close();
     }
@@ -236,14 +263,53 @@ export async function fetchRssFeed(url: string): Promise<RssItem[]> {
         responseType: "text",
         headers: RSS_HEADERS,
     });
-    const sanitized = sanitizeXml(response.data as string);
-    const feed = await rssParser.parseString(sanitized);
-    return (feed.items ?? []).slice(0, 30).map((item) => ({
-        title: item.title ?? "",
-        content: item.contentSnippet ?? item.content ?? item.summary ?? "",
-        link: item.link ?? "",
-        pubDate: item.pubDate ?? "",
-    }));
+    const raw = response.data as string;
+    const sanitized = sanitizeXml(raw);
+    try {
+        const feed = await rssParser.parseString(sanitized);
+        return (feed.items ?? []).slice(0, 30).map((item) => ({
+            title: item.title ?? "",
+            content: item.contentSnippet ?? item.content ?? item.summary ?? "",
+            link: item.link ?? "",
+            pubDate: item.pubDate ?? "",
+        }));
+    } catch {
+        // Strict sax parsing chokes on malformed embedded HTML (unquoted
+        // attributes etc. — the Creative NZ feed). Fall back to a lenient parse.
+        return parseRssLeniently(raw);
+    }
+}
+
+/**
+ * Lenient RSS fallback: pull <item> blocks with cheerio in xml mode after
+ * stripping the embedded-HTML bodies that break strict parsers. Loses rich
+ * content but recovers title/link/date/description — enough for extraction.
+ */
+export function parseRssLeniently(xml: string): RssItem[] {
+    const items: RssItem[] = [];
+    const itemBlocks = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? [];
+    const field = (block: string, tag: string): string => {
+        const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
+        if (!m) return "";
+        let v = m[1].trim();
+        const cdata = v.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
+        if (cdata) v = cdata[1].trim();
+        // Strip any residual tags and decode the common entities
+        v = v.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        return v
+            .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'");
+    };
+    for (const block of itemBlocks.slice(0, 30)) {
+        const link = field(block, "link") || (block.match(/<guid[^>]*>([^<]+)<\/guid>/i)?.[1]?.trim() ?? "");
+        items.push({
+            title: field(block, "title"),
+            content: field(block, "description") || field(block, "content:encoded"),
+            link,
+            pubDate: field(block, "pubDate"),
+        });
+    }
+    return items;
 }
 
 // ── Utility ──────────────────────────────────────────────────────────────────

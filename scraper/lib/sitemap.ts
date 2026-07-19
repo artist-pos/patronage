@@ -17,6 +17,43 @@ async function fetchXml(url: string): Promise<string> {
     return res.data as string;
 }
 
+/**
+ * Parse one sitemap document. Returns either the child sitemap URLs (for an
+ * index) or the leaf URL entries. Pure — no fetching — so it's unit-testable.
+ */
+export function parseSitemapXml(xml: string): { childSitemaps: string[]; entries: SitemapEntry[] } {
+    const $ = cheerio.load(xml, { xmlMode: true });
+
+    const childSitemaps = $("sitemap loc")
+        .toArray()
+        .map((el) => $(el).text().trim())
+        .filter(Boolean);
+    if (childSitemaps.length > 0) return { childSitemaps, entries: [] };
+
+    const entries: SitemapEntry[] = [];
+    $("url").each((_, el) => {
+        const loc = $("loc", el).first().text().trim();
+        const lastmod = $("lastmod", el).first().text().trim() || null;
+        if (!loc) return;
+        if (SKIP_PATH.test(loc) || SKIP_EXT.test(loc)) return;
+        entries.push({ loc, lastmod });
+    });
+    return { childSitemaps: [], entries };
+}
+
+/**
+ * Filter sitemap entries to those whose <lastmod> falls within the last
+ * `maxAgeDays`. Entries with no lastmod are kept (we can't age them out).
+ */
+export function filterByLastmodAge(entries: SitemapEntry[], maxAgeDays: number, now = Date.now()): SitemapEntry[] {
+    const cutoff = now - maxAgeDays * 86_400_000;
+    return entries.filter((e) => {
+        if (!e.lastmod) return true;
+        const t = Date.parse(e.lastmod);
+        return Number.isNaN(t) ? true : t >= cutoff;
+    });
+}
+
 async function parseSitemap(url: string, depth = 0): Promise<SitemapEntry[]> {
     if (depth > 3) return []; // guard against deeply nested indexes
     let xml: string;
@@ -26,30 +63,10 @@ async function parseSitemap(url: string, depth = 0): Promise<SitemapEntry[]> {
         return [];
     }
 
-    const $ = cheerio.load(xml, { xmlMode: true });
-    const entries: SitemapEntry[] = [];
-
-    // Sitemap index — recurse into child sitemaps
-    const childSitemaps = $("sitemap loc");
-    if (childSitemaps.length > 0) {
-        for (const el of childSitemaps.toArray()) {
-            const childUrl = $(el).text().trim();
-            if (!childUrl) continue;
-            const children = await parseSitemap(childUrl, depth + 1);
-            entries.push(...children);
-        }
-        return entries;
+    const { childSitemaps, entries } = parseSitemapXml(xml);
+    for (const childUrl of childSitemaps) {
+        entries.push(...await parseSitemap(childUrl, depth + 1));
     }
-
-    // Regular sitemap
-    $("url").each((_, el) => {
-        const loc = $("loc", el).first().text().trim();
-        const lastmod = $("lastmod", el).first().text().trim() || null;
-        if (!loc) return;
-        if (SKIP_PATH.test(loc) || SKIP_EXT.test(loc)) return;
-        entries.push({ loc, lastmod });
-    });
-
     return entries;
 }
 

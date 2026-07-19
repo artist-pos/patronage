@@ -39,16 +39,31 @@ export async function fetchWpPosts(
         };
         if (since) params["after"] = since;
 
-        let res;
+        let items: any[] | null = null;
         try {
-            res = await http.get(endpoint, { params, responseType: "json" });
+            const res = await http.get(endpoint, { params, responseType: "json" });
+            items = Array.isArray(res.data) ? (res.data as any[]) : null;
         } catch (err: any) {
-            if (err?.response?.status === 400 || err?.response?.status === 404) break; // no more pages
-            throw err;
+            const status = err?.response?.status;
+            // Past page 1, a 400/404 just means "no more pages"
+            if (page > 1 && (status === 400 || status === 404)) break;
+            // TLS-fingerprint 403 (e.g. Cloudflare blocking axios but not real browsers):
+            // retry the request through a Playwright page before giving up
+            if (status === 403) {
+                items = await fetchWpJsonViaBrowser(endpoint, params);
+                if (items === null) throw err;
+            } else {
+                throw err;
+            }
         }
 
-        const items = res.data as any[];
-        if (!items || items.length === 0) break;
+        // A redirect to an HTML page (site migrated off WordPress) arrives here as
+        // non-array data. Silently returning [] hid the NAVA/a-n breakage for months.
+        if (items === null) {
+            if (page > 1) break;
+            throw new Error(`WP REST endpoint ${endpoint} did not return a post array — endpoint moved or site is no longer WordPress`);
+        }
+        if (items.length === 0) break;
 
         for (const item of items) {
             const featuredImageUrl =
@@ -74,4 +89,24 @@ export async function fetchWpPosts(
     }
 
     return posts.slice(0, limit);
+}
+
+/**
+ * Fetch a WP REST JSON URL through a real browser page. Cloudflare's TLS
+ * fingerprinting blocks axios on some sites (artguide.com.au) while letting
+ * real Chromium through. Returns null if the body isn't a JSON array.
+ */
+async function fetchWpJsonViaBrowser(
+    endpoint: string,
+    params: Record<string, string | number>
+): Promise<any[] | null> {
+    const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
+    const url = `${endpoint}?${qs}`;
+    try {
+        const { fetchJsonWithBrowser } = await import("./fetch.js");
+        const data = await fetchJsonWithBrowser(url);
+        return Array.isArray(data) ? data : null;
+    } catch {
+        return null;
+    }
 }

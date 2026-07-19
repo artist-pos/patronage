@@ -16,8 +16,11 @@ export interface Source {
   isAggregator?: boolean;   // detail pages link out to the real provider — store outbound URL instead of aggregator URL
   sitemapUrl?: string;      // sitemap.xml URL (absolute or path) — overrides list-page discovery
   sitemapLastmodOnly?: boolean; // skip URLs whose <lastmod> is not newer than last_seen_at
+  sitemapMaxAgeDays?: number; // drop sitemap URLs whose <lastmod> is older than N days (default SITEMAP_MAX_AGE_DAYS env or 365)
   detailBudget?: number;    // per-source cap on detail pages (overrides SOURCE_DETAIL_BUDGET env var)
   feedUrl?: string;         // WordPress REST endpoint path e.g. "/wp-json/wp/v2/posts"
+  allowExternalDomains?: boolean; // followLinks may leave the source's hostname (e.g. artcall.org → *.artcall.org)
+  authority?: number;       // dedupe canonical priority: 1 = original org page, 2 = primary aggregator, 3 = secondary aggregator. Defaults: isAggregator ? 2 : 1
 }
 
 export interface ScrapedOpportunity {
