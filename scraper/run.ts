@@ -345,6 +345,27 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
 async function main() {
   const startTime = Date.now();
 
+  // SCRAPER_SOURCE runs only sources whose name contains the value (case-
+  // insensitive) — for testing a single source end-to-end. Takes precedence
+  // over SCRAPER_TIER.
+  const sourceFilter = process.env.SCRAPER_SOURCE?.toLowerCase();
+  if (sourceFilter) {
+    const filtered = sources.filter((s) => s.name.toLowerCase().includes(sourceFilter));
+    console.log(`\n🎨 Patronage Scraper — source filter "${process.env.SCRAPER_SOURCE}" (${filtered.length} matched)\n`);
+    const cache = await loadDedupeCache();
+    for (const source of filtered) {
+      console.log(`— ${source.name}`);
+      try {
+        const result = await withTimeout(processSource(source, cache), SOURCE_TIMEOUT_MS);
+        console.log(`  inserted ${result.inserted}, updated ${result.updated}, skipped ${result.skipped}, errors ${result.errors}, geo-dropped ${extractStats.geoDropped} (extract ${extractStats.attempts} calls, ${extractStats.failures} failed)`);
+      } catch (err) {
+        console.error(`  ✗ ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    await closeBrowser();
+    return;
+  }
+
   // SCRAPER_TIER env var selects which quarter to run (1–4). Unset = run all.
   const tierEnv = process.env.SCRAPER_TIER;
   const tier = tierEnv ? parseInt(tierEnv, 10) : null;
@@ -406,6 +427,7 @@ async function main() {
   console.log(`   Errors    : ${errors}`);
   console.log(`   Timed out : ${timedOut}`);
   console.log(`   Extract   : ${extractStats.failures}/${extractStats.attempts} calls failed`);
+  console.log(`   Geo-drop  : ${extractStats.geoDropped} items failed the NZ/AUS eligibility gate`);
   console.log(`   Dupes     : ${dedupeStats.fuzzyCollapsed} cross-source duplicates collapsed`);
   console.log(`   Total new : ${inserted + updated}\n`);
 

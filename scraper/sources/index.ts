@@ -49,6 +49,10 @@ export const sources: Source[] = [
 
   // Secondary aggregators — heavy overlap with CaFE/ZAPP/ArtCall listings;
   // the fuzzy dedupe pass collapses the cross-posts (authority: 3).
+  // NOTE July 2026: EntryThingy's month pages render nav only (call list is
+  // client-side from app.entrythingy.com, which 403s scrapers). Currently
+  // yields nothing — kept in case they open up; their calls arrive via
+  // CaFE/ZAPP/ArtCall overlap regardless.
   { name: "EntryThingy Calls", url: "https://www.entrythingy.com/calls/deadlines", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, linkPattern: /\/calls\//, isAggregator: true, authority: 3, strictGeo: true },
   { name: "ZAPPlication", url: "https://www.zapplication.org/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
   { name: "ArtCall", url: "https://artcall.org/calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, allowExternalDomains: true, linkPattern: /\.artcall\.org/, isAggregator: true, authority: 3, strictGeo: true },

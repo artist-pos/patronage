@@ -18,7 +18,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
  * 0 inserts and a green CI job. run.ts reads these to fail the run loudly when
  * the failure rate is high. See run.ts summary.
  */
-export const extractStats = { attempts: 0, failures: 0 };
+export const extractStats = { attempts: 0, failures: 0, geoDropped: 0 };
 
 // ============================================================
 // UPGRADED SYSTEM PROMPT
@@ -122,9 +122,13 @@ export function applyExtractionFilters(parsed: ParsedOpp[], opts: ExtractOptions
         // good enough — demand explicit evidence (or NZ/AUS eligibility).
         .filter((o) => {
             const geo = o.geo_eligibility ?? "";
-            if (geo === "local_only") return false;
-            if (opts.strictGeo) return geo === "worldwide_explicit" || geo === "nz" || geo === "aus";
-            return true;
+            const keep = geo === "local_only"
+                ? false
+                : opts.strictGeo
+                    ? geo === "worldwide_explicit" || geo === "nz" || geo === "aus"
+                    : true;
+            if (!keep) extractStats.geoDropped++;
+            return keep;
         })
         // Map country to DB-safe values
         .map((o) => ({

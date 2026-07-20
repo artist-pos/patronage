@@ -76,6 +76,17 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run dedupe
 
+      # Weekly geo-eligibility sweep: demote listings NZ/AUS artists can't
+      # enter that slipped past the extraction-time gate. NZ/AUS-tagged rows
+      # are never touched (deterministic guard in the tool).
+      - name: Run geo-eligibility audit
+        working-directory: scraper
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx tools/geo-audit.ts
+
   # Discovery-level regression guard: fails when a source that historically
   # yielded >5 items silently drops to zero (selector break / bot wall).
   yield-guard:
