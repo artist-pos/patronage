@@ -116,12 +116,12 @@ export default async function PartnersPage() {
               art programme. Free to start.
             </p>
             <div className="flex flex-wrap gap-2.5">
-              <Link
-                href="/partner/list-free"
+              <a
+                href="#tiers"
                 className="bg-brand px-[22px] py-[11px] text-sm font-medium text-white transition-opacity hover:opacity-85"
               >
                 List for free →
-              </Link>
+              </a>
               <a
                 href="#strategy"
                 className="border border-border px-[22px] py-[11px] font-mono text-[13px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"

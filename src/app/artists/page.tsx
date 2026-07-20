@@ -145,6 +145,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
         <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6">
           <div className="mb-4 flex items-baseline gap-3">
             <h1 className="text-2xl font-semibold tracking-[-0.025em]">Artists</h1>
+            <span className="font-mono text-xs text-muted-foreground">{artists.length}</span>
             {activeFilters.length > 0 && (
               <span className="font-mono text-xs text-muted-foreground">
                 {activeFilters.join(" · ")}
@@ -216,7 +217,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
               {/* Directory — everyone presentable, as rows */}
               {directoryArtists.length > 0 && (
                 <div className="space-y-3">
-                  <p className="t-section-label">Directory · {directoryArtists.length}</p>
+                  <p className="t-section-label">Directory</p>
                   <div>
                     {directoryArtists.map((artist) => (
                       <div key={artist.id} className="flex items-stretch">
