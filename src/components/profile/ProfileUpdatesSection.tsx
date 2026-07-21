@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
+import { StudioAllUpdatesGrid } from "@/components/profile/StudioAllUpdatesGrid";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 function formatDateRange(start: string | null, end: string | null): string | null {
@@ -19,10 +20,28 @@ function formatTimestamp(iso: string): string {
   return `${dd} ${mon}`;
 }
 
+/** "12 Mar – 28 Jun 2025", or a single date when the thread is one day old. */
+function formatThreadRange(earliest: string, latest: string): string {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+  return earliest === latest ? fmt(earliest) : `${fmt(earliest)} – ${fmt(latest)}`;
+}
+
+interface ThreadProject {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
 interface Props {
   campaigns: CampaignForProfile[];
   updates: ProjectUpdateWithArtist[];
+  projects: ThreadProject[];
   username: string;
+  /** signed-in user id — enables inline edit pencil on their own posts in the "All Updates" grid */
+  currentUserId?: string;
+  /** admins/owners can edit any post */
+  isAdmin?: boolean;
 }
 
 const IMG_H = 240; // image area height — every card shares it
@@ -159,14 +178,60 @@ function StripCard({ u }: { u: ProjectUpdateWithArtist }) {
 }
 
 const UPDATES_SHOWN = 8;
+const THREAD_CARD_W = 260;
+
+interface Thread {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  count: number;
+  dateRange: string;
+  latest: number;
+}
+
+/** Group updates by project into "threads" — newest-active thread first. */
+function buildThreads(projects: ThreadProject[], updates: ProjectUpdateWithArtist[]): Thread[] {
+  return projects
+    .map((p): Thread | null => {
+      const posts = updates.filter((u) => u.project_id === p.id);
+      if (posts.length === 0) return null;
+      const cover = posts.find((u) => u.content_type === "image" && u.image_url) ?? null;
+      const times = posts.map((u) => new Date(u.created_at).getTime());
+      const earliest = new Date(Math.min(...times)).toISOString();
+      const latest = Math.max(...times);
+      return {
+        id: p.id,
+        title: p.title,
+        coverUrl: cover?.image_url ?? null,
+        count: posts.length,
+        dateRange: formatThreadRange(earliest, new Date(latest).toISOString()),
+        latest,
+      };
+    })
+    .filter((t): t is Thread => t !== null)
+    .sort((a, b) => b.latest - a.latest);
+}
 
 /**
  * Profile "From the studio" — active campaigns, then the artist's latest
  * updates as a fixed-height, variable-width strip (heights align, widths
- * follow each image's aspect — never a ragged masonry).
+ * follow each image's aspect — never a ragged masonry). "View all" expands
+ * (in place, no navigation) into Studio Threads + a full Explore-style
+ * masonry of every update.
+ *
+ * The toggle is a bare <details>/<summary> — no client JS needed to expand.
+ * The expanding content is NOT nested inside the <details> (which sits
+ * inline with the "From the studio" heading in a flex row); instead it's a
+ * sibling block shown via a `:has()` selector scoped to `.update-toggle`,
+ * so the toggle button's own row never has to carry the expanded content's
+ * height and can't drag the heading down beside it. Same technique as the
+ * work-filter row fix (see WorkTab.tsx) for the identical reason: keep the
+ * trigger's box completely decoupled from what it reveals.
  */
-export function ProfileUpdatesSection({ campaigns, updates, username }: Props) {
+export function ProfileUpdatesSection({ campaigns, updates, projects, username, currentUserId, isAdmin = false }: Props) {
   const shown = updates.slice(0, UPDATES_SHOWN);
+  const hasMore = updates.length > UPDATES_SHOWN;
+  const threads = hasMore ? buildThreads(projects, updates) : [];
 
   return (
     <div className="space-y-10 py-8">
@@ -219,20 +284,84 @@ export function ProfileUpdatesSection({ campaigns, updates, username }: Props) {
 
       {/* Latest studio updates — one tidy strip, uniform height */}
       {shown.length > 0 && (
-        <div className="space-y-4">
+        <div className="update-toggle space-y-4">
           <div className="flex items-baseline justify-between gap-4">
             <h2 className="t-section-label">From the studio</h2>
-            {updates.length > UPDATES_SHOWN && (
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {updates.length} updates
-              </span>
+            {hasMore && (
+              <details className="js-updates-toggle group/updates">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-mono text-[11px] font-normal text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+                  <span className="group-open/updates:hidden">View all {updates.length}</span>
+                  <span className="hidden group-open/updates:inline">Show less</span>
+                  <svg
+                    aria-hidden
+                    width="9" height="9" viewBox="0 0 10 10" fill="none"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+                    className="transition-transform group-open/updates:rotate-180"
+                  >
+                    <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+                  </svg>
+                </summary>
+              </details>
             )}
           </div>
+
           <div className="scrollbar-hide flex gap-2 overflow-x-auto bg-feed-bg p-2">
             {shown.map((u) => (
               <StripCard key={u.id} u={u} />
             ))}
           </div>
+
+          {hasMore && (
+            <div className="hidden space-y-10 pt-2 [.update-toggle:has(.js-updates-toggle[open])_&]:block">
+              {/* Studio Threads — grouped-update cards, horizontal scroll */}
+              {threads.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="t-section-label">Studio Threads</h3>
+                  <div
+                    className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
+                    {threads.map((t) => (
+                      <Link
+                        key={t.id}
+                        href={`/threads/${t.id}`}
+                        className="block shrink-0 snap-start bg-card"
+                        style={{ width: THREAD_CARD_W }}
+                      >
+                        <div className="h-[150px] w-full overflow-hidden bg-feed-bg">
+                          {t.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={t.coverUrl}
+                              alt={t.title}
+                              loading="lazy"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="px-3.5 py-3">
+                          <p className="truncate text-sm font-semibold leading-snug">{t.title}</p>
+                          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                            {t.count} update{t.count !== 1 ? "s" : ""} · {t.dateRange}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Updates — every update, Explore-style masonry */}
+              <div className="space-y-3">
+                <h3 className="t-section-label">All Updates</h3>
+                <StudioAllUpdatesGrid
+                  updates={updates}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

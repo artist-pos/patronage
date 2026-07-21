@@ -194,7 +194,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .order("position", { ascending: true })
           .then(({ data }) => data ?? [])
       : Promise.resolve([]),
-    needsUpdates ? getArtistUpdates(profile.id) : Promise.resolve([]),
+    // 200, not the default 30 — "From the studio" expands to an "All
+    // Updates" view that needs every update, not just a preview page's worth.
+    needsUpdates ? getArtistUpdates(profile.id, 200) : Promise.resolve([]),
     needsProjects ? getArtistProjects(profile.id) : Promise.resolve([]),
     needsSold
       ? supabase
@@ -1060,7 +1062,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 <ProfileUpdatesSection
                   campaigns={resolvedCampaigns}
                   updates={studioUpdates}
+                  projects={artistProjects.map((p) => ({ id: p.id, title: p.title, created_at: p.created_at }))}
                   username={profile.username}
+                  currentUserId={user?.id}
+                  isAdmin={viewerRole === "admin"}
                 />
               </section>
             )}
