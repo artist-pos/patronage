@@ -222,103 +222,109 @@ export function WorkTab({
         </section>
       )}
 
-      {/* ── Archive — the complete record, an optional disclosure. Starts
-             open when there's no Selected section (otherwise the profile
-             would show no work at all until a click). ── */}
-      {archiveCount > 0 && (
-        <details className="group" open={selectedItems.length === 0}>
-          <summary className="inline-flex cursor-pointer list-none items-center gap-3 border border-border bg-card px-4 py-2.5 transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden">
-            <h2 className="t-section-label">Archive</h2>
-            <span className="font-mono text-[11px] text-muted-foreground">
-              sorted by year
-            </span>
-            <svg
-              aria-hidden
-              width="10" height="10" viewBox="0 0 10 10" fill="none"
-              stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
-              className="text-muted-foreground transition-transform group-open:rotate-180"
-            >
-              <path d="M1.5 3.5 L5 7 L8.5 3.5" />
-            </svg>
-          </summary>
-          <div className="space-y-8 pt-6">
-            {sortedYears.map((year) => {
-              const items = groups.get(year)!.sort(byPosition);
-              return (
-                <div key={year ?? "undated"} className="space-y-3">
-                  <div className="border-b border-border pb-1.5 font-mono text-[11px] text-muted-foreground">
-                    {year ?? "Undated"} · {items.length} work{items.length !== 1 ? "s" : ""}
-                  </div>
-                  <GalleryWithControls
-                    images={items}
+      {/* ── More work — Available / Sold / Archive, one pill row, single-select.
+             Each pill is a <details name="work-panel">: the shared `name`
+             makes the three mutually exclusive natively (opening one closes
+             the others; clicking the open one again closes it) — no JS state,
+             WorkTab stays a server component. Available holds every for-sale
+             work not already surfaced in Selected — without it, a
+             non-featured sale listing was counted in "N works available" but
+             rendered nowhere. Archive defaults open only when there's no
+             Selected section above (otherwise the profile shows no work at
+             all until a click). ── */}
+      {(forSaleWorks.length > 0 || soldWorks.length > 0 || archiveCount > 0 || isOwner) && (
+        <section>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="t-section-label mr-1">More work</span>
+
+            {forSaleWorks.length > 0 && (
+              <details name="work-panel" className="group/avail w-fit open:w-full">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/avail:border-foreground group-open/avail:bg-foreground group-open/avail:text-white">
+                  <span>Available</span>
+                  <span className="text-muted-foreground group-open/avail:text-white/70">
+                    · {forSaleWorks.length}
+                  </span>
+                  <svg
+                    aria-hidden
+                    width="9" height="9" viewBox="0 0 10 10" fill="none"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+                    className="transition-transform group-open/avail:rotate-180"
+                  >
+                    <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+                  </svg>
+                </summary>
+                <div className="space-y-4 pt-6">
+                  {isOwner && (
+                    <div className="flex justify-end">
+                      <Link
+                        href="/studio?section=works"
+                        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                      >
+                        Manage in Studio →
+                      </Link>
+                    </div>
+                  )}
+                  {/* Tiles open the commerce modal (buy/enquire), not the
+                      artwork detail page — this is the storefront. */}
+                  <AvailableWorksGrid
+                    artworks={forSaleWorks}
+                    artistId={profileId}
+                    artistName={artistName}
                     username={username}
-                    viewerRole={viewerRole}
-                    profileId={isOwner ? undefined : profileId}
                     isOwner={isOwner}
-                    savedRowHeight={320}
-                    savedGutter={galleryGutter ?? 6}
-                    noControls
                   />
                 </div>
-              );
-            })}
+              </details>
+            )}
+
+            <SoldWorksSection
+              initialWorks={soldWorks}
+              isOwner={isOwner}
+              hideSoldSection={hideSoldSection}
+            />
+
+            {archiveCount > 0 && (
+              <details name="work-panel" className="group/archive w-fit open:w-full" open={selectedItems.length === 0}>
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/archive:border-foreground group-open/archive:bg-foreground group-open/archive:text-white">
+                  <span>Archive</span>
+                  <span className="text-muted-foreground group-open/archive:text-white/70">
+                    · {archiveCount}, by year
+                  </span>
+                  <svg
+                    aria-hidden
+                    width="9" height="9" viewBox="0 0 10 10" fill="none"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+                    className="transition-transform group-open/archive:rotate-180"
+                  >
+                    <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+                  </svg>
+                </summary>
+                <div className="space-y-8 pt-6">
+                  {sortedYears.map((year) => {
+                    const items = groups.get(year)!.sort(byPosition);
+                    return (
+                      <div key={year ?? "undated"} className="space-y-3">
+                        <div className="border-b border-border pb-1.5 font-mono text-[11px] text-muted-foreground">
+                          {year ?? "Undated"} · {items.length} work{items.length !== 1 ? "s" : ""}
+                        </div>
+                        <GalleryWithControls
+                          images={items}
+                          username={username}
+                          viewerRole={viewerRole}
+                          profileId={isOwner ? undefined : profileId}
+                          isOwner={isOwner}
+                          savedRowHeight={320}
+                          savedGutter={galleryGutter ?? 6}
+                          noControls
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            )}
           </div>
-        </details>
-      )}
-
-      {/* ── Market row — Available and Sold sit side-by-side as disclosures
-             (same treatment as Archive). An opened one expands to full width;
-             the other wraps below. Available holds every for-sale work not
-             already surfaced in Selected — without it, a non-featured sale
-             listing was counted in "N works available" but rendered nowhere. */}
-      {(forSaleWorks.length > 0 || soldWorks.length > 0 || isOwner) && (
-        <div className="flex flex-wrap items-start gap-3">
-          {forSaleWorks.length > 0 && (
-            <details className="group/avail w-fit open:w-full">
-              <summary className="inline-flex cursor-pointer list-none items-center gap-3 border border-border bg-card px-4 py-2.5 transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden">
-                <h2 className="t-section-label">Available</h2>
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  {forSaleWorks.length} work{forSaleWorks.length !== 1 ? "s" : ""}
-                </span>
-                <svg
-                  aria-hidden
-                  width="10" height="10" viewBox="0 0 10 10" fill="none"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
-                  className="text-muted-foreground transition-transform group-open/avail:rotate-180"
-                >
-                  <path d="M1.5 3.5 L5 7 L8.5 3.5" />
-                </svg>
-              </summary>
-              <div className="space-y-4 pt-6">
-                {isOwner && (
-                  <div className="flex justify-end">
-                    <Link
-                      href="/studio?section=works"
-                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-                    >
-                      Manage in Studio →
-                    </Link>
-                  </div>
-                )}
-                {/* Tiles open the commerce modal (buy/enquire), not the
-                    artwork detail page — this is the storefront. */}
-                <AvailableWorksGrid
-                  artworks={forSaleWorks}
-                  artistId={profileId}
-                  artistName={artistName}
-                  username={username}
-                  isOwner={isOwner}
-                />
-              </div>
-            </details>
-          )}
-
-          <SoldWorksSection
-            initialWorks={soldWorks}
-            isOwner={isOwner}
-            hideSoldSection={hideSoldSection}
-          />
-        </div>
+        </section>
       )}
 
       {/* ── Collection — works owned but not created by this artist ── */}
