@@ -17,6 +17,23 @@ function formatTimestamp(iso: string): string {
   return `${hh}:${mm}, ${dd} ${mon}`;
 }
 
+/* Compact relative form for the footer row — "2d", "3h" — so it never
+   competes with the artist name for space (see formatTimestamp above for
+   the full form, still used in share payloads). */
+function formatRelativeShort(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
+  return new Date(iso).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
+}
+
 /* Three content voices so the feed is scannable by type:
    teal kicker = process (studio updates), black chip = finished work,
    outlined chip = editorial (articles). */
@@ -98,21 +115,24 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     </span>
   );
 
-  /* Footer attribution row for surface pins (text/audio/video/embed) */
+  /* Footer attribution row for surface pins (text/audio/video/embed).
+     Name gets flex-1 min-w-0 (effective priority — it truncates last, not
+     the timestamp) and the timestamp is a short relative form with
+     shrink-0, so a long name and a short "2d" never fight for space. */
   const attributionRow = (
     <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
-      <Link
-        href={`/${u.artist_username}`}
-        className="group/artist flex min-w-0 flex-1 items-baseline gap-2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span className="truncate text-[13px] font-medium group-hover/artist:underline underline-offset-2">
+      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
+        <Link
+          href={`/${u.artist_username}`}
+          className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
           {name}
+        </Link>
+        <span className="shrink-0 font-mono text-[9px] text-[color:var(--fg-subtle)]">
+          {formatRelativeShort(u.created_at)}
         </span>
-        <span className="shrink-0 font-mono text-[10px] text-[color:var(--fg-subtle)]">
-          {formatTimestamp(u.created_at)}
-        </span>
-      </Link>
+      </div>
       {controls}
     </div>
   );
@@ -143,8 +163,13 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               />
             </div>
             <div data-pin-overlay>
-              <div className="font-mono text-[10px] text-white/60">
-                {name} · {formatTimestamp(u.created_at)}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-white">
+                  {name}
+                </span>
+                <span className="shrink-0 font-mono text-[9px] text-white/60">
+                  {formatRelativeShort(u.created_at)}
+                </span>
               </div>
             </div>
           </Link>
