@@ -222,70 +222,36 @@ export function WorkTab({
         </section>
       )}
 
-      {/* ── More work — Available / Sold / Archive, one pill row, single-select.
+      {/* ── More work — Archive / Available / Sold, one pill row, single-select.
              Each pill is a <details name="work-panel">: the shared `name`
              makes the three mutually exclusive natively (opening one closes
              the others; clicking the open one again closes it) — no JS state,
-             WorkTab stays a server component. Available holds every for-sale
-             work not already surfaced in Selected — without it, a
-             non-featured sale listing was counted in "N works available" but
-             rendered nowhere. Archive defaults open only when there's no
-             Selected section above (otherwise the profile shows no work at
-             all until a click). ── */}
+             WorkTab stays a server component.
+
+             The pills are summary-only <details> (no nested content), so a
+             pill's own box never changes size when it's toggled active — only
+             its border/background/text colour change (font-weight and
+             letter-spacing are constant across states). Each panel is instead
+             a `w-full` sibling *within the same .work-panels flex container*,
+             shown via a `:has()` selector keyed to its pill's [open] state.
+             Because hidden panels are `display:none` they don't occupy a flex
+             line at all, so the pill row is never a wrap target and can't be
+             pushed around — only the one active (w-full) panel ever forces a
+             line-break, and always onto its own fresh line below the pills.
+
+             Available holds every for-sale work not already surfaced in
+             Selected — without it, a non-featured sale listing was counted in
+             "N works available" but rendered nowhere. Archive defaults open
+             only when there's no Selected section above (otherwise the
+             profile shows no work at all until a click). ── */}
       {(forSaleWorks.length > 0 || soldWorks.length > 0 || archiveCount > 0 || isOwner) && (
         <section>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="work-panels flex flex-wrap items-center gap-2">
             <span className="t-section-label mr-1">More work</span>
 
-            {forSaleWorks.length > 0 && (
-              <details name="work-panel" className="group/avail w-fit open:w-full">
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/avail:border-foreground group-open/avail:bg-foreground group-open/avail:text-white">
-                  <span>Available</span>
-                  <span className="text-muted-foreground group-open/avail:text-white/70">
-                    · {forSaleWorks.length}
-                  </span>
-                  <svg
-                    aria-hidden
-                    width="9" height="9" viewBox="0 0 10 10" fill="none"
-                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
-                    className="transition-transform group-open/avail:rotate-180"
-                  >
-                    <path d="M1.5 3.5 L5 7 L8.5 3.5" />
-                  </svg>
-                </summary>
-                <div className="space-y-4 pt-6">
-                  {isOwner && (
-                    <div className="flex justify-end">
-                      <Link
-                        href="/studio?section=works"
-                        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-                      >
-                        Manage in Studio →
-                      </Link>
-                    </div>
-                  )}
-                  {/* Tiles open the commerce modal (buy/enquire), not the
-                      artwork detail page — this is the storefront. */}
-                  <AvailableWorksGrid
-                    artworks={forSaleWorks}
-                    artistId={profileId}
-                    artistName={artistName}
-                    username={username}
-                    isOwner={isOwner}
-                  />
-                </div>
-              </details>
-            )}
-
-            <SoldWorksSection
-              initialWorks={soldWorks}
-              isOwner={isOwner}
-              hideSoldSection={hideSoldSection}
-            />
-
             {archiveCount > 0 && (
-              <details name="work-panel" className="group/archive w-fit open:w-full" open={selectedItems.length === 0}>
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/archive:border-foreground group-open/archive:bg-foreground group-open/archive:text-white">
+              <details name="work-panel" className="js-archive group/archive" open={selectedItems.length === 0}>
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/archive:border-foreground group-open/archive:bg-foreground group-open/archive:text-white">
                   <span>Archive</span>
                   <span className="text-muted-foreground group-open/archive:text-white/70">
                     · {archiveCount}, by year
@@ -299,7 +265,37 @@ export function WorkTab({
                     <path d="M1.5 3.5 L5 7 L8.5 3.5" />
                   </svg>
                 </summary>
-                <div className="space-y-8 pt-6">
+              </details>
+            )}
+
+            {forSaleWorks.length > 0 && (
+              <details name="work-panel" className="js-avail group/avail">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/avail:border-foreground group-open/avail:bg-foreground group-open/avail:text-white">
+                  <span>Available</span>
+                  <span className="text-muted-foreground group-open/avail:text-white/70">
+                    · {forSaleWorks.length}
+                  </span>
+                  <svg
+                    aria-hidden
+                    width="9" height="9" viewBox="0 0 10 10" fill="none"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
+                    className="transition-transform group-open/avail:rotate-180"
+                  >
+                    <path d="M1.5 3.5 L5 7 L8.5 3.5" />
+                  </svg>
+                </summary>
+              </details>
+            )}
+
+            <SoldWorksSection
+              initialWorks={soldWorks}
+              isOwner={isOwner}
+              hideSoldSection={hideSoldSection}
+            />
+
+            {archiveCount > 0 && (
+              <div className="js-archive-panel hidden w-full pt-6 [.work-panels:has(.js-archive[open])_&]:block">
+                <div className="space-y-8">
                   {sortedYears.map((year) => {
                     const items = groups.get(year)!.sort(byPosition);
                     return (
@@ -321,7 +317,33 @@ export function WorkTab({
                     );
                   })}
                 </div>
-              </details>
+              </div>
+            )}
+
+            {forSaleWorks.length > 0 && (
+              <div className="js-avail-panel hidden w-full pt-6 [.work-panels:has(.js-avail[open])_&]:block">
+                <div className="space-y-4">
+                  {isOwner && (
+                    <div className="flex justify-end">
+                      <Link
+                        href="/studio?section=works"
+                        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                      >
+                        Manage in Studio →
+                      </Link>
+                    </div>
+                  )}
+                  {/* Tiles open the commerce modal (buy/enquire), not the
+                      artwork detail page — this is the storefront. */}
+                  <AvailableWorksGrid
+                    artworks={forSaleWorks}
+                    artistId={profileId}
+                    artistName={artistName}
+                    username={username}
+                    isOwner={isOwner}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </section>

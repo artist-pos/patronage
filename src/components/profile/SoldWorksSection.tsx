@@ -406,11 +406,15 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
         />
       )}
 
-      {/* Pill — one of the three mutually-exclusive "More work" panels
-          (Available / Sold / Archive) in WorkTab; the shared `name` makes
-          opening this one close the others natively. */}
-      <details name="work-panel" className="group/sold w-fit open:w-full">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/sold:border-foreground group-open/sold:bg-foreground group-open/sold:text-white">
+      {/* Pill — one of the three mutually-exclusive "More work" pills
+          (Archive / Available / Sold) in WorkTab; the shared `name` makes
+          opening this one close the others natively. The pill's box is
+          summary-only (no nested content) so it never resizes when toggled —
+          the panel below is a separate sibling within the same .work-panels
+          flex container, shown purely via the :has() selector on the right,
+          so opening/closing it can never reflow this row. */}
+      <details name="work-panel" className="js-sold group/sold">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/sold:border-foreground group-open/sold:bg-foreground group-open/sold:text-white">
           <span>Sold</span>
           <span className="text-muted-foreground group-open/sold:text-white/70">
             · {visibleWorks.length}
@@ -425,7 +429,10 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
             <path d="M1.5 3.5 L5 7 L8.5 3.5" />
           </svg>
         </summary>
-        <div className="space-y-4 pt-6">
+      </details>
+
+      <div className="js-sold-panel hidden w-full pt-6 [.work-panels:has(.js-sold[open])_&]:block">
+        <div className="space-y-4">
         {isOwner && (
           <div className="flex justify-end">
             <button
@@ -528,7 +535,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
           </div>
         )}
         </div>
-      </details>
+      </div>
     </>
   );
 }
