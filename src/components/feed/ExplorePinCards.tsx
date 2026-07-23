@@ -38,6 +38,8 @@ export interface WorkSalePinData {
   kind: "work";
   id: string;
   url: string | null;
+  /** Pre-generated ~480px thumbnail — always prefer over `url` in the masonry */
+  thumb_url?: string | null;
   title: string | null;
   year: number | null;
   /** Edition text, e.g. "1 of 3" — shown in the AVAILABLE chip */
@@ -191,7 +193,7 @@ export function WorkSalePin({ p }: { p: WorkSalePinData }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         data-pin-img
-        src={p.url}
+        src={p.thumb_url ?? p.url}
         alt={p.title ?? "Available work"}
         loading="lazy"
         className="block h-auto w-full"

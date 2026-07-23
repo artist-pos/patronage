@@ -7,6 +7,7 @@ import { Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
+import { gridImageSrc } from "@/lib/image";
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -156,7 +157,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 data-pin-img
-                src={u.image_url}
+                src={gridImageSrc(u.image_url, u.thumb_url)}
                 alt={`Update by ${name}`}
                 loading={priority ? "eager" : "lazy"}
                 style={{ width: "100%", height: "auto", display: "block" }}
@@ -192,7 +193,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               data-pin-img
-              src={u.image_url}
+              src={gridImageSrc(u.image_url, u.thumb_url)}
               alt={u.caption ?? `Update by ${name}`}
               loading={priority ? "eager" : "lazy"}
               style={{ width: "100%", height: "auto", display: "block" }}
