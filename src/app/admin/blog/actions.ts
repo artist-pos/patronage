@@ -72,6 +72,7 @@ export async function upsertPost(data: {
   category: "feature" | "data" | "essay" | null;
   status: "draft" | "published" | "scheduled";
   existingPublishedAt?: string | null;
+  publishedAtOverride?: string | null; // NZ local "YYYY-MM-DDTHH:mm" — explicit backdate/redate
   featured_profile_id: string | null;
   spotlight_until: string | null;
   scheduled_at: string | null;
@@ -92,9 +93,11 @@ export async function upsertPost(data: {
 
   const scheduled_at = data.scheduled_at ? nzLocalToUtc(data.scheduled_at) : null;
 
+  const publishedAtOverride = data.publishedAtOverride ? nzLocalToUtc(data.publishedAtOverride) : null;
+
   const published_at =
     data.status === "published"
-      ? (data.existingPublishedAt ?? now)
+      ? (publishedAtOverride ?? data.existingPublishedAt ?? now)
       : data.status === "scheduled" && scheduled_at && new Date(scheduled_at) <= new Date()
       ? now
       : null;

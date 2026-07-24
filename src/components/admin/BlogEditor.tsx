@@ -100,6 +100,9 @@ export function BlogEditor({ post, userId }: Props) {
   const [scheduledAt, setScheduledAt] = useState<string>(
     post?.scheduled_at ? utcToNzLocal(post.scheduled_at) : ""
   );
+  const [publishedAt, setPublishedAt] = useState<string>(
+    post?.published_at ? utcToNzLocal(post.published_at) : ""
+  );
   const [featuredProfile, setFeaturedProfile] = useState<FeaturedProfile | null>(
     post?.featured_profile ?? null
   );
@@ -216,6 +219,7 @@ export function BlogEditor({ post, userId }: Props) {
         category,
         status: targetStatus,
         existingPublishedAt: post?.published_at,
+        publishedAtOverride: targetStatus === "published" ? (publishedAt || null) : null,
         featured_profile_id: featuredProfile?.id ?? null,
         spotlight_until: featuredProfile && spotlightUntil ? spotlightUntil : null,
         scheduled_at: targetStatus === "scheduled" ? scheduledAt : null,
@@ -708,6 +712,24 @@ export function BlogEditor({ post, userId }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Published datetime — only shown when status = published; lets you back/re-date a post */}
+      {status === "published" && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
+            Published At{" "}
+            <span className="normal-case tracking-normal font-normal text-muted-foreground">
+              (NZ time — drives display date and blog sort order)
+            </span>
+          </label>
+          <input
+            type="datetime-local"
+            value={publishedAt}
+            onChange={(e) => setPublishedAt(e.target.value)}
+            className="text-sm border border-border rounded-lg px-3 py-2 bg-transparent focus:outline-none focus:border-foreground transition-colors"
+          />
+        </div>
+      )}
 
       {/* Scheduled datetime — only shown when status = scheduled */}
       {status === "scheduled" && (
