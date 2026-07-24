@@ -172,6 +172,14 @@ export async function drawShareCanvas(
   const isStory = format === 'story'
   const m = W * 0.08
 
+  // Bottom bound content must not cross — the sticker/footer strip in story format,
+  // or a plain bottom margin in post format. Computed up front (independent of image
+  // height / title length) so the caption can be sized to whatever room is left above it.
+  const shH = Math.round(W * 0.078)
+  const shY = H - 100 - shH
+  // Post format has no footer strip to protect — only a small breathing-room pad.
+  const contentBottomBound = isStory ? shY - W * 0.035 : H - W * 0.04
+
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')!
@@ -235,18 +243,27 @@ export async function drawShareCanvas(
   subLines.forEach(l => { ctx.fillText(l, m, ty); ty += ss * 1.42 })
   ty += ss * 0.5
 
-  // Caption
+  // Caption — line count is derived from remaining space above the bottom bound
+  // (footer sticker in story format), not a fixed count, so a long caption uses
+  // whatever room the image/title/sub left behind instead of overflowing into it.
   const cap = caption.trim()
   if (cap) {
     const cs = Math.round(W * 0.028)
-    ctx.font = `${cs}px ${GF}`
-    ctx.fillStyle = t.text
-    ctx.globalAlpha = 0.5
-    ctx.textBaseline = 'top'
-    const capLines = wrapText(ctx, cap, W - m * 2, 3)
-    capLines.forEach(l => { ctx.fillText(l, m, ty); ty += cs * 1.42 })
-    ctx.globalAlpha = 1
-    ty += cs * 0.25
+    const lineH = cs * 1.42
+    const willShowPrice = showPrice && !!payload.price
+    const priceReserve = willShowPrice ? Math.round(W * 0.032) * 1.5 : 0
+    const maxCapLines = Math.floor((contentBottomBound - ty - priceReserve) / lineH)
+
+    if (maxCapLines > 0) {
+      ctx.font = `${cs}px ${GF}`
+      ctx.fillStyle = t.text
+      ctx.globalAlpha = 0.5
+      ctx.textBaseline = 'top'
+      const capLines = wrapText(ctx, cap, W - m * 2, maxCapLines)
+      capLines.forEach(l => { ctx.fillText(l, m, ty); ty += lineH })
+      ctx.globalAlpha = 1
+      ty += cs * 0.25
+    }
   }
 
   // Price
@@ -266,9 +283,7 @@ export async function drawShareCanvas(
     const footerLogo = t.light ? logoEl : logoWhiteEl
 
     const shW = Math.round(W * 0.27)
-    const shH = Math.round(W * 0.078)
     const shR = 8
-    const shY = H - 100 - shH
     const shX = (W - shW) / 2
 
     ctx.globalAlpha = 1

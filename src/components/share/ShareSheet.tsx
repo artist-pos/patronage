@@ -372,11 +372,12 @@ export function ShareSheet({ payload, onClose }: Props) {
                 value={caption}
                 onChange={e => { setCaption(e.target.value); redraw(); }}
                 placeholder="Add a personal note…"
-                maxLength={120}
                 rows={3}
                 className="w-full text-sm border border-border px-3 py-2 resize-none bg-background focus:outline-none focus:border-black transition-colors placeholder:text-muted-foreground"
               />
-              <p className="text-[10px] text-muted-foreground text-right">{caption.length} / 120</p>
+              <p className="text-[10px] text-muted-foreground text-right">
+                Long captions are wrapped to fit the space above the footer
+              </p>
             </div>
             )}
 
