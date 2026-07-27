@@ -141,6 +141,7 @@ export function OpportunitySubmissionForm({
     funding_range: formData.fundingRange || null,
     sub_categories: allTagsForPreview.length > 0 ? allTagsForPreview : null,
     featured_image_url: formData.featuredImageUrl || null,
+    secondary_image_url: null,
     grant_type: formData.grantType || null,
     recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,
     slug: null,
@@ -240,6 +241,7 @@ export function OpportunitySubmissionForm({
         <input type="hidden" name="deadline"                   value={formData.deadline} />
         <input type="hidden" name="funding_range"              value={formData.fundingRange} />
         <input type="hidden" name="featured_image_url"         value={formData.featuredImageUrl} />
+        <input type="hidden" name="secondary_image_url"        value={formData.secondaryImageUrl} />
         <input type="hidden" name="sub_categories"             value={allTags.join(",")} />
         <input type="hidden" name="career_stage"               value={formData.selectedCareerStages.join(",")} />
         <input type="hidden" name="tags"                       value={formData.selectedTags.join(",")} />

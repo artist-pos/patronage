@@ -50,6 +50,7 @@ export interface OpportunityFormData {
   deadline: string;
   fundingRange: string;
   featuredImageUrl: string;
+  secondaryImageUrl: string;
   // Tags by group
   selectedDisciplines: string[];
   selectedCareerStages: string[];
@@ -98,6 +99,7 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     deadline: "",
     fundingRange: "",
     featuredImageUrl: "",
+    secondaryImageUrl: "",
     selectedDisciplines: [],
     selectedCareerStages: [],
     selectedTags: [],
@@ -165,6 +167,7 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     deadline: opp.deadline ?? "",
     fundingRange: opp.funding_range ?? "",
     featuredImageUrl: opp.featured_image_url ?? "",
+    secondaryImageUrl: opp.secondary_image_url ?? "",
     selectedDisciplines,
     selectedCareerStages,
     selectedTags,
@@ -889,10 +892,13 @@ export function OpportunityForm({
   onAutoSave,
 }: OpportunityFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const secondaryFileInputRef = useRef<HTMLInputElement>(null);
   const termsFileRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [imgUploading, setImgUploading] = useState(false);
+  const [secondaryImgUploading, setSecondaryImgUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [secondaryDragOver, setSecondaryDragOver] = useState(false);
   const [termsUploading, setTermsUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [autofillSource, setAutofillSource] = useState<string | null>(null);
@@ -974,6 +980,16 @@ export function OpportunityForm({
       if (url) set({ featuredImageUrl: url });
     } finally {
       setImgUploading(false);
+    }
+  }
+
+  async function handleSecondaryImageFile(file: File) {
+    setSecondaryImgUploading(true);
+    try {
+      const url = await onImgUpload(file);
+      if (url) set({ secondaryImageUrl: url });
+    } finally {
+      setSecondaryImgUploading(false);
     }
   }
 
@@ -1510,6 +1526,57 @@ export function OpportunityForm({
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
           />
         </Field>
+
+        {(mode === "admin" || mode === "create") && (
+          <Field label="Second Image (optional)">
+            <p className="text-xs text-muted-foreground -mt-0.5 mb-2">
+              Shown on the detail page hero as a second frame — visitors click a right arrow to view it, then a left arrow to go back to the main image. Not shown on cards.
+            </p>
+            {value.secondaryImageUrl && (
+              <div className="relative border border-black bg-[#E5E7EB] h-32 overflow-hidden flex items-center justify-center mb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={value.secondaryImageUrl} alt="" className="max-h-full max-w-full object-contain" />
+                <button
+                  type="button"
+                  onClick={() => set({ secondaryImageUrl: "" })}
+                  className="absolute top-1 right-1 bg-black text-white w-5 h-5 flex items-center justify-center text-xs"
+                  aria-label="Remove image"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <div
+              onClick={() => secondaryFileInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                setSecondaryDragOver(false);
+                const file = e.dataTransfer.files[0];
+                if (file?.type.startsWith("image/")) handleSecondaryImageFile(file);
+              }}
+              onDragOver={(e) => { e.preventDefault(); setSecondaryDragOver(true); }}
+              onDragLeave={() => setSecondaryDragOver(false)}
+              className={`border border-black border-dashed p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${
+                secondaryDragOver ? "bg-muted" : "hover:bg-muted/40"
+              }`}
+            >
+              {secondaryImgUploading
+                ? "Uploading…"
+                : secondaryDragOver
+                ? "Drop to upload"
+                : value.secondaryImageUrl
+                ? "Drop a new image or click to replace"
+                : "Drop an image here, or click to browse"}
+            </div>
+            <input
+              ref={secondaryFileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSecondaryImageFile(f); }}
+            />
+          </Field>
+        )}
 
         {mode === "create" && (
           <Field label="Your Email (for correspondence)">

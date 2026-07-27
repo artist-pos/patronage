@@ -198,6 +198,7 @@ export async function submitOpportunityAction(
     career_stage: careerStage,
     tags,
     featured_image_url: (formData.get("featured_image_url") as string)?.trim() || null,
+    secondary_image_url: (formData.get("secondary_image_url") as string)?.trim() || null,
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,

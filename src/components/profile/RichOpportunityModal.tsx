@@ -157,6 +157,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       funding_range: fundingRange || null,
       sub_categories: subCategories.length > 0 ? subCategories : null,
       featured_image_url: imgUrl || null,
+      secondary_image_url: null,
       grant_type: grantType || null,
       recipients_count: recipients ? parseInt(recipients) : null,
       slug: null,

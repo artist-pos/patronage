@@ -128,6 +128,7 @@ export function PartnerEditForm({ opp }: Props) {
       deadline: d.deadline || null,
       funding_range: d.fundingRange.trim() || null,
       featured_image_url: d.featuredImageUrl.trim() || null,
+      secondary_image_url: d.secondaryImageUrl.trim() || null,
       sub_categories: d.selectedDisciplines.length > 0 ? d.selectedDisciplines : null,
       career_stage: d.selectedCareerStages.length > 0 ? d.selectedCareerStages : null,
       tags: d.selectedTags.length > 0 ? d.selectedTags : null,

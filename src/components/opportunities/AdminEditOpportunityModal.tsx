@@ -71,6 +71,7 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
         deadline: formData.deadline || null,
         funding_range: formData.fundingRange.trim() || null,
         featured_image_url: formData.featuredImageUrl.trim() || null,
+        secondary_image_url: formData.secondaryImageUrl.trim() || null,
         sub_categories: formData.selectedDisciplines.length > 0 ? formData.selectedDisciplines : null,
         career_stage: formData.selectedCareerStages.length > 0 ? formData.selectedCareerStages : null,
         tags: formData.selectedTags.length > 0 ? formData.selectedTags : null,
