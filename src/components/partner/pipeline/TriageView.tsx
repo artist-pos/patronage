@@ -3,27 +3,20 @@
 import { useState, useEffect, useRef } from "react";
 import { updateApplicationStatus } from "@/app/partner/dashboard/actions";
 import type { EnrichedApp } from "@/components/partner/ApplicationsManager";
-
-const STATUS_OPTIONS = [
-  { val: "pending",                 label: "New",           color: "text-stone-500" },
-  { val: "shortlisted",             label: "Shortlisted",   color: "text-blue-600" },
-  { val: "selected",                label: "Selected",      color: "text-green-600" },
-  { val: "approved_pending_assets", label: "Awaiting File", color: "text-yellow-600" },
-  { val: "production_ready",        label: "Ready",         color: "text-emerald-600" },
-  { val: "rejected",                label: "Rejected",      color: "text-red-500" },
-];
-
-function statusLabel(val: string) {
-  return STATUS_OPTIONS.find((s) => s.val === val)?.label ?? val;
-}
+import type { StageDef } from "@/lib/pipeline-stages";
 
 interface Props {
   apps: EnrichedApp[];
+  stages: StageDef[];
   onOpenApp: (id: string) => void;
   onStatusChange: (appId: string, status: string) => void;
 }
 
-export function TriageView({ apps, onOpenApp, onStatusChange }: Props) {
+export function TriageView({ apps, stages, onOpenApp, onStatusChange }: Props) {
+  function statusLabel(val: string) {
+    return stages.find((s) => s.val === val)?.label ?? val;
+  }
+  const hasStage = (val: string) => stages.some((s) => s.val === val && !s.disabled);
   const [localApps, setLocalApps] = useState(apps);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -60,13 +53,13 @@ export function TriageView({ apps, onOpenApp, onStatusChange }: Props) {
           setSelectedIdx((i) => Math.max(i - 1, 0));
           break;
         case "s":
-          changeStatus(selected.id, "shortlisted");
+          if (hasStage("shortlisted")) changeStatus(selected.id, "shortlisted");
           break;
         case "a":
-          changeStatus(selected.id, "selected");
+          if (hasStage("selected")) changeStatus(selected.id, "selected");
           break;
         case "x":
-          changeStatus(selected.id, "rejected");
+          if (hasStage("rejected")) changeStatus(selected.id, "rejected");
           break;
         case "Enter":
           onOpenApp(selected.id);
@@ -93,7 +86,10 @@ export function TriageView({ apps, onOpenApp, onStatusChange }: Props) {
       {/* List pane */}
       <div ref={listRef} className="w-[360px] shrink-0 border-r border-black/10 overflow-y-auto">
         <div className="px-3 py-2 border-b border-black/5 text-[10px] text-stone-400 font-medium uppercase tracking-widest">
-          {localApps.length} applications — j/k navigate, s shortlist, a select, x reject
+          {localApps.length} applications — j/k navigate
+          {hasStage("shortlisted") && ", s shortlist"}
+          {hasStage("selected") && ", a select"}
+          {hasStage("rejected") && ", x reject"}
         </div>
         {localApps.map((app, idx) => {
           const a = app.artist;
@@ -137,6 +133,7 @@ export function TriageView({ apps, onOpenApp, onStatusChange }: Props) {
         {selected ? (
           <TriagePreview
             app={selected}
+            stages={stages}
             onOpenFull={() => onOpenApp(selected.id)}
             onStatusChange={(s) => changeStatus(selected.id, s)}
           />
@@ -150,10 +147,12 @@ export function TriageView({ apps, onOpenApp, onStatusChange }: Props) {
 
 function TriagePreview({
   app,
+  stages,
   onOpenFull,
   onStatusChange,
 }: {
   app: EnrichedApp;
+  stages: StageDef[];
   onOpenFull: () => void;
   onStatusChange: (status: string) => void;
 }) {
@@ -196,18 +195,21 @@ function TriagePreview({
 
       {/* Quick status actions */}
       <div className="flex gap-2 flex-wrap">
-        {STATUS_OPTIONS.map((opt) => (
+        {stages.map((opt) => (
           <button
             key={opt.val}
             type="button"
             onClick={() => onStatusChange(opt.val)}
+            disabled={opt.disabled}
             className={`text-xs px-3 py-1.5 border transition-colors ${
               app.status === opt.val
                 ? "border-black bg-black text-white"
+                : opt.disabled
+                ? "border-stone-100 text-stone-300 cursor-not-allowed"
                 : "border-stone-200 hover:border-black"
             }`}
           >
-            {opt.label}
+            {opt.label}{opt.disabled ? " (disabled)" : ""}
           </button>
         ))}
       </div>

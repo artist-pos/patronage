@@ -6,18 +6,11 @@ import { useDroppable } from "@dnd-kit/core";
 import { KanbanCard } from "./KanbanCard";
 import { updateApplicationStatus } from "@/app/partner/dashboard/actions";
 import type { EnrichedApp } from "@/components/partner/ApplicationsManager";
-
-const COLUMNS: { id: string; label: string }[] = [
-  { id: "pending",                 label: "New" },
-  { id: "shortlisted",             label: "Shortlisted" },
-  { id: "selected",                label: "Selected" },
-  { id: "approved_pending_assets", label: "Awaiting File" },
-  { id: "production_ready",        label: "Ready" },
-  { id: "rejected",                label: "Rejected" },
-];
+import type { StageDef } from "@/lib/pipeline-stages";
 
 interface Props {
   apps: EnrichedApp[];
+  stages: StageDef[];
   onOpenApp: (id: string) => void;
   onStatusChange: (appId: string, status: string) => void;
 }
@@ -25,22 +18,29 @@ interface Props {
 function KanbanColumn({
   colId,
   label,
+  disabled,
   apps,
   onOpenApp,
 }: {
   colId: string;
   label: string;
+  disabled?: boolean;
   apps: EnrichedApp[];
   onOpenApp: (id: string) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: colId });
+  const { setNodeRef, isOver } = useDroppable({ id: colId, disabled });
 
   return (
-    <div className="flex flex-col min-w-[220px] w-[220px] shrink-0">
+    <div className={`flex flex-col min-w-[220px] w-[220px] shrink-0 ${disabled ? "opacity-50" : ""}`}>
       <div className="flex items-center justify-between mb-2 px-0.5">
-        <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">
+          {label}{disabled ? " · disabled" : ""}
+        </p>
         <span className="text-xs text-stone-400">{apps.length}</span>
       </div>
+      {disabled && (
+        <p className="text-[10px] text-stone-400 mb-1.5 px-0.5">Move these applicants to continue.</p>
+      )}
       <div
         ref={setNodeRef}
         className={`flex-1 space-y-2 min-h-[80px] p-1 transition-colors ${isOver ? "bg-stone-100" : ""}`}
@@ -53,7 +53,7 @@ function KanbanColumn({
   );
 }
 
-export function KanbanView({ apps, onOpenApp, onStatusChange }: Props) {
+export function KanbanView({ apps, stages, onOpenApp, onStatusChange }: Props) {
   const [localApps, setLocalApps] = useState(apps);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -89,7 +89,7 @@ export function KanbanView({ apps, onOpenApp, onStatusChange }: Props) {
   }
 
   const appsByStatus = Object.fromEntries(
-    COLUMNS.map((col) => [col.id, localApps.filter((a) => a.status === col.id)])
+    stages.map((col) => [col.val, localApps.filter((a) => a.status === col.val)])
   );
 
   return (
@@ -101,12 +101,13 @@ export function KanbanView({ apps, onOpenApp, onStatusChange }: Props) {
     >
       <div className="overflow-x-auto pb-4">
         <div className="flex gap-3 min-w-max">
-          {COLUMNS.map((col) => (
+          {stages.map((col) => (
             <KanbanColumn
-              key={col.id}
-              colId={col.id}
+              key={col.val}
+              colId={col.val}
               label={col.label}
-              apps={appsByStatus[col.id] ?? []}
+              disabled={col.disabled}
+              apps={appsByStatus[col.val] ?? []}
               onOpenApp={onOpenApp}
             />
           ))}

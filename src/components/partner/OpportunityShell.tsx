@@ -11,27 +11,8 @@ import { ApplicantPanel } from "./ApplicantPanel";
 import { CollaboratorsPanel } from "./CollaboratorsPanel";
 import { closeOpportunity, delistOpportunity, relistOpportunity } from "@/app/partner/dashboard/actions";
 import type { EnrichedApp, OpportunityShape } from "./ApplicationsManager";
-import type { OpportunityCollaborator, PipelineConfig } from "@/types/database";
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "New",
-  shortlisted: "Shortlisted",
-  selected: "Selected",
-  approved_pending_assets: "Awaiting File",
-  production_ready: "Ready",
-  rejected: "Rejected",
-};
-
-const STATUS_ORDER = ["pending", "shortlisted", "selected", "approved_pending_assets", "production_ready", "rejected"];
-
-const STATUS_DOTS: Record<string, string> = {
-  pending: "bg-amber-400",
-  shortlisted: "bg-stone-700",
-  selected: "bg-emerald-500",
-  approved_pending_assets: "bg-blue-400",
-  production_ready: "bg-violet-500",
-  rejected: "bg-stone-300",
-};
+import type { OpportunityCollaborator } from "@/types/database";
+import { getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
 
 type ViewMode = "kanban" | "table" | "triage";
 type TabId = "pipeline" | "setup" | "analytics" | "impact" | "collaborators";
@@ -102,7 +83,7 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
       a?.city ?? "",
       a?.country ?? "",
       new Date(app.created_at).toLocaleDateString("en-NZ"),
-      STATUS_LABELS[app.status] ?? app.status,
+      stageLabel(app.status, opp.pipeline_config?.pipeline_stages ?? null),
       ...questions.map((q: { id: string }) => answers[q.id] ?? ""),
     ];
   });
@@ -138,7 +119,8 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
 
   const filtered = statusFilter ? localApps.filter((a) => a.status === statusFilter) : localApps;
 
-  const counts = Object.fromEntries(STATUS_ORDER.map((s) => [s, localApps.filter((a) => a.status === s).length]));
+  const stages = getStagesWithOccupied(opp.pipeline_config?.pipeline_stages ?? null, localApps);
+  const counts = Object.fromEntries(stages.map((s) => [s.val, localApps.filter((a) => a.status === s.val).length]));
   const isPipeline = opp.routing_type === "pipeline";
   const isDelisted = opp.status === "unlisted";
   const isClosed = opp.is_active === false;
@@ -343,11 +325,11 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
                   className={`text-xs px-3 py-1.5 border transition-colors ${statusFilter === null ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"}`}>
                   All ({localApps.length})
                 </button>
-                {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
-                  <button key={s} type="button" onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 border transition-colors ${statusFilter === s ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusFilter === s ? "bg-white" : STATUS_DOTS[s]}`} />
-                    {STATUS_LABELS[s]} ({counts[s]})
+                {stages.filter((s) => counts[s.val] > 0).map((s) => (
+                  <button key={s.val} type="button" onClick={() => setStatusFilter(statusFilter === s.val ? null : s.val)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 border transition-colors ${statusFilter === s.val ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"} ${s.disabled ? "opacity-60" : ""}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusFilter === s.val ? "bg-white" : s.dot}`} />
+                    {s.label}{s.disabled ? " (disabled)" : ""} ({counts[s.val]})
                   </button>
                 ))}
               </div>
@@ -362,9 +344,9 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
                 </div>
               </div>
             </div>
-            {view === "table" && <TableView apps={filtered} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
-            {view === "kanban" && <KanbanView apps={filtered} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
-            {view === "triage" && <TriageView apps={filtered} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
+            {view === "table" && <TableView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
+            {view === "kanban" && <KanbanView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
+            {view === "triage" && <TriageView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
           </div>
         )}
 

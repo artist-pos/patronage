@@ -79,6 +79,14 @@ export interface PipelineConfig {
   };
   anonymous_first_pass?: boolean;
   template?: 'residency' | 'commission' | 'grant' | 'open_call' | 'prize' | 'display';
+  /** Which of the 6 system application stages this opportunity uses, in display order.
+   *  Unset = all 6 (today's default). "pending" always stays enabled — it's the
+   *  status every application starts at. The underlying status values never change;
+   *  this only controls which columns/filters show and what they're labelled. */
+  pipeline_stages?: {
+    enabled: string[];
+    labels?: Record<string, string>;
+  } | null;
 }
 
 export interface PostSelectionDocField {
@@ -123,6 +131,7 @@ export interface Opportunity {
   tags?: string[] | null;          // freeform searchable tags (eligibility, focus, themes)
   career_stage?: string[] | null;  // career stage tags e.g. ["Emerging", "Mid-Career"]
   featured_image_url: string | null;
+  secondary_image_url: string | null; // optional second hero image (migration 173) — detail page carousel only
   grant_type: string | null;
   recipients_count: number | null;
   slug: string | null;             // SEO-friendly URL segment e.g. "photoplace-gallery-open-call-195878cc"
@@ -268,7 +277,7 @@ export type OpportunityInsert = Omit<
   Opportunity,
   | "id" | "is_active" | "created_at"
   | "city" | "funding_amount" | "funding_range" | "sub_categories"
-  | "featured_image_url" | "grant_type" | "recipients_count"
+  | "featured_image_url" | "secondary_image_url" | "grant_type" | "recipients_count"
   | "caption" | "full_description"
 > & {
   city?: string | null;
@@ -276,6 +285,7 @@ export type OpportunityInsert = Omit<
   funding_range?: string | null;
   sub_categories?: string[] | null;
   featured_image_url?: string | null;
+  secondary_image_url?: string | null;
   grant_type?: string | null;
   recipients_count?: number | null;
   caption?: string | null;

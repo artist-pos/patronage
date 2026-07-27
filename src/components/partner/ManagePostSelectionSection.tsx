@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { StepPostSelection } from "@/components/partner/wizard/StepPostSelection";
 import { updateOpportunityPartner } from "@/app/partner/opportunities/[id]/edit/actions";
 import type { Opportunity, PostSelectionConfig, PipelineConfig } from "@/types/database";
+import { ALL_STAGE_VALUES, type PipelineStagesConfig } from "@/lib/pipeline-stages";
 
 interface NotificationDefaults {
   shortlisted: "send" | "hold";
@@ -36,6 +37,9 @@ export function ManagePostSelectionSection({ opp }: Props) {
   const [notificationDefaults, setNotificationDefaults] = useState<NotificationDefaults>(
     (opp.pipeline_config?.notification_defaults as NotificationDefaults | undefined) ??
       DEFAULT_NOTIFICATION_DEFAULTS
+  );
+  const [stagesConfig, setStagesConfig] = useState<PipelineStagesConfig>(
+    opp.pipeline_config?.pipeline_stages ?? { enabled: ALL_STAGE_VALUES }
   );
   const configRef = useRef<PipelineConfig>(
     (opp.pipeline_config as PipelineConfig | null) ?? {
@@ -70,12 +74,21 @@ export function ManagePostSelectionSection({ opp }: Props) {
     queueSave(newConfig);
   }
 
+  function handleStagesConfigChange(config: PipelineStagesConfig) {
+    setStagesConfig(config);
+    const newConfig: PipelineConfig = { ...configRef.current, pipeline_stages: config };
+    configRef.current = newConfig;
+    queueSave(newConfig);
+  }
+
   return (
     <StepPostSelection
       postSelection={postSelection}
       notificationDefaults={notificationDefaults}
+      stagesConfig={stagesConfig}
       onPostSelectionChange={handlePostSelectionChange}
       onNotificationDefaultsChange={handleNotificationDefaultsChange}
+      onStagesConfigChange={handleStagesConfigChange}
     />
   );
 }

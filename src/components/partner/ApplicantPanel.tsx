@@ -9,6 +9,7 @@ import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/a
 import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
 import type { EnrichedApp } from "./ApplicationsManager";
+import { getStages, getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
 
 interface Artist {
   id: string;
@@ -74,24 +75,6 @@ interface Props {
   onNavigate?: (id: string) => void;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "New",
-  shortlisted: "Shortlisted",
-  selected: "Selected",
-  approved_pending_assets: "Awaiting File",
-  production_ready: "Download Ready",
-  rejected: "Rejected",
-};
-
-const STATUS_DOT: Record<string, string> = {
-  pending: "bg-amber-400",
-  shortlisted: "bg-stone-700",
-  selected: "bg-emerald-500",
-  approved_pending_assets: "bg-blue-400",
-  production_ready: "bg-violet-500",
-  rejected: "bg-red-400",
-};
-
 type AppTab = "application" | "portfolio" | "cv" | "activity";
 
 export function ApplicantPanel({ application, opportunity, onClose, allApps, onNavigate }: Props) {
@@ -107,6 +90,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
   const [rejectionReason, setRejectionReason] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>("application");
+
+  const stagesCfg = opportunity.pipeline_config?.pipeline_stages ?? null;
+  const enabledStageVals = new Set(getStages(stagesCfg).map((s) => s.val));
+  const currentStageDot = getStagesWithOccupied(stagesCfg, [{ status }]).find((s) => s.val === status)?.dot ?? "bg-stone-300";
 
   const artist = application.artist;
   const displayName = artist?.full_name ?? artist?.username ?? "Unknown";
@@ -136,7 +123,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
       setStatus(newStatus);
       setUndoStatus(previousStatus);
       setToastIsUndo(true);
-      setToast(`Moved to ${STATUS_LABELS[newStatus] ?? newStatus}`);
+      setToast(`Moved to ${stageLabel(newStatus, stagesCfg)}`);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       undoTimerRef.current = setTimeout(() => { setToast(null); setToastIsUndo(false); setUndoStatus(null); }, 5000);
     }
@@ -381,7 +368,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                         {new Date(entry.changed_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
                       </span>
                       <span className="text-stone-600">
-                        {STATUS_LABELS[entry.old_status] ?? entry.old_status} → {STATUS_LABELS[entry.new_status] ?? entry.new_status}
+                        {stageLabel(entry.old_status, stagesCfg)} → {stageLabel(entry.new_status, stagesCfg)}
                       </span>
                       {entry.changed_by_name && <span className="text-stone-400 text-xs">by {entry.changed_by_name}</span>}
                     </div>
@@ -429,8 +416,8 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
           <div className="space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Decision</p>
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status] ?? "bg-stone-300"}`} />
-              <span className="text-sm font-medium">{STATUS_LABELS[status] ?? status}</span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${currentStageDot}`} />
+              <span className="text-sm font-medium">{stageLabel(status, stagesCfg)}</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               {[
@@ -438,7 +425,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 { val: "selected", label: "Select" },
                 { val: "approved_pending_assets", label: "Send to inbox" },
                 { val: "rejected", label: "Reject" },
-              ].map((opt) => (
+              ].filter((opt) => (enabledStageVals as Set<string>).has(opt.val)).map((opt) => (
                 <button key={opt.val} type="button"
                   disabled={saving || status === opt.val}
                   onClick={() => {

@@ -15,6 +15,7 @@ import { saveRubricCriteria } from "@/app/partner/opportunities/[id]/new/actions
 import { submitDraftForReview } from "@/app/partner/opportunities/new/actions";
 import type { Opportunity, PartnerDocument, PipelineConfig, PostSelectionConfig } from "@/types/database";
 import type { TemplateKey } from "@/lib/pipeline-templates";
+import { ALL_STAGE_VALUES, type PipelineStagesConfig } from "@/lib/pipeline-stages";
 import type { LocalCriterion } from "./RubricBuilder";
 
 type NotificationDefaults = {
@@ -98,6 +99,11 @@ export function WizardShell({
   // Post-selection config
   const [postSelection, setPostSelection] = useState<PostSelectionConfig>(
     initialOpp.pipeline_config?.post_selection ?? DEFAULT_POST_SELECTION
+  );
+
+  // Pipeline stages config
+  const [stagesConfig, setStagesConfig] = useState<PipelineStagesConfig>(
+    initialOpp.pipeline_config?.pipeline_stages ?? { enabled: ALL_STAGE_VALUES }
   );
 
   // Questions + artist docs + badges (from pipeline_config)
@@ -196,6 +202,14 @@ export function WizardShell({
     const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
     queueSave({
       pipeline_config: { ...prevConfig, notification_defaults: defaults },
+    });
+  }
+
+  function handleStagesConfigChange(config: PipelineStagesConfig) {
+    setStagesConfig(config);
+    const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
+    queueSave({
+      pipeline_config: { ...prevConfig, pipeline_stages: config },
     });
   }
 
@@ -310,8 +324,10 @@ export function WizardShell({
           <StepPostSelection
             postSelection={postSelection}
             notificationDefaults={notificationDefaults}
+            stagesConfig={stagesConfig}
             onPostSelectionChange={handlePostSelectionChange}
             onNotificationDefaultsChange={handleNotificationDefaultsChange}
+            onStagesConfigChange={handleStagesConfigChange}
           />
         )}
 

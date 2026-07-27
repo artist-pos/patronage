@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Lightbulb, Plus, Trash2 } from "lucide-react";
-import type { PostSelectionConfig, PostSelectionDocField, PipelineConfig } from "@/types/database";
+import type { PostSelectionConfig, PostSelectionDocField } from "@/types/database";
+import { ALL_STAGE_VALUES, getStages, type PipelineStagesConfig } from "@/lib/pipeline-stages";
 
 interface NotificationDefaults {
   shortlisted: "send" | "hold";
@@ -13,8 +14,10 @@ interface NotificationDefaults {
 interface Props {
   postSelection: PostSelectionConfig;
   notificationDefaults: NotificationDefaults;
+  stagesConfig: PipelineStagesConfig;
   onPostSelectionChange: (config: PostSelectionConfig) => void;
   onNotificationDefaultsChange: (defaults: NotificationDefaults) => void;
+  onStagesConfigChange: (config: PipelineStagesConfig) => void;
 }
 
 const UPDATE_FREQUENCY_OPTIONS: { label: string; value: 7 | 14 | 30 | 90 }[] = [
@@ -56,10 +59,30 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 export function StepPostSelection({
   postSelection,
   notificationDefaults,
+  stagesConfig,
   onPostSelectionChange,
   onNotificationDefaultsChange,
+  onStagesConfigChange,
 }: Props) {
   const [showCampaignTip, setShowCampaignTip] = useState(false);
+
+  const enabledStages = getStages(stagesConfig);
+  const enabledSet = new Set(enabledStages.map((s) => s.val));
+
+  function toggleStage(val: string) {
+    if (val === "pending") return; // always on — the status every application starts at
+    const nextEnabled = ALL_STAGE_VALUES.filter((v) =>
+      v === val ? !enabledSet.has(v) : enabledSet.has(v)
+    );
+    onStagesConfigChange({ ...stagesConfig, enabled: nextEnabled });
+  }
+
+  function relabelStage(val: string, label: string) {
+    const labels = { ...stagesConfig.labels };
+    if (label.trim()) labels[val] = label.trim();
+    else delete labels[val];
+    onStagesConfigChange({ ...stagesConfig, labels });
+  }
 
   function update(patch: Partial<PostSelectionConfig>) {
     onPostSelectionChange({ ...postSelection, ...patch });
@@ -94,6 +117,40 @@ export function StepPostSelection({
         </p>
       </div>
 
+      {/* Pipeline stages */}
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">Pipeline stages</h3>
+          <p className="text-xs text-stone-500">
+            Choose which stages this opportunity uses and what they&apos;re called. A simple job with one round of review might just need New → Selected → Not Selected — you don&apos;t have to use all six.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {ALL_STAGE_VALUES.map((val) => {
+            const def = getStages({ enabled: ALL_STAGE_VALUES, labels: stagesConfig.labels }).find((s) => s.val === val)!;
+            const on = val === "pending" || enabledSet.has(val);
+            const locked = val === "pending";
+            return (
+              <div key={val} className={`flex items-center gap-3 border border-black/10 p-3 ${!on ? "opacity-50" : ""}`}>
+                <Toggle on={on} onToggle={() => toggleStage(val)} />
+                <input
+                  type="text"
+                  disabled={locked}
+                  defaultValue={def.label}
+                  onBlur={(e) => relabelStage(val, e.target.value)}
+                  placeholder={def.label}
+                  className="flex-1 text-sm border-0 border-b border-black/10 focus:border-black focus:outline-none pb-0.5 bg-transparent disabled:cursor-not-allowed"
+                />
+                {locked && <span className="text-[10px] text-stone-400 uppercase tracking-widest shrink-0">Always on</span>}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-stone-400">
+          The underlying application status never changes — this only controls what&apos;s shown and what it&apos;s called. Applicants already sitting in a stage you turn off stay visible (greyed out) until you move them.
+        </p>
+      </div>
+
       {/* Notification defaults */}
       <div className="space-y-4">
         <div className="space-y-1">
@@ -103,7 +160,7 @@ export function StepPostSelection({
           </p>
         </div>
         <div className="space-y-3">
-          {NOTIFICATION_STAGES.map(({ key, label, desc }) => (
+          {NOTIFICATION_STAGES.filter(({ key }) => enabledSet.has(key)).map(({ key, label, desc }) => (
             <div key={key} className="flex items-start justify-between gap-4 border border-black/10 p-4">
               <div>
                 <p className="text-sm font-medium">{label}</p>
