@@ -131,11 +131,12 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
 
     const [profileResult, worksResult, artworkBadgeResult, availableWorksResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      // Portfolio = artworks marked not-for-sale, same as the public Work tab
-      // (getPortfolioImages in lib/profiles.ts) — not the unused creative_works table.
+      // Portfolio = artworks this artist created AND still owns, not hidden from
+      // archive — same filter as the public Work tab's real query. is_available
+      // alone doesn't work here: sold pieces keep is_available=false too.
       isJob
         ? Promise.resolve({ data: [] as AvailableWork[] })
-        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency").eq("profile_id", user.id).eq("is_available", false).order("position", { ascending: true }),
+        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency").eq("profile_id", user.id).eq("creator_id", user.id).eq("current_owner_id", user.id).eq("hide_from_archive", false).order("position", { ascending: true }),
       isJob
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
         : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),

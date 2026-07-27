@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 import type { ApplicationLink } from "@/types/database";
 
 async function getOpportunityForPartner(id: string) {
@@ -13,7 +14,7 @@ async function getOpportunityForPartner(id: string) {
 
   const { data: opp } = await supabase
     .from("opportunities")
-    .select("id, profile_id, status")
+    .select("id, profile_id, status, routing_type, title, organiser, deadline, slug, pipeline_paid_at")
     .eq("id", id)
     .single();
 
@@ -105,13 +106,26 @@ export async function updateOpportunityPartner(
 export async function publishOpportunityPartner(id: string) {
   const { supabase, opp, user } = await getOpportunityForPartner(id);
 
-  if (opp.status !== "draft") {
+  if (opp.status !== "draft" && opp.status !== "draft_unclaimed") {
     throw new Error("Only draft listings can be published");
+  }
+
+  // Pipeline listings must go through the application wizard's Review & Publish
+  // step, not this shortcut — that's what enforces admin review and the
+  // activation fee (submitDraftForReview / approveSubmission). Publishing
+  // directly here would skip both.
+  if (opp.routing_type === "pipeline") {
+    throw new Error("Pipeline listings publish from the application wizard's Review & Publish step, not here.");
+  }
+
+  const updates: Record<string, unknown> = { status: "published", is_active: true };
+  if (isSlugBad(opp.slug)) {
+    updates.slug = toSlug(opp.title ?? "", opp.organiser ?? null, opp.deadline ?? null);
   }
 
   const { error } = await supabase
     .from("opportunities")
-    .update({ status: "published", is_active: true })
+    .update(updates)
     .eq("id", id)
     .eq("profile_id", user.id);
 

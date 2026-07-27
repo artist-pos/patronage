@@ -176,8 +176,10 @@ export function PartnerEditForm({ opp }: Props) {
     }
   }
 
-  const canPublish = opp.status === "draft" || opp.status === "draft_unclaimed";
   const isPipeline = formData.routingType === "pipeline";
+  // Pipeline drafts publish via the application wizard's Review & Publish step
+  // (admin review + activation fee), not this shortcut.
+  const canPublish = (opp.status === "draft" || opp.status === "draft_unclaimed") && !isPipeline;
 
   return (
     <div className="space-y-6">
@@ -370,6 +372,15 @@ export function PartnerEditForm({ opp }: Props) {
 
       <div className="flex items-center justify-between pt-6 border-t border-black/20">
         <div>
+          {isPipeline && (opp.status === "draft" || opp.status === "draft_unclaimed") && (
+            <p className="text-xs text-stone-500">
+              Pipeline listings publish from the{" "}
+              <a href={`/partner/opportunities/${opp.id}/new?step=6&type=pipeline`} className="underline underline-offset-2">
+                application wizard&rsquo;s Review &amp; Publish step
+              </a>
+              , not here.
+            </p>
+          )}
           {toast && (
             <p
               className={`text-xs ${

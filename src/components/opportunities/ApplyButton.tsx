@@ -99,17 +99,22 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       !isJobOpportunity && (opportunity.pipeline_config?.artist_documents ?? []).includes("available_works");
 
     const [worksResult, artworkBadgeResult, availableWorksResult, draft, profileResult] = await Promise.all([
-      // Portfolio = artworks marked not-for-sale (is_available: false), same
-      // table+filter as the public Work tab (getPortfolioImages in lib/profiles.ts).
-      // NOT the separate `creative_works` table — that one is only ever written
-      // to by a Studio tab that hasn't been reachable since Studio merged into Work.
+      // Portfolio = artworks this artist both created AND still owns, not hidden
+      // from their archive — same filter as the public Work tab's actual query
+      // ([username]/page.tsx's "needsPortfolio" fetch). is_available is NOT part
+      // of this: it doesn't distinguish "my portfolio" from sold/collected work,
+      // since a sold piece keeps is_available=false too. NOT the separate
+      // `creative_works` table either — that one is only ever written to by a
+      // Studio tab that hasn't been reachable since Studio merged into Work.
       isJobOpportunity
         ? Promise.resolve({ data: [] as AvailableWork[] })
         : supabase
             .from("artworks")
             .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
             .eq("profile_id", user.id)
-            .eq("is_available", false)
+            .eq("creator_id", user.id)
+            .eq("current_owner_id", user.id)
+            .eq("hide_from_archive", false)
             .order("position", { ascending: true }),
       isJobOpportunity
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
