@@ -1446,9 +1446,10 @@ export function OpportunityForm({
         </Field>
       </Section>
 
-      {/* ── Section 6: Application links (create-external + admin) ─────── */}
-      {/* Each labelled link becomes its own button on the public listing. */}
-      {((mode === "create" && value.routingType === "external") || mode === "admin") && (
+      {/* ── Section 6: Application links (free/external listings only) ─── */}
+      {/* Each labelled link becomes its own button on the public listing. Pipeline
+          applications route entirely through Patronage, so this doesn't apply. */}
+      {value.routingType !== "pipeline" && (
         <Section label="Application">
           <Field label="Application links">
             <ApplicationLinksEditor
