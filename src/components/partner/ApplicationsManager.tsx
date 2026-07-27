@@ -6,12 +6,23 @@ import { ApplicantPanel } from "./ApplicantPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
 import { getAgeBracket, IDENTITY_TAGS } from "@/lib/constants/demographics";
 
+export interface CreativeWorkLite {
+  id: string;
+  content_type: string;
+  title: string | null;
+  caption: string | null;
+  image_url: string | null;
+  embed_provider: string | null;
+}
+
 export interface EnrichedApp {
   id: string;
   status: string;
   created_at: string;
   artwork: { id: string; url: string; caption: string | null } | null;
   submitted_image_url: string | null;
+  /** All portfolio works the artist picked (Step 3 "Portfolio images" pick count). */
+  creative_works: CreativeWorkLite[] | null;
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
   artist: {

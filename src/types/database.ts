@@ -71,6 +71,10 @@ export interface PipelineConfig {
   questions: PipelineQuestion[];
   artist_documents: ('cv' | 'bio' | 'portfolio' | 'available_works')[];
   terms_pdf_url: string | null;
+  /** How many portfolio works the artist may pick when submitting (only used
+   *  when 'portfolio' is in artist_documents). Defaults to 3 — matches the
+   *  Verified-badge minimum of 3 works in their portfolio. */
+  portfolio_pick_count?: number;
   post_selection?: PostSelectionConfig | null;
   notification_defaults?: {
     shortlisted: 'send' | 'hold';
@@ -212,6 +216,9 @@ export interface OpportunityApplication {
   invoice_amount: number | null;
   invoice_paid_at: string | null;
   creative_work_id: string | null;
+  /** Multiple portfolio picks (Step 3 "Portfolio images" with a pick count > 1).
+   *  creative_work_id above stays as the first pick, for older single-work consumers. */
+  creative_work_ids: string[] | null;
 }
 
 export interface RubricCriterion {
@@ -301,6 +308,7 @@ export interface OpportunityApplicationDraft {
   custom_answers: Record<string, string>;
   updated_at: string;
   creative_work_id: string | null;
+  creative_work_ids: string[] | null;
 }
 
 export interface ProfileAchievement {

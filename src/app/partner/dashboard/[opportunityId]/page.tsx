@@ -94,7 +94,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const [appsResult, followupsResult, collaboratorsResult] = await Promise.all([
     supabase
       .from("opportunity_applications")
-      .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, invoice_requested_at, invoice_amount, invoice_paid_at, creative_work_id, artwork:artwork_id(id, url, caption)")
+      .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, invoice_requested_at, invoice_amount, invoice_paid_at, creative_work_id, creative_work_ids, artwork:artwork_id(id, url, caption)")
       .eq("opportunity_id", opportunityId)
       .order("created_at", { ascending: false }),
     supabase
@@ -122,6 +122,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     invoice_amount: number | null;
     invoice_paid_at: string | null;
     creative_work_id: string | null;
+    creative_work_ids: string[] | null;
     artwork: { id: string; url: string; caption: string | null } | null;
   }>;
 
@@ -145,8 +146,9 @@ export default async function PartnerOpportunityPage({ params }: Props) {
 
   // Fetch profiles for all applicants in parallel with email lookups
   const artistIds = [...new Set(apps.map((a) => a.artist_id))];
+  const creativeWorkIds = [...new Set(apps.flatMap((a) => a.creative_work_ids ?? []))];
 
-  const [profilesResult, emailResults] = await Promise.all([
+  const [profilesResult, emailResults, creativeWorksResult] = await Promise.all([
     artistIds.length > 0
       ? supabase
           .from("profiles")
@@ -158,6 +160,12 @@ export default async function PartnerOpportunityPage({ params }: Props) {
           artistIds.map((id) => createAdminClient().auth.admin.getUserById(id))
         )
       : Promise.resolve([]),
+    creativeWorkIds.length > 0
+      ? supabase
+          .from("creative_works")
+          .select("id, content_type, title, caption, image_url, embed_provider")
+          .in("id", creativeWorkIds)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const profileMap = new Map<string, ProfileRow>();
@@ -171,10 +179,18 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     if (email) emailMap.set(artistIds[i], email);
   }
 
+  const creativeWorkMap = new Map<string, { id: string; content_type: string; title: string | null; caption: string | null; image_url: string | null; embed_provider: string | null }>();
+  for (const w of (creativeWorksResult.data ?? []) as unknown as Array<{ id: string; content_type: string; title: string | null; caption: string | null; image_url: string | null; embed_provider: string | null }>) {
+    creativeWorkMap.set(w.id, w);
+  }
+
   const enrichedApps = apps.map((app) => {
     const profile = profileMap.get(app.artist_id) ?? null;
     return {
       ...app,
+      creative_works: (app.creative_work_ids ?? [])
+        .map((id) => creativeWorkMap.get(id))
+        .filter((w): w is NonNullable<typeof w> => !!w),
       artist: profile
         ? {
             id: profile.id,

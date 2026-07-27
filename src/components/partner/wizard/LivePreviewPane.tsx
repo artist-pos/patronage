@@ -8,12 +8,17 @@ interface Props {
   questions: PipelineQuestion[];
   artistDocs: PipelineConfig["artist_documents"];
   showBadges: boolean;
+  portfolioPickCount: number;
 }
 
-export function LivePreviewPane({ questions, artistDocs, showBadges }: Props) {
+export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPickCount }: Props) {
   const docVals = artistDocs as string[];
   const autoDocs = ARTIST_DOC_OPTIONS.filter((d) => docVals.includes(d.val) && (ARTIST_DOC_AUTO_VALS as string[]).includes(d.val));
   const pickerDocs = ARTIST_DOC_OPTIONS.filter((d) => docVals.includes(d.val) && (ARTIST_DOC_PICKER_VALS as string[]).includes(d.val));
+  const showsPortfolio = docVals.includes("portfolio");
+  const showsAvailableWorks = docVals.includes("available_works");
+  // One placeholder tile per available-work pick (single) + one per portfolio pick (up to portfolioPickCount)
+  const placeholderTileCount = (showsAvailableWorks ? 1 : 0) + (showsPortfolio ? portfolioPickCount : 0);
 
   return (
     <div className="space-y-4">
@@ -71,7 +76,10 @@ export function LivePreviewPane({ questions, artistDocs, showBadges }: Props) {
         {pickerDocs.length > 0 && (
           <div className="border-t border-black/10 pt-4 space-y-2">
             <p className="text-xs font-medium text-stone-500">
-              Submit a work — artist picks {pickerDocs.length > 1 ? "one of these" : "one"}:
+              Submit a work
+              {showsPortfolio && ` — artist picks up to ${portfolioPickCount} portfolio work${portfolioPickCount !== 1 ? "s" : ""}`}
+              {showsPortfolio && showsAvailableWorks && ", plus"}
+              {showsAvailableWorks && " one available (for-sale) work"}:
             </p>
             <div className="grid grid-cols-4 gap-1.5">
               <div className="aspect-square border border-black bg-muted flex items-center justify-center text-[8px] text-stone-400">
@@ -80,8 +88,8 @@ export function LivePreviewPane({ questions, artistDocs, showBadges }: Props) {
               <div className="aspect-square border border-dashed border-black/30 bg-white flex items-center justify-center">
                 <Upload className="w-3 h-3 text-stone-300" />
               </div>
-              {pickerDocs.map((d) => (
-                <div key={d.val} className="aspect-square border border-black/20 bg-stone-100" />
+              {Array.from({ length: placeholderTileCount }).map((_, i) => (
+                <div key={i} className="aspect-square border border-black/20 bg-stone-100" />
               ))}
             </div>
             <p className="text-[10px] text-stone-400">

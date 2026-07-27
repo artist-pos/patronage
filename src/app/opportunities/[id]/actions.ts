@@ -87,12 +87,13 @@ export async function saveDraft(
   artworkId: string | null,
   answers: Record<string, string>,
   submittedImageUrl?: string | null,
-  creativeWorkId?: string | null,
+  creativeWorkIds?: string[] | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const workIds = creativeWorkIds ?? [];
   const { error } = await supabase
     .from("opportunity_application_drafts")
     .upsert({
@@ -102,7 +103,9 @@ export async function saveDraft(
       submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
       updated_at: new Date().toISOString(),
-      creative_work_id: creativeWorkId || null,
+      // creative_work_id mirrors the first pick for older single-work consumers.
+      creative_work_id: workIds[0] ?? null,
+      creative_work_ids: workIds.length > 0 ? workIds : null,
     }, { onConflict: "opportunity_id,artist_id" });
 
   if (error) return { error: error.message };
@@ -130,7 +133,7 @@ export async function submitApplication(
   answers: Record<string, string>,
   submittedImageUrl?: string | null,
   partnerMarketingOptIn?: boolean,
-  creativeWorkId?: string | null,
+  creativeWorkIds?: string[] | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -148,6 +151,7 @@ export async function submitApplication(
     return { error: "You're not eligible to apply for this opportunity" };
   }
 
+  const workIds = creativeWorkIds ?? [];
   const { error } = await supabase
     .from("opportunity_applications")
     .insert({
@@ -157,7 +161,9 @@ export async function submitApplication(
       submitted_image_url: submittedImageUrl || null,
       custom_answers: answers,
       partner_marketing_opt_in: partnerMarketingOptIn ?? false,
-      creative_work_id: creativeWorkId || null,
+      // creative_work_id mirrors the first pick for older single-work consumers.
+      creative_work_id: workIds[0] ?? null,
+      creative_work_ids: workIds.length > 0 ? workIds : null,
     });
 
   if (error) return { error: error.message };

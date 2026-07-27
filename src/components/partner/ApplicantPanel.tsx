@@ -3,12 +3,12 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Music, Play, FileText, Link as LinkIcon } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
 import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
-import type { EnrichedApp } from "./ApplicationsManager";
+import type { EnrichedApp, CreativeWorkLite } from "./ApplicationsManager";
 import { getStages, getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
 
 interface Artist {
@@ -51,6 +51,7 @@ interface Application {
   documentation: Record<string, string> | null;
   artist: Artist | null;
   artwork: Artwork | null;
+  creative_works: CreativeWorkLite[] | null;
   invoice_requested_at: string | null;
   invoice_amount: number | null;
   invoice_paid_at: string | null;
@@ -97,9 +98,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
 
   const artist = application.artist;
   const displayName = artist?.full_name ?? artist?.username ?? "Unknown";
-  const portfolioImages = (application.artwork ? [application.artwork] : []).concat(
-    application.submitted_image_url ? [{ id: "si", url: application.submitted_image_url, caption: null }] : []
-  );
+  const creativeWorksList = application.creative_works ?? [];
+  const artworkImages = application.artwork ? [application.artwork] : [];
+  // Legacy fallback — pre-multi-pick applications only ever stored one flattened
+  // image with no artwork/creative_works rows to point to.
+  const legacyImage =
+    artworkImages.length === 0 && creativeWorksList.length === 0 && application.submitted_image_url
+      ? [{ id: "si", url: application.submitted_image_url, caption: null }]
+      : [];
+  const portfolioIsEmpty = artworkImages.length === 0 && creativeWorksList.length === 0 && legacyImage.length === 0;
   const exhibitionHistory = artist?.exhibition_history ?? [];
   const badges = artist
     ? computeBadges({ is_patronage_supported: artist.is_patronage_supported, bio: artist.bio, avatar_url: artist.avatar_url, exhibition_history: artist.exhibition_history ?? [], received_grants: artist.received_grants ?? [] }, 0, false)
@@ -217,7 +224,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
         <div className="flex border-b border-black/10 shrink-0 px-2">
           {([
             { id: "application", label: "Application" },
-            { id: "portfolio", label: `Portfolio${portfolioImages.length > 0 ? ` · ${portfolioImages.length}` : ""}` },
+            { id: "portfolio", label: `Portfolio${!portfolioIsEmpty ? ` · ${artworkImages.length + creativeWorksList.length + legacyImage.length}` : ""}` },
             { id: "cv", label: "CV" },
             { id: "activity", label: "Activity" },
           ] as { id: AppTab; label: string }[]).map((t) => (
@@ -286,9 +293,34 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
           {/* ─ Portfolio tab ─ */}
           {appTab === "portfolio" && (
             <>
-              {portfolioImages.length > 0 ? (
+              {!portfolioIsEmpty ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {portfolioImages.map((img) => (
+                  {artworkImages.map((img) => (
+                    <div key={img.id} className="space-y-1">
+                      <p className="text-[10px] uppercase tracking-widest text-stone-400">For sale</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
+                      {img.caption && <p className="text-xs text-stone-400">{img.caption}</p>}
+                    </div>
+                  ))}
+                  {creativeWorksList.map((work) => (
+                    <div key={work.id} className="space-y-1">
+                      {work.content_type === "image" && work.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={work.image_url} alt={work.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
+                      ) : (
+                        <div className="w-full h-[200px] flex flex-col items-center justify-center gap-2 bg-stone-50 border border-black/10">
+                          {work.content_type === "audio" ? <Music className="w-6 h-6 text-stone-400" />
+                            : work.content_type === "video" ? <Play className="w-6 h-6 text-stone-400" />
+                            : work.content_type === "text" ? <FileText className="w-6 h-6 text-stone-400" />
+                            : <LinkIcon className="w-6 h-6 text-stone-400" />}
+                          <span className="text-xs text-stone-400 capitalize">{work.content_type}</span>
+                        </div>
+                      )}
+                      <p className="text-xs text-stone-400">{work.title ?? work.caption ?? ""}</p>
+                    </div>
+                  ))}
+                  {legacyImage.map((img) => (
                     <div key={img.id} className="space-y-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />

@@ -19,6 +19,7 @@ export function ManageFormSection({ opp }: Props) {
     opp.pipeline_config?.artist_documents ?? []
   );
   const [termsPdfUrl, setTermsPdfUrl] = useState<string | null>(opp.pipeline_config?.terms_pdf_url ?? null);
+  const [portfolioPickCount, setPortfolioPickCount] = useState(opp.pipeline_config?.portfolio_pick_count ?? 3);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const configRef = useRef<PipelineConfig>(
     (opp.pipeline_config as PipelineConfig | null) ?? {
@@ -43,22 +44,26 @@ export function ManageFormSection({ opp }: Props) {
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
+    portfolioPickCount?: number;
   }) {
     const newQuestions = patch.questions ?? questions;
     const newDocs = patch.artistDocs ?? artistDocs;
     const newBadges = patch.showBadges ?? showBadges;
     const newTermsPdfUrl = patch.termsPdfUrl !== undefined ? patch.termsPdfUrl : termsPdfUrl;
+    const newPortfolioPickCount = patch.portfolioPickCount ?? portfolioPickCount;
 
     if (patch.questions !== undefined) setQuestions(newQuestions);
     if (patch.artistDocs !== undefined) setArtistDocs(newDocs);
     if (patch.showBadges !== undefined) setShowBadges(newBadges);
     if (patch.termsPdfUrl !== undefined) setTermsPdfUrl(newTermsPdfUrl);
+    if (patch.portfolioPickCount !== undefined) setPortfolioPickCount(newPortfolioPickCount);
 
     configRef.current = {
       ...configRef.current,
       ...(patch.questions !== undefined && { questions: newQuestions }),
       ...(patch.artistDocs !== undefined && { artist_documents: newDocs }),
       ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: newTermsPdfUrl }),
+      ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: newPortfolioPickCount }),
     };
 
     const savePatch: Parameters<typeof updateOpportunityPartner>[1] = {
@@ -76,6 +81,7 @@ export function ManageFormSection({ opp }: Props) {
         showBadges={showBadges}
         artistDocs={artistDocs}
         termsPdfUrl={termsPdfUrl}
+        portfolioPickCount={portfolioPickCount}
         onChange={handleChange}
       />
       <div className="lg:sticky lg:top-[57px]">
@@ -83,6 +89,7 @@ export function ManageFormSection({ opp }: Props) {
           questions={questions}
           artistDocs={artistDocs}
           showBadges={showBadges}
+          portfolioPickCount={portfolioPickCount}
         />
       </div>
     </div>

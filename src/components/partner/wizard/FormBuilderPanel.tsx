@@ -28,15 +28,17 @@ interface Props {
   showBadges: boolean;
   artistDocs: PipelineConfig["artist_documents"];
   termsPdfUrl: string | null;
+  portfolioPickCount: number;
   onChange: (patch: {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
+    portfolioPickCount?: number;
   }) => void;
 }
 
-export function FormBuilderPanel({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, onChange }: Props) {
+export function FormBuilderPanel({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, portfolioPickCount, onChange }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -142,18 +144,33 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
           </div>
           <div className="space-y-2.5">
             {ARTIST_DOC_OPTIONS.filter((d) => (ARTIST_DOC_PICKER_VALS as string[]).includes(d.val)).map(({ val, label, desc }) => (
-              <label key={val} className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={(artistDocs as string[]).includes(val)}
-                  onChange={() => toggleDoc(val)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm">{label}</p>
-                  <p className="text-xs text-stone-400">{desc}</p>
-                </div>
-              </label>
+              <div key={val}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(artistDocs as string[]).includes(val)}
+                    onChange={() => toggleDoc(val)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm">{label}</p>
+                    <p className="text-xs text-stone-400">{desc}</p>
+                  </div>
+                </label>
+                {val === "portfolio" && (artistDocs as string[]).includes("portfolio") && (
+                  <label className="flex items-center gap-2 mt-2 ml-7 text-xs text-stone-500">
+                    How many works can they submit?
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={portfolioPickCount}
+                      onChange={(e) => onChange({ portfolioPickCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className="w-14 border border-black/20 px-2 py-1 text-xs text-center focus:outline-none focus:border-black"
+                    />
+                  </label>
+                )}
+              </div>
             ))}
           </div>
         </div>

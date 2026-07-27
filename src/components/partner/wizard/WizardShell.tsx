@@ -121,6 +121,7 @@ export function WizardShell({
   const questions = opp.pipeline_config?.questions ?? [];
   const artistDocs = (opp.pipeline_config?.artist_documents ?? []) as PipelineConfig["artist_documents"];
   const showBadges = opp.show_badges_in_submission ?? false;
+  const portfolioPickCount = opp.pipeline_config?.portfolio_pick_count ?? 3;
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -137,12 +138,9 @@ export function WizardShell({
       if (raw) {
         const parsed = JSON.parse(raw);
         if (isPipeline) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           if (parsed.opp) setOpp((prev) => ({ ...prev, ...parsed.opp }));
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           if (parsed.template) setTemplate(parsed.template as TemplateKey);
         } else {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setOpp((prev) => ({ ...prev, ...parsed }));
         }
       }
@@ -194,6 +192,7 @@ export function WizardShell({
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
+    portfolioPickCount?: number;
   }) {
     setOpp((prev) => {
       const prevConfig = prev.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
@@ -202,18 +201,20 @@ export function WizardShell({
         ...(patch.questions !== undefined && { questions: patch.questions }),
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
         ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
+        ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: patch.portfolioPickCount }),
       };
       return { ...prev, pipeline_config: newConfig, show_badges_in_submission: patch.showBadges ?? prev.show_badges_in_submission };
     });
 
     const configPatch: Parameters<typeof updateOpportunityPartner>[1] = {};
     if (patch.showBadges !== undefined) configPatch.show_badges_in_submission = patch.showBadges;
-    if (patch.questions !== undefined || patch.artistDocs !== undefined || patch.termsPdfUrl !== undefined) {
+    if (patch.questions !== undefined || patch.artistDocs !== undefined || patch.termsPdfUrl !== undefined || patch.portfolioPickCount !== undefined) {
       configPatch.pipeline_config = {
         ...(opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null }),
         ...(patch.questions !== undefined && { questions: patch.questions }),
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
         ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
+        ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: patch.portfolioPickCount }),
       };
     }
     if (Object.keys(configPatch).length > 0) queueSave(configPatch);
@@ -340,6 +341,7 @@ export function WizardShell({
             showBadges={showBadges}
             artistDocs={artistDocs}
             termsPdfUrl={opp.pipeline_config?.terms_pdf_url ?? null}
+            portfolioPickCount={portfolioPickCount}
             onChange={handleFormChange}
           />
         )}

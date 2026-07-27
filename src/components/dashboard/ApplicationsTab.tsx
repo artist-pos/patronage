@@ -172,6 +172,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         custom_answers: draft.custom_answers,
         updated_at: draft.updated_at,
         creative_work_id: draft.creative_work_id ?? null,
+        creative_work_ids: draft.creative_work_ids ?? null,
       },
       artistProfile: {
         id: profile.id,

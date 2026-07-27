@@ -160,8 +160,11 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
   const artistDocs = (opportunity.pipeline_config?.artist_documents ?? []) as string[];
   const showPortfolioPicker = artistDocs.includes("portfolio");
   const showAvailableWorksPicker = artistDocs.includes("available_works");
+  const portfolioPickCount = opportunity.pipeline_config?.portfolio_pick_count ?? 3;
 
-  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(draft?.creative_work_id ?? null);
+  const [selectedWorkIds, setSelectedWorkIds] = useState<string[]>(
+    draft?.creative_work_ids ?? (draft?.creative_work_id ? [draft.creative_work_id] : [])
+  );
   const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(draft?.artwork_id ?? null);
   const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(draft?.submitted_image_url ?? null);
@@ -198,8 +201,19 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
     const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
     setSubmittedImageUrl(publicUrl);
     setSubmittedImagePreview(URL.createObjectURL(file));
-    setSelectedWorkId(null);
+    setSelectedWorkIds([]);
     setSelectedArtworkId(null);
+  }
+
+  function toggleWorkSelection(workId: string) {
+    setSelectedWorkIds((prev) => {
+      if (prev.includes(workId)) return prev.filter((id) => id !== workId);
+      if (prev.length >= portfolioPickCount) return prev; // cap reached — ignore
+      return [...prev, workId];
+    });
+    setSelectedArtworkId(null);
+    setSubmittedImageUrl(null);
+    setSubmittedImagePreview(null);
   }
 
   const FILE_CAP = 10;
@@ -262,17 +276,17 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
     const encodedFiles: Record<string, string> = {};
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
-    const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const firstSelectedWork = artistWorks.find((w) => w.id === selectedWorkIds[0]) ?? null;
     const selectedArtwork = availableWorks.find((w) => w.id === selectedArtworkId) ?? null;
     const effectiveImageUrl = isJobOpportunity
       ? professionalCvUrl
-      : (submittedImageUrl ?? selectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
+      : (submittedImageUrl ?? firstSelectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
     await saveDraft(
       opportunity.id,
       isJobOpportunity ? null : selectedArtworkId,
       finalAnswers,
       effectiveImageUrl,
-      isJobOpportunity ? null : selectedWorkId,
+      isJobOpportunity ? [] : selectedWorkIds,
     );
     setSavingDraft(false);
     setDraftSaved(true);
@@ -301,7 +315,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers, selectedWorkId, selectedArtworkId, submittedImageUrl]);
+  }, [answers, selectedWorkIds, selectedArtworkId, submittedImageUrl]);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -310,11 +324,11 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
     const encodedFiles: Record<string, string> = {};
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
-    const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const firstSelectedWork = artistWorks.find((w) => w.id === selectedWorkIds[0]) ?? null;
     const selectedArtwork = availableWorks.find((w) => w.id === selectedArtworkId) ?? null;
     const effectiveImageUrl = isJobOpportunity
       ? professionalCvUrl
-      : (submittedImageUrl ?? selectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
+      : (submittedImageUrl ?? firstSelectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
 
     const result = await submitApplication(
       opportunity.id,
@@ -322,7 +336,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       finalAnswers,
       effectiveImageUrl,
       marketingOptIn,
-      isJobOpportunity ? null : selectedWorkId,
+      isJobOpportunity ? [] : selectedWorkIds,
     );
     setSubmitting(false);
 
@@ -460,18 +474,18 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
               <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
               <p className="text-xs text-muted-foreground">
                 {showPortfolioPicker && showAvailableWorksPicker
-                  ? "Pick one work from your portfolio or your available (for-sale) works to include with this application."
+                  ? `Pick up to ${portfolioPickCount} work${portfolioPickCount !== 1 ? "s" : ""} from your portfolio, or one available (for-sale) work, to include with this application.`
                   : showAvailableWorksPicker
                   ? "Pick one of your available (for-sale) works to include with this application."
-                  : "Pick one work from your portfolio to include with this application."}
+                  : `Pick up to ${portfolioPickCount} work${portfolioPickCount !== 1 ? "s" : ""} from your portfolio to include with this application.`}
               </p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {/* None tile */}
                 <button
                   type="button"
-                  onClick={() => { setSelectedWorkId(null); setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                  onClick={() => { setSelectedWorkIds([]); setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
                   className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
-                    selectedWorkId === null && selectedArtworkId === null && !submittedImageUrl
+                    selectedWorkIds.length === 0 && selectedArtworkId === null && !submittedImageUrl
                       ? "border-black bg-muted"
                       : "border-black/30 hover:border-black"
                   }`}
@@ -516,7 +530,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                     <button
                       key={work.id}
                       type="button"
-                      onClick={() => { setSelectedArtworkId(work.id); setSelectedWorkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                      onClick={() => { setSelectedArtworkId(work.id); setSelectedWorkIds([]); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
                       className={`aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
                         selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
                       }`}
@@ -529,19 +543,30 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                   );
                 })}
 
-                {/* Creative works — all media types */}
+                {/* Creative works — all media types. Multi-select up to portfolioPickCount. */}
                 {showPortfolioPicker && artistWorks.slice(0, 10).map((work) => {
-                  const selected = selectedWorkId === work.id;
+                  const selected = selectedWorkIds.includes(work.id);
+                  const capReached = !selected && selectedWorkIds.length >= portfolioPickCount;
                   const baseClass = `aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
-                    selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
+                    selected
+                      ? "border-black ring-2 ring-black"
+                      : capReached
+                      ? "border-black/10 opacity-40 cursor-not-allowed"
+                      : "border-black/30 hover:border-black"
                   }`;
                   return (
                     <button
                       key={work.id}
                       type="button"
-                      onClick={() => { setSelectedWorkId(work.id); setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                      disabled={capReached}
+                      onClick={() => toggleWorkSelection(work.id)}
                       className={baseClass}
                     >
+                      {selected && (
+                        <span className="absolute top-1 left-1 z-10 w-4 h-4 rounded-full bg-black text-white text-[9px] flex items-center justify-center leading-none">
+                          {selectedWorkIds.indexOf(work.id) + 1}
+                        </span>
+                      )}
                       {work.content_type === "image" && work.image_url ? (
                         <Image src={work.image_url} alt={work.caption ?? ""} fill className="object-cover" sizes="80px" />
                       ) : work.content_type === "audio" ? (
@@ -579,17 +604,16 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                   );
                 })}
               </div>
-              {selectedWorkId && (() => {
-                const w = artistWorks.find((a) => a.id === selectedWorkId);
-                return w ? (
-                  <p className="text-xs text-muted-foreground">
-                    {w.title ?? w.caption ?? ""}
-                    {w.content_type !== "image" && (
-                      <span className="ml-1 text-stone-400">({w.content_type})</span>
-                    )}
-                  </p>
-                ) : null;
-              })()}
+              {selectedWorkIds.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedWorkIds
+                    .map((id) => artistWorks.find((a) => a.id === id))
+                    .filter((w): w is NonNullable<typeof w> => !!w)
+                    .map((w) => w.title ?? w.caption ?? w.content_type)
+                    .join(", ")}
+                  {" "}({selectedWorkIds.length}/{portfolioPickCount})
+                </p>
+              )}
               {selectedArtworkId && (() => {
                 const w = availableWorks.find((a) => a.id === selectedArtworkId);
                 return w ? (
