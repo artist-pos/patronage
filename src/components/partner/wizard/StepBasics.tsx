@@ -196,6 +196,7 @@ export interface Patch {
   full_description?: string | null;
   application_links?: ApplicationLink[] | null;
   featured_image_url?: string | null;
+  secondary_image_url?: string | null;
   sub_categories?: string[] | null;
   career_stage?: string[] | null;
   tags?: string[] | null;
@@ -225,11 +226,14 @@ interface Props {
   canUploadImage?: boolean;
 }
 
-export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = true }: Props) {
+export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Props) {
   const [imageUploading, setImageUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [secondaryImageUploading, setSecondaryImageUploading] = useState(false);
+  const [secondaryDragOver, setSecondaryDragOver] = useState(false);
   const [autofillSource, setAutofillSource] = useState<string | null>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const secondaryImageRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
 
@@ -253,6 +257,18 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
     if (error) return;
     const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
     onChange({ featured_image_url: publicUrl });
+  }
+
+  async function handleSecondaryImageUpload(file: File) {
+    setSecondaryImageUploading(true);
+    const path = `listings/${opp.id}/secondary-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+    const { error } = await supabase.storage
+      .from("opportunity-images")
+      .upload(path, file, { contentType: file.type, upsert: true });
+    setSecondaryImageUploading(false);
+    if (error) return;
+    const { data: { publicUrl } } = supabase.storage.from("opportunity-images").getPublicUrl(path);
+    onChange({ secondary_image_url: publicUrl });
   }
 
   function toggleDiscipline(d: string) {
@@ -454,14 +470,16 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
           />
         </div>
 
-        {/* Application links */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Application links <span className="text-stone-400">optional</span></label>
-          <ApplicationLinksEditor
-            links={opp.application_links ?? []}
-            onChange={handleLinksChange}
-          />
-        </div>
+        {/* Application links — free/external listings only; pipeline applications run entirely through Patronage */}
+        {isFree && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Application links <span className="text-stone-400">optional</span></label>
+            <ApplicationLinksEditor
+              links={opp.application_links ?? []}
+              onChange={handleLinksChange}
+            />
+          </div>
+        )}
 
         {/* Contact email */}
         <div className="space-y-1.5">
@@ -528,6 +546,55 @@ export function StepBasics({ opp, isFree: _isFree, onChange, canUploadImage = tr
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
+          />
+        </div>
+        )}
+
+        {/* Secondary image — powers the detail-page carousel alongside the featured image */}
+        {canUploadImage && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Secondary image <span className="text-stone-400">optional</span></label>
+          {opp.secondary_image_url && (
+            <div className="relative border border-black bg-[#E5E7EB] overflow-hidden flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={opp.secondary_image_url} alt="" className="w-full max-h-56 object-contain" />
+              <button
+                type="button"
+                onClick={() => onChange({ secondary_image_url: null })}
+                className="absolute top-2 right-2 bg-black text-white text-xs px-2 py-1 hover:bg-black/70"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          <div
+            onClick={() => secondaryImageRef.current?.click()}
+            onDrop={(e) => {
+              e.preventDefault();
+              setSecondaryDragOver(false);
+              const file = e.dataTransfer.files[0];
+              if (file?.type.startsWith("image/")) handleSecondaryImageUpload(file);
+            }}
+            onDragOver={(e) => { e.preventDefault(); setSecondaryDragOver(true); }}
+            onDragLeave={() => setSecondaryDragOver(false)}
+            className={`border border-dashed border-black p-8 text-center cursor-pointer text-sm text-muted-foreground transition-colors ${
+              secondaryDragOver ? "bg-muted" : "hover:bg-muted/40"
+            }`}
+          >
+            {secondaryImageUploading
+              ? "Uploading…"
+              : secondaryDragOver
+              ? "Drop to upload"
+              : opp.secondary_image_url
+              ? "Drop a new image or click to replace"
+              : "Drop an image here, or click to browse"}
+          </div>
+          <input
+            ref={secondaryImageRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSecondaryImageUpload(f); }}
           />
         </div>
         )}

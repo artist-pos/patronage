@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FREE_LISTING_DRAFT_KEY } from "@/lib/free-listing";
+import { PIPELINE_LISTING_DRAFT_KEY } from "@/lib/pipeline-listing";
 import { WizardChrome } from "./WizardChrome";
 import { StepTemplate } from "./StepTemplate";
 import { StepBasics, type Patch as BasicsPatch } from "./StepBasics";
@@ -52,6 +53,14 @@ const PIPELINE_STEPS = [
   { number: 6, label: "Review & Publish" },
 ];
 
+// Anonymous partners only fill Template + Basics; everything past that persists
+// against a real opportunity id (rubric, documents, terms upload) so it's
+// gated behind sign-in, same as free listings only doing Basics anonymously.
+const PIPELINE_STEPS_ANON = [
+  { number: 1, label: "Template" },
+  { number: 2, label: "Basics" },
+];
+
 const DEFAULT_POST_SELECTION: PostSelectionConfig = {
   requires_campaign: false,
   requires_studio_updates: false,
@@ -74,7 +83,9 @@ export function WizardShell({
   initialDocuments,
   anonymous = false,
 }: Props) {
-  const steps = isPipeline ? PIPELINE_STEPS : anonymous ? FREE_STEPS_ANON : FREE_STEPS;
+  const steps = isPipeline
+    ? (anonymous ? PIPELINE_STEPS_ANON : PIPELINE_STEPS)
+    : (anonymous ? FREE_STEPS_ANON : FREE_STEPS);
   const minStep = steps[0].number;
   const maxStep = steps[steps.length - 1].number;
 
@@ -115,29 +126,45 @@ export function WizardShell({
 
   // Anonymous mode: hydrate from localStorage once, then mirror every change to
   // it so the draft survives the sign-in round-trip (incl. email confirmation).
+  // Pipeline also persists the selected template alongside the opp patch.
   const [hydrated, setHydrated] = useState(!anonymous);
   useEffect(() => {
     if (!anonymous) return;
     // Reading localStorage must happen after mount (it's unavailable during SSR),
     // so loading the saved draft into state here is intentional, not a cascade.
     try {
-      const raw = localStorage.getItem(FREE_LISTING_DRAFT_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (raw) setOpp((prev) => ({ ...prev, ...JSON.parse(raw) }));
+      const raw = localStorage.getItem(isPipeline ? PIPELINE_LISTING_DRAFT_KEY : FREE_LISTING_DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (isPipeline) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          if (parsed.opp) setOpp((prev) => ({ ...prev, ...parsed.opp }));
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          if (parsed.template) setTemplate(parsed.template as TemplateKey);
+        } else {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setOpp((prev) => ({ ...prev, ...parsed }));
+        }
+      }
     } catch {
       /* ignore */
     }
     setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anonymous]);
 
   useEffect(() => {
     if (!anonymous || !hydrated) return;
     try {
-      localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+      if (isPipeline) {
+        localStorage.setItem(PIPELINE_LISTING_DRAFT_KEY, JSON.stringify({ opp, template }));
+      } else {
+        localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+      }
     } catch {
       /* ignore */
     }
-  }, [anonymous, hydrated, opp]);
+  }, [anonymous, hydrated, isPipeline, opp, template]);
 
   const queueSave = useCallback(
     (patch: Parameters<typeof updateOpportunityPartner>[1]) => {
@@ -166,6 +193,7 @@ export function WizardShell({
     questions?: PipelineConfig["questions"];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
+    termsPdfUrl?: string | null;
   }) {
     setOpp((prev) => {
       const prevConfig = prev.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
@@ -173,17 +201,19 @@ export function WizardShell({
         ...prevConfig,
         ...(patch.questions !== undefined && { questions: patch.questions }),
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
+        ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
       };
       return { ...prev, pipeline_config: newConfig, show_badges_in_submission: patch.showBadges ?? prev.show_badges_in_submission };
     });
 
     const configPatch: Parameters<typeof updateOpportunityPartner>[1] = {};
     if (patch.showBadges !== undefined) configPatch.show_badges_in_submission = patch.showBadges;
-    if (patch.questions !== undefined || patch.artistDocs !== undefined) {
+    if (patch.questions !== undefined || patch.artistDocs !== undefined || patch.termsPdfUrl !== undefined) {
       configPatch.pipeline_config = {
         ...(opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null }),
         ...(patch.questions !== undefined && { questions: patch.questions }),
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
+        ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
       };
     }
     if (Object.keys(configPatch).length > 0) queueSave(configPatch);
@@ -226,21 +256,24 @@ export function WizardShell({
     }
     if (step === maxStep) {
       if (!allRequired || submitting) return;
-      // Anonymous free listing: they've entered the info; gate auth here before
-      // the rest of the process. Persist and send them to sign in / sign up; they
-      // return to /partner/list-free, which finalises the draft and resumes the
-      // wizard (review + publish) authenticated.
+      // Anonymous free/pipeline listing: they've entered the info; gate auth here
+      // before the rest of the process. Persist and send them to sign in / sign
+      // up; they return to /partner/list-free or /partner/list-pipeline, which
+      // finalises the draft and resumes the wizard authenticated.
       if (anonymous) {
         try {
-          localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+          if (isPipeline) {
+            localStorage.setItem(PIPELINE_LISTING_DRAFT_KEY, JSON.stringify({ opp, template }));
+          } else {
+            localStorage.setItem(FREE_LISTING_DRAFT_KEY, JSON.stringify(opp));
+          }
         } catch {
           /* ignore */
         }
         // role=partner so a new account created from here defaults to partner;
         // returning users just sign in (role unchanged).
-        router.push(
-          `/auth/login?next=${encodeURIComponent("/partner/list-free")}&role=partner`,
-        );
+        const next = isPipeline ? "/partner/list-pipeline" : "/partner/list-free";
+        router.push(`/auth/login?next=${encodeURIComponent(next)}&role=partner`);
         return;
       }
       setSubmitting(true);
@@ -302,9 +335,11 @@ export function WizardShell({
 
         {step === 3 && isPipeline && (
           <StepFormBuilder
+            opportunityId={opp.id}
             questions={questions}
             showBadges={showBadges}
             artistDocs={artistDocs}
+            termsPdfUrl={opp.pipeline_config?.terms_pdf_url ?? null}
             onChange={handleFormChange}
           />
         )}

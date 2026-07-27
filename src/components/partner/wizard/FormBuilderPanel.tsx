@@ -18,21 +18,25 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ARTIST_DOC_OPTIONS } from "@/lib/opportunity-constants";
+import { ARTIST_DOC_OPTIONS, ARTIST_DOC_AUTO_VALS, ARTIST_DOC_PICKER_VALS } from "@/lib/opportunity-constants";
+import { TermsUploader } from "./TermsUploader";
 import type { PipelineQuestion, PipelineConfig } from "@/types/database";
 
 interface Props {
+  opportunityId: string;
   questions: PipelineQuestion[];
   showBadges: boolean;
   artistDocs: PipelineConfig["artist_documents"];
+  termsPdfUrl: string | null;
   onChange: (patch: {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
+    termsPdfUrl?: string | null;
   }) => void;
 }
 
-export function FormBuilderPanel({ questions, showBadges, artistDocs, onChange }: Props) {
+export function FormBuilderPanel({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, onChange }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -107,27 +111,61 @@ export function FormBuilderPanel({ questions, showBadges, artistDocs, onChange }
       </div>
 
       {/* Artist documents */}
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Artist documents</h3>
-          <p className="text-xs text-stone-500">Pulled automatically from the artist&apos;s Patronage profile.</p>
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Auto-included from profile</h3>
+            <p className="text-xs text-stone-500">Added to the submission automatically — the artist doesn&apos;t do anything for these.</p>
+          </div>
+          <div className="space-y-2.5">
+            {ARTIST_DOC_OPTIONS.filter((d) => (ARTIST_DOC_AUTO_VALS as string[]).includes(d.val)).map(({ val, label, desc }) => (
+              <label key={val} className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(artistDocs as string[]).includes(val)}
+                  onChange={() => toggleDoc(val)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm">{label}</p>
+                  <p className="text-xs text-stone-400">{desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
         </div>
-        <div className="space-y-2.5">
-          {ARTIST_DOC_OPTIONS.map(({ val, label, desc }) => (
-            <label key={val} className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={(artistDocs as string[]).includes(val)}
-                onChange={() => toggleDoc(val)}
-                className="mt-0.5"
-              />
-              <div>
-                <p className="text-sm">{label}</p>
-                <p className="text-xs text-stone-400">{desc}</p>
-              </div>
-            </label>
-          ))}
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Let the artist pick a work</h3>
+            <p className="text-xs text-stone-500">Each option checked here gives the artist a picker on the application form to choose one matching work to submit.</p>
+          </div>
+          <div className="space-y-2.5">
+            {ARTIST_DOC_OPTIONS.filter((d) => (ARTIST_DOC_PICKER_VALS as string[]).includes(d.val)).map(({ val, label, desc }) => (
+              <label key={val} className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(artistDocs as string[]).includes(val)}
+                  onChange={() => toggleDoc(val)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm">{label}</p>
+                  <p className="text-xs text-stone-400">{desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Terms & conditions */}
+      <div className="border-t border-black/10 pt-6">
+        <TermsUploader
+          opportunityId={opportunityId}
+          termsPdfUrl={termsPdfUrl}
+          onChange={(url) => onChange({ termsPdfUrl: url })}
+        />
       </div>
 
       {/* Badges */}

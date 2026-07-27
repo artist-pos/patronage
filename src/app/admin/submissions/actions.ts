@@ -30,10 +30,17 @@ export async function approveSubmission(submissionId: string) {
   // Fetch current state so we can fix bad slugs generated when the title was blank at submit time.
   const { data: opp } = await supabase
     .from("opportunities")
-    .select("slug, title, organiser, deadline")
+    .select("slug, title, organiser, deadline, routing_type, pipeline_paid_at")
     .eq("id", submissionId)
     .eq("status", "pending")
     .single();
+
+  // Pipeline listings must have the activation fee paid before they can go live —
+  // the partner is routed to /activate when they submit, but that doesn't block
+  // the row from sitting in this queue unpaid, so enforce it here too.
+  if (opp?.routing_type === "pipeline" && !opp.pipeline_paid_at) {
+    throw new Error("This pipeline listing hasn't paid the activation fee yet — it can't be published until payment is confirmed.");
+  }
 
   const updates: Record<string, unknown> = { status: "published", is_active: true };
   if (opp && isSlugBad(opp.slug)) {

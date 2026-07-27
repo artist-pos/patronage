@@ -10,7 +10,9 @@ import { computeBadges } from "@/lib/badges";
 import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
-import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, CreativeWork } from "@/types/database";
+import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, CreativeWork, Artwork } from "@/types/database";
+
+export type AvailableWork = Pick<Artwork, "id" | "url" | "thumb_url" | "title" | "caption" | "price_cents" | "is_poa" | "price_currency">;
 
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 
@@ -78,6 +80,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
     artistWorks: CreativeWork[];
+    availableWorks: AvailableWork[];
     badges: ApplyModalProps["badges"];
     draft: OpportunityApplicationDraft | null;
   } | null>(null);
@@ -92,7 +95,10 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       return;
     }
 
-    const [worksResult, artworkBadgeResult, draft, profileResult] = await Promise.all([
+    const wantsAvailableWorks =
+      !isJobOpportunity && (opportunity.pipeline_config?.artist_documents ?? []).includes("available_works");
+
+    const [worksResult, artworkBadgeResult, availableWorksResult, draft, profileResult] = await Promise.all([
       isJobOpportunity
         ? Promise.resolve({ data: [] as CreativeWork[] })
         : supabase
@@ -103,6 +109,14 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       isJobOpportunity
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
         : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
+      wantsAvailableWorks
+        ? supabase
+            .from("artworks")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
+            .eq("current_owner_id", user.id)
+            .eq("is_available", true)
+            .order("position", { ascending: true })
+        : Promise.resolve({ data: [] as AvailableWork[] }),
       opportunity.routing_type === "pipeline"
         ? getDraft(opportunity.id)
         : Promise.resolve(null),
@@ -113,6 +127,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
 
     const artistWorks = (worksResult.data ?? []) as CreativeWork[];
     const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
+    const availableWorks = (availableWorksResult.data ?? []) as AvailableWork[];
     const profile = profileResult.data;
 
     if (profile) {
@@ -158,6 +173,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
           exhibition_history: profile.exhibition_history ?? [],
         },
         artistWorks,
+        availableWorks,
         badges,
         draft: draft as OpportunityApplicationDraft | null,
       });
@@ -234,6 +250,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
           opportunity={opportunity}
           artistProfile={applicantData.profile}
           artistWorks={applicantData.artistWorks}
+          availableWorks={applicantData.availableWorks}
           badges={applicantData.badges}
           draft={applicantData.draft}
           isJobOpportunity={isJobOpportunity}

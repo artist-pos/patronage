@@ -1,7 +1,7 @@
 "use client";
 
-import { FileUp } from "lucide-react";
-import { ARTIST_DOC_OPTIONS } from "@/lib/opportunity-constants";
+import { FileUp, Upload } from "lucide-react";
+import { ARTIST_DOC_OPTIONS, ARTIST_DOC_AUTO_VALS, ARTIST_DOC_PICKER_VALS } from "@/lib/opportunity-constants";
 import type { PipelineQuestion, PipelineConfig } from "@/types/database";
 
 interface Props {
@@ -11,9 +11,9 @@ interface Props {
 }
 
 export function LivePreviewPane({ questions, artistDocs, showBadges }: Props) {
-  const selectedDocs = ARTIST_DOC_OPTIONS.filter((d) =>
-    (artistDocs as string[]).includes(d.val)
-  );
+  const docVals = artistDocs as string[];
+  const autoDocs = ARTIST_DOC_OPTIONS.filter((d) => docVals.includes(d.val) && (ARTIST_DOC_AUTO_VALS as string[]).includes(d.val));
+  const pickerDocs = ARTIST_DOC_OPTIONS.filter((d) => docVals.includes(d.val) && (ARTIST_DOC_PICKER_VALS as string[]).includes(d.val));
 
   return (
     <div className="space-y-4">
@@ -54,17 +54,39 @@ export function LivePreviewPane({ questions, artistDocs, showBadges }: Props) {
           </div>
         ))}
 
-        {selectedDocs.length > 0 && (
+        {autoDocs.length > 0 && (
           <div className="border-t border-black/10 pt-4 space-y-1.5">
-            <p className="text-xs font-medium text-stone-500">Pulled from your Patronage profile:</p>
+            <p className="text-xs font-medium text-stone-500">Auto-included from their profile:</p>
             <ul className="space-y-1">
-              {selectedDocs.map((d) => (
+              {autoDocs.map((d) => (
                 <li key={d.val} className="text-xs text-stone-400 flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-stone-300 shrink-0" />
                   {d.label}
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {pickerDocs.length > 0 && (
+          <div className="border-t border-black/10 pt-4 space-y-2">
+            <p className="text-xs font-medium text-stone-500">
+              Submit a work — artist picks {pickerDocs.length > 1 ? "one of these" : "one"}:
+            </p>
+            <div className="grid grid-cols-4 gap-1.5">
+              <div className="aspect-square border border-black bg-muted flex items-center justify-center text-[8px] text-stone-400">
+                None
+              </div>
+              <div className="aspect-square border border-dashed border-black/30 bg-white flex items-center justify-center">
+                <Upload className="w-3 h-3 text-stone-300" />
+              </div>
+              {pickerDocs.map((d) => (
+                <div key={d.val} className="aspect-square border border-black/20 bg-stone-100" />
+              ))}
+            </div>
+            <p className="text-[10px] text-stone-400">
+              {pickerDocs.map((d) => d.label).join(" / ")}
+            </p>
           </div>
         )}
 

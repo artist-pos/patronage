@@ -790,9 +790,21 @@ export default async function OpportunityPage({ params }: Props) {
       {/* Pipeline: dynamic — shows apply / already-applied / sign-in prompt */}
       {/* External: static — plain link, no user data needed               */}
       {isPipeline ? (
-        <Suspense fallback={<CTASkeleton />}>
-          <UserCTA opportunityId={opp.id} opp={opp} />
-        </Suspense>
+        <div className="flex flex-wrap items-center gap-4">
+          <Suspense fallback={<CTASkeleton />}>
+            <UserCTA opportunityId={opp.id} opp={opp} />
+          </Suspense>
+          {opp.pipeline_config?.terms_pdf_url && (
+            <a
+              href={opp.pipeline_config.terms_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm underline underline-offset-2 text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
+            >
+              View documents →
+            </a>
+          )}
+        </div>
       ) : applyLinks.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3">
           {applyLinks.map((link, i) => (

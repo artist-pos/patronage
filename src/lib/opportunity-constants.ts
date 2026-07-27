@@ -160,13 +160,21 @@ export const FOCUS_ONLY_TAGS = [
 
 export const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"] as const;
 
-/** Documents a partner can request from artist profiles in a pipeline application */
+/**
+ * Documents a partner can request from artist profiles in a pipeline application.
+ * "cv"/"bio" are auto-included from the artist's profile with no action from them.
+ * "portfolio"/"available_works" give the artist a picker to choose one work to
+ * submit — see ARTIST_DOC_GROUPS below for the two groups.
+ */
 export const ARTIST_DOC_OPTIONS: { val: PipelineConfig["artist_documents"][number]; label: string; desc: string }[] = [
-  { val: "cv",              label: "Artist CV (PDF)",    desc: "Uploaded via their profile" },
-  { val: "bio",             label: "Artist statement",    desc: "From profile bio field" },
-  { val: "portfolio",       label: "Portfolio images",   desc: "From their portfolio" },
-  { val: "available_works", label: "Available works",    desc: "From their available works" },
+  { val: "cv",              label: "Artist CV (PDF)",    desc: "Auto-included from their profile, if they've uploaded one" },
+  { val: "bio",             label: "Artist statement",    desc: "Auto-included from their profile bio" },
+  { val: "portfolio",       label: "Portfolio images",   desc: "Artist picks one work from their portfolio to submit with this application" },
+  { val: "available_works", label: "Available works",    desc: "Artist picks one available (for-sale) work to submit with this application" },
 ];
+
+export const ARTIST_DOC_AUTO_VALS: PipelineConfig["artist_documents"] = ["cv", "bio"];
+export const ARTIST_DOC_PICKER_VALS: PipelineConfig["artist_documents"] = ["portfolio", "available_works"];
 
 export const RECURRENCE_OPTIONS: { value: RecurrencePattern; label: string }[] = [
   { value: "monthly",   label: "Monthly" },

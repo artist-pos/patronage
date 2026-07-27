@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import type { CreativeWork, OpportunityApplicationDraft } from "@/types/database";
-import type { OpportunityForApply } from "./ApplyButton";
+import type { OpportunityForApply, AvailableWork } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
 
 function fmtDate(iso: string | null | undefined): string | null {
@@ -121,6 +121,7 @@ export interface ApplyModalProps {
   opportunity: OpportunityForApply;
   artistProfile: ArtistProfile;
   artistWorks: CreativeWork[];
+  availableWorks: AvailableWork[];
   badges: BadgeSet | null;
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
@@ -155,8 +156,13 @@ function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
   }));
 }
 
-export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
+export function ApplyModal({ opportunity, artistProfile, artistWorks, availableWorks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
+  const artistDocs = (opportunity.pipeline_config?.artist_documents ?? []) as string[];
+  const showPortfolioPicker = artistDocs.includes("portfolio");
+  const showAvailableWorksPicker = artistDocs.includes("available_works");
+
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(draft?.creative_work_id ?? null);
+  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(draft?.artwork_id ?? null);
   const [submittedImageUrl, setSubmittedImageUrl] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [submittedImagePreview, setSubmittedImagePreview] = useState<string | null>(draft?.submitted_image_url ?? null);
   const [uploadingNewImage, setUploadingNewImage] = useState(false);
@@ -193,6 +199,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
     setSubmittedImageUrl(publicUrl);
     setSubmittedImagePreview(URL.createObjectURL(file));
     setSelectedWorkId(null);
+    setSelectedArtworkId(null);
   }
 
   const FILE_CAP = 10;
@@ -256,12 +263,13 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
     const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const selectedArtwork = availableWorks.find((w) => w.id === selectedArtworkId) ?? null;
     const effectiveImageUrl = isJobOpportunity
       ? professionalCvUrl
-      : (submittedImageUrl ?? selectedWork?.image_url ?? null);
+      : (submittedImageUrl ?? selectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
     await saveDraft(
       opportunity.id,
-      null,
+      isJobOpportunity ? null : selectedArtworkId,
       finalAnswers,
       effectiveImageUrl,
       isJobOpportunity ? null : selectedWorkId,
@@ -293,7 +301,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers, selectedWorkId, submittedImageUrl]);
+  }, [answers, selectedWorkId, selectedArtworkId, submittedImageUrl]);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -303,11 +311,19 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
     const finalAnswers = { ...answers, ...encodedFiles };
     const selectedWork = artistWorks.find((w) => w.id === selectedWorkId) ?? null;
+    const selectedArtwork = availableWorks.find((w) => w.id === selectedArtworkId) ?? null;
     const effectiveImageUrl = isJobOpportunity
       ? professionalCvUrl
-      : (submittedImageUrl ?? selectedWork?.image_url ?? null);
+      : (submittedImageUrl ?? selectedWork?.image_url ?? selectedArtwork?.thumb_url ?? selectedArtwork?.url ?? null);
 
-    const result = await submitApplication(opportunity.id, null, finalAnswers, effectiveImageUrl, marketingOptIn, isJobOpportunity ? null : selectedWorkId);
+    const result = await submitApplication(
+      opportunity.id,
+      isJobOpportunity ? null : selectedArtworkId,
+      finalAnswers,
+      effectiveImageUrl,
+      marketingOptIn,
+      isJobOpportunity ? null : selectedWorkId,
+    );
     setSubmitting(false);
 
     if (result.error) {
@@ -439,16 +455,23 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
                 </div>
               )}
             </div>
-          ) : (
+          ) : (showPortfolioPicker || showAvailableWorksPicker) ? (
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
+              <p className="text-xs text-muted-foreground">
+                {showPortfolioPicker && showAvailableWorksPicker
+                  ? "Pick one work from your portfolio or your available (for-sale) works to include with this application."
+                  : showAvailableWorksPicker
+                  ? "Pick one of your available (for-sale) works to include with this application."
+                  : "Pick one work from your portfolio to include with this application."}
+              </p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {/* None tile */}
                 <button
                   type="button"
-                  onClick={() => { setSelectedWorkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                  onClick={() => { setSelectedWorkId(null); setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
                   className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
-                    selectedWorkId === null && !submittedImageUrl
+                    selectedWorkId === null && selectedArtworkId === null && !submittedImageUrl
                       ? "border-black bg-muted"
                       : "border-black/30 hover:border-black"
                   }`}
@@ -486,8 +509,28 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleNewImageUpload(f); }}
                 />
 
+                {/* Available (for-sale) works */}
+                {showAvailableWorksPicker && availableWorks.slice(0, 10).map((work) => {
+                  const selected = selectedArtworkId === work.id;
+                  return (
+                    <button
+                      key={work.id}
+                      type="button"
+                      onClick={() => { setSelectedArtworkId(work.id); setSelectedWorkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                      className={`aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
+                        selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
+                      }`}
+                    >
+                      <Image src={work.thumb_url ?? work.url} alt={work.caption ?? work.title ?? ""} fill className="object-cover" sizes="80px" />
+                      <span className={`absolute bottom-0 inset-x-0 text-center text-[8px] py-0.5 uppercase tracking-wide ${selected ? "bg-black text-white" : "bg-white/80 text-stone-500"}`}>
+                        For sale
+                      </span>
+                    </button>
+                  );
+                })}
+
                 {/* Creative works — all media types */}
-                {artistWorks.slice(0, 10).map((work) => {
+                {showPortfolioPicker && artistWorks.slice(0, 10).map((work) => {
                   const selected = selectedWorkId === work.id;
                   const baseClass = `aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
                     selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
@@ -496,7 +539,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
                     <button
                       key={work.id}
                       type="button"
-                      onClick={() => { setSelectedWorkId(work.id); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
+                      onClick={() => { setSelectedWorkId(work.id); setSelectedArtworkId(null); setSubmittedImageUrl(null); setSubmittedImagePreview(null); }}
                       className={baseClass}
                     >
                       {work.content_type === "image" && work.image_url ? (
@@ -547,11 +590,17 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
                   </p>
                 ) : null;
               })()}
+              {selectedArtworkId && (() => {
+                const w = availableWorks.find((a) => a.id === selectedArtworkId);
+                return w ? (
+                  <p className="text-xs text-muted-foreground">{w.title ?? w.caption ?? ""}</p>
+                ) : null;
+              })()}
               {submittedImageUrl && (
                 <p className="text-xs text-muted-foreground">New image uploaded.</p>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Questions (normalised from pipeline_config or custom_fields) */}
           {fields.length > 0 && (

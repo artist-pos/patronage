@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { notifyOpportunitySubmission } from "@/lib/email";
 import { updateOpportunityPartner } from "@/app/partner/opportunities/[id]/edit/actions";
 import { pickFreeListingFields } from "@/lib/free-listing";
+import { pickPipelineListingFields } from "@/lib/pipeline-listing";
+import { PIPELINE_TEMPLATES, type TemplateKey } from "@/lib/pipeline-templates";
 
 export async function createOpportunityDraft(type: "free" | "pipeline"): Promise<{ id: string }> {
   const supabase = await createClient();
@@ -65,6 +67,43 @@ export async function finalizeFreeListing(
   }
 
   const fields = pickFreeListingFields(raw);
+  if (Object.keys(fields).length > 0) {
+    try {
+      await updateOpportunityPartner(id, fields as Parameters<typeof updateOpportunityPartner>[1]);
+    } catch {
+      // Still return the id — the draft exists and they can finish it in the wizard.
+      return { id };
+    }
+  }
+
+  return { id };
+}
+
+/**
+ * Turn an anonymous pipeline-listing draft (Template + Basics, collected
+ * client-side in localStorage) into a real draft owned by the now-authenticated
+ * user. Returns the new id so the client can drop them into the normal wizard
+ * at the Form Builder step to finish setup and publish.
+ */
+export async function finalizePipelineListing(
+  raw: Record<string, unknown>,
+  template: TemplateKey | null,
+): Promise<{ id?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  let id: string;
+  try {
+    ({ id } = await createOpportunityDraft("pipeline"));
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not create listing" };
+  }
+
+  const fields = pickPipelineListingFields(raw);
+  if (template) {
+    fields.pipeline_config = { questions: PIPELINE_TEMPLATES[template], artist_documents: [], terms_pdf_url: null, template };
+  }
   if (Object.keys(fields).length > 0) {
     try {
       await updateOpportunityPartner(id, fields as Parameters<typeof updateOpportunityPartner>[1]);

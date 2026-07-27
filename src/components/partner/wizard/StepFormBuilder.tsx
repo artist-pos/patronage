@@ -5,17 +5,20 @@ import { LivePreviewPane } from "./LivePreviewPane";
 import type { PipelineQuestion, PipelineConfig } from "@/types/database";
 
 interface Props {
+  opportunityId: string;
   questions: PipelineQuestion[];
   showBadges: boolean;
   artistDocs: PipelineConfig["artist_documents"];
+  termsPdfUrl: string | null;
   onChange: (patch: {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
+    termsPdfUrl?: string | null;
   }) => void;
 }
 
-export function StepFormBuilder({ questions, showBadges, artistDocs, onChange }: Props) {
+export function StepFormBuilder({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -27,9 +30,11 @@ export function StepFormBuilder({ questions, showBadges, artistDocs, onChange }:
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
         <FormBuilderPanel
+          opportunityId={opportunityId}
           questions={questions}
           showBadges={showBadges}
           artistDocs={artistDocs}
+          termsPdfUrl={termsPdfUrl}
           onChange={onChange}
         />
 

@@ -18,6 +18,7 @@ export function ManageFormSection({ opp }: Props) {
   const [artistDocs, setArtistDocs] = useState<PipelineConfig["artist_documents"]>(
     opp.pipeline_config?.artist_documents ?? []
   );
+  const [termsPdfUrl, setTermsPdfUrl] = useState<string | null>(opp.pipeline_config?.terms_pdf_url ?? null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const configRef = useRef<PipelineConfig>(
     (opp.pipeline_config as PipelineConfig | null) ?? {
@@ -41,19 +42,23 @@ export function ManageFormSection({ opp }: Props) {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
+    termsPdfUrl?: string | null;
   }) {
     const newQuestions = patch.questions ?? questions;
     const newDocs = patch.artistDocs ?? artistDocs;
     const newBadges = patch.showBadges ?? showBadges;
+    const newTermsPdfUrl = patch.termsPdfUrl !== undefined ? patch.termsPdfUrl : termsPdfUrl;
 
     if (patch.questions !== undefined) setQuestions(newQuestions);
     if (patch.artistDocs !== undefined) setArtistDocs(newDocs);
     if (patch.showBadges !== undefined) setShowBadges(newBadges);
+    if (patch.termsPdfUrl !== undefined) setTermsPdfUrl(newTermsPdfUrl);
 
     configRef.current = {
       ...configRef.current,
       ...(patch.questions !== undefined && { questions: newQuestions }),
       ...(patch.artistDocs !== undefined && { artist_documents: newDocs }),
+      ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: newTermsPdfUrl }),
     };
 
     const savePatch: Parameters<typeof updateOpportunityPartner>[1] = {
@@ -66,9 +71,11 @@ export function ManageFormSection({ opp }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
       <FormBuilderPanel
+        opportunityId={opp.id}
         questions={questions}
         showBadges={showBadges}
         artistDocs={artistDocs}
+        termsPdfUrl={termsPdfUrl}
         onChange={handleChange}
       />
       <div className="lg:sticky lg:top-[57px]">

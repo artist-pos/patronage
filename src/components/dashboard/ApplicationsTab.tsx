@@ -8,6 +8,7 @@ import { createRealtimeClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
 import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, CreativeWork, PipelineConfig } from "@/types/database";
 import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
+import type { AvailableWork } from "@/components/opportunities/ApplyButton";
 import { UploadHighResButton } from "./UploadHighResButton";
 import { sendRejectionReplyAction } from "@/app/dashboard/payment-actions";
 
@@ -56,6 +57,7 @@ interface ModalState {
   draft: OpportunityApplicationDraft;
   artistProfile: ApplyModalProps["artistProfile"];
   artistWorks: CreativeWork[];
+  availableWorks: AvailableWork[];
   badges: ApplyModalProps["badges"];
   professionalCvUrl: string | null;
 }
@@ -124,8 +126,10 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
     if (!user) { setLoadingDraftId(null); return; }
 
     const isJob = draft.opportunity.type === "Job / Employment";
+    const wantsAvailableWorks =
+      !isJob && (draft.opportunity.pipeline_config?.artist_documents ?? []).includes("available_works");
 
-    const [profileResult, worksResult, artworkBadgeResult] = await Promise.all([
+    const [profileResult, worksResult, artworkBadgeResult, availableWorksResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       isJob
         ? Promise.resolve({ data: [] as CreativeWork[] })
@@ -133,11 +137,20 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
       isJob
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
         : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
+      wantsAvailableWorks
+        ? supabase
+            .from("artworks")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
+            .eq("current_owner_id", user.id)
+            .eq("is_available", true)
+            .order("position", { ascending: true })
+        : Promise.resolve({ data: [] as AvailableWork[] }),
     ]);
 
     const profile = profileResult.data;
     const artistWorks = (worksResult.data ?? []) as CreativeWork[];
     const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
+    const availableWorks = (availableWorksResult.data ?? []) as AvailableWork[];
 
     if (!profile) { setLoadingDraftId(null); return; }
 
@@ -170,6 +183,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         exhibition_history: profile.exhibition_history ?? [],
       },
       artistWorks,
+      availableWorks,
       badges,
       professionalCvUrl: profile.professional_cv_url ?? null,
     });
@@ -415,6 +429,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
           opportunity={modalState.opportunity}
           artistProfile={modalState.artistProfile}
           artistWorks={modalState.artistWorks}
+          availableWorks={modalState.availableWorks}
           badges={modalState.badges}
           draft={modalState.draft}
           isJobOpportunity={modalState.opportunity.type === "Job / Employment"}

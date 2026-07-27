@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Plus, GripVertical, X } from "lucide-react";
 import {
   DndContext,
@@ -63,6 +64,16 @@ export function RubricBuilder({ criteria, onChange }: Props) {
       },
     ]);
   }
+
+  // Start with one open criterion rather than an empty state — the partner can
+  // still remove it if they don't want scoring. Only fires once on mount.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    seededRef.current = true;
+    if (criteria.length === 0) addCriterion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
 
