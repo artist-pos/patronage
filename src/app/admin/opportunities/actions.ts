@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { toSlug } from "@/lib/opportunity-slug";
 import type { Opportunity } from "@/types/database";
 
 async function guard() {
@@ -18,6 +19,58 @@ export async function toggleOpportunityActive(id: string, current: boolean) {
     .eq("id", id);
   revalidatePath("/admin/opportunities");
   revalidatePath("/opportunities");
+}
+
+export async function toggleOpportunityFeatured(id: string, current: boolean) {
+  await guard();
+  const supabase = await createClient();
+  await supabase
+    .from("opportunities")
+    .update({ is_featured: !current })
+    .eq("id", id);
+  revalidatePath("/admin/opportunities");
+  revalidatePath("/opportunities");
+  revalidatePath("/");
+}
+
+/**
+ * Recompute an opportunity's slug from its current title/organiser/deadline.
+ * For fixing slugs that were generated back when title/organiser were still
+ * blank (e.g. "-2027") — those never self-heal since there's no slug field in
+ * the edit form and re-approval doesn't happen once a listing is already live.
+ */
+export async function regenerateOpportunitySlug(id: string): Promise<{ error?: string; slug?: string }> {
+  await guard();
+  const supabase = await createClient();
+
+  const { data: opp } = await supabase
+    .from("opportunities")
+    .select("title, organiser, deadline")
+    .eq("id", id)
+    .single();
+  if (!opp) return { error: "Opportunity not found" };
+
+  const base = toSlug(opp.title ?? "", opp.organiser ?? null, opp.deadline ?? null);
+  if (!base) return { error: "Title is blank — add one before regenerating the slug" };
+
+  // Unique index on slug — retry with -2, -3... on collision (e.g. a duplicate listing).
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ slug: candidate })
+      .eq("id", id);
+    if (!error) {
+      revalidatePath("/admin/opportunities");
+      revalidatePath("/opportunities");
+      revalidatePath(`/opportunities/${id}`);
+      return { slug: candidate };
+    }
+    if (!error.message.toLowerCase().includes("duplicate")) {
+      return { error: error.message };
+    }
+  }
+  return { error: "Couldn't find a free slug — try renaming the listing slightly" };
 }
 
 export async function deleteOpportunity(id: string) {

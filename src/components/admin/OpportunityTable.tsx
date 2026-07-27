@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   toggleOpportunityActive,
+  toggleOpportunityFeatured,
   deleteOpportunity,
   createDraftUnclaimedListing,
   generateClaimToken,
+  regenerateOpportunitySlug,
 } from "@/app/admin/opportunities/actions";
+import { isSlugBad } from "@/lib/opportunity-slug";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
-import { X, Mail, Search } from "lucide-react";
+import { X, Mail, Search, Star } from "lucide-react";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import type { Opportunity } from "@/types/database";
@@ -350,6 +353,22 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                   <td className="py-3 pr-4 max-w-[200px]">
                     <span className="line-clamp-1">{o.title}</span>
                     <span className="text-muted-foreground block truncate">{o.organiser}</span>
+                    {isSlugBad(o.slug) && (
+                      <span className="flex items-center gap-1.5 text-destructive">
+                        <span className="truncate">Bad slug: {o.slug ?? "(none)"}</span>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => act(async () => {
+                            const result = await regenerateOpportunitySlug(o.id);
+                            if (result.error) window.alert(result.error);
+                          })}
+                          className="underline underline-offset-2 hover:text-foreground shrink-0"
+                        >
+                          Fix
+                        </button>
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 pr-4">
                     <Badge variant="outline" className="text-xs font-normal">{o.type}</Badge>
@@ -377,6 +396,19 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       >
                         {o.is_active ? "Deactivate" : "Activate"}
                       </Button>
+                      <button
+                        type="button"
+                        title={o.is_featured ? "Remove from featured" : "Feature this opportunity"}
+                        disabled={isPending}
+                        onClick={() => act(() => toggleOpportunityFeatured(o.id, o.is_featured))}
+                        className={`inline-flex items-center justify-center h-7 w-7 border transition-colors disabled:opacity-50 ${
+                          o.is_featured
+                            ? "border-black bg-black text-white"
+                            : "border-border hover:border-black text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Star className="w-3.5 h-3.5" fill={o.is_featured ? "currentColor" : "none"} />
+                      </button>
                       <Button
                         size="sm"
                         variant="outline"

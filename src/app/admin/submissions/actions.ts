@@ -3,24 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
-}
-
-function toSlug(title: string, organiser: string | null, deadline: string | null): string {
-  const slugify = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const organiserPart = organiser ? slugify(organiser).slice(0, 40).replace(/-+$/, "") : "";
-  const titlePart = slugify(title).slice(0, 60).replace(/-+$/, "");
-  const year = deadline ? new Date(deadline).getFullYear() : null;
-  const base = [organiserPart, titlePart].filter(Boolean).join("-");
-  return year ? `${base}-${year}` : base;
-}
-
-function isSlugBad(slug: string | null): boolean {
-  // A bad slug is null, empty, or starts with "-" (produced when title was blank at insert time)
-  return !slug || slug.startsWith("-");
 }
 
 export async function approveSubmission(submissionId: string) {
