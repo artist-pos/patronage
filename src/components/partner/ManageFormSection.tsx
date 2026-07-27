@@ -28,15 +28,36 @@ export function ManageFormSection({ opp }: Props) {
       terms_pdf_url: null,
     }
   );
+  // Mirrors showBadges state so doSave always reads the latest value even if a
+  // debounced save fires after a newer render replaced its closure.
+  const showBadgesRef = useRef(showBadges);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const doSave = useCallback(async () => {
+    clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    try {
+      await updateOpportunityPartner(opp.id, {
+        pipeline_config: configRef.current,
+        show_badges_in_submission: showBadgesRef.current,
+      });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
+    } catch (err) {
+      console.error(err);
+      setSaveStatus("error");
+    }
+  }, [opp.id]);
 
   const queueSave = useCallback(
-    (patch: Parameters<typeof updateOpportunityPartner>[1]) => {
+    () => {
       clearTimeout(saveTimer.current);
+      setSaveStatus("idle");
       saveTimer.current = setTimeout(() => {
-        updateOpportunityPartner(opp.id, patch).catch(console.error);
+        doSave();
       }, 800);
     },
-    [opp.id]
+    [doSave]
   );
 
   function handleChange(patch: {
@@ -54,7 +75,7 @@ export function ManageFormSection({ opp }: Props) {
 
     if (patch.questions !== undefined) setQuestions(newQuestions);
     if (patch.artistDocs !== undefined) setArtistDocs(newDocs);
-    if (patch.showBadges !== undefined) setShowBadges(newBadges);
+    if (patch.showBadges !== undefined) { setShowBadges(newBadges); showBadgesRef.current = newBadges; }
     if (patch.termsPdfUrl !== undefined) setTermsPdfUrl(newTermsPdfUrl);
     if (patch.portfolioPickCount !== undefined) setPortfolioPickCount(newPortfolioPickCount);
 
@@ -66,31 +87,43 @@ export function ManageFormSection({ opp }: Props) {
       ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: newPortfolioPickCount }),
     };
 
-    const savePatch: Parameters<typeof updateOpportunityPartner>[1] = {
-      pipeline_config: configRef.current,
-    };
-    if (patch.showBadges !== undefined) savePatch.show_badges_in_submission = newBadges;
-    queueSave(savePatch);
+    queueSave();
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
-      <FormBuilderPanel
-        opportunityId={opp.id}
-        questions={questions}
-        showBadges={showBadges}
-        artistDocs={artistDocs}
-        termsPdfUrl={termsPdfUrl}
-        portfolioPickCount={portfolioPickCount}
-        onChange={handleChange}
-      />
-      <div className="lg:sticky lg:top-[57px]">
-        <LivePreviewPane
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
+        <FormBuilderPanel
+          opportunityId={opp.id}
           questions={questions}
-          artistDocs={artistDocs}
           showBadges={showBadges}
+          artistDocs={artistDocs}
+          termsPdfUrl={termsPdfUrl}
           portfolioPickCount={portfolioPickCount}
+          onChange={handleChange}
         />
+        <div className="lg:sticky lg:top-[57px]">
+          <LivePreviewPane
+            questions={questions}
+            artistDocs={artistDocs}
+            showBadges={showBadges}
+            portfolioPickCount={portfolioPickCount}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-3">
+        {saveStatus === "error" && (
+          <span className="text-xs text-destructive">Couldn&apos;t save — try again</span>
+        )}
+        <button
+          type="button"
+          onClick={doSave}
+          disabled={saveStatus === "saving"}
+          className="px-4 py-2 bg-black text-white text-sm disabled:opacity-50"
+        >
+          {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save changes"}
+        </button>
       </div>
     </div>
   );

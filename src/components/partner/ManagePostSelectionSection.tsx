@@ -49,15 +49,31 @@ export function ManagePostSelectionSection({ opp }: Props) {
     }
   );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const doSave = useCallback(async () => {
+    clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    try {
+      await updateOpportunityPartner(opp.id, { pipeline_config: configRef.current });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
+    } catch (err) {
+      console.error(err);
+      setSaveStatus("error");
+    }
+  }, [opp.id]);
 
   const queueSave = useCallback(
     (newConfig: PipelineConfig) => {
+      void newConfig; // already written into configRef.current by the caller
       clearTimeout(saveTimer.current);
+      setSaveStatus("idle");
       saveTimer.current = setTimeout(() => {
-        updateOpportunityPartner(opp.id, { pipeline_config: newConfig }).catch(console.error);
+        doSave();
       }, 800);
     },
-    [opp.id]
+    [doSave]
   );
 
   function handlePostSelectionChange(config: PostSelectionConfig) {
@@ -82,13 +98,29 @@ export function ManagePostSelectionSection({ opp }: Props) {
   }
 
   return (
-    <StepPostSelection
-      postSelection={postSelection}
-      notificationDefaults={notificationDefaults}
-      stagesConfig={stagesConfig}
-      onPostSelectionChange={handlePostSelectionChange}
-      onNotificationDefaultsChange={handleNotificationDefaultsChange}
-      onStagesConfigChange={handleStagesConfigChange}
-    />
+    <div className="space-y-6">
+      <StepPostSelection
+        postSelection={postSelection}
+        notificationDefaults={notificationDefaults}
+        stagesConfig={stagesConfig}
+        onPostSelectionChange={handlePostSelectionChange}
+        onNotificationDefaultsChange={handleNotificationDefaultsChange}
+        onStagesConfigChange={handleStagesConfigChange}
+      />
+
+      <div className="flex items-center justify-end gap-3">
+        {saveStatus === "error" && (
+          <span className="text-xs text-destructive">Couldn&apos;t save — try again</span>
+        )}
+        <button
+          type="button"
+          onClick={doSave}
+          disabled={saveStatus === "saving"}
+          className="px-4 py-2 bg-black text-white text-sm disabled:opacity-50"
+        >
+          {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save changes"}
+        </button>
+      </div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import { createRealtimeClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
-import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, Artwork, CreativeWork, PipelineConfig } from "@/types/database";
+import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, PipelineConfig } from "@/types/database";
 import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
 import type { AvailableWork } from "@/components/opportunities/ApplyButton";
 import { UploadHighResButton } from "./UploadHighResButton";
@@ -56,7 +56,7 @@ interface ModalState {
   opportunity: Opportunity;
   draft: OpportunityApplicationDraft;
   artistProfile: ApplyModalProps["artistProfile"];
-  artistWorks: CreativeWork[];
+  artistWorks: AvailableWork[];
   availableWorks: AvailableWork[];
   badges: ApplyModalProps["badges"];
   professionalCvUrl: string | null;
@@ -131,9 +131,11 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
 
     const [profileResult, worksResult, artworkBadgeResult, availableWorksResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
+      // Portfolio = artworks marked not-for-sale, same as the public Work tab
+      // (getPortfolioImages in lib/profiles.ts) — not the unused creative_works table.
       isJob
-        ? Promise.resolve({ data: [] as CreativeWork[] })
-        : supabase.from("creative_works").select("id, profile_id, content_type, title, caption, image_url, audio_url, video_url, text_content, embed_url, embed_provider, year_created, position").eq("profile_id", user.id).order("position", { ascending: true }),
+        ? Promise.resolve({ data: [] as AvailableWork[] })
+        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency").eq("profile_id", user.id).eq("is_available", false).order("position", { ascending: true }),
       isJob
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
         : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
@@ -148,7 +150,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
     ]);
 
     const profile = profileResult.data;
-    const artistWorks = (worksResult.data ?? []) as CreativeWork[];
+    const artistWorks = (worksResult.data ?? []) as AvailableWork[];
     const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
     const availableWorks = (availableWorksResult.data ?? []) as AvailableWork[];
 

@@ -10,7 +10,7 @@ import { computeBadges } from "@/lib/badges";
 import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
-import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, CreativeWork, Artwork } from "@/types/database";
+import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, Artwork } from "@/types/database";
 
 export type AvailableWork = Pick<Artwork, "id" | "url" | "thumb_url" | "title" | "caption" | "price_cents" | "is_poa" | "price_currency">;
 
@@ -79,7 +79,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [showVerifiedTip, setShowVerifiedTip] = useState(false);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
-    artistWorks: CreativeWork[];
+    artistWorks: AvailableWork[];
     availableWorks: AvailableWork[];
     badges: ApplyModalProps["badges"];
     draft: OpportunityApplicationDraft | null;
@@ -99,12 +99,17 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       !isJobOpportunity && (opportunity.pipeline_config?.artist_documents ?? []).includes("available_works");
 
     const [worksResult, artworkBadgeResult, availableWorksResult, draft, profileResult] = await Promise.all([
+      // Portfolio = artworks marked not-for-sale (is_available: false), same
+      // table+filter as the public Work tab (getPortfolioImages in lib/profiles.ts).
+      // NOT the separate `creative_works` table — that one is only ever written
+      // to by a Studio tab that hasn't been reachable since Studio merged into Work.
       isJobOpportunity
-        ? Promise.resolve({ data: [] as CreativeWork[] })
+        ? Promise.resolve({ data: [] as AvailableWork[] })
         : supabase
-            .from("creative_works")
-            .select("id, profile_id, content_type, title, caption, image_url, audio_url, video_url, text_content, embed_url, embed_provider, year_created, position")
+            .from("artworks")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
             .eq("profile_id", user.id)
+            .eq("is_available", false)
             .order("position", { ascending: true }),
       isJobOpportunity
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
@@ -125,7 +130,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
     ]);
 
-    const artistWorks = (worksResult.data ?? []) as CreativeWork[];
+    const artistWorks = (worksResult.data ?? []) as AvailableWork[];
     const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
     const availableWorks = (availableWorksResult.data ?? []) as AvailableWork[];
     const profile = profileResult.data;
