@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, Lightbulb } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
@@ -23,6 +23,23 @@ export interface OpportunityForApply {
   show_badges_in_submission: boolean;
   pipeline_config?: PipelineConfig | null;
   custom_fields: CustomField[];
+  // Reference fields — shown in the ApplyModal side panel so artists can check
+  // the brief while writing, without leaving the application.
+  country?: string;
+  city?: string | null;
+  caption?: string | null;
+  full_description?: string | null;
+  funding_range?: string | null;
+  funding_amount?: number | null;
+  deadline?: string | null;
+  opens_at?: string | null;
+  entry_fee?: number | null;
+  entry_fee_currency?: string | null;
+  artist_payment_type?: string | null;
+  travel_support?: boolean | null;
+  travel_support_details?: string | null;
+  sub_categories?: string[] | null;
+  featured_image_url?: string | null;
 }
 
 interface ServerProfile {
@@ -57,6 +74,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [lockedFields, setLockedFields] = useState<MissingField[] | null>(null);
+  const [showVerifiedTip, setShowVerifiedTip] = useState(false);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
     artistWorks: CreativeWork[];
@@ -98,15 +116,24 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
     const profile = profileResult.data;
 
     if (profile) {
-      // Gate pipeline applications behind profile completion.
+      // Gate pipeline applications behind the "Verified" badge — bio + avatar +
+      // at least 3 works (see computeBadges in src/lib/badges.ts). Job opportunities
+      // don't fetch works at all (isJobOpportunity above), so they're exempt.
       if (opportunity.routing_type === "pipeline") {
-        const missing = getMissingFields({
+        const missing: MissingField[] = getMissingFields({
           avatar_url: profile.avatar_url,
           full_name: profile.full_name,
           bio: profile.bio,
           disciplines: (profile.disciplines ?? []) as string[],
           city: profile.city ?? null,
         });
+        if (!isJobOpportunity && artistWorks.length < 3) {
+          missing.push({
+            key: "works",
+            label: `${3 - artistWorks.length} more work${3 - artistWorks.length !== 1 ? "s" : ""} in your portfolio`,
+            href: `/${profile.username}?tab=work`,
+          });
+        }
         if (missing.length > 0) {
           setLockedFields(missing);
           setLoading(false);
@@ -158,9 +185,22 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         <div className="flex items-center gap-2 border border-dashed border-stone-300 px-4 py-3 rounded-lg text-sm text-muted-foreground">
           <Lock className="w-4 h-4 shrink-0" />
           <span>
-            Partners review your profile alongside your application. Complete your profile to apply.
+            You need a Verified profile to apply — partners review your profile alongside your application.
           </span>
+          <button
+            type="button"
+            onClick={() => setShowVerifiedTip((v) => !v)}
+            className="text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+            aria-label="What does Verified mean?"
+          >
+            <Lightbulb className="w-3.5 h-3.5" />
+          </button>
         </div>
+        {showVerifiedTip && (
+          <p className="text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-lg p-3">
+            Verified means your profile has a photo, a bio, and at least 3 works in your portfolio — it&apos;s the same badge shown on your public profile.
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           Add:{" "}
           {lockedFields.map((f, i) => (

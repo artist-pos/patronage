@@ -11,6 +11,7 @@ import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
+import { OpportunityHeroImage } from "@/components/opportunities/OpportunityHeroImage";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
@@ -292,12 +293,13 @@ async function UserCTA({
   const { supabase, user } = await getServerUser();
 
   if (!user) {
+    const returnTo = `/opportunities/${opp.slug ?? opp.id}`;
     return (
       <Link
-        href="/get-started"
+        href={`/auth/signup?role=artist&next=${encodeURIComponent(returnTo)}`}
         className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
       >
-        Create an account to apply →
+        Sign up as an artist to apply →
       </Link>
     );
   }
@@ -373,6 +375,21 @@ async function UserCTA({
           show_badges_in_submission: opp.show_badges_in_submission,
           pipeline_config: opp.pipeline_config,
           custom_fields: opp.custom_fields,
+          country: opp.country,
+          city: opp.city,
+          caption: opp.caption,
+          full_description: opp.full_description,
+          funding_range: opp.funding_range,
+          funding_amount: opp.funding_amount,
+          deadline: opp.deadline,
+          opens_at: opp.opens_at,
+          entry_fee: opp.entry_fee,
+          entry_fee_currency: opp.entry_fee_currency,
+          artist_payment_type: opp.artist_payment_type,
+          travel_support: opp.travel_support,
+          travel_support_details: opp.travel_support_details,
+          sub_categories: opp.sub_categories,
+          featured_image_url: opp.featured_image_url,
         }}
         isJobOpportunity={isJobOpportunity}
         professionalCvUrl={professionalCvUrl}
@@ -620,16 +637,11 @@ export default async function OpportunityPage({ params }: Props) {
 
       {/* ── Featured image — STATIC, borderless per v2 ──────────────────── */}
       {opp.featured_image_url ? (
-        <div className="mb-6 w-full overflow-hidden bg-white">
-          <Image
-            src={opp.featured_image_url}
-            alt={opp.title}
-            width={1200}
-            height={630}
-            priority
-            className="w-full h-auto max-h-[420px] object-contain"
-          />
-        </div>
+        <OpportunityHeroImage
+          title={opp.title}
+          featuredImageUrl={opp.featured_image_url}
+          secondaryImageUrl={opp.secondary_image_url}
+        />
       ) : (
         /* No image: gradient hero with type + organiser overlay (per handoff) */
         <div

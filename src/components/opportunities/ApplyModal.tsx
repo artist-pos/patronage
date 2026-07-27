@@ -1,13 +1,111 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { X, Upload, Music, Play, FileText, Link } from "lucide-react";
+import { X, Upload, Music, Play, FileText, Link, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
+import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import type { CreativeWork, OpportunityApplicationDraft } from "@/types/database";
 import type { OpportunityForApply } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
+
+function fmtDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Full listing details for reference while writing — desktop sidebar, mobile accordion.
+function ListingReference({ opportunity: o }: { opportunity: OpportunityForApply }) {
+  const fundingLabel = o.funding_range?.trim() || (o.funding_amount != null ? formatFunding(o.funding_amount) : null);
+  const deadline = fmtDate(o.deadline);
+  const opensAt = fmtDate(o.opens_at);
+  const location = o.city ? `${o.city}, ${o.country ?? ""}`.replace(/, $/, "") : o.country;
+  const bodyText = o.full_description ?? o.caption ?? null;
+  const hasStats = !!(fundingLabel || deadline || opensAt || o.entry_fee != null || o.artist_payment_type || o.travel_support != null);
+
+  return (
+    <div className="p-5 space-y-4">
+      {o.featured_image_url && (
+        <div className="border border-black overflow-hidden bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={o.featured_image_url} alt={o.title} className="w-full max-h-40 object-contain" />
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] border border-black px-1.5 py-0.5 leading-none">{o.type}</span>
+          {o.country && <span className="text-[10px] border border-black px-1.5 py-0.5 leading-none">{o.country}</span>}
+        </div>
+        <h3 className="font-semibold leading-snug">{o.title}</h3>
+        <p className="text-xs text-muted-foreground">{o.organiser}</p>
+      </div>
+
+      {(o.sub_categories ?? []).length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {(o.sub_categories ?? []).map((cat) => (
+            <span key={cat} className="text-[10px] border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">{cat}</span>
+          ))}
+        </div>
+      )}
+
+      {hasStats && (
+        <div className="grid grid-cols-2 gap-3 border-t border-black/10 pt-3">
+          {fundingLabel && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Funding</p>
+              <p className="text-xs font-medium">{fundingLabel}</p>
+            </div>
+          )}
+          {deadline && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Deadline</p>
+              <p className="text-xs font-medium">{deadline}</p>
+            </div>
+          )}
+          {opensAt && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Opens</p>
+              <p className="text-xs font-medium">{opensAt}</p>
+            </div>
+          )}
+          {location && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Location</p>
+              <p className="text-xs font-medium">{location}</p>
+            </div>
+          )}
+          {o.entry_fee != null && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Entry Fee</p>
+              <p className="text-xs font-medium">{o.entry_fee === 0 ? "Free" : `NZD ${o.entry_fee}`}</p>
+            </div>
+          )}
+          {o.artist_payment_type && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Artist Payment</p>
+              <p className="text-xs font-medium">{o.artist_payment_type}</p>
+            </div>
+          )}
+          {o.travel_support != null && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Travel Support</p>
+              <p className="text-xs font-medium">{o.travel_support ? "Yes" : "No"}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {bodyText && (
+        <div className="border-t border-black/10 pt-3 space-y-1.5">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">About</p>
+          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ArtistProfile {
   id: string;
@@ -151,7 +249,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
     }));
   }
 
-  async function handleSaveDraft() {
+  async function doSaveDraft() {
     setSavingDraft(true);
     setDraftSaved(false);
     const encodedFiles: Record<string, string> = {};
@@ -172,6 +270,30 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
     setDraftSaved(true);
     setTimeout(() => setDraftSaved(false), 2000);
   }
+
+  async function handleSaveDraft() {
+    await doSaveDraft();
+  }
+
+  // Autosave — debounced, fires a couple seconds after the artist stops typing/
+  // uploading. Skips the initial mount (draft was just loaded, nothing to save yet).
+  const hasMountedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (opportunity.routing_type !== "pipeline") return;
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      doSaveDraft();
+    }, 2500);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, selectedWorkId, submittedImageUrl]);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -200,19 +322,36 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-background border border-black w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black sticky top-0 bg-background z-10">
-          <div>
-            <h2 className="text-sm font-semibold">Apply with Patronage</h2>
-            <p className="text-xs text-muted-foreground">{opportunity.title}</p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
+      <div className="bg-background border border-black w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden">
+        {/* Reference sidebar — desktop only, always visible so they can check the brief while writing */}
+        <div className="hidden md:block md:w-72 md:shrink-0 md:border-r md:border-black md:overflow-y-auto">
+          <ListingReference opportunity={opportunity} />
         </div>
 
-        <div className="px-6 py-6 space-y-6">
+        {/* Form column */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-black">
+            <div>
+              <h2 className="text-sm font-semibold">Apply with Patronage</h2>
+              <p className="text-xs text-muted-foreground">{opportunity.title}</p>
+            </div>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* Mobile-only collapsible listing reference */}
+            <details className="md:hidden border-b border-black group">
+              <summary className="cursor-pointer list-none flex items-center justify-between px-6 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                View listing details
+                <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+              </summary>
+              <ListingReference opportunity={opportunity} />
+            </details>
+
+            <div className="px-6 py-6 space-y-6">
           {/* Artist profile summary */}
           <div className="border border-black p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your Profile</p>
@@ -536,6 +675,12 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
 
           {error && <p className="text-xs text-destructive">{error}</p>}
 
+          {opportunity.routing_type === "pipeline" && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              {savingDraft ? "Saving…" : draftSaved ? "Saved ✓" : "Your progress saves automatically."}
+            </p>
+          )}
+
           <div className="flex gap-2 pt-2 flex-wrap">
             <button
               type="button"
@@ -562,6 +707,8 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, badges, is
             >
               {submitting ? "Submitting…" : "Submit Application"}
             </button>
+          </div>
+        </div>
           </div>
         </div>
       </div>
