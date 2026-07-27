@@ -187,10 +187,31 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     creativeWorkMap.set(w.id, w);
   }
 
+  // File-upload question ids — used to find the artist's actual submission
+  // (e.g. a concept sketch) so cards show that instead of a portfolio pick.
+  const fileQuestionIds = new Set([
+    ...(opp.pipeline_config?.questions ?? []).filter((q) => q.type === "file_upload").map((q) => q.id),
+    ...(opp.custom_fields ?? []).filter((f) => f.inputType === "file").map((f) => f.id),
+  ]);
+  const IMAGE_RE = /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i;
+  function conceptImageFor(customAnswers: Record<string, string>): string | null {
+    for (const qId of fileQuestionIds) {
+      const raw = customAnswers?.[qId];
+      if (!raw) continue;
+      let urls: string[];
+      try { const p = JSON.parse(raw); urls = Array.isArray(p) ? p : [raw]; }
+      catch { urls = [raw]; }
+      const image = urls.find((u) => IMAGE_RE.test(u));
+      if (image) return image;
+    }
+    return null;
+  }
+
   const enrichedApps = apps.map((app) => {
     const profile = profileMap.get(app.artist_id) ?? null;
     return {
       ...app,
+      concept_image_url: conceptImageFor(app.custom_answers),
       creative_works: (app.creative_work_ids ?? [])
         .map((id) => creativeWorkMap.get(id))
         .filter((w): w is NonNullable<typeof w> => !!w),

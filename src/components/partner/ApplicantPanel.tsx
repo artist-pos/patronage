@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
 import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
@@ -254,19 +254,32 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   let urls: string[] = [];
                   try { const p = JSON.parse(answer); urls = Array.isArray(p) ? p : [answer]; }
                   catch { urls = [answer]; }
+                  const isImage = (url: string) => /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i.test(url);
                   return (
                     <div key={field.id} className="space-y-1.5">
                       <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{field.label}</p>
-                      <ul className="space-y-1">
-                        {urls.map((url, i) => {
-                          const parts = url.split("/"); const raw = parts[parts.length - 1]?.split("?")[0] ?? "";
-                          const name = raw.replace(/^\d+-/, "") || `File ${i + 1}`;
-                          return (
-                            <li key={url}><a href={url} target="_blank" rel="noopener noreferrer"
-                              className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity">{name}</a></li>
-                          );
-                        })}
-                      </ul>
+                      {urls.some(isImage) && (
+                        <div className="grid grid-cols-2 gap-3">
+                          {urls.filter(isImage).map((url) => (
+                            <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={field.label} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {urls.some((u) => !isImage(u)) && (
+                        <ul className="space-y-1">
+                          {urls.filter((u) => !isImage(u)).map((url, i) => {
+                            const parts = url.split("/"); const raw = parts[parts.length - 1]?.split("?")[0] ?? "";
+                            const name = raw.replace(/^\d+-/, "") || `File ${i + 1}`;
+                            return (
+                              <li key={url}><a href={url} target="_blank" rel="noopener noreferrer"
+                                className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity">{name}</a></li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </div>
                   );
                 }
@@ -297,7 +310,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 <div className="grid grid-cols-2 gap-3">
                   {artworkImages.map((img) => (
                     <div key={img.id} className="space-y-1">
-                      <p className="text-[10px] uppercase tracking-widest text-stone-400">For sale</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] uppercase tracking-widest text-stone-400">For sale</p>
+                        {artist?.username && (
+                          <a href={`/${artist.username}/works/${img.id}`} target="_blank" rel="noopener noreferrer"
+                            className="text-stone-400 hover:text-foreground transition-colors" title="View this work">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
                       {img.caption && <p className="text-xs text-stone-400">{img.caption}</p>}
@@ -307,7 +328,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                     <div key={work.id} className="space-y-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={work.thumb_url ?? work.url} alt={work.caption ?? work.title ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
-                      <p className="text-xs text-stone-400">{work.title ?? work.caption ?? ""}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-stone-400 truncate">{work.title ?? work.caption ?? ""}</p>
+                        {artist?.username && (
+                          <a href={`/${artist.username}/works/${work.id}`} target="_blank" rel="noopener noreferrer"
+                            className="text-stone-400 hover:text-foreground transition-colors shrink-0" title="View this work">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {legacyImage.map((img) => (

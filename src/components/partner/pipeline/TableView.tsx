@@ -140,7 +140,7 @@ export function TableView({ apps, stages, onOpenApp, onStatusChange }: Props) {
           {localApps.map((app) => {
             const a = app.artist;
             const meta = statusMeta(app.status);
-            const thumb = app.submitted_image_url ?? app.artwork?.url ?? null;
+            const thumb = app.concept_image_url ?? app.submitted_image_url ?? app.artwork?.url ?? null;
             const isSelected = selectedIds.has(app.id);
 
             return (

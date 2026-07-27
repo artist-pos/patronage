@@ -115,10 +115,10 @@ export function TriageView({ apps, stages, onOpenApp, onStatusChange }: Props) {
                   {statusLabel(app.status)} · {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
                 </p>
               </div>
-              {(app.submitted_image_url ?? app.artwork?.url) && (
+              {(app.concept_image_url ?? app.submitted_image_url ?? app.artwork?.url) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={app.submitted_image_url ?? app.artwork!.url}
+                  src={app.concept_image_url ?? app.submitted_image_url ?? app.artwork!.url}
                   alt=""
                   className="w-10 h-10 object-cover shrink-0"
                 />
@@ -157,7 +157,7 @@ function TriagePreview({
   onStatusChange: (status: string) => void;
 }) {
   const a = app.artist;
-  const thumb = app.submitted_image_url ?? app.artwork?.url ?? null;
+  const thumb = app.concept_image_url ?? app.submitted_image_url ?? app.artwork?.url ?? null;
 
   return (
     <div className="space-y-5 max-w-xl">

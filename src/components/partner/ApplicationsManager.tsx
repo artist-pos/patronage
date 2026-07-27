@@ -23,6 +23,10 @@ export interface EnrichedApp {
   created_at: string;
   artwork: { id: string; url: string; caption: string | null } | null;
   submitted_image_url: string | null;
+  /** First image from a file-upload question answer (e.g. a concept sketch) —
+   *  the actual submission for this opportunity, prioritised over portfolio
+   *  picks for card thumbnails since it's opportunity-specific. */
+  concept_image_url: string | null;
   /** All portfolio works the artist picked (Step 3 "Portfolio images" pick count). */
   creative_works: CreativeWorkLite[] | null;
   custom_answers: Record<string, string>;
@@ -126,7 +130,7 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
       (a?.identity_tags ?? []).join(", "),
       a?.username ? `https://patronage.nz/${a.username}` : "",
       a?.cv_url ?? "",
-      app.artwork?.url ?? app.submitted_image_url ?? "",
+      app.concept_image_url ?? app.artwork?.url ?? app.submitted_image_url ?? "",
       ...questions.map((q) => answers[q.id] ?? ""),
     ];
   });
@@ -631,7 +635,7 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
           ) : view === "gallery" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredApps.map((app) => {
-                const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
+                const imageUrl = app.concept_image_url ?? app.artwork?.url ?? app.submitted_image_url ?? null;
                 return (
                   <button
                     key={app.id}
@@ -667,7 +671,7 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
           ) : (
             <div className="border-t border-black">
               {filteredApps.map((app) => {
-                const imageUrl = app.artwork?.url ?? app.submitted_image_url ?? null;
+                const imageUrl = app.concept_image_url ?? app.artwork?.url ?? app.submitted_image_url ?? null;
                 return (
                   <button
                     key={app.id}
