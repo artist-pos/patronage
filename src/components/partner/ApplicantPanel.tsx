@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronLeft, ChevronRight, Music, Play, FileText, Link as LinkIcon } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
 import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
@@ -305,18 +305,8 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   ))}
                   {creativeWorksList.map((work) => (
                     <div key={work.id} className="space-y-1">
-                      {work.content_type === "image" && work.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={work.image_url} alt={work.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
-                      ) : (
-                        <div className="w-full h-[200px] flex flex-col items-center justify-center gap-2 bg-stone-50 border border-black/10">
-                          {work.content_type === "audio" ? <Music className="w-6 h-6 text-stone-400" />
-                            : work.content_type === "video" ? <Play className="w-6 h-6 text-stone-400" />
-                            : work.content_type === "text" ? <FileText className="w-6 h-6 text-stone-400" />
-                            : <LinkIcon className="w-6 h-6 text-stone-400" />}
-                          <span className="text-xs text-stone-400 capitalize">{work.content_type}</span>
-                        </div>
-                      )}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={work.thumb_url ?? work.url} alt={work.caption ?? work.title ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
                       <p className="text-xs text-stone-400">{work.title ?? work.caption ?? ""}</p>
                     </div>
                   ))}

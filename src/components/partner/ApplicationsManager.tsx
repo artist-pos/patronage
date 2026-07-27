@@ -6,13 +6,15 @@ import { ApplicantPanel } from "./ApplicantPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
 import { getAgeBracket, IDENTITY_TAGS } from "@/lib/constants/demographics";
 
+// Named for the legacy creative_work_ids column, but these rows come from
+// `artworks` (the portfolio picker sources from there, not creative_works —
+// see ApplyButton.tsx) — always images, no content_type/embed variants.
 export interface CreativeWorkLite {
   id: string;
-  content_type: string;
   title: string | null;
   caption: string | null;
-  image_url: string | null;
-  embed_provider: string | null;
+  url: string;
+  thumb_url: string | null;
 }
 
 export interface EnrichedApp {

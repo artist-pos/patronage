@@ -160,10 +160,13 @@ export default async function PartnerOpportunityPage({ params }: Props) {
           artistIds.map((id) => createAdminClient().auth.admin.getUserById(id))
         )
       : Promise.resolve([]),
+    // creative_work_ids actually holds artworks.id values (the portfolio picker
+    // sources from artworks, not the unused creative_works table — see
+    // ApplyButton.tsx) — column name is legacy, kept as-is to avoid another migration.
     creativeWorkIds.length > 0
       ? supabase
-          .from("creative_works")
-          .select("id, content_type, title, caption, image_url, embed_provider")
+          .from("artworks")
+          .select("id, title, caption, url, thumb_url")
           .in("id", creativeWorkIds)
       : Promise.resolve({ data: [] }),
   ]);
@@ -179,8 +182,8 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     if (email) emailMap.set(artistIds[i], email);
   }
 
-  const creativeWorkMap = new Map<string, { id: string; content_type: string; title: string | null; caption: string | null; image_url: string | null; embed_provider: string | null }>();
-  for (const w of (creativeWorksResult.data ?? []) as unknown as Array<{ id: string; content_type: string; title: string | null; caption: string | null; image_url: string | null; embed_provider: string | null }>) {
+  const creativeWorkMap = new Map<string, { id: string; title: string | null; caption: string | null; url: string; thumb_url: string | null }>();
+  for (const w of (creativeWorksResult.data ?? []) as unknown as Array<{ id: string; title: string | null; caption: string | null; url: string; thumb_url: string | null }>) {
     creativeWorkMap.set(w.id, w);
   }
 
