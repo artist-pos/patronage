@@ -526,10 +526,6 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
             <Link href={`/messages`} className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors w-full">
               <span>Message {artist?.full_name?.split(" ")[0] ?? "artist"}</span>
             </Link>
-            <button type="button" onClick={() => exportPDF()}
-              className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors w-full text-left">
-              Download as PDF
-            </button>
             {artist?.cv_url && (
               <a href={artist.cv_url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors">
@@ -571,8 +567,4 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
       )}
     </div>
   );
-}
-
-function exportPDF() {
-  window.print();
 }
