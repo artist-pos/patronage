@@ -224,8 +224,9 @@ export const sources: Source[] = [
   // ── Writing & Poetry ─────────────────────────────────────────────────────
 
   { name: "Creative NZ Literature Grants", url: "https://www.creativenz.govt.nz/funding-and-support/find-funding?category=literature", country: "NZ", disciplines: ["writing", "poetry"], isListPage: true, needsBrowser: true, followLinks: true },
-  // NZ Book Council rebranded → Read NZ Te Pou Muramura
-  { name: "Read NZ Te Pou Muramura", url: "https://www.read-nz.org/", country: "NZ", disciplines: ["writing"], isListPage: true, followLinks: true },
+  // Read NZ Te Pou Muramura (ex NZ Book Council) retired 2026-07: site redesigned into a
+  // reading-advocacy org — no opportunities/awards/grants page remains (all 404). NZ writing
+  // is covered by Creative NZ Literature, Landfall, Starling, Verb Wellington.
   { name: "Landfall Journal Submissions", url: "https://www.otago.ac.nz/press/journals/landfall/submissions/", country: "NZ", disciplines: ["writing", "poetry"], needsBrowser: true },
   { name: "Starling Magazine", url: "https://starlingmag.com/submissions/", country: "NZ", disciplines: ["poetry", "writing"], needsBrowser: true },
   { name: "Verb Wellington Writers Festival", url: "https://verbwellington.nz/", country: "NZ", disciplines: ["writing"], needsBrowser: true },
