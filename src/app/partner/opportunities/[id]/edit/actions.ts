@@ -99,8 +99,9 @@ export async function updateOpportunityPartner(
   revalidatePath("/partner/dashboard");
   revalidatePath("/opportunities");
   revalidatePath(`/opportunities/${id}`);
-
-  void opp; // suppress unused warning
+  // The public page is served by slug when one exists — revalidating only the
+  // id path left it stale (e.g. a newly-uploaded T&C PDF not showing up).
+  if (opp.slug) revalidatePath(`/opportunities/${opp.slug}`);
 }
 
 export async function publishOpportunityPartner(id: string) {

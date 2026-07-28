@@ -102,12 +102,15 @@ export function PartnerEditForm({ opp }: Props) {
   }
 
   function buildUpdatePayload(d: OpportunityFormData = formData) {
+    // Spread the current pipeline_config first — this tab doesn't manage
+    // terms_pdf_url, portfolio_pick_count, pipeline_stages, or template, and
+    // reconstructing from scratch here silently wiped them on every save.
     const pipelineConfig =
       d.routingType === "pipeline"
         ? {
+            ...(opp.pipeline_config as PipelineConfig | null),
             questions: d.questions,
             artist_documents: d.artistDocs,
-            terms_pdf_url: d.termsPdfUrl,
             post_selection: postSel,
           }
         : null;

@@ -1724,43 +1724,49 @@ export function OpportunityForm({
         </div>
       </Section>
 
-      <Section label="Terms & Conditions (optional)">
-        <p className="text-xs text-muted-foreground -mt-3 mb-5">
-          Artists will be able to download this before applying.
-        </p>
-        <div
-          onClick={() => termsFileRef.current?.click()}
-          className="border border-dashed border-black p-4 text-center cursor-pointer hover:bg-muted/40 transition-colors text-xs text-muted-foreground"
-        >
-          {termsUploading
-            ? "Uploading…"
-            : value.termsPdfUrl
-            ? "File uploaded. Click to replace."
-            : "Click to upload PDF"}
-        </div>
-        <input
-          ref={termsFileRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleTermsFile(f); }}
-        />
-        {value.termsPdfUrl && (
-          <div className="flex items-center gap-3 mt-2">
-            <a href={value.termsPdfUrl} target="_blank" rel="noopener noreferrer"
-              className="text-xs underline underline-offset-2">
-              Preview →
-            </a>
-            <button
-              type="button"
-              onClick={() => set({ termsPdfUrl: null })}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Remove
-            </button>
+      {/* Only rendered where onTermsUpload is actually wired (OpportunitySubmissionForm's
+          create flow) — PartnerEditForm/AdminEditOpportunityModal don't pass it, which made
+          this a dead button there. Existing pipeline listings manage T&Cs from the
+          Application form tab (ManageFormSection/TermsUploader) instead. */}
+      {onTermsUpload && (
+        <Section label="Terms & Conditions (optional)">
+          <p className="text-xs text-muted-foreground -mt-3 mb-5">
+            Artists will be able to download this before applying.
+          </p>
+          <div
+            onClick={() => termsFileRef.current?.click()}
+            className="border border-dashed border-black p-4 text-center cursor-pointer hover:bg-muted/40 transition-colors text-xs text-muted-foreground"
+          >
+            {termsUploading
+              ? "Uploading…"
+              : value.termsPdfUrl
+              ? "File uploaded. Click to replace."
+              : "Click to upload PDF"}
           </div>
-        )}
-      </Section>
+          <input
+            ref={termsFileRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleTermsFile(f); }}
+          />
+          {value.termsPdfUrl && (
+            <div className="flex items-center gap-3 mt-2">
+              <a href={value.termsPdfUrl} target="_blank" rel="noopener noreferrer"
+                className="text-xs underline underline-offset-2">
+                Preview →
+              </a>
+              <button
+                type="button"
+                onClick={() => set({ termsPdfUrl: null })}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </Section>
+      )}
     </div>
   );
 
