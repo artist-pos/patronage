@@ -1,14 +1,20 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Opportunity } from "@/types/database";
 import { formatFunding } from "./OpportunityCard";
 
-function daysLeftLabel(deadline: string | null): string {
-  if (!deadline) return "Open";
-  const d = Math.ceil((new Date(deadline + "T00:00:00").getTime() - Date.now()) / 86_400_000);
-  if (d <= 0) return "Closing today";
-  if (d === 1) return "1 day left";
-  return `${d} days left`;
+const TAG_CLS =
+  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+
+/* Mirrors OpportunityPin's deadlineBits in ExplorePinCards.tsx — same urgency
+   colour scale, so a featured listing reads consistently with the pin grid. */
+function deadlineBits(deadline: string | null): { label: string; cls: string } {
+  if (!deadline) return { label: "Open", cls: "text-[color:var(--fg-muted)]" };
+  const days = Math.ceil((new Date(deadline + "T23:59:59").getTime() - Date.now()) / 86_400_000);
+  if (days <= 0) return { label: "Closes today", cls: "text-[color:var(--urgent)]" };
+  if (days <= 2) return { label: `${days} day${days === 1 ? "" : "s"} left`, cls: "text-[color:var(--urgent)]" };
+  if (days <= 14) return { label: `${days} days left`, cls: "text-[color:var(--warning)]" };
+  if (days > 21) return { label: `${Math.round(days / 7)} weeks left`, cls: "text-[color:var(--fg-muted)]" };
+  return { label: `${days} days left`, cls: "text-[color:var(--fg-muted)]" };
 }
 
 interface Props {
@@ -16,25 +22,25 @@ interface Props {
 }
 
 export function FeaturedOpportunityHero({ opportunity: o }: Props) {
-  const deadlineLabel = daysLeftLabel(o.deadline);
-  const isUrgent = o.deadline !== null && Math.ceil((new Date(o.deadline + "T00:00:00").getTime() - Date.now()) / 86_400_000) <= 7;
+  const d = deadlineBits(o.deadline);
   const funding = o.funding_amount ? formatFunding(o.funding_amount) : o.funding_range ?? null;
   const displayedTags = (o.sub_categories ?? []).slice(0, 4);
   const href = `/opportunities/${o.slug ?? o.id}`;
 
   return (
-    <Link href={href} className="group block border border-black hover:shadow-sm transition-shadow">
-      <div className="flex flex-col sm:flex-row">
-        {/* Image — left strip, fixed height, wide */}
-        <div className="relative sm:w-[38%] shrink-0 h-48 sm:h-56 overflow-hidden bg-stone-100">
+    <section className="space-y-3">
+      <p className="t-section-label">Featured</p>
+
+      <Link href={href} className="pin group flex flex-col bg-card sm:flex-row">
+        {/* Image — left, stretches to match content panel height on desktop */}
+        <div className="relative h-56 shrink-0 overflow-hidden bg-stone-100 sm:h-auto sm:min-h-72 sm:w-[45%]">
           {o.featured_image_url ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              data-pin-img
               src={o.featured_image_url}
               alt={o.title}
-              fill
-              className="object-contain group-hover:scale-[1.02] transition-transform duration-500"
-              sizes="(max-width: 640px) 100vw, 38vw"
-              priority
+              className="absolute inset-0 h-full w-full object-contain"
             />
           ) : (
             <div className="absolute inset-0 flex items-end p-4 bg-stone-900">
@@ -43,64 +49,50 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
               </span>
             </div>
           )}
-          {/* Featured pill — overlaid top-left */}
-          <div className="absolute top-3 left-3">
-            <span className="text-[10px] font-mono uppercase tracking-widest bg-white text-black px-2 py-0.5">
-              Featured
-            </span>
-          </div>
         </div>
 
-        {/* Content — right side */}
-        <div className="flex-1 border-t border-black sm:border-t-0 sm:border-l border-black p-5 sm:p-6 flex flex-col gap-3">
-          {/* Meta row: type + country + deadline */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-stone-600">{o.type}</span>
-            <span className="text-stone-300">·</span>
-            <span className="text-xs text-muted-foreground">{o.country}</span>
-            <span className="text-stone-300">·</span>
-            <span className={`text-xs font-medium ${isUrgent ? "text-orange-600" : "text-muted-foreground"}`}>
-              {deadlineLabel}
-            </span>
+        {/* Content — right */}
+        <div className="flex flex-1 flex-col gap-4 p-6 sm:p-8">
+          <div>
+            <div className="t-kicker mb-2.5">{o.type}</div>
+            <h2 className="text-2xl font-semibold leading-tight tracking-[-0.022em] sm:text-3xl">
+              {o.title}
+            </h2>
+            <p className="mt-1.5 font-mono text-xs text-muted-foreground">
+              {o.organiser}
+            </p>
           </div>
 
-          {/* Title */}
-          <h2 className="text-lg sm:text-xl font-semibold leading-snug group-hover:underline underline-offset-2 line-clamp-2">
-            {o.title}
-          </h2>
-
-          {/* Org + funding */}
-          <p className="text-sm text-muted-foreground">
-            {o.organiser}
-            {funding && <> · <span className="font-medium text-foreground">{funding}</span></>}
-          </p>
+          {/* Funding + deadline row */}
+          <div className="flex items-baseline justify-between gap-2 border-t border-border pt-3">
+            {funding ? (
+              <span className="truncate font-mono text-base font-semibold">{funding}</span>
+            ) : <span />}
+            <span className={`shrink-0 font-mono text-[11px] ${d.cls}`}>{d.label}</span>
+          </div>
 
           {/* Blurb */}
           {(o.caption || o.description) && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="line-clamp-3 text-sm leading-[1.65] text-muted-foreground">
               {o.caption ?? o.description}
             </p>
           )}
 
           {/* Tags */}
-          {displayedTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {displayedTags.map((t) => (
-                <span key={t} className="text-xs bg-stone-100 text-stone-600 rounded-full px-2.5 py-0.5">
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-1">
+            {o.country && <span className={TAG_CLS}>{o.country}</span>}
+            {o.entry_fee === 0 && <span className={TAG_CLS}>free</span>}
+            {displayedTags.map((t) => (
+              <span key={t} className={TAG_CLS}>{t}</span>
+            ))}
+          </div>
 
           {/* CTA */}
-          <div className="mt-auto pt-1">
-            <span className="text-sm font-medium group-hover:underline underline-offset-2">
-              View opportunity →
-            </span>
+          <div className="mt-auto border-t border-border pt-4 font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+            View opportunity →
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </section>
   );
 }
