@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
-import { X, Mail, Search, Star } from "lucide-react";
+import { X, Mail, Search, Star, Settings } from "lucide-react";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import type { Opportunity } from "@/types/database";
@@ -387,6 +387,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                   </td>
                   <td className="py-3 pr-4">
                     <div className="flex gap-1.5">
+                      <Link
+                        href={`/partner/opportunities/${o.id}/manage`}
+                        title="Manage listing (settings, applications, etc.)"
+                        className="inline-flex items-center justify-center h-7 w-7 border border-border hover:border-black transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </Link>
                       <Button
                         size="sm"
                         variant={o.is_active ? "outline" : "default"}
