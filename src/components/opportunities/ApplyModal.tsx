@@ -27,7 +27,7 @@ function ListingReference({ opportunity: o }: { opportunity: OpportunityForApply
   return (
     <div className="p-5 space-y-4">
       {o.featured_image_url && (
-        <div className="border border-black overflow-hidden bg-white">
+        <div className="border border-border overflow-hidden bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={o.featured_image_url} alt={o.title} className="w-full max-h-40 object-contain" />
         </div>
@@ -35,62 +35,62 @@ function ListingReference({ opportunity: o }: { opportunity: OpportunityForApply
 
       <div className="space-y-1.5">
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-[10px] border border-black px-1.5 py-0.5 leading-none">{o.type}</span>
-          {o.country && <span className="text-[10px] border border-black px-1.5 py-0.5 leading-none">{o.country}</span>}
+          <span className="tag">{o.type}</span>
+          {o.country && <span className="tag">{o.country}</span>}
         </div>
-        <h3 className="font-semibold leading-snug">{o.title}</h3>
-        <p className="text-xs text-muted-foreground">{o.organiser}</p>
+        <h3 className="t-heading">{o.title}</h3>
+        <p className="t-mono-sm text-[color:var(--fg-muted)]">{o.organiser}</p>
       </div>
 
       {(o.sub_categories ?? []).length > 0 && (
         <div className="flex flex-wrap gap-1">
           {(o.sub_categories ?? []).map((cat) => (
-            <span key={cat} className="text-[10px] border border-black/30 text-muted-foreground px-1.5 py-0.5 leading-none">{cat}</span>
+            <span key={cat} className="tag pill-subdued">{cat}</span>
           ))}
         </div>
       )}
 
       {hasStats && (
-        <div className="grid grid-cols-2 gap-3 border-t border-black/10 pt-3">
+        <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
           {fundingLabel && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Funding</p>
+              <p className="t-section-label">Funding</p>
               <p className="text-xs font-medium">{fundingLabel}</p>
             </div>
           )}
           {deadline && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Deadline</p>
+              <p className="t-section-label">Deadline</p>
               <p className="text-xs font-medium">{deadline}</p>
             </div>
           )}
           {opensAt && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Opens</p>
+              <p className="t-section-label">Opens</p>
               <p className="text-xs font-medium">{opensAt}</p>
             </div>
           )}
           {location && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Location</p>
+              <p className="t-section-label">Location</p>
               <p className="text-xs font-medium">{location}</p>
             </div>
           )}
           {o.entry_fee != null && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Entry Fee</p>
+              <p className="t-section-label">Entry Fee</p>
               <p className="text-xs font-medium">{o.entry_fee === 0 ? "Free" : `NZD ${o.entry_fee}`}</p>
             </div>
           )}
           {o.artist_payment_type && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Artist Payment</p>
+              <p className="t-section-label">Artist Payment</p>
               <p className="text-xs font-medium">{o.artist_payment_type}</p>
             </div>
           )}
           {o.travel_support != null && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Travel Support</p>
+              <p className="t-section-label">Travel Support</p>
               <p className="text-xs font-medium">{o.travel_support ? "Yes" : "No"}</p>
             </div>
           )}
@@ -98,9 +98,9 @@ function ListingReference({ opportunity: o }: { opportunity: OpportunityForApply
       )}
 
       {bodyText && (
-        <div className="border-t border-black/10 pt-3 space-y-1.5">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">About</p>
-          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+        <div className="border-t border-border pt-3 space-y-2">
+          <p className="t-section-label">About</p>
+          <p className="t-body-sm whitespace-pre-wrap">{bodyText}</p>
         </div>
       )}
     </div>
@@ -162,11 +162,19 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
   const showPortfolioPicker = artistDocs.includes("portfolio");
   const showAvailableWorksPicker = artistDocs.includes("available_works");
   const portfolioPickCount = opportunity.pipeline_config?.portfolio_pick_count ?? 3;
+  const askForWorkDescriptions = opportunity.pipeline_config?.work_descriptions_enabled ?? false;
 
   const [selectedWorkIds, setSelectedWorkIds] = useState<string[]>(
     draft?.creative_work_ids ?? (draft?.creative_work_id ? [draft.creative_work_id] : [])
   );
   const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(draft?.artwork_id ?? null);
+  // Per-work description overrides, keyed by artwork id. A key being PRESENT is
+  // what marks "wrote a new one for this application" — an absent key means the
+  // partner sees the work's own live description instead, so we never copy that
+  // in here. Mirrors the work_descriptions column (migration 178).
+  const [workDescriptions, setWorkDescriptions] = useState<Record<string, string>>(
+    draft?.work_descriptions ?? {}
+  );
   // Kept read-only for backward compat with drafts saved before the picker
   // became the only way to attach a work — no UI writes to these anymore
   // (a free-upload tile defeated the point of picking from real, existing works).
@@ -180,6 +188,9 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set on a blocked submit — reveals which works still need describing rather
+  // than only naming the problem down by the button.
+  const [showDescriptionErrors, setShowDescriptionErrors] = useState(false);
   const supabase = createClient();
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -188,14 +199,82 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
   const fields = normaliseFields(opportunity);
 
   function toggleWorkSelection(workId: string) {
-    setSelectedWorkIds((prev) => {
-      if (prev.includes(workId)) return prev.filter((id) => id !== workId);
-      if (prev.length >= portfolioPickCount) return prev; // cap reached — ignore
-      return [...prev, workId];
-    });
+    if (selectedWorkIds.includes(workId)) {
+      setSelectedWorkIds((prev) => prev.filter((id) => id !== workId));
+      // Deselecting drops any description written for it — saveDraft prunes
+      // detached works server-side too, so keeping it here would only diverge.
+      dropWorkDescription(workId);
+    } else {
+      if (selectedWorkIds.length >= portfolioPickCount) return; // cap reached — ignore
+      setSelectedWorkIds((prev) => [...prev, workId]);
+    }
+    if (selectedArtworkId) dropWorkDescription(selectedArtworkId);
     setSelectedArtworkId(null);
     setSubmittedImageUrl(null);
   }
+
+  // ── Per-work descriptions (only rendered when the partner asked for them) ──
+
+  // Key-presence in workDescriptions is the mode flag, so switching back to
+  // "use existing" has to delete the text. This keeps a copy so flipping the
+  // radio twice doesn't silently bin what they wrote.
+  const workDescriptionCache = useRef<Record<string, string>>({ ...(draft?.work_descriptions ?? {}) });
+
+  function writeWorkDescription(workId: string, text: string) {
+    workDescriptionCache.current[workId] = text;
+    setWorkDescriptions((prev) => ({ ...prev, [workId]: text }));
+  }
+
+  function dropWorkDescription(workId: string) {
+    setWorkDescriptions((prev) => {
+      if (prev[workId] === undefined) return prev;
+      const next = { ...prev };
+      delete next[workId];
+      return next;
+    });
+  }
+
+  /** Switch a work to "write a new one" — restoring whatever they had typed
+   *  before, else seeded with the work's existing description so they edit
+   *  rather than start from a blank box. */
+  function startWorkDescription(workId: string, existing: string | null) {
+    setWorkDescriptions((prev) => ({
+      ...prev,
+      [workId]: prev[workId] ?? workDescriptionCache.current[workId] ?? existing ?? "",
+    }));
+  }
+
+  function clearAllWorkSelections() {
+    setSelectedWorkIds([]);
+    setSelectedArtworkId(null);
+    setSubmittedImageUrl(null);
+    setWorkDescriptions({});
+  }
+
+  // Works currently attached, in the order the partner will see them. Only one
+  // of the two branches is ever populated — picking from one picker clears the
+  // other — but both are listed so the section doesn't depend on that rule.
+  const attachedWorks = [
+    ...selectedWorkIds.map((id) => artistWorks.find((w) => w.id === id)),
+    ...(selectedArtworkId ? [availableWorks.find((w) => w.id === selectedArtworkId)] : []),
+  ].filter((w): w is AvailableWork => !!w);
+
+  // A work is described if it carries an override OR its own description stands
+  // in — "use existing" is a valid answer, not a skipped field. Empty when the
+  // partner didn't ask, so submission is never blocked on a hidden section.
+  const missingDescriptionIds = new Set(
+    askForWorkDescriptions
+      ? attachedWorks
+          .filter((w) => !(workDescriptions[w.id]?.trim() || w.description?.trim()))
+          .map((w) => w.id)
+      : []
+  );
+
+  // Segmented mode switch, per the v2 vocabulary (solid fill = active).
+  const modeSegCls = (active: boolean) =>
+    `px-3 py-1.5 font-mono text-[11px] transition-colors ${
+      active ? "bg-foreground text-white" : "bg-card text-muted-foreground hover:text-foreground"
+    }`;
 
   const FILE_CAP = 10;
   const ACCEPTED_TYPES = ".pdf,.doc,.docx,.jpg,.jpeg,.png,.tiff,.tif,.mp4,.mp3";
@@ -268,6 +347,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       finalAnswers,
       effectiveImageUrl,
       isJobOpportunity ? [] : selectedWorkIds,
+      isJobOpportunity ? {} : workDescriptions,
     );
     setSavingDraft(false);
     setDraftSaved(true);
@@ -296,11 +376,33 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers, selectedWorkIds, selectedArtworkId, submittedImageUrl]);
+  }, [answers, selectedWorkIds, selectedArtworkId, submittedImageUrl, workDescriptions]);
+
+  // Clear the blocked-submit state as soon as the last gap is filled, so the
+  // artist isn't reading a stale complaint while typing.
+  useEffect(() => {
+    if (showDescriptionErrors && missingDescriptionIds.size === 0) {
+      setShowDescriptionErrors(false);
+      setError(null);
+    }
+  }, [showDescriptionErrors, missingDescriptionIds.size]);
 
   async function handleSubmit() {
+    // Required descriptions gate submission (the server re-checks — a client
+    // can't be trusted with a partner's requirement).
+    if (missingDescriptionIds.size > 0) {
+      setShowDescriptionErrors(true);
+      setError(
+        missingDescriptionIds.size === 1
+          ? "Describe the work you've attached before submitting, or deselect it."
+          : `Describe all ${missingDescriptionIds.size} works you've attached before submitting, or deselect them.`
+      );
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
+    setShowDescriptionErrors(false);
 
     const encodedFiles: Record<string, string> = {};
     for (const [k, v] of Object.entries(fileUploads)) encodedFiles[k] = JSON.stringify(v);
@@ -318,6 +420,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       effectiveImageUrl,
       marketingOptIn,
       isJobOpportunity ? [] : selectedWorkIds,
+      isJobOpportunity ? {} : workDescriptions,
     );
     setSubmitting(false);
 
@@ -333,42 +436,42 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-background border border-black w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden">
+      <div className="bg-background border border-border shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden">
         {/* Reference sidebar — desktop only, always visible so they can check the brief while writing */}
-        <div className="hidden md:block md:w-72 md:shrink-0 md:border-r md:border-black md:overflow-y-auto">
+        <div className="hidden md:block md:w-72 md:shrink-0 md:border-r md:border-border md:overflow-y-auto">
           <ListingReference opportunity={opportunity} />
         </div>
 
         {/* Form column */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-black">
-            <div>
-              <h2 className="text-sm font-semibold">Apply with Patronage</h2>
-              <p className="text-xs text-muted-foreground">{opportunity.title}</p>
+          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border">
+            <div className="space-y-0.5">
+              <h2 className="t-heading">Apply with Patronage</h2>
+              <p className="t-mono-sm text-[color:var(--fg-muted)]">{opportunity.title}</p>
             </div>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {/* Mobile-only collapsible listing reference */}
-            <details className="md:hidden border-b border-black group">
-              <summary className="cursor-pointer list-none flex items-center justify-between px-6 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <details className="md:hidden border-b border-border group">
+              <summary className="cursor-pointer list-none flex items-center justify-between px-6 py-3.5 t-section-label">
                 View listing details
                 <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
               </summary>
               <ListingReference opportunity={opportunity} />
             </details>
 
-            <div className="px-6 py-6 space-y-6">
+            <div className="px-6 py-6 space-y-7">
           {/* Artist profile summary */}
-          <div className="border border-black p-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your Profile</p>
+          <div className="space-y-3">
+            <p className="t-section-label">Your profile</p>
             <div className="flex items-start gap-4">
               {artistProfile.avatar_url && (
-                <div className="relative w-16 h-16 shrink-0 border border-black overflow-hidden">
+                <div className="relative w-16 h-16 shrink-0 border border-border overflow-hidden">
                   <Image
                     src={artistProfile.avatar_url}
                     alt={displayName}
@@ -378,18 +481,18 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                   />
                 </div>
               )}
-              <div className="space-y-1 min-w-0">
-                <p className="font-semibold">{displayName}</p>
-                <p className="text-xs text-muted-foreground">@{artistProfile.username}</p>
+              <div className="space-y-1.5 min-w-0">
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="t-mono-sm text-[color:var(--fg-subtle)]">@{artistProfile.username}</p>
                 {(artistProfile.medium ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {(artistProfile.medium ?? []).slice(0, 3).map((m) => (
-                      <span key={m} className="text-xs border border-black px-1.5 py-0.5 leading-none">{m}</span>
+                      <span key={m} className="tag">{m}</span>
                     ))}
                   </div>
                 )}
                 {exhibitionCount > 0 && (
-                  <p className="text-xs text-muted-foreground">{exhibitionCount} exhibition{exhibitionCount !== 1 ? "s" : ""}</p>
+                  <p className="t-mono-sm text-[color:var(--fg-subtle)]">{exhibitionCount} exhibition{exhibitionCount !== 1 ? "s" : ""}</p>
                 )}
               </div>
             </div>
@@ -397,24 +500,22 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
             {/* Badges */}
             {opportunity.show_badges_in_submission && badges && (
               <div className="flex flex-wrap gap-1.5">
-                {badges.withPatronage && (
-                  <span className="text-xs bg-black text-white px-2 py-0.5 leading-none">With Patronage</span>
-                )}
-                {badges.verified && <span className="text-xs border border-black/50 text-muted-foreground px-2 py-0.5 leading-none">Verified</span>}
-                {badges.exhibited && <span className="text-xs border border-black/50 text-muted-foreground px-2 py-0.5 leading-none">Exhibited</span>}
-                {badges.grantRecipient && <span className="text-xs border border-black/50 text-muted-foreground px-2 py-0.5 leading-none">Grant Recipient</span>}
-                {badges.collected && <span className="text-xs border border-black/50 text-muted-foreground px-2 py-0.5 leading-none">Collected</span>}
+                {badges.withPatronage && <span className="badge badge-verified">With Patronage</span>}
+                {badges.verified && <span className="badge badge-verified">Verified</span>}
+                {badges.exhibited && <span className="badge badge-exhibited">Exhibited</span>}
+                {badges.grantRecipient && <span className="badge badge-grant">Grant recipient</span>}
+                {badges.collected && <span className="badge">Collected</span>}
               </div>
             )}
 
             {artistProfile.bio && (
-              <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">{artistProfile.bio}</p>
+              <p className="t-body-sm line-clamp-3">{artistProfile.bio}</p>
             )}
           </div>
 
           {/* T&C download (pipeline_config) */}
           {opportunity.pipeline_config?.terms_pdf_url && (
-            <div className="border border-black/20 px-4 py-3 flex items-center gap-3">
+            <div className="border border-border px-4 py-3 flex items-center gap-3">
               <svg className="w-4 h-4 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               <a
                 href={opportunity.pipeline_config.terms_pdf_url}
@@ -429,22 +530,22 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
 
           {/* Job: Professional CV attachment — or Artist: Artwork selector */}
           {isJobOpportunity ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest">Professional CV</p>
+            <div className="space-y-2.5">
+              <p className="t-section-label">Professional CV</p>
               {professionalCvUrl ? (
-                <div className="flex items-center gap-3 border border-black px-4 py-3">
+                <div className="flex items-center gap-3 border border-border px-4 py-3">
                   <svg className="w-4 h-4 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   <div className="min-w-0">
                     <p className="text-sm font-medium">CV attached</p>
-                    <a href={professionalCvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground underline underline-offset-2">
+                    <a href={professionalCvUrl} target="_blank" rel="noopener noreferrer" className="t-mono-sm text-[color:var(--fg-muted)] underline underline-offset-2 hover:text-foreground transition-colors">
                       Preview →
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="border border-dashed border-black/40 px-4 py-3 space-y-1">
-                  <p className="text-sm text-muted-foreground">No professional CV uploaded.</p>
-                  <a href="/settings?tab=cv-press" target="_blank" className="text-xs underline underline-offset-2">
+                <div className="border border-dashed border-border px-4 py-3 space-y-1">
+                  <p className="t-body-sm">No professional CV uploaded.</p>
+                  <a href="/settings?tab=cv-press" target="_blank" className="t-mono-sm underline underline-offset-2">
                     Upload one in Settings →
                   </a>
                 </div>
@@ -452,8 +553,8 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
             </div>
           ) : (showPortfolioPicker || showAvailableWorksPicker) ? (
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest">Submit a Work (optional)</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="t-section-label">Submit a work (optional)</p>
+              <p className="t-body-sm">
                 {showPortfolioPicker && showAvailableWorksPicker
                   ? `Pick up to ${portfolioPickCount} work${portfolioPickCount !== 1 ? "s" : ""} from your portfolio, or one available (for-sale) work, to include with this application.`
                   : showAvailableWorksPicker
@@ -464,14 +565,14 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                 {/* None tile */}
                 <button
                   type="button"
-                  onClick={() => { setSelectedWorkIds([]); setSelectedArtworkId(null); setSubmittedImageUrl(null); }}
-                  className={`aspect-square border text-xs flex items-center justify-center transition-colors ${
+                  onClick={clearAllWorkSelections}
+                  className={`aspect-square border font-mono text-[11px] flex items-center justify-center transition-colors ${
                     selectedWorkIds.length === 0 && selectedArtworkId === null && !submittedImageUrl
-                      ? "border-black bg-muted"
-                      : "border-black/30 hover:border-black"
+                      ? "border-foreground bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
                   }`}
                 >
-                  None
+                  none
                 </button>
 
                 {/* Available (for-sale) works */}
@@ -481,14 +582,20 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                     <button
                       key={work.id}
                       type="button"
-                      onClick={() => { setSelectedArtworkId(work.id); setSelectedWorkIds([]); setSubmittedImageUrl(null); }}
+                      onClick={() => {
+                        if (selectedArtworkId && selectedArtworkId !== work.id) dropWorkDescription(selectedArtworkId);
+                        selectedWorkIds.forEach(dropWorkDescription);
+                        setSelectedArtworkId(work.id);
+                        setSelectedWorkIds([]);
+                        setSubmittedImageUrl(null);
+                      }}
                       className={`aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
-                        selected ? "border-black ring-2 ring-black" : "border-black/30 hover:border-black"
+                        selected ? "border-foreground ring-1 ring-foreground" : "border-border hover:border-foreground"
                       }`}
                     >
                       <Image src={work.thumb_url ?? work.url} alt={work.caption ?? work.title ?? ""} fill className="object-cover" sizes="80px" />
-                      <span className={`absolute bottom-0 inset-x-0 text-center text-[8px] py-0.5 uppercase tracking-wide ${selected ? "bg-black text-white" : "bg-white/80 text-stone-500"}`}>
-                        For sale
+                      <span className={`absolute bottom-0 inset-x-0 text-center font-mono text-[9px] leading-none py-1 uppercase tracking-[0.08em] ${selected ? "bg-foreground text-white" : "bg-white/85 text-[color:var(--fg-muted)]"}`}>
+                        for sale
                       </span>
                     </button>
                   );
@@ -506,14 +613,14 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                       onClick={() => toggleWorkSelection(work.id)}
                       className={`aspect-square border relative overflow-hidden transition-colors flex flex-col items-center justify-center gap-1 ${
                         selected
-                          ? "border-black ring-2 ring-black"
+                          ? "border-foreground ring-1 ring-foreground"
                           : capReached
-                          ? "border-black/10 opacity-40 cursor-not-allowed"
-                          : "border-black/30 hover:border-black"
+                          ? "border-border opacity-40 cursor-not-allowed"
+                          : "border-border hover:border-foreground"
                       }`}
                     >
                       {selected && (
-                        <span className="absolute top-1 left-1 z-10 w-4 h-4 rounded-full bg-black text-white text-[9px] flex items-center justify-center leading-none">
+                        <span className="absolute top-0 left-0 z-10 w-5 h-5 bg-foreground text-white font-mono text-[10px] flex items-center justify-center leading-none">
                           {selectedWorkIds.indexOf(work.id) + 1}
                         </span>
                       )}
@@ -523,23 +630,118 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                 })}
               </div>
               {selectedWorkIds.length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="t-mono-sm text-[color:var(--fg-muted)]">
                   {selectedWorkIds
                     .map((id) => artistWorks.find((a) => a.id === id))
                     .filter((w): w is NonNullable<typeof w> => !!w)
                     .map((w) => w.title ?? w.caption ?? "Untitled")
-                    .join(", ")}
+                    .join(" · ")}
                   {" "}({selectedWorkIds.length}/{portfolioPickCount})
                 </p>
               )}
               {selectedArtworkId && (() => {
                 const w = availableWorks.find((a) => a.id === selectedArtworkId);
                 return w ? (
-                  <p className="text-xs text-muted-foreground">{w.title ?? w.caption ?? ""}</p>
+                  <p className="t-mono-sm text-[color:var(--fg-muted)]">{w.title ?? w.caption ?? ""}</p>
                 ) : null;
               })()}
               {submittedImageUrl && (
-                <p className="text-xs text-muted-foreground">Image from an earlier draft is attached.</p>
+                <p className="t-mono-sm text-[color:var(--fg-subtle)]">Image from an earlier draft is attached.</p>
+              )}
+
+              {/* Per-work descriptions — shown only when the partner asked for
+                  them (pipeline_config.work_descriptions_enabled), and then
+                  REQUIRED for every attached work. Attaching works is still
+                  optional; describing the ones you attach is not. */}
+              {askForWorkDescriptions && attachedWorks.length > 0 && (
+                <div className="space-y-4 border-t border-border pt-5">
+                  <div className="space-y-1.5">
+                    <p className="t-section-label">
+                      {attachedWorks.length === 1 ? "About this work" : "About these works"}
+                      <span className="ml-1 text-[color:var(--urgent)]">*</span>
+                    </p>
+                    <p className="t-body-sm">
+                      {opportunity.organiser} asks for a description of every work you attach.
+                    </p>
+                  </div>
+
+                  <div className="divide-y divide-border">
+                    {attachedWorks.map((work) => {
+                      const existing = work.description?.trim() || null;
+                      const override = workDescriptions[work.id];
+                      const isOverride = override !== undefined;
+                      const workLabel = work.title ?? work.caption ?? "Untitled";
+                      const isMissing = missingDescriptionIds.has(work.id);
+                      const flagged = showDescriptionErrors && isMissing;
+
+                      return (
+                        <div key={work.id} className="space-y-3 py-4 first:pt-0 last:pb-0">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-11 w-11 shrink-0 overflow-hidden border border-border">
+                              <Image src={work.thumb_url ?? work.url} alt={workLabel} fill className="object-cover" sizes="44px" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{workLabel}</p>
+                              {flagged && (
+                                <p className="t-mono-sm text-[color:var(--urgent)]">Description required</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Mode switch — only meaningful when the work already
+                              carries a description worth reusing. */}
+                          {existing && (
+                            <div className="inline-flex items-stretch border border-border">
+                              <button
+                                type="button"
+                                onClick={() => dropWorkDescription(work.id)}
+                                className={modeSegCls(!isOverride)}
+                              >
+                                Use existing
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => startWorkDescription(work.id, existing)}
+                                className={`border-l border-border ${modeSegCls(isOverride)}`}
+                              >
+                                Write new
+                              </button>
+                            </div>
+                          )}
+
+                          {existing && !isOverride ? (
+                            <p className="whitespace-pre-wrap border-l-2 border-border pl-3 t-body-sm">
+                              {existing}
+                            </p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <textarea
+                                rows={4}
+                                value={override ?? ""}
+                                onChange={(e) => {
+                                  const text = e.target.value;
+                                  if (text === "" && existing) dropWorkDescription(work.id);
+                                  else writeWorkDescription(work.id, text);
+                                }}
+                                placeholder={`What ${opportunity.organiser} should know about this work…`}
+                                className={`w-full resize-none bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none ${
+                                  flagged
+                                    ? "border border-[color:var(--urgent)] focus:border-[color:var(--urgent)]"
+                                    : "border border-border focus:border-foreground"
+                                }`}
+                              />
+                              {!existing && (
+                                <p className="t-mono-sm text-[color:var(--fg-subtle)]">
+                                  This work has no saved description — what you write here applies to this application only.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           ) : null}
@@ -547,19 +749,19 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
           {/* Questions (normalised from pipeline_config or custom_fields) */}
           {fields.length > 0 && (
             <div className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-widest">Questions</p>
+              <p className="t-section-label">Questions</p>
               {fields.map((field) => (
                 <div key={field.id} className="space-y-1.5">
                   <label className="text-sm font-medium">{field.label}</label>
                   {field.file_label && (
-                    <p className="text-xs text-muted-foreground">{field.file_label}</p>
+                    <p className="t-caption">{field.file_label}</p>
                   )}
                   {field.type === "short" && (
                     <input
                       type="text"
                       value={answers[field.id] ?? ""}
                       onChange={(e) => setAnswers((prev) => ({ ...prev, [field.id]: e.target.value }))}
-                      className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                      className="w-full border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none focus:border-foreground"
                     />
                   )}
                   {field.type === "long" && (
@@ -567,7 +769,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                       rows={4}
                       value={answers[field.id] ?? ""}
                       onChange={(e) => setAnswers((prev) => ({ ...prev, [field.id]: e.target.value }))}
-                      className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black resize-none"
+                      className="w-full resize-none border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none focus:border-foreground"
                     />
                   )}
                   {field.type === "file" && (
@@ -606,7 +808,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                             type="button"
                             onClick={() => fileRefs.current[field.id]?.click()}
                             disabled={uploadingFields[field.id]}
-                            className="text-xs border border-black px-3 py-2 hover:bg-muted transition-colors disabled:opacity-50"
+                            className="btn btn-ghost btn-sm disabled:opacity-50"
                           >
                             {uploadingFields[field.id]
                               ? "Uploading…"
@@ -615,7 +817,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                               : "Choose files"}
                           </button>
                           {(fileUploads[field.id] ?? []).length > 0 && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="t-mono-sm text-[color:var(--fg-subtle)]">
                               {fileUploads[field.id].length}/{FILE_CAP}
                             </span>
                           )}
@@ -643,7 +845,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
           {/* Partner data disclosure — shown for all pipeline opportunities */}
           {opportunity.routing_type === "pipeline" && (
             <div className="space-y-3">
-              <div className="border border-black/20 bg-stone-50 px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+              <div className="border border-border bg-muted px-4 py-3 text-xs leading-relaxed text-[color:var(--fg-muted)]">
                 This opportunity is run by <strong className="text-foreground">{opportunity.organiser}</strong>.
                 Your responses will be shared with <strong className="text-foreground">{opportunity.organiser}</strong> for
                 application evaluation. <strong className="text-foreground">{opportunity.organiser}</strong> will also
@@ -657,27 +859,27 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                   onChange={(e) => setMarketingOptIn(e.target.checked)}
                   className="mt-0.5 shrink-0 accent-black"
                 />
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-[color:var(--fg-muted)]">
                   I&rsquo;m happy for <strong className="text-foreground">{opportunity.organiser}</strong> to contact me about their services.
                 </span>
               </label>
             </div>
           )}
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && (
+            <p className="border-l-2 border-[color:var(--urgent)] pl-3 text-xs text-[color:var(--urgent)]">
+              {error}
+            </p>
+          )}
 
           {opportunity.routing_type === "pipeline" && (
-            <p className="text-xs text-muted-foreground -mt-2">
+            <p className="t-mono-sm -mt-2 text-[color:var(--fg-subtle)]">
               {savingDraft ? "Saving…" : draftSaved ? "Saved ✓" : "Your progress saves automatically."}
             </p>
           )}
 
-          <div className="flex gap-2 pt-2 flex-wrap">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-black px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-            >
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button type="button" onClick={onClose} className="btn btn-ghost flex-1">
               Cancel
             </button>
             {opportunity.routing_type === "pipeline" && (
@@ -685,7 +887,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                 type="button"
                 onClick={handleSaveDraft}
                 disabled={savingDraft}
-                className="flex-1 border border-black px-4 py-2.5 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                className="btn btn-outline flex-1 disabled:opacity-50"
               >
                 {savingDraft ? "Saving…" : draftSaved ? "Draft saved ✓" : "Save draft"}
               </button>
@@ -694,9 +896,9 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 bg-black text-white px-4 py-2.5 text-sm hover:bg-black/80 transition-colors disabled:opacity-50"
+              className="btn btn-primary flex-1 disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit Application"}
+              {submitting ? "Submitting…" : "Submit application"}
             </button>
           </div>
         </div>

@@ -94,7 +94,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
   const [appsResult, followupsResult, collaboratorsResult] = await Promise.all([
     supabase
       .from("opportunity_applications")
-      .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, invoice_requested_at, invoice_amount, invoice_paid_at, creative_work_id, creative_work_ids, artwork:artwork_id(id, url, caption)")
+      .select("id, status, created_at, artwork_id, submitted_image_url, custom_answers, highres_asset_url, artist_id, documentation, invoice_requested_at, invoice_amount, invoice_paid_at, creative_work_id, creative_work_ids, work_descriptions, artwork:artwork_id(id, url, caption, description)")
       .eq("opportunity_id", opportunityId)
       .order("created_at", { ascending: false }),
     supabase
@@ -123,7 +123,8 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     invoice_paid_at: string | null;
     creative_work_id: string | null;
     creative_work_ids: string[] | null;
-    artwork: { id: string; url: string; caption: string | null } | null;
+    work_descriptions: Record<string, string> | null;
+    artwork: { id: string; url: string; caption: string | null; description: string | null } | null;
   }>;
 
   const followups = (followupsResult.data ?? []) as Array<{
@@ -166,7 +167,7 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     creativeWorkIds.length > 0
       ? supabase
           .from("artworks")
-          .select("id, title, caption, url, thumb_url")
+          .select("id, title, caption, url, thumb_url, description")
           .in("id", creativeWorkIds)
       : Promise.resolve({ data: [] }),
   ]);
@@ -182,8 +183,9 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     if (email) emailMap.set(artistIds[i], email);
   }
 
-  const creativeWorkMap = new Map<string, { id: string; title: string | null; caption: string | null; url: string; thumb_url: string | null }>();
-  for (const w of (creativeWorksResult.data ?? []) as unknown as Array<{ id: string; title: string | null; caption: string | null; url: string; thumb_url: string | null }>) {
+  type CreativeWorkRow = { id: string; title: string | null; caption: string | null; url: string; thumb_url: string | null; description: string | null };
+  const creativeWorkMap = new Map<string, CreativeWorkRow>();
+  for (const w of (creativeWorksResult.data ?? []) as unknown as CreativeWorkRow[]) {
     creativeWorkMap.set(w.id, w);
   }
 
@@ -212,6 +214,8 @@ export default async function PartnerOpportunityPage({ params }: Props) {
     return {
       ...app,
       concept_image_url: conceptImageFor(app.custom_answers),
+      // Pre-178 rows have no overrides — normalise so readers can index directly.
+      work_descriptions: app.work_descriptions ?? {},
       creative_works: (app.creative_work_ids ?? [])
         .map((id) => creativeWorkMap.get(id))
         .filter((w): w is NonNullable<typeof w> => !!w),

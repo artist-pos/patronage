@@ -20,6 +20,9 @@ export function ManageFormSection({ opp }: Props) {
   );
   const [termsPdfUrl, setTermsPdfUrl] = useState<string | null>(opp.pipeline_config?.terms_pdf_url ?? null);
   const [portfolioPickCount, setPortfolioPickCount] = useState(opp.pipeline_config?.portfolio_pick_count ?? 3);
+  const [workDescriptionsEnabled, setWorkDescriptionsEnabled] = useState(
+    opp.pipeline_config?.work_descriptions_enabled ?? false
+  );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const configRef = useRef<PipelineConfig>(
     (opp.pipeline_config as PipelineConfig | null) ?? {
@@ -66,18 +69,21 @@ export function ManageFormSection({ opp }: Props) {
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
     portfolioPickCount?: number;
+    workDescriptionsEnabled?: boolean;
   }) {
     const newQuestions = patch.questions ?? questions;
     const newDocs = patch.artistDocs ?? artistDocs;
     const newBadges = patch.showBadges ?? showBadges;
     const newTermsPdfUrl = patch.termsPdfUrl !== undefined ? patch.termsPdfUrl : termsPdfUrl;
     const newPortfolioPickCount = patch.portfolioPickCount ?? portfolioPickCount;
+    const newWorkDescriptionsEnabled = patch.workDescriptionsEnabled ?? workDescriptionsEnabled;
 
     if (patch.questions !== undefined) setQuestions(newQuestions);
     if (patch.artistDocs !== undefined) setArtistDocs(newDocs);
     if (patch.showBadges !== undefined) { setShowBadges(newBadges); showBadgesRef.current = newBadges; }
     if (patch.termsPdfUrl !== undefined) setTermsPdfUrl(newTermsPdfUrl);
     if (patch.portfolioPickCount !== undefined) setPortfolioPickCount(newPortfolioPickCount);
+    if (patch.workDescriptionsEnabled !== undefined) setWorkDescriptionsEnabled(newWorkDescriptionsEnabled);
 
     configRef.current = {
       ...configRef.current,
@@ -85,6 +91,7 @@ export function ManageFormSection({ opp }: Props) {
       ...(patch.artistDocs !== undefined && { artist_documents: newDocs }),
       ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: newTermsPdfUrl }),
       ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: newPortfolioPickCount }),
+      ...(patch.workDescriptionsEnabled !== undefined && { work_descriptions_enabled: newWorkDescriptionsEnabled }),
     };
 
     queueSave();
@@ -100,6 +107,7 @@ export function ManageFormSection({ opp }: Props) {
           artistDocs={artistDocs}
           termsPdfUrl={termsPdfUrl}
           portfolioPickCount={portfolioPickCount}
+          workDescriptionsEnabled={workDescriptionsEnabled}
           onChange={handleChange}
         />
         <div className="lg:sticky lg:top-[57px]">
@@ -108,6 +116,7 @@ export function ManageFormSection({ opp }: Props) {
             artistDocs={artistDocs}
             showBadges={showBadges}
             portfolioPickCount={portfolioPickCount}
+            workDescriptionsEnabled={workDescriptionsEnabled}
           />
         </div>
       </div>

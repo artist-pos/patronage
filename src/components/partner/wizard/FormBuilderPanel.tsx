@@ -29,16 +29,18 @@ interface Props {
   artistDocs: PipelineConfig["artist_documents"];
   termsPdfUrl: string | null;
   portfolioPickCount: number;
+  workDescriptionsEnabled: boolean;
   onChange: (patch: {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
     portfolioPickCount?: number;
+    workDescriptionsEnabled?: boolean;
   }) => void;
 }
 
-export function FormBuilderPanel({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, portfolioPickCount, onChange }: Props) {
+export function FormBuilderPanel({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, portfolioPickCount, workDescriptionsEnabled, onChange }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -77,6 +79,10 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
         : [...prev, val]) as PipelineConfig["artist_documents"],
     });
   }
+
+  const anyPickerEnabled = (ARTIST_DOC_PICKER_VALS as string[]).some((v) =>
+    (artistDocs as string[]).includes(v)
+  );
 
   return (
     <div className="space-y-8">
@@ -172,6 +178,27 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
                 )}
               </div>
             ))}
+
+            {/* Sub-toggle of the pickers above — applies to whichever picker is on,
+                since both source from `artworks` and so both have a description. */}
+            {anyPickerEnabled && (
+              <div className="ml-7 pt-1">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={workDescriptionsEnabled}
+                    onChange={(e) => onChange({ workDescriptionsEnabled: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm">Require a description of each work</p>
+                    <p className="text-xs text-stone-400">
+                      Artists can&apos;t submit until every work they attach has one — either the description already on the work, or one written for your application.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </div>

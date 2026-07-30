@@ -122,6 +122,7 @@ export function WizardShell({
   const artistDocs = (opp.pipeline_config?.artist_documents ?? []) as PipelineConfig["artist_documents"];
   const showBadges = opp.show_badges_in_submission ?? false;
   const portfolioPickCount = opp.pipeline_config?.portfolio_pick_count ?? 3;
+  const workDescriptionsEnabled = opp.pipeline_config?.work_descriptions_enabled ?? false;
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -193,6 +194,7 @@ export function WizardShell({
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
     portfolioPickCount?: number;
+    workDescriptionsEnabled?: boolean;
   }) {
     setOpp((prev) => {
       const prevConfig = prev.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
@@ -202,19 +204,21 @@ export function WizardShell({
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
         ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
         ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: patch.portfolioPickCount }),
+        ...(patch.workDescriptionsEnabled !== undefined && { work_descriptions_enabled: patch.workDescriptionsEnabled }),
       };
       return { ...prev, pipeline_config: newConfig, show_badges_in_submission: patch.showBadges ?? prev.show_badges_in_submission };
     });
 
     const configPatch: Parameters<typeof updateOpportunityPartner>[1] = {};
     if (patch.showBadges !== undefined) configPatch.show_badges_in_submission = patch.showBadges;
-    if (patch.questions !== undefined || patch.artistDocs !== undefined || patch.termsPdfUrl !== undefined || patch.portfolioPickCount !== undefined) {
+    if (patch.questions !== undefined || patch.artistDocs !== undefined || patch.termsPdfUrl !== undefined || patch.portfolioPickCount !== undefined || patch.workDescriptionsEnabled !== undefined) {
       configPatch.pipeline_config = {
         ...(opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null }),
         ...(patch.questions !== undefined && { questions: patch.questions }),
         ...(patch.artistDocs !== undefined && { artist_documents: patch.artistDocs }),
         ...(patch.termsPdfUrl !== undefined && { terms_pdf_url: patch.termsPdfUrl }),
         ...(patch.portfolioPickCount !== undefined && { portfolio_pick_count: patch.portfolioPickCount }),
+        ...(patch.workDescriptionsEnabled !== undefined && { work_descriptions_enabled: patch.workDescriptionsEnabled }),
       };
     }
     if (Object.keys(configPatch).length > 0) queueSave(configPatch);
@@ -342,6 +346,7 @@ export function WizardShell({
             artistDocs={artistDocs}
             termsPdfUrl={opp.pipeline_config?.terms_pdf_url ?? null}
             portfolioPickCount={portfolioPickCount}
+            workDescriptionsEnabled={workDescriptionsEnabled}
             onChange={handleFormChange}
           />
         )}

@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendApplicationConfirmation } from "@/lib/email";
-import type { ApplicationLink, OpportunityApplicationDraft } from "@/types/database";
+import type { ApplicationLink, OpportunityApplicationDraft, PipelineConfig } from "@/types/database";
 
 export async function updateOpportunityAdmin(
   id: string,
@@ -82,12 +82,33 @@ export async function updateOpportunityAdmin(
   revalidatePath("/opportunities");
 }
 
+/**
+ * Drop description overrides for works that are no longer attached, so a
+ * deselected work can't leave orphaned text behind for the reviewer to see.
+ * `artworkId` is the available-work pick, which lives outside creativeWorkIds.
+ */
+function pruneWorkDescriptions(
+  workDescriptions: Record<string, string> | null | undefined,
+  workIds: string[],
+  artworkId: string | null,
+): Record<string, string> {
+  if (!workDescriptions) return {};
+  const attached = new Set<string>(workIds);
+  if (artworkId) attached.add(artworkId);
+  const pruned: Record<string, string> = {};
+  for (const [id, text] of Object.entries(workDescriptions)) {
+    if (attached.has(id) && text.trim()) pruned[id] = text;
+  }
+  return pruned;
+}
+
 export async function saveDraft(
   opportunityId: string,
   artworkId: string | null,
   answers: Record<string, string>,
   submittedImageUrl?: string | null,
   creativeWorkIds?: string[] | null,
+  workDescriptions?: Record<string, string> | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -106,6 +127,7 @@ export async function saveDraft(
       // creative_work_id mirrors the first pick for older single-work consumers.
       creative_work_id: workIds[0] ?? null,
       creative_work_ids: workIds.length > 0 ? workIds : null,
+      work_descriptions: pruneWorkDescriptions(workDescriptions, workIds, artworkId || null),
     }, { onConflict: "opportunity_id,artist_id" });
 
   if (error) return { error: error.message };
@@ -134,6 +156,7 @@ export async function submitApplication(
   submittedImageUrl?: string | null,
   partnerMarketingOptIn?: boolean,
   creativeWorkIds?: string[] | null,
+  workDescriptions?: Record<string, string> | null,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -142,7 +165,7 @@ export async function submitApplication(
   // Eligibility check + opportunity data fetched together — reused for email below
   const [{ data: pd }, { data: opp }] = await Promise.all([
     supabase.from("profiles").select("role, full_name, username").eq("id", user.id).single(),
-    supabase.from("opportunities").select("type, routing_type, title, organiser, profile_id").eq("id", opportunityId).single(),
+    supabase.from("opportunities").select("type, routing_type, title, organiser, profile_id, pipeline_config").eq("id", opportunityId).single(),
   ]);
 
   const isArtist = pd?.role === "artist" || pd?.role === "owner";
@@ -152,6 +175,28 @@ export async function submitApplication(
   }
 
   const workIds = creativeWorkIds ?? [];
+  const descriptions = pruneWorkDescriptions(workDescriptions, workIds, artworkId || null);
+
+  // When the partner requires per-work descriptions, every attached work must
+  // have one — either written for this application or already on the work.
+  // Re-checked here because ApplyModal's gate is client-side only.
+  const wantsDescriptions =
+    ((opp?.pipeline_config as PipelineConfig | null)?.work_descriptions_enabled ?? false);
+  const attachedIds = [...workIds, ...(artworkId ? [artworkId] : [])];
+  const undescribed = attachedIds.filter((id) => !descriptions[id]);
+  if (wantsDescriptions && undescribed.length > 0) {
+    // Only the works without an override need checking against their own row.
+    const { data: workRows } = await supabase
+      .from("artworks")
+      .select("id, description")
+      .in("id", undescribed);
+    const described = new Set(
+      (workRows ?? []).filter((w) => w.description?.trim()).map((w) => w.id)
+    );
+    if (undescribed.some((id) => !described.has(id))) {
+      return { error: "Every work you attach needs a description." };
+    }
+  }
   const { error } = await supabase
     .from("opportunity_applications")
     .insert({
@@ -164,6 +209,7 @@ export async function submitApplication(
       // creative_work_id mirrors the first pick for older single-work consumers.
       creative_work_id: workIds[0] ?? null,
       creative_work_ids: workIds.length > 0 ? workIds : null,
+      work_descriptions: descriptions,
     });
 
   if (error) return { error: error.message };

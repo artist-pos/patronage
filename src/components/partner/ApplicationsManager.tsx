@@ -15,13 +15,16 @@ export interface CreativeWorkLite {
   caption: string | null;
   url: string;
   thumb_url: string | null;
+  /** The artist's own description of the work. Shown to reviewers unless this
+   *  application carries an override in `work_descriptions`. */
+  description: string | null;
 }
 
 export interface EnrichedApp {
   id: string;
   status: string;
   created_at: string;
-  artwork: { id: string; url: string; caption: string | null } | null;
+  artwork: { id: string; url: string; caption: string | null; description: string | null } | null;
   submitted_image_url: string | null;
   /** First image from a file-upload question answer (e.g. a concept sketch) —
    *  the actual submission for this opportunity, prioritised over portfolio
@@ -29,6 +32,9 @@ export interface EnrichedApp {
   concept_image_url: string | null;
   /** All portfolio works the artist picked (Step 3 "Portfolio images" pick count). */
   creative_works: CreativeWorkLite[] | null;
+  /** Descriptions the artist wrote for THIS application, keyed by artwork id
+   *  (migration 178). An absent key means the work's own description stands. */
+  work_descriptions: Record<string, string>;
   custom_answers: Record<string, string>;
   highres_asset_url: string | null;
   artist: {

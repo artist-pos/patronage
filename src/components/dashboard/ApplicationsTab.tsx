@@ -136,14 +136,14 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
       // alone doesn't work here: sold pieces keep is_available=false too.
       isJob
         ? Promise.resolve({ data: [] as AvailableWork[] })
-        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency").eq("profile_id", user.id).eq("creator_id", user.id).eq("current_owner_id", user.id).eq("hide_from_archive", false).order("position", { ascending: true }),
+        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description").eq("profile_id", user.id).eq("creator_id", user.id).eq("current_owner_id", user.id).eq("hide_from_archive", false).order("position", { ascending: true }),
       isJob
         ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
         : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
       wantsAvailableWorks
         ? supabase
             .from("artworks")
-            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description")
             .eq("current_owner_id", user.id)
             .eq("is_available", true)
             .order("position", { ascending: true })
@@ -176,6 +176,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
         updated_at: draft.updated_at,
         creative_work_id: draft.creative_work_id ?? null,
         creative_work_ids: draft.creative_work_ids ?? null,
+        work_descriptions: draft.work_descriptions ?? {},
       },
       artistProfile: {
         id: profile.id,

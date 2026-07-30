@@ -11,16 +11,18 @@ interface Props {
   artistDocs: PipelineConfig["artist_documents"];
   termsPdfUrl: string | null;
   portfolioPickCount: number;
+  workDescriptionsEnabled: boolean;
   onChange: (patch: {
     questions?: PipelineQuestion[];
     showBadges?: boolean;
     artistDocs?: PipelineConfig["artist_documents"];
     termsPdfUrl?: string | null;
     portfolioPickCount?: number;
+    workDescriptionsEnabled?: boolean;
   }) => void;
 }
 
-export function StepFormBuilder({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, portfolioPickCount, onChange }: Props) {
+export function StepFormBuilder({ opportunityId, questions, showBadges, artistDocs, termsPdfUrl, portfolioPickCount, workDescriptionsEnabled, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -38,6 +40,7 @@ export function StepFormBuilder({ opportunityId, questions, showBadges, artistDo
           artistDocs={artistDocs}
           termsPdfUrl={termsPdfUrl}
           portfolioPickCount={portfolioPickCount}
+          workDescriptionsEnabled={workDescriptionsEnabled}
           onChange={onChange}
         />
 
@@ -47,6 +50,7 @@ export function StepFormBuilder({ opportunityId, questions, showBadges, artistDo
             artistDocs={artistDocs}
             showBadges={showBadges}
             portfolioPickCount={portfolioPickCount}
+            workDescriptionsEnabled={workDescriptionsEnabled}
           />
         </div>
       </div>

@@ -75,6 +75,11 @@ export interface PipelineConfig {
    *  when 'portfolio' is in artist_documents). Defaults to 3 — matches the
    *  Verified-badge minimum of 3 works in their portfolio. */
   portfolio_pick_count?: number;
+  /** Sub-toggle of the work pickers: when true, the artist is asked for a short
+   *  description of each work they attach — reusing the work's existing
+   *  description, or writing one specific to this application. Defaults to off,
+   *  so existing listings don't gain a field their applicants didn't expect. */
+  work_descriptions_enabled?: boolean;
   post_selection?: PostSelectionConfig | null;
   notification_defaults?: {
     shortlisted: 'send' | 'hold';
@@ -219,6 +224,9 @@ export interface OpportunityApplication {
   /** Multiple portfolio picks (Step 3 "Portfolio images" with a pick count > 1).
    *  creative_work_id above stays as the first pick, for older single-work consumers. */
   creative_work_ids: string[] | null;
+  /** Per-work description overrides, keyed by artworks.id (migration 178). An
+   *  absent key means the reviewer sees the live artworks.description instead. */
+  work_descriptions: Record<string, string>;
 }
 
 export interface RubricCriterion {
@@ -309,6 +317,8 @@ export interface OpportunityApplicationDraft {
   updated_at: string;
   creative_work_id: string | null;
   creative_work_ids: string[] | null;
+  /** Per-work description overrides, keyed by artworks.id (migration 178). */
+  work_descriptions: Record<string, string>;
 }
 
 export interface ProfileAchievement {

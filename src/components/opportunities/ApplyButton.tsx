@@ -12,7 +12,7 @@ import { getDraft } from "@/app/opportunities/[id]/actions";
 import type { ApplyModalProps } from "./ApplyModal";
 import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, Artwork } from "@/types/database";
 
-export type AvailableWork = Pick<Artwork, "id" | "url" | "thumb_url" | "title" | "caption" | "price_cents" | "is_poa" | "price_currency">;
+export type AvailableWork = Pick<Artwork, "id" | "url" | "thumb_url" | "title" | "caption" | "price_cents" | "is_poa" | "price_currency" | "description">;
 
 const ApplyModal = dynamic(() => import("./ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 
@@ -110,7 +110,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         ? Promise.resolve({ data: [] as AvailableWork[] })
         : supabase
             .from("artworks")
-            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description")
             .eq("profile_id", user.id)
             .eq("creator_id", user.id)
             .eq("current_owner_id", user.id)
@@ -122,7 +122,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       wantsAvailableWorks
         ? supabase
             .from("artworks")
-            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency")
+            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description")
             .eq("current_owner_id", user.id)
             .eq("is_available", true)
             .order("position", { ascending: true })

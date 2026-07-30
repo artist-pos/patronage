@@ -31,6 +31,7 @@ interface Artwork {
   id: string;
   url: string;
   caption: string | null;
+  description: string | null;
 }
 
 interface StatusLogEntry {
@@ -52,6 +53,7 @@ interface Application {
   artist: Artist | null;
   artwork: Artwork | null;
   creative_works: CreativeWorkLite[] | null;
+  work_descriptions?: Record<string, string>;
   invoice_requested_at: string | null;
   invoice_amount: number | null;
   invoice_paid_at: string | null;
@@ -78,6 +80,27 @@ interface Props {
 
 type AppTab = "application" | "portfolio" | "cv" | "activity";
 
+/**
+ * A submitted work's description. An override written for this application wins
+ * over the work's own description and is labelled, so a reviewer can tell what
+ * was written for them from what was already on the piece. Renders nothing when
+ * there's neither — most applications predate migration 178.
+ */
+function WorkDescription({ override, existing }: { override?: string; existing: string | null }) {
+  const text = override?.trim() || existing?.trim() || null;
+  if (!text) return null;
+  const isOverride = !!override?.trim();
+
+  return (
+    <div className="space-y-1 pt-1">
+      {isOverride && <p className="t-section-label">Written for this application</p>}
+      <p className="whitespace-pre-wrap border-l-2 border-border pl-2.5 text-xs leading-relaxed text-[color:var(--fg-muted)]">
+        {text}
+      </p>
+    </div>
+  );
+}
+
 export function ApplicantPanel({ application, opportunity, onClose, allApps, onNavigate }: Props) {
   const [status, setStatus] = useState(application.status);
   const [saving, setSaving] = useState(false);
@@ -99,6 +122,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
   const artist = application.artist;
   const displayName = artist?.full_name ?? artist?.username ?? "Unknown";
   const creativeWorksList = application.creative_works ?? [];
+  const workDescriptions = application.work_descriptions ?? {};
   const artworkImages = application.artwork ? [application.artwork] : [];
   // Legacy fallback — pre-multi-pick applications only ever stored one flattened
   // image with no artwork/creative_works rows to point to.
@@ -322,6 +346,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
                       {img.caption && <p className="text-xs text-stone-400">{img.caption}</p>}
+                      <WorkDescription override={workDescriptions[img.id]} existing={img.description} />
                     </div>
                   ))}
                   {creativeWorksList.map((work) => (
@@ -337,6 +362,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                           </a>
                         )}
                       </div>
+                      <WorkDescription override={workDescriptions[work.id]} existing={work.description} />
                     </div>
                   ))}
                   {legacyImage.map((img) => (
