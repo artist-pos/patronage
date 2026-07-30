@@ -59,12 +59,21 @@ export default async function FeedPage({ searchParams }: PageProps) {
 
   const wantsUpdates = filter === "all" || filter === "updates";
 
-  // ── Public queries — none of these depend on auth, so they start BEFORE
-  // the auth + profile round-trips instead of queuing behind them.
+  // Auth — request-deduped with the Header. Started here, awaited far below, so
+  // the public queries that follow overlap it instead of queuing behind it.
+  const authPromise = getServerUser();
+
+  // The "everyone" feed is the one query that DOES depend on auth: signed-out
+  // viewers get admin-moderated updates filtered out (migration 177), signed-in
+  // viewers see everything. Chained off authPromise so it fires the moment the
+  // user resolves, rather than waiting on the profile round-trip too.
   const everyoneFeedPromise =
     activeTab === "feed" && feedAudience === "everyone" && wantsUpdates
-      ? getLatestUpdates(INITIAL_COUNT, 0, undefined)
+      ? authPromise.then(({ user }) => getLatestUpdates(INITIAL_COUNT, 0, undefined, !!user))
       : null;
+
+  // ── Public queries — these don't depend on auth at all, so they start
+  // immediately and run alongside the auth round-trip above.
 
   // ── Explore extras — available works thread through the update masonry so
   // the "All" feed stays visual: studio updates + art for sale, nothing else.
@@ -103,9 +112,8 @@ export default async function FeedPage({ searchParams }: PageProps) {
     ? getAvailableWorksForGrid({ medium, sort: sort as WorksSort })
     : Promise.resolve(null);
 
-  // ── Auth — request-deduped with the Header; runs concurrently with the
-  // public queries started above ──
-  const { user } = await getServerUser();
+  // ── Resolve auth (started above, concurrent with the public queries) ──
+  const { user } = await authPromise;
   const profile = user ? await getProfileById(user.id) : null;
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
 
@@ -161,7 +169,8 @@ export default async function FeedPage({ searchParams }: PageProps) {
     everyoneFeedPromise !== null
       ? await everyoneFeedPromise
       : activeTab === "feed" && feedAudience !== "everyone"
-        ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds)
+        // following/subscribed are signed-in-only audiences — no admin_hidden filter
+        ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds, !!user)
         : [];
 
   const hasMore = activeTab === "feed" && feedUpdates.length === INITIAL_COUNT;

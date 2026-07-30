@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getLatestUpdates } from "@/lib/feed";
 
 const PAGE_SIZE = 10;
@@ -10,11 +10,13 @@ export async function GET(request: NextRequest) {
   const audience = searchParams.get("audience") ?? "everyone";
 
   try {
+    // Auth is now needed for every audience, not just following/subscribed: the
+    // admin_hidden filter (migration 177) applies to signed-out viewers only, so
+    // page 2+ of the public feed must be filtered the same way page 1 was.
+    const { supabase, user } = await getServerUser();
     let artistIds: string[] | undefined;
 
     if (audience === "subscribed") {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: subs } = await supabase
           .from("support_subscriptions")
@@ -28,8 +30,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (audience === "following") {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: follows } = await supabase
           .from("follows")
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const updates = await getLatestUpdates(PAGE_SIZE, offset, artistIds);
+    const updates = await getLatestUpdates(PAGE_SIZE, offset, artistIds, !!user);
     return NextResponse.json(
       { updates, hasMore: updates.length === PAGE_SIZE },
       { headers: { "Cache-Control": "private, no-store" } }

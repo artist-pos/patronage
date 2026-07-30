@@ -1001,6 +1001,15 @@ export interface ProjectUpdate {
   update_tag: 'concept' | 'update' | 'milestone' | 'complete';
   title: string | null;
   tldr: string | null;
+  /**
+   * Migration 177: admin moderation flag. When true the update is hidden from
+   * signed-out visitors on the landing page and /feed — and nowhere else. The
+   * artist profile, detail pages, project threads and direct links all still
+   * render it for everyone, and any signed-in viewer sees it on the two feeds
+   * too. Nothing is deleted. Admin-set only; the artist is never notified and
+   * has no UI for it.
+   */
+  admin_hidden: boolean;
   created_at: string;
 }
 

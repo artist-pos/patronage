@@ -7,6 +7,7 @@ import { Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
+import { AdminHideToggle } from "@/components/feed/AdminHideToggle";
 import { gridImageSrc } from "@/lib/image";
 
 function formatTimestamp(iso: string): string {
@@ -95,7 +96,8 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     shareUrl: `${SITE_URL}${href}`,
   };
 
-  const controls = (
+  /* `onDark` = rendered on the image-pin hover bar rather than a light surface. */
+  const renderControls = (onDark = false) => (
     <span className="flex shrink-0 items-center gap-0.5">
       {canEdit && (
         <EditUpdateModal
@@ -106,6 +108,15 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           initialCaption={u.caption ?? null}
           initialTextContent={u.text_content ?? null}
           variant="icon"
+        />
+      )}
+      {/* Admin-only moderation toggle — never rendered for the artist, so a
+          moderated post looks completely unchanged from their side. */}
+      {isAdmin && (
+        <AdminHideToggle
+          updateId={u.id}
+          initialHidden={u.admin_hidden ?? false}
+          onDark={onDark}
         />
       )}
       <ShareTrigger
@@ -134,7 +145,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           {formatRelativeShort(u.created_at)}
         </span>
       </div>
-      {controls}
+      {renderControls(false)}
     </div>
   );
 
@@ -176,7 +187,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           </Link>
           {/* Controls — revealed on hover, top-right, over the image */}
           <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 bg-black/60 opacity-0 transition-opacity duration-200 [.pin:hover_&]:opacity-100 text-white">
-            {controls}
+            {renderControls(true)}
           </div>
         </div>
       );

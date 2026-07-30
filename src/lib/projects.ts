@@ -44,7 +44,9 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
   if (!projectRow) return null;
   const pr = projectRow as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  // Fetch all updates belonging to this project, chronological
+  // Fetch all updates belonging to this project, chronological.
+  // NOT filtered on admin_hidden (migration 177) — that flag only hides posts
+  // from the landing page and /feed. Project threads render in full for everyone.
   const { data: updatesData } = await supabase
     .from("project_updates")
     .select(`
@@ -66,6 +68,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
       collaborator_ids,
       title,
       tldr,
+      admin_hidden,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -158,6 +161,8 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
     notes: notesByUpdate[u.id] ?? [],
     title: u.title ?? null,
     tldr: u.tldr ?? null,
+    // Carried through to satisfy the shared type; threads never filter on it.
+    admin_hidden: u.admin_hidden ?? false,
     update_tag: u.update_tag ?? "update",
   }));
 

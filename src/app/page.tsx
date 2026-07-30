@@ -15,7 +15,7 @@ const UPDATE_SELECT = `
   id, artist_id, project_id, image_url, caption, content_type, discipline,
   audio_url, video_url, text_content, embed_url, embed_provider,
   orientation, image_width, image_height, collaborator_ids,
-  title, tldr, update_tag, created_at,
+  title, tldr, update_tag, admin_hidden, created_at,
   profiles!project_updates_artist_id_fkey (username, full_name, avatar_url)
 `;
 
@@ -41,11 +41,15 @@ const getCachedHomeData = unstable_cache(
           .or(`deadline.gte.${today},deadline.is.null`)
           .order("deadline", { ascending: true, nullsFirst: false })
           .limit(8),
+        // NOT filtered on admin_hidden here: this block is unstable_cache'd and
+        // shared by every visitor, so the auth-dependent filter has to happen
+        // after the cache (see Home() below). Over-fetches 16 for a 12-slot strip
+        // so a signed-out viewer still gets a full row once hidden posts drop out.
         supabase
           .from("project_updates")
           .select(UPDATE_SELECT)
           .order("created_at", { ascending: false })
-          .limit(12),
+          .limit(16),
         supabase
           .from("opportunities")
           .select("id", { count: "exact", head: true })
@@ -94,6 +98,7 @@ const getCachedHomeData = unstable_cache(
       orientation: row.orientation ?? null,
       image_width: row.image_width ?? null,
       image_height: row.image_height ?? null,
+      admin_hidden: row.admin_hidden ?? false,
       created_at: row.created_at,
       artist_username: row.profiles?.username ?? "",
       artist_full_name: row.profiles?.full_name ?? null,
@@ -371,10 +376,17 @@ export default async function Home() {
   const isNewUser = !!user && !!user.created_at &&
     (Date.now() - new Date(user.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
+  // admin_hidden (migration 177) is applied here rather than in the cached query
+  // above, which is shared across all visitors: signed-out viewers lose moderated
+  // posts, everyone with an account sees the strip unchanged. Sliced to 12 after
+  // filtering — the query over-fetches 16 to absorb the drop-outs.
+  const visibleUpdates = (isAuthenticated ? updates : updates.filter((u) => !u.admin_hidden))
+    .slice(0, 12);
+
   // From-the-studio preview replicates Explore: same cards, same 5-column
   // masonry (columns collapse responsively via hidden classes).
   const previewCols: ProjectUpdateWithArtist[][] = [[], [], [], [], []];
-  updates.forEach((u, i) => previewCols[i % 5].push(u));
+  visibleUpdates.forEach((u, i) => previewCols[i % 5].push(u));
   const previewColCls = [
     "flex flex-col gap-2 flex-1 min-w-0",
     "flex flex-col gap-2 flex-1 min-w-0",
@@ -632,7 +644,7 @@ export default async function Home() {
 
       {/* ══ FEED PREVIEW — straight from Explore: same cards, same 5-column
              masonry, cut with a fade-out ══ */}
-      {updates.length > 0 && (
+      {visibleUpdates.length > 0 && (
         <section className="border-t border-border bg-feed-bg">
           <div className="mx-auto max-w-[1600px]">
             <div className="flex items-baseline justify-between px-6 pb-5 pt-8">
