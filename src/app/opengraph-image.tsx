@@ -101,13 +101,16 @@ export default async function Image() {
           {/* Tagline */}
           <div
             style={{
+              display: "flex",
+              flexDirection: "column",
               fontSize: 17,
               color: MUTED,
               lineHeight: 1.5,
               marginBottom: 44,
             }}
           >
-            Professional Profiles and Opportunities{"\n"}for Australasian Artists
+            <div>Professional Profiles and Opportunities</div>
+            <div>for Australasian Artists</div>
           </div>
 
           {/* Feature bullets */}
