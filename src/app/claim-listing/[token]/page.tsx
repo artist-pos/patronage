@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { claimListing } from "./actions";
 import { TrackClaimOpen } from "./TrackClaimOpen";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
@@ -96,17 +95,7 @@ export default async function ClaimListingPage({ params }: Props) {
       );
     }
 
-    const result = await claimListing(token, user.id);
-    if ("error" in result) {
-      return (
-        <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
-          <p className="text-sm font-semibold">Something went wrong</p>
-          <p className="text-sm text-muted-foreground">{result.error}</p>
-        </div>
-      );
-    }
-
-    redirect(`/partner/opportunities/${result.id}/edit`);
+    redirect(`/claim-listing/${token}/complete`);
   }
 
   const claimPath = `/claim-listing/${token}`;
