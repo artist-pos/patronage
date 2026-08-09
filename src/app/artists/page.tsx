@@ -8,7 +8,7 @@ import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
 import { AdminSpotlightMenu } from "@/components/artists/AdminSpotlightMenu";
 import { computeBadges } from "@/lib/badges";
-import type { CountryEnum, CareerStageEnum } from "@/types/database";
+import type { CountryEnum, CareerStageEnum, ProfileWithImage } from "@/types/database";
 
 export const metadata = {
   title: "Artists — Patronage",
@@ -79,6 +79,64 @@ interface PageProps {
   searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string; commissions?: string }>;
 }
 
+// A single directory row + (for admins) the spotlight menu rail beside it.
+// Shared by the Directory and International sections.
+function DirectoryRow({
+  artist,
+  isAdmin,
+  spotlightProfileId,
+  worksCount,
+  collected,
+}: {
+  artist: ProfileWithImage;
+  isAdmin: boolean;
+  spotlightProfileId: string | null;
+  worksCount: number;
+  collected: boolean;
+}) {
+  return (
+    <div className="flex items-stretch">
+      <div className="min-w-0 flex-1">
+        <ArtistCard
+          artist={artist}
+          view="list"
+          badges={computeBadges(
+            { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+            worksCount,
+            collected
+          )}
+        />
+      </div>
+      {isAdmin && (
+        <div className="flex items-center border-b border-border bg-card pr-1.5">
+          <AdminSpotlightMenu
+            profileId={artist.id}
+            artistName={artist.full_name ?? artist.username}
+            isSpotlit={artist.id === spotlightProfileId}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Bare signups — mono handles, never fake directory entries.
+function HandleChips({ artists }: { artists: ProfileWithImage[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {artists.map((artist) => (
+        <a
+          key={artist.id}
+          href={`/${artist.username}`}
+          className="border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+        >
+          @{artist.username}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default async function ArtistsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const country = params.country as CountryEnum | undefined;
@@ -112,10 +170,12 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
     ? artists.filter((a) => a.id !== spotlightArtist.id)
     : artists;
 
-  // ── Two tiers below the (single, admin-set) spotlight. A directory is a
+  // ── Three tiers below the (single, admin-set) spotlight. A directory is a
   // list, not a mosaic:
   // Directory: everyone presentable (a name or an image) as clean rows.
   // Recently joined: bare signups as mono handles — never fake directory entries.
+  // International: anyone based outside NZ/AUS, kept out of the two above so
+  // the domestic directory reads as the local scene.
   const completeness = (a: (typeof artists)[number]) => {
     const hasImage = !!(a.primary_image_url || a.avatar_url);
     const hasName = !!a.full_name;
@@ -123,14 +183,23 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
     return { hasImage, hasName, hasBio, score: (hasImage ? 2 : 0) + (hasName ? 2 : 0) + (hasBio ? 1 : 0) };
   };
 
-  const directoryArtists = gridArtists
-    .filter((a) => { const c = completeness(a); return c.hasName || c.hasImage; })
-    .sort((a, b) => completeness(b).score - completeness(a).score);
-
-  const recentlyJoined = gridArtists.filter((a) => {
+  // Untagged (null country) stays domestic — most bare signups never set one.
+  const isInternational = (a: (typeof artists)[number]) =>
+    !!a.country && a.country !== "NZ" && a.country !== "AUS";
+  const isPresentable = (a: (typeof artists)[number]) => {
     const c = completeness(a);
-    return !c.hasName && !c.hasImage;
-  });
+    return c.hasName || c.hasImage;
+  };
+  const byCompleteness = (a: (typeof artists)[number], b: (typeof artists)[number]) =>
+    completeness(b).score - completeness(a).score;
+
+  const domesticArtists = gridArtists.filter((a) => !isInternational(a));
+  const internationalArtists = gridArtists.filter(isInternational);
+
+  const directoryArtists = domesticArtists.filter(isPresentable).sort(byCompleteness);
+  const recentlyJoined = domesticArtists.filter((a) => !isPresentable(a));
+  const internationalDirectory = internationalArtists.filter(isPresentable).sort(byCompleteness);
+  const internationalHandles = internationalArtists.filter((a) => !isPresentable(a));
 
   const activeFilters = [
     country,
@@ -220,28 +289,14 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
                   <p className="t-section-label">Directory</p>
                   <div>
                     {directoryArtists.map((artist) => (
-                      <div key={artist.id} className="flex items-stretch">
-                        <div className="min-w-0 flex-1">
-                          <ArtistCard
-                            artist={artist}
-                            view="list"
-                            badges={computeBadges(
-                              { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-                              worksCountMap.get(artist.id) ?? 0,
-                              collectedSet.has(artist.id)
-                            )}
-                          />
-                        </div>
-                        {isAdmin && (
-                          <div className="flex items-center border-b border-border bg-card pr-1.5">
-                            <AdminSpotlightMenu
-                              profileId={artist.id}
-                              artistName={artist.full_name ?? artist.username}
-                              isSpotlit={artist.id === spotlightProfileId}
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <DirectoryRow
+                        key={artist.id}
+                        artist={artist}
+                        isAdmin={isAdmin}
+                        spotlightProfileId={spotlightProfileId}
+                        worksCount={worksCountMap.get(artist.id) ?? 0}
+                        collected={collectedSet.has(artist.id)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -251,17 +306,31 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
               {recentlyJoined.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <p className="t-section-label">Recently joined</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {recentlyJoined.map((artist) => (
-                      <a
-                        key={artist.id}
-                        href={`/${artist.username}`}
-                        className="border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-                      >
-                        @{artist.username}
-                      </a>
-                    ))}
-                  </div>
+                  <HandleChips artists={recentlyJoined} />
+                </div>
+              )}
+
+              {/* International — artists based outside NZ/AUS */}
+              {internationalArtists.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <p className="t-section-label">International</p>
+                  {internationalDirectory.length > 0 && (
+                    <div>
+                      {internationalDirectory.map((artist) => (
+                        <DirectoryRow
+                          key={artist.id}
+                          artist={artist}
+                          isAdmin={isAdmin}
+                          spotlightProfileId={spotlightProfileId}
+                          worksCount={worksCountMap.get(artist.id) ?? 0}
+                          collected={collectedSet.has(artist.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {internationalHandles.length > 0 && (
+                    <HandleChips artists={internationalHandles} />
+                  )}
                 </div>
               )}
             </>
