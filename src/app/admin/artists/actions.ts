@@ -3,9 +3,27 @@
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import { ALL_COUNTRIES } from "@/lib/constants/countries";
+import type { CountryEnum } from "@/types/database";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
+}
+
+// Country drives the Artists page tiers (NZ/AUS = directory, everything else =
+// International) — admins set it by hand when an artist never picked one.
+export async function setArtistCountry(id: string, country: string | null) {
+  await guard();
+  const value = country && (ALL_COUNTRIES as readonly string[]).includes(country)
+    ? (country as CountryEnum)
+    : null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ country: value }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/artists");
+  revalidatePath("/artists");
+  revalidatePath("/[username]", "page");
+  return {};
 }
 
 export async function toggleArtistActive(id: string, current: boolean) {

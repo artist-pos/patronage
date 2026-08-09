@@ -9,8 +9,8 @@ import { MediumInput } from "./MediumInput";
 import { DisciplineInput } from "./DisciplineInput";
 import type { Profile, DisciplineEnum } from "@/types/database";
 import { IDENTITY_TAGS } from "@/lib/constants/demographics";
+import { SELECTABLE_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
 
-const COUNTRIES = ["NZ", "AUS", "Global"] as const;
 const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 
 interface Props {
@@ -98,11 +98,14 @@ export function ProfileForm({ profile, role }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
+          <Label htmlFor="country">
+            Country <span className="text-destructive">*</span>
+          </Label>
           <select
             id="country"
             name="country"
             defaultValue={profile?.country ?? ""}
+            required
             className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
           >
             <option value="">— Select —</option>
@@ -110,6 +113,12 @@ export function ProfileForm({ profile, role }: Props) {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          {state.fieldErrors?.country && (
+            <p className="text-xs text-destructive">{state.fieldErrors.country}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Where you&rsquo;re based — choose Global if you&rsquo;re outside NZ and Australia.
+          </p>
         </div>
       </div>
 

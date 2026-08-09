@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { isSelectableCountry } from "@/lib/constants/countries";
 
 async function maybeSetVerifiedAt(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -104,6 +105,13 @@ export async function upsertProfileAction(
     .maybeSingle();
 
   if (existing) return { fieldErrors: { username: "Username already taken." } };
+
+  // Country is required — it drives the Artists directory tiers (NZ/AUS vs
+  // International) and the country filter, so a blank leaves a profile
+  // unplaceable. Validated here too: server actions are public endpoints.
+  if (!country) return { fieldErrors: { country: "Country is required." } };
+  if (!isSelectableCountry(country))
+    return { fieldErrors: { country: "Select a valid country." } };
 
   const profileData: Record<string, unknown> = {
     id: user.id,
