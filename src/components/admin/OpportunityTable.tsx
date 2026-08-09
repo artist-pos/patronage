@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -127,7 +127,22 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [bulkPanelOpen, setBulkPanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+
+  // Country options, NZ/AUS first (the claim-outreach countries), then the rest
+  // alphabetically — each with its listing count.
+  const countryOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const o of opps) {
+      const c = o.country || "—";
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    const rank = (c: string) => (c === "NZ" ? 0 : c === "AUS" ? 1 : c === "—" ? 3 : 2);
+    return [...counts.entries()].sort(
+      ([a], [b]) => rank(a) - rank(b) || a.localeCompare(b)
+    );
+  }, [opps]);
 
   const [claimState, setClaimState] = useState<Record<string, ClaimState>>(
     () =>
@@ -235,10 +250,11 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const inviteOpp = inviteTargetId ? opps.find(o => o.id === inviteTargetId) ?? null : null;
   const selectedOpps = opps.filter(o => selected.has(o.id));
 
-  // Filter opps by search + claim status
+  // Filter opps by search + claim status + country
   const q = search.trim().toLowerCase();
   const filteredOpps = opps.filter(o => {
     if (claimFilter !== "all" && getClaimStatus(o) !== claimFilter) return false;
+    if (countryFilter !== "all" && (o.country || "—") !== countryFilter) return false;
     if (q && !o.title?.toLowerCase().includes(q) && !o.organiser?.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -249,8 +265,8 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   return (
     <>
       {/* Header toolbar */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
@@ -276,6 +292,26 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
             <option value="opened">Opened</option>
             <option value="claimed">Claimed</option>
           </select>
+
+          {/* Country filter */}
+          <select
+            value={countryFilter}
+            onChange={e => setCountryFilter(e.target.value)}
+            className="text-xs border border-border px-2 py-1.5 focus:outline-none focus:border-black bg-background"
+          >
+            <option value="all">All countries ({opps.length})</option>
+            {countryOptions.map(([country, count]) => (
+              <option key={country} value={country}>
+                {country === "—" ? "No country" : country} ({count})
+              </option>
+            ))}
+          </select>
+
+          {filteredOpps.length !== opps.length && (
+            <span className="text-xs text-muted-foreground">
+              {filteredOpps.length} of {opps.length} shown
+            </span>
+          )}
 
           {/* Bulk invite button */}
           {selected.size > 0 && (
@@ -465,7 +501,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
         </table>
         {filteredOpps.length === 0 && (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            {q ? `No opportunities matching "${search}".` : claimFilter !== "all" ? "No opportunities with this claim status." : "No opportunities yet."}
+            {q
+              ? `No opportunities matching "${search}".`
+              : countryFilter !== "all"
+              ? "No opportunities match these filters."
+              : claimFilter !== "all"
+              ? "No opportunities with this claim status."
+              : "No opportunities yet."}
           </p>
         )}
       </div>
