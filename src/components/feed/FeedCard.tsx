@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Play, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
@@ -136,6 +135,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
       <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
         <Link
           href={`/${u.artist_username}`}
+          prefetch={false}
           className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground underline-offset-2 hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
@@ -160,7 +160,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     if (!hasWords) {
       return (
         <div className="pin relative mb-2 break-inside-avoid">
-          <Link href={href} scroll={false} className="block">
+          <Link href={href} scroll={false} prefetch={false} className="block">
             <div
               className="overflow-hidden"
               style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
@@ -171,6 +171,8 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
                 src={gridImageSrc(u.image_url, u.thumb_url)}
                 alt={`Update by ${name}`}
                 loading={priority ? "eager" : "lazy"}
+                fetchPriority={priority ? "high" : "auto"}
+                decoding="async"
                 style={{ width: "100%", height: "auto", display: "block" }}
               />
             </div>
@@ -196,7 +198,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     // Captioned studio update — image on a white surface, caption below
     return (
       <div className="mb-2 break-inside-avoid bg-card">
-        <Link href={href} scroll={false} className="pin block">
+        <Link href={href} scroll={false} prefetch={false} className="pin block">
           <div
             className="overflow-hidden"
             style={hasAspect ? { aspectRatio: `${u.image_width} / ${u.image_height}` } : undefined}
@@ -207,6 +209,8 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               src={gridImageSrc(u.image_url, u.thumb_url)}
               alt={u.caption ?? `Update by ${name}`}
               loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? "high" : "auto"}
+              decoding="async"
               style={{ width: "100%", height: "auto", display: "block" }}
             />
           </div>
@@ -295,7 +299,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     if (u.content_type === "embed" && u.embed_url) {
       return (
         <div className="relative -mx-5 -mt-1 mb-3.5 overflow-hidden bg-muted">
-          <Link href={href} className="absolute inset-0 z-10 flex items-center justify-center">
+          <Link href={href} prefetch={false} className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="flex items-center gap-1.5 border border-border bg-background/90 px-3 py-1.5">
               <ExternalLink className="h-3 w-3" />
               <span className="font-mono text-[11px]">{u.embed_provider ?? "View embed"}</span>
@@ -324,7 +328,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
   return (
     <div className="mb-2 break-inside-avoid">
       <div className="flex flex-col bg-card p-5">
-        <Link href={href} scroll={false} className="block">
+        <Link href={href} scroll={false} prefetch={false} className="block">
           <div className="mb-3">
             <TypeKicker u={u} />
           </div>

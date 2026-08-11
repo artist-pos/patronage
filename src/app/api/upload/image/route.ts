@@ -36,12 +36,19 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
+  // Upload paths are timestamped, so an object at a given path never changes
+  // content. Supabase defaults to max-age=3600, which makes the browser
+  // re-validate every feed tile an hour after it was first seen — a year is the
+  // honest lifetime. Callers that pass `upsert` overwrite in place, so those
+  // keep the short default.
+  const cacheControl = upsert ? "3600" : "31536000";
+
   const uploadPromises: Promise<{ error: { message: string } | null }>[] = [
-    admin.storage.from(bucket).upload(path, full.data, { contentType: "image/webp", upsert }).then(r => r),
+    admin.storage.from(bucket).upload(path, full.data, { contentType: "image/webp", cacheControl, upsert }).then(r => r),
   ];
   if (thumbProcessed && thumbPath) {
     uploadPromises.push(
-      admin.storage.from(bucket).upload(thumbPath, thumbProcessed.data, { contentType: "image/webp", upsert }).then(r => r)
+      admin.storage.from(bucket).upload(thumbPath, thumbProcessed.data, { contentType: "image/webp", cacheControl, upsert }).then(r => r)
     );
   }
 

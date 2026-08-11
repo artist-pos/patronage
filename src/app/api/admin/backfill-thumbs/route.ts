@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { processImage } from "@/lib/image-processing";
+import { processImage, readImageSize } from "@/lib/image-processing";
 
-// One-off backfill: generates a ~800px thumbnail for existing rows whose
-// thumb_url is still null, and stores it. Admin-only, idempotent (only touches
-// rows missing a thumb), and batched so it never times out — call it repeatedly
-// (or with ?limit=) until `remaining` reaches 0.
+// One-off backfill, two passes. Admin-only, idempotent (only touches rows that
+// are actually missing something), and batched so it never times out — call it
+// repeatedly (or with ?limit=) until `remaining` reaches 0.
 //
 //   POST /api/admin/backfill-thumbs?limit=50
 //
-// Maximum runtime is bounded by `limit`; each row downloads the original,
-// resizes it, uploads `<path>-thumb.webp`, and sets thumb_url.
+// Pass 1 — thumbnails: generates a ~800px thumb for rows whose thumb_url is
+// null, uploads `<path>-thumb.webp`, sets thumb_url.
+//
+// Pass 2 — dimensions: fills image_width/image_height on project_updates rows
+// that lack them. FeedCard reserves an aspect-ratio box from those two columns;
+// without them the tile has no height until the image decodes, so every late
+// image shoves the masonry down. That is the feed's layout shift.
 
 export const maxDuration = 300;
 
@@ -53,6 +57,30 @@ async function backfillRow(
   const thumbUrl = admin.storage.from(bucket).getPublicUrl(thumbObjectPath).data.publicUrl;
   const { error: updErr } = await admin.from(table).update({ thumb_url: thumbUrl }).eq("id", id);
   return !updErr;
+}
+
+/** Pass 2 — record the original's intrinsic size so the feed can reserve space. */
+async function backfillDimensions(
+  admin: ReturnType<typeof createAdminClient>,
+  id: string,
+  sourceUrl: string
+): Promise<boolean> {
+  const parsed = parseStorageUrl(sourceUrl);
+  if (!parsed) return false;
+
+  const { data: blob, error: dlErr } = await admin.storage
+    .from(parsed.bucket)
+    .download(parsed.objectPath);
+  if (dlErr || !blob) return false;
+
+  const size = await readImageSize(Buffer.from(await blob.arrayBuffer()));
+  if (!size) return false;
+
+  const { error } = await admin
+    .from("project_updates")
+    .update({ image_width: size.width, image_height: size.height })
+    .eq("id", id);
+  return !error;
 }
 
 export async function POST(req: NextRequest) {
@@ -102,12 +130,31 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Pass 2: dimensions on feed rows that have an image but no width/height ──
+  let dimensionsFilled = 0;
+  const dimBudget = limit - processed - failed;
+  if (dimBudget > 0) {
+    const { data: sizeless } = await admin
+      .from("project_updates")
+      .select("id, image_url")
+      .is("image_width", null)
+      .not("image_url", "is", null)
+      .like("image_url", `%${PUBLIC_MARKER}%`)
+      .limit(dimBudget);
+
+    for (const u of sizeless ?? []) {
+      const ok = await backfillDimensions(admin, u.id as string, u.image_url as string);
+      ok ? dimensionsFilled++ : failed++;
+    }
+  }
+
   // How many still need doing (so the caller knows whether to run again).
-  const [{ count: artworksLeft }, { count: updatesLeft }] = await Promise.all([
+  const [{ count: artworksLeft }, { count: updatesLeft }, { count: dimensionsLeft }] = await Promise.all([
     admin.from("artworks").select("id", { count: "exact", head: true }).is("thumb_url", null).like("url", `%${PUBLIC_MARKER}%`),
     admin.from("project_updates").select("id", { count: "exact", head: true }).is("thumb_url", null).not("image_url", "is", null).like("image_url", `%${PUBLIC_MARKER}%`),
+    admin.from("project_updates").select("id", { count: "exact", head: true }).is("image_width", null).not("image_url", "is", null).like("image_url", `%${PUBLIC_MARKER}%`),
   ]);
 
-  const remaining = (artworksLeft ?? 0) + (updatesLeft ?? 0);
-  return NextResponse.json({ processed, failed, remaining });
+  const remaining = (artworksLeft ?? 0) + (updatesLeft ?? 0) + (dimensionsLeft ?? 0);
+  return NextResponse.json({ processed, dimensionsFilled, failed, remaining });
 }

@@ -99,6 +99,7 @@ export function OpportunityPin({ p }: { p: OpportunityPinData }) {
   return (
     <Link
       href={`/opportunities/${p.slug ?? p.id}`}
+      prefetch={false}
       className="pin-opportunity block cursor-pointer"
     >
       <div className="t-kicker mb-2.5">{p.type ?? "Opportunity"}</div>
@@ -135,7 +136,7 @@ export function ArtistPin({ p }: { p: ArtistPinData }) {
   const name = p.full_name ?? p.username;
   const loc = [p.city, p.country].filter(Boolean).join(", ");
   return (
-    <Link href={`/${p.username}`} className="pin block cursor-pointer bg-card">
+    <Link href={`/${p.username}`} prefetch={false} className="pin block cursor-pointer bg-card">
       {p.image_url && (
         <div className="relative overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -189,7 +190,7 @@ export function WorkSalePin({ p }: { p: WorkSalePinData }) {
   // Work detail route accepts the artwork id (or slug) after /works/
   const href = p.artist_username ? `/${p.artist_username}/works/${p.id}` : "/works";
   return (
-    <Link href={href} className="pin relative block cursor-pointer overflow-hidden">
+    <Link href={href} prefetch={false} className="pin relative block cursor-pointer overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         data-pin-img
@@ -223,7 +224,7 @@ export function ArticlePin({ p }: { p: ArticlePinData }) {
     ? new Date(p.published_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })
     : null;
   return (
-    <Link href={`/blog/${p.slug}`} className="pin block cursor-pointer bg-card">
+    <Link href={`/blog/${p.slug}`} prefetch={false} className="pin block cursor-pointer bg-card">
       {p.image_url && (
         <div className="overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}

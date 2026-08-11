@@ -129,9 +129,10 @@ export function ChatDropdown({ userId, username }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, [open, isMobile]);
 
-  // Fetch own profile for avatar + display name in own messages
+  // Fetch own profile for avatar + display name in own messages. Deferred until
+  // the panel is opened — the closed trigger button doesn't render any of it.
   useEffect(() => {
-    if (!userId) return;
+    if (!open || !userId) return;
     supabase
       .from("profiles")
       .select("full_name, avatar_url, role")
@@ -139,9 +140,9 @@ export function ChatDropdown({ userId, username }: Props) {
       .maybeSingle()
       .then(({ data }) => { if (data) setSelfProfile(data); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [open, userId]);
 
-  // Load channels — called on mount and retried when panel opens if empty
+  // Load channels — called when the panel opens, and again if it opens empty
   const loadChannels = useCallback(() => {
     supabase
       .from("chat_channels")
@@ -156,9 +157,11 @@ export function ChatDropdown({ userId, username }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { loadChannels(); }, [loadChannels]);
-
-  // Retry if channels didn't load (e.g. session wasn't ready on first mount)
+  // Loaded on first open, not on mount. Loading channels sets activeChannelId,
+  // which cascades into the 60-message fetch, the sender-profile lookup and a
+  // realtime subscription below — all of it for a panel nobody has opened yet.
+  // NavBar renders this twice (desktop + mobile), so on mount that was six
+  // Supabase round-trips on every page in the app.
   useEffect(() => {
     if (open && channels.length === 0) loadChannels();
   // eslint-disable-next-line react-hooks/exhaustive-deps
