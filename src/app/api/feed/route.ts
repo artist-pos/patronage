@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getLatestUpdates } from "@/lib/feed";
 
-const PAGE_SIZE = 10;
+// Larger than the page's INITIAL_COUNT of 10. The first ten are what the user
+// waits on, so keep those tight; every page after that is fetched ahead of the
+// scroll, where the ~250ms round-trip matters more than the payload (a page of
+// 20 is ~28KB). Halving the number of round-trips halves the chances of
+// stalling at the bottom of the feed.
+const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

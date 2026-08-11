@@ -6,7 +6,17 @@ import { FeedCard } from "@/components/feed/FeedCard";
 import { renderExplorePin, type ExplorePin } from "@/components/feed/ExplorePinCards";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
+/* Only used to decide whether "All updates loaded." is worth showing — the
+   server owns the real page size. */
 const PAGE_SIZE = 10;
+
+/* Eager-load the first row of the *widest* layout (xl = 5 columns). This is
+   decided during SSR, where the column count isn't known yet — so it has to
+   cover the widest case or the right-hand columns get nothing. At `i < 4` the
+   fifth column's top tile was always lazy, which is why the right of the feed
+   visibly filled in last on desktop. Narrower layouts eager a little more than
+   one row, which is a few thumbnails — cheap next to a blank column. */
+const EAGER_COUNT = 5;
 
 type FeedAudience = "everyone" | "following" | "subscribed";
 
@@ -94,9 +104,13 @@ export function InfiniteFeed({
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
+    // /api/feed costs ~300ms warm and ~1s cold. At 400px of lead time the
+    // request only started once the last row was already on screen, so the
+    // bottom of the feed sat empty for the whole round-trip. ~1.5 viewports of
+    // margin starts the fetch while there's still content to scroll through.
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMore(); },
-      { rootMargin: "400px" }
+      { rootMargin: "1200px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -117,18 +131,27 @@ export function InfiniteFeed({
   const items: React.ReactNode[] = [];
   {
     const extras = [...extraPins];
+    // Eagerness follows position in the masonry, not position in `updates`.
+    // Every fourth slot is a work pin, so counting updates put the fifth
+    // column's top tile past the cutoff and left it lazy on every load.
+    const eager = () => items.length < EAGER_COUNT;
     updates.forEach((u, i) => {
       items.push(
         <FeedCard
           key={u.id}
           u={u}
-          priority={i < 4}
+          priority={eager()}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
         />
       );
       if ((i + 1) % 4 === 0 && extras.length > 0) {
-        items.push(<div key={`x-${extras.length}`} className="mb-2">{renderExplorePin(extras.shift()!)}</div>);
+        const priority = eager();
+        items.push(
+          <div key={`x-${extras.length}`} className="mb-2">
+            {renderExplorePin(extras.shift()!, priority)}
+          </div>
+        );
       }
     });
     if (updates.length === 0) {

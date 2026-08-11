@@ -132,7 +132,7 @@ export function OpportunityPin({ p }: { p: OpportunityPinData }) {
 }
 
 /* ── Artist spotlight pin — image top, compact strip below ── */
-export function ArtistPin({ p }: { p: ArtistPinData }) {
+export function ArtistPin({ p, priority = false }: { p: ArtistPinData; priority?: boolean }) {
   const name = p.full_name ?? p.username;
   const loc = [p.city, p.country].filter(Boolean).join(", ");
   return (
@@ -144,7 +144,9 @@ export function ArtistPin({ p }: { p: ArtistPinData }) {
             data-pin-img
             src={p.image_url}
             alt={name}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
             className="block aspect-[4/3] w-full object-cover"
           />
         </div>
@@ -181,7 +183,7 @@ export function ArtistPin({ p }: { p: ArtistPinData }) {
 }
 
 /* ── Work for sale pin — image + always-visible AVAILABLE chip ── */
-export function WorkSalePin({ p }: { p: WorkSalePinData }) {
+export function WorkSalePin({ p, priority = false }: { p: WorkSalePinData; priority?: boolean }) {
   if (!p.url) return null;
   const priceLabel =
     p.is_poa || p.hide_price || p.price_cents == null
@@ -196,7 +198,9 @@ export function WorkSalePin({ p }: { p: WorkSalePinData }) {
         data-pin-img
         src={p.thumb_url ?? p.url}
         alt={p.title ?? "Available work"}
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
         className="block h-auto w-full"
       />
       <span className="absolute left-2.5 top-2.5 bg-black px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase tracking-[0.04em] text-white">
@@ -219,7 +223,7 @@ export function WorkSalePin({ p }: { p: WorkSalePinData }) {
 }
 
 /* ── Article pin — image → tag line → title → author row ── */
-export function ArticlePin({ p }: { p: ArticlePinData }) {
+export function ArticlePin({ p, priority = false }: { p: ArticlePinData; priority?: boolean }) {
   const date = p.published_at
     ? new Date(p.published_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })
     : null;
@@ -232,7 +236,9 @@ export function ArticlePin({ p }: { p: ArticlePinData }) {
             data-pin-img
             src={p.image_url}
             alt=""
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
             className="block aspect-[16/10] w-full object-cover"
           />
         </div>
@@ -255,11 +261,13 @@ export function ArticlePin({ p }: { p: ArticlePinData }) {
   );
 }
 
-export function renderExplorePin(pin: ExplorePin) {
+/** `priority` marks a pin as being in the first visible row of the masonry, so
+    its image loads eagerly instead of waiting for the lazy-load threshold. */
+export function renderExplorePin(pin: ExplorePin, priority = false) {
   switch (pin.kind) {
     case "opportunity": return <OpportunityPin key={`o-${pin.id}`} p={pin} />;
-    case "artist":      return <ArtistPin key={`a-${pin.id}`} p={pin} />;
-    case "work":        return <WorkSalePin key={`w-${pin.id}`} p={pin} />;
-    case "article":     return <ArticlePin key={`b-${pin.slug}`} p={pin} />;
+    case "artist":      return <ArtistPin key={`a-${pin.id}`} p={pin} priority={priority} />;
+    case "work":        return <WorkSalePin key={`w-${pin.id}`} p={pin} priority={priority} />;
+    case "article":     return <ArticlePin key={`b-${pin.slug}`} p={pin} priority={priority} />;
   }
 }
