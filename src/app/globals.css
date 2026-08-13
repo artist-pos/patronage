@@ -511,3 +511,64 @@
   header, footer, nav { display: none !important; }
   body { background: white !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BLOG BODY FIGURES — in-line images inside post bodies
+
+   Deliberately unlayered: these rules are the single source of truth for
+   figure sizing across the three surfaces that render a body (the published
+   post, the admin preview, and the TipTap editor), so a sized image looks
+   the same while you write it as it does once published. Tailwind utilities
+   sit in the `utilities` cascade layer, and unlayered CSS beats every layer,
+   so the arbitrary [&_figure] variants on those surfaces can't fight these.
+
+   Selectors key off the data attributes the figureImage node serialises, not
+   a class, so posts written before sizing existed pick the styling up too.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+figure[data-figure-image] {
+  margin: 28px auto;
+}
+figure[data-figure-image] img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+figure[data-figure-image] figcaption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-subtle);
+}
+
+/* Width steps. No attribute = full, so existing posts are unchanged. */
+figure[data-figure-image][data-size="s"] { width: 40%; }
+figure[data-figure-image][data-size="m"] { width: 60%; }
+figure[data-figure-image][data-size="l"] { width: 80%; }
+
+/* Side-by-side row. Each figure carries `flex-grow: <aspect ratio>` inline
+   against a zero basis, so widths land proportional to aspect and the row
+   comes out flush along the bottom edge of the images. Figures uploaded
+   before dimensions were recorded fall back to an even split. */
+div[data-figure-row] {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 28px 0;
+}
+div[data-figure-row] > figure[data-figure-image] {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+
+/* On a phone a 40%-wide image is unreadable, so single figures go full width.
+   Rows stay side by side — that pairing is the whole point of the layout. */
+@media (max-width: 560px) {
+  /* [data-size] repeated so this matches the specificity of the width steps
+     above — a plain figure[data-figure-image] selector loses to them. */
+  figure[data-figure-image][data-size] { width: 100%; }
+  div[data-figure-row] { gap: 8px; }
+  div[data-figure-row] > figure[data-figure-image] { width: auto; }
+}

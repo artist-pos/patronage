@@ -292,9 +292,7 @@ export default async function BlogPostPage({ params }: Props) {
                 [&_em]:italic
                 [&_blockquote]:border-l-2 [&_blockquote]:border-stone-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:mb-4
                 [&_hr]:border-stone-200 [&_hr]:my-8
-                [&_figure]:my-7
-                [&_figure_img]:block [&_figure_img]:w-full [&_figure_img]:h-auto [&_figure_img]:cursor-zoom-in
-                [&_figcaption]:mt-2 [&_figcaption]:text-[12.5px] [&_figcaption]:leading-[1.55] [&_figcaption]:text-[color:var(--fg-subtle)]
+                [&_figure_img]:cursor-zoom-in
               "
               dangerouslySetInnerHTML={{ __html: post.body }}
             />

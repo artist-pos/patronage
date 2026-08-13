@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapLink from "@tiptap/extension-link";
-import { FigureImage } from "@/components/admin/FigureImageExtension";
+import { FigureImage, FigureRow, MAX_ROW_FIGURES } from "@/components/admin/FigureImageExtension";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/upload-image";
@@ -41,6 +41,13 @@ interface Post {
 interface Props {
   post?: Post;
   userId: string;
+}
+
+/** Stored image plus the dimensions a figure needs for sizing and CLS. */
+interface UploadedImage {
+  url: string;
+  width: number;
+  height: number;
 }
 
 type ToolbarItem =
@@ -138,6 +145,7 @@ export function BlogEditor({ post, userId }: Props) {
         HTMLAttributes: { class: "underline text-blue-600 hover:opacity-80" },
       }),
       FigureImage,
+      FigureRow,
     ],
     content: post?.body ?? "",
     editorProps: {
@@ -179,36 +187,59 @@ export function BlogEditor({ post, userId }: Props) {
     };
   }, [artistQuery]);
 
-  async function uploadBlogImage(file: File): Promise<string | null> {
-    const path = `${userId}/blog/${Date.now()}.webp`;
-    const { url } = await resizeToWebp(file)
-      .then(blob => uploadImage(blob, { bucket: "portfolio", path, quality: 90 }))
-      .catch(err => {
-        setError(err.message);
-        return { url: null as unknown as string };
+  async function uploadBlogImage(file: File): Promise<UploadedImage | null> {
+    // The random suffix matters now that inline uploads run in parallel —
+    // Date.now() alone collides when two files land in the same millisecond.
+    const path = `${userId}/blog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+    try {
+      const blob = await resizeToWebp(file);
+      const { url, width, height } = await uploadImage(blob, {
+        bucket: "portfolio",
+        path,
+        quality: 90,
       });
-    return url ?? null;
+      return { url, width, height };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+      return null;
+    }
   }
 
   async function handleImageUpload(file: File) {
     setUploading(true);
     setError(null);
-    const url = await uploadBlogImage(file);
-    if (url) setImageUrl(url);
+    const uploaded = await uploadBlogImage(file);
+    if (uploaded) setImageUrl(uploaded.url);
     setUploading(false);
   }
 
-  /** Uploads, then drops a captioned figure into the body at the cursor. */
-  async function handleInlineImageUpload(file: File) {
-    if (!editor) return;
+  /**
+   * Uploads, then drops captioned figures into the body at the cursor.
+   * Two or three files at once become a side-by-side row; more than that goes
+   * in as separate full-width figures.
+   */
+  async function handleInlineImageUpload(files: File[]) {
+    if (!editor || files.length === 0) return;
     setInlineUploading(true);
     setError(null);
-    const url = await uploadBlogImage(file);
-    if (url) {
+    // One round-trip for the lot — a row of three would otherwise upload
+    // sequentially and take three times as long.
+    const uploaded = (await Promise.all(files.map((f) => uploadBlogImage(f)))).filter(
+      (u): u is UploadedImage => u !== null
+    );
+    if (uploaded.length > 0) {
+      const figures = uploaded.map((u) => ({
+        type: "figureImage",
+        attrs: { src: u.url, caption: "", size: "full", width: u.width, height: u.height },
+      }));
       editor
         .chain()
         .focus()
-        .insertContent({ type: "figureImage", attrs: { src: url, caption: "" } })
+        .insertContent(
+          figures.length > 1 && figures.length <= MAX_ROW_FIGURES
+            ? { type: "figureRow", content: figures }
+            : figures
+        )
         .run();
     }
     setInlineUploading(false);
@@ -217,8 +248,8 @@ export function BlogEditor({ post, userId }: Props) {
   async function handleImage2Upload(file: File) {
     setUploading(true);
     setError(null);
-    const url = await uploadBlogImage(file);
-    if (url) setImageUrl2(url);
+    const uploaded = await uploadBlogImage(file);
+    if (uploaded) setImageUrl2(uploaded.url);
     setUploading(false);
   }
 
@@ -701,16 +732,20 @@ export function BlogEditor({ post, userId }: Props) {
         </div>
         <p className="text-[11px] text-muted-foreground">
           Use <strong className="font-medium">Image</strong> to place a picture in the body at the
-          cursor — the caption sits under it and is optional.
+          cursor — the caption sits under it and is optional. Hover an image for its width
+          (<strong className="font-medium">S / M / L / F</strong>), and{" "}
+          <strong className="font-medium">Pair</strong> to set it side by side with the image
+          below. Selecting two or three files at once places them side by side straight away.
         </p>
         <input
           ref={inlineImageInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleInlineImageUpload(f);
+            const files = Array.from(e.target.files ?? []);
+            if (files.length > 0) handleInlineImageUpload(files);
             e.target.value = "";
           }}
         />
