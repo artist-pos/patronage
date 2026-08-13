@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapLink from "@tiptap/extension-link";
+import { FigureImage } from "@/components/admin/FigureImageExtension";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/upload-image";
@@ -122,9 +123,11 @@ export function BlogEditor({ post, userId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [inlineUploading, setInlineUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
+  const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
@@ -134,6 +137,7 @@ export function BlogEditor({ post, userId }: Props) {
         openOnClick: false,
         HTMLAttributes: { class: "underline text-blue-600 hover:opacity-80" },
       }),
+      FigureImage,
     ],
     content: post?.body ?? "",
     editorProps: {
@@ -142,6 +146,10 @@ export function BlogEditor({ post, userId }: Props) {
       },
     },
   });
+
+  const openInlineImagePicker = useCallback(() => {
+    inlineImageInputRef.current?.click();
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -188,6 +196,22 @@ export function BlogEditor({ post, userId }: Props) {
     const url = await uploadBlogImage(file);
     if (url) setImageUrl(url);
     setUploading(false);
+  }
+
+  /** Uploads, then drops a captioned figure into the body at the cursor. */
+  async function handleInlineImageUpload(file: File) {
+    if (!editor) return;
+    setInlineUploading(true);
+    setError(null);
+    const url = await uploadBlogImage(file);
+    if (url) {
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: "figureImage", attrs: { src: url, caption: "" } })
+        .run();
+    }
+    setInlineUploading(false);
   }
 
   async function handleImage2Upload(file: File) {
@@ -657,9 +681,39 @@ export function BlogEditor({ post, userId }: Props) {
                 </button>
               );
             })}
+            {/* Inline image sits outside the toolbar list — it drives a file input
+                rather than an editor command. */}
+            {editor && (
+              <>
+                <span className="mx-1 h-4 w-px bg-stone-200" />
+                <button
+                  type="button"
+                  onClick={openInlineImagePicker}
+                  disabled={inlineUploading}
+                  className="px-2.5 py-1 text-xs font-medium rounded transition-colors hover:bg-stone-200 text-stone-600 disabled:opacity-50"
+                >
+                  {inlineUploading ? "Uploading…" : "Image"}
+                </button>
+              </>
+            )}
           </div>
           <EditorContent editor={editor} />
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Use <strong className="font-medium">Image</strong> to place a picture in the body at the
+          cursor — the caption sits under it and is optional.
+        </p>
+        <input
+          ref={inlineImageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleInlineImageUpload(f);
+            e.target.value = "";
+          }}
+        />
       </div>
 
       {/* Category — drives the index card eyebrow and byline */}

@@ -168,6 +168,9 @@ export function BlogPreviewModal({
                   [&_em]:italic
                   [&_blockquote]:border-l-2 [&_blockquote]:border-stone-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:mb-4
                   [&_hr]:border-stone-200 [&_hr]:my-8
+                  [&_figure]:my-6
+                  [&_figure_img]:block [&_figure_img]:w-full [&_figure_img]:h-auto
+                  [&_figcaption]:mt-2 [&_figcaption]:text-xs [&_figcaption]:leading-[1.55] [&_figcaption]:text-muted-foreground
                 "
                 dangerouslySetInnerHTML={{ __html: body }}
               />

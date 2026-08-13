@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { BlogMasonry } from "@/components/blog/BlogMasonry";
+import { stripBodyHtml } from "@/lib/blog-text";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,9 +23,6 @@ function formatDate(dateStr: string | null): string {
 // Excerpt + read time are derived from the body (no dedicated columns).
 // Category comes from blog_posts.category (migration 169), falling back to
 // the derived label (featured artist → Feature, otherwise Essay) when unset.
-function stripHtml(body: string | null): string {
-  return (body ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
 
 function readTime(text: string): string {
   const mins = Math.max(1, Math.round(text.split(" ").length / 200));
@@ -56,7 +54,7 @@ export default async function BlogPage() {
             const category: string =
               post.category ??
               (post.featured_profile_id || /^feature\b/i.test(post.title) ? "feature" : "essay");
-            const text = stripHtml(post.body);
+            const text = stripBodyHtml(post.body);
             const excerpt = text.length > 220 ? text.slice(0, 217) + "…" : text;
             const author = category === "feature" ? "Patronage Editorial" : "Blake Aitken";
             return (

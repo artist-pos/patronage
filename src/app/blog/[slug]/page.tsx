@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { BlogImages } from "@/components/blog/BlogImages";
+import { BlogBodyZoom } from "@/components/blog/BlogBodyZoom";
+import { stripBodyHtml } from "@/lib/blog-text";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import type { Metadata } from "next";
 
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonicalUrl = `${BASE_URL}/blog/${slug}`;
 
   // Strip HTML tags for description, take first 155 chars
-  const rawText = (post.body ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const rawText = stripBodyHtml(post.body);
   const description = rawText.length > 155 ? rawText.slice(0, 152) + "…" : rawText || undefined;
 
   const publishedTime = post.published_at ?? post.created_at ?? undefined;
@@ -96,7 +98,7 @@ export default async function BlogPostPage({ params }: Props) {
   const sidebar = otherPosts ?? [];
 
   const canonicalUrl = `${BASE_URL}/blog/${slug}`;
-  const rawText = (post.body ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const rawText = stripBodyHtml(post.body);
   const description = rawText.length > 155 ? rawText.slice(0, 152) + "…" : rawText || undefined;
 
   const jsonLd = {
@@ -275,6 +277,7 @@ export default async function BlogPostPage({ params }: Props) {
           {/* Body */}
           {post.body && (
             <div
+              id="blog-body"
               className="
                 text-foreground
                 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-8 [&_h1]:mb-3
@@ -289,10 +292,16 @@ export default async function BlogPostPage({ params }: Props) {
                 [&_em]:italic
                 [&_blockquote]:border-l-2 [&_blockquote]:border-stone-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:mb-4
                 [&_hr]:border-stone-200 [&_hr]:my-8
+                [&_figure]:my-7
+                [&_figure_img]:block [&_figure_img]:w-full [&_figure_img]:h-auto [&_figure_img]:cursor-zoom-in
+                [&_figcaption]:mt-2 [&_figcaption]:text-[12.5px] [&_figcaption]:leading-[1.55] [&_figcaption]:text-[color:var(--fg-subtle)]
               "
               dangerouslySetInnerHTML={{ __html: post.body }}
             />
           )}
+          {/* Click-to-zoom for body figures — listener only, so the article HTML
+              stays server-rendered instead of crossing the RSC boundary. */}
+          {post.body?.includes("data-figure-image") && <BlogBodyZoom containerId="blog-body" />}
         </article>
 
         {/* ── Right: sidebar — thumbnail rows, hairline dividers ── */}
