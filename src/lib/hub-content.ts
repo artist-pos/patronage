@@ -6,7 +6,78 @@ export interface HubContent {
   body: string;
 }
 
+// Keys are either "<type>" (all countries) or "<type>/<country>".
 export const HUB_CONTENT: Record<string, HubContent> = {
+  grants: {
+    title: "Art Grants",
+    metaTitle: "Art Grants for Artists 2026 | Patronage",
+    metaDescription: "Browse active art grants open to New Zealand and Australian artists — national funders, regional trusts, private foundations, and international programmes. Updated weekly.",
+    intro: "Grants are the most direct form of arts funding: money awarded for a project, a period of practice, or a specific piece of work, with no expectation of repayment.",
+    body: `Arts grants fall into a few broad shapes. Project grants fund a defined piece of work with a start and an end — an exhibition, a recording, a publication, a tour. Practice or development grants fund your time rather than an output, giving you a period to make work without a fixed deliverable. Capability grants cover the costs around practice: equipment, studio setup, professional development, travel to present work.
+
+In New Zealand, Creative New Zealand is the primary public funder, alongside regional arts councils, the Lottery Grants Board, and private trusts such as Foundation North. In Australia, Creative Australia sits at federal level with a parallel body in every state and territory, supplemented by Screen Australia and a deep field of private foundations.
+
+Beyond the two national systems, a meaningful number of international grants are open to artists anywhere, or specifically to artists from the Asia-Pacific. These are listed here alongside domestic funding — the filters on each listing show which nationalities and residencies are eligible.
+
+Grant rounds are deadline-driven and most funders assess two to four times a year. Applications are typically judged on artistic merit, the clarity and feasibility of the proposal, a realistic budget, and evidence you can deliver what you have described.`,
+  },
+
+  residencies: {
+    title: "Artist Residencies",
+    metaTitle: "Artist Residencies 2026 | Patronage",
+    metaDescription: "Browse open artist residencies for New Zealand and Australian artists — studio time, accommodation, and stipends at home and internationally. Updated weekly.",
+    intro: "A residency buys an artist the scarcest thing in the practice: uninterrupted time, in a space that is not your kitchen table, usually somewhere unfamiliar.",
+    body: `Residencies vary enormously in what they actually provide, and the difference matters more than the prestige of the host. A fully supported residency covers studio space, accommodation, and a stipend, and sometimes a materials or production budget on top. A studio-only residency gives you the space and nothing else — still valuable, but you are covering your own living costs for the duration. Some residencies charge a fee to attend.
+
+Durations run from a two-week intensive to a year-long tenancy, with one to three months the most common. Shorter residencies suit a concentrated body of work or a research trip; longer ones suit projects that need to develop in place, or that depend on a relationship with a particular community or landscape.
+
+New Zealand and Australian residencies are listed here alongside international programmes that accept applicants from Aotearoa and Australia — including exchange residencies run by Creative New Zealand and Creative Australia, which reserve places for their own nationals at partner institutions overseas.
+
+Selection panels consistently weigh the fit between your proposal and the specific place: what the site, its collections, its people, or its landscape offer that your studio at home does not. Generic proposals read as generic wherever they are sent.`,
+  },
+
+  "open-calls": {
+    title: "Open Calls for Artists",
+    metaTitle: "Open Calls for Artists 2026 | Patronage",
+    metaDescription: "Browse open calls, submissions, and calls for entry open to New Zealand and Australian artists — exhibitions, publications, festivals, and public art. Updated weekly.",
+    intro: "An open call is any invitation to submit work or a proposal without needing an existing relationship with the organisation — the most accessible entry point in the arts.",
+    body: `Open calls cover a wide field: exhibition proposals at galleries and artist-run spaces, submissions to journals and artist publications, expressions of interest for public art commissions, festival programming, calls for a specific themed group show, and entries to competitions and awards.
+
+What separates an open call from a grant is what you are asking for. A grant application asks for money to make work. An open call usually asks for a platform — wall space, page space, stage time, a commission — and any fee or prize attached comes with it. Many are free to enter; where a fee applies it is generally modest and goes toward prize money or exhibition costs.
+
+Turnaround is faster than the grant cycle. Open calls are frequently announced four to twelve weeks ahead of their deadline, and artist-run spaces in particular post at short notice, which is the main reason they are easy to miss.
+
+Most submissions want the same core material: a short proposal or artist statement, five to ten images of relevant work with full captions, and a current CV. Assembling that once and keeping it updated turns a two-hour application into a twenty-minute one.`,
+  },
+
+  prizes: {
+    title: "Art Prizes & Awards",
+    metaTitle: "Art Prizes and Awards 2026 | Patronage",
+    metaDescription: "Browse art prizes and awards open to New Zealand and Australian artists — acquisition prizes, portrait and landscape awards, and career fellowships. Updated weekly.",
+    intro: "Prizes offer something grants generally cannot: money without an acquittal, plus the visibility of a shortlist, an exhibition, and a public announcement.",
+    body: `Art prizes come in several forms. Acquisition prizes buy the winning work outright for a public collection, which places your work permanently alongside the institution's holdings. Non-acquisitive prizes award cash and return the work to you. Career awards and fellowships recognise a body of work rather than a single piece, and often carry the largest sums.
+
+Most prizes run on an annual cycle with a fixed entry window, a shortlist announced some weeks later, and a finalists' exhibition where the winner is named. Being shortlisted is itself a credential worth listing on a CV, and the finalists' exhibition frequently produces sales and gallery interest independent of the prize itself.
+
+Entry fees are more common with prizes than with other opportunity types, typically sitting between $25 and $100, and usually fund the prize pool and exhibition costs. Check whether the fee is per entry or per artist, and whether shortlisted work must be delivered at your own expense — freight to and from the host institution is a real cost that catches people out.
+
+Read the eligibility conditions closely. Prizes are the most heavily conditioned opportunity type, with restrictions on medium, dimensions, date of making, subject matter, and the artist's age, residency, or career stage.`,
+  },
+
+  jobs: {
+    title: "Arts Jobs",
+    metaTitle: "Arts Jobs and Careers 2026 | Patronage",
+    metaDescription: "Browse current arts jobs in New Zealand and Australia — curatorial, programming, technical, collections, and arts administration roles at galleries, museums, festivals, and councils. Updated weekly.",
+    intro: "Paid work inside the arts sector: the curatorial, programming, technical, and administrative roles that keep galleries, museums, festivals, and councils running.",
+    body: `Arts sector roles cluster into a few families. Curatorial and collections work — curators, registrars, collection managers, conservators — sits with public galleries, museums, and iwi and community heritage organisations. Programming and production roles run festivals, performance seasons, and public programmes. Technical roles cover installation, exhibition build, lighting, AV, and front-of-house. Arts administration spans development and fundraising, marketing, venue management, and grants administration at funding bodies themselves.
+
+Fixed-term contracts are the norm rather than the exception, because a large share of these positions are funded from project or programme budgets tied to a specific season or funding cycle. A twelve- or eighteen-month contract at a major institution is common and often renewed. Fellowships and internships sit alongside permanent roles and are listed here too.
+
+Most arts employers still advertise on their own careers page first and syndicate late or not at all, which is why sector roles are easy to miss even when you are actively looking. Councils and universities publish to their central HR systems, where arts roles are buried among unrelated listings.
+
+Applications generally want a CV and a cover letter addressing the position description point by point — closer to a public sector application than a creative one. Where a role is at a New Zealand institution, familiarity with Te Tiriti o Waitangi obligations and mātauranga Māori is frequently listed as essential or desirable.`,
+  },
+
   "grants/new-zealand": {
     title: "Art Grants — New Zealand",
     metaTitle: "Art Grants New Zealand 2026 | Patronage",

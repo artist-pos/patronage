@@ -27,7 +27,9 @@ export function generateHubMetadata(typeSlug: string, countrySlug?: string): Met
     ? `/opportunities/${typeSlug}/${countrySlug}`
     : `/opportunities/${typeSlug}`;
   return {
-    title: hub.metaTitle,
+    // absolute: metaTitle already carries the brand, so skip the root layout's
+    // "%s | Patronage" template — otherwise it renders "... | Patronage | Patronage".
+    title: { absolute: hub.metaTitle },
     description: hub.metaDescription,
     alternates: { canonical: `${SITE_URL}${canonicalPath}` },
     openGraph: {
@@ -56,6 +58,15 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
 
   const typeLabel = HUB_TYPE_LABEL[typeSlug] ?? typeSlug;
   const countryLabel = countrySlug ? (HUB_COUNTRY_LABEL[countrySlug] ?? countrySlug) : undefined;
+
+  // On the all-countries hub, link down to whichever country hubs actually
+  // have editorial content — not every type has them.
+  const countryHubs = countrySlug
+    ? []
+    : Object.keys(HUB_COUNTRY_MAP)
+        .filter((slug) => HUB_CONTENT[`${typeSlug}/${slug}`])
+        .map((slug) => ({ slug, label: HUB_COUNTRY_LABEL[slug] ?? slug }));
+
   const canonicalPath = countrySlug
     ? `/opportunities/${typeSlug}/${countrySlug}`
     : `/opportunities/${typeSlug}`;
@@ -102,30 +113,30 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
         </ol>
       </nav>
 
-      {/* Editorial header */}
-      <div className="space-y-6 max-w-3xl">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">{hub.title}</h1>
-          <p className="text-base text-muted-foreground leading-relaxed">{hub.intro}</p>
-        </div>
-        <div
-          className="text-sm leading-relaxed text-foreground space-y-4 [&_p]:text-muted-foreground"
-          dangerouslySetInnerHTML={{ __html: hub.body.replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>") }}
-        />
-        <p className="text-sm">
-          <Link href="/resources" className="underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
-            Resources for artists →
-          </Link>
+      {/* Header — title, one-line intro, live count. Keep this short: the
+          listings must be the first thing on screen. Long-form copy sits
+          below the grid. */}
+      <div className="max-w-3xl space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">{hub.title}</h1>
+        <p className="text-base text-muted-foreground leading-relaxed">{hub.intro}</p>
+        <p className="text-xs text-muted-foreground pt-2">
+          {opportunities.length} active {typeLabel.toLowerCase()}{countryLabel ? ` in ${countryLabel}` : ""}
         </p>
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-border" />
-
-      {/* Live opportunity count */}
-      <p className="text-xs text-muted-foreground">
-        {opportunities.length} active {typeLabel.toLowerCase()}{countryLabel ? ` in ${countryLabel}` : ""}
-      </p>
+      {countryHubs.length > 0 && (
+        <nav className="flex flex-wrap items-center gap-2" aria-label={`${typeLabel} by country`}>
+          {countryHubs.map(({ slug, label }) => (
+            <Link
+              key={slug}
+              href={`/opportunities/${typeSlug}/${slug}`}
+              className="bg-stone-100 text-stone-600 rounded-full px-3 py-1 text-xs hover:bg-stone-200 transition-colors"
+            >
+              {typeLabel} in {label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* Live opportunities grid */}
       {opportunities.length === 0 ? (
@@ -136,6 +147,25 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
       ) : (
         <MasonryGrid opportunities={opportunities} />
       )}
+
+      {/* Divider */}
+      <div className="border-t border-border" />
+
+      {/* Long-form guide — below the listings on purpose */}
+      <div className="space-y-6 max-w-3xl">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
+          About {typeLabel.toLowerCase()}{countryLabel ? ` in ${countryLabel}` : ""}
+        </h2>
+        <div
+          className="text-sm leading-relaxed text-foreground space-y-4 [&_p]:text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: hub.body.replace(/\n\n/g, "</p><p>").replace(/^/, "<p>").replace(/$/, "</p>") }}
+        />
+        <p className="text-sm">
+          <Link href="/resources" className="underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
+            Resources for artists →
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
