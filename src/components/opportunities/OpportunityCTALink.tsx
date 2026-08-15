@@ -2,6 +2,7 @@
 
 import { track } from "@vercel/analytics";
 import { trackEvent } from "@/actions/trackEvent";
+import { withUtm } from "@/lib/utm";
 
 interface Props {
   href: string;
@@ -18,9 +19,12 @@ export function OpportunityCTALink({ href, opportunityId, title, organiser, labe
     trackEvent("opportunity_click", { opportunity_id: opportunityId, title, organiser });
   }
 
+  // Tag the outbound link so the organiser's analytics can see the referral.
+  const outbound = withUtm(href, { campaign: "opportunity_listing", content: opportunityId });
+
   return (
     <a
-      href={href}
+      href={outbound}
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
