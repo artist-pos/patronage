@@ -74,6 +74,10 @@ export default async function ClaimListingPage({ params }: Props) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Admins previewing a link from /admin/opportunities must not move the
+  // listing's state — no auto-claim, and no open recorded further down.
+  let isAdminPreview = false;
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -81,7 +85,9 @@ export default async function ClaimListingPage({ params }: Props) {
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "partner") {
+    isAdminPreview = profile?.role === "admin" || profile?.role === "owner";
+
+    if (!isAdminPreview && profile?.role !== "partner") {
       return (
         <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
           <p className="text-sm font-semibold">Wrong account type</p>
@@ -96,17 +102,19 @@ export default async function ClaimListingPage({ params }: Props) {
       );
     }
 
-    const result = await claimListing(token, user.id);
-    if ("error" in result) {
-      return (
-        <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
-          <p className="text-sm font-semibold">Something went wrong</p>
-          <p className="text-sm text-muted-foreground">{result.error}</p>
-        </div>
-      );
-    }
+    if (!isAdminPreview) {
+      const result = await claimListing(token, user.id);
+      if ("error" in result) {
+        return (
+          <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+            <p className="text-sm font-semibold">Something went wrong</p>
+            <p className="text-sm text-muted-foreground">{result.error}</p>
+          </div>
+        );
+      }
 
-    redirect(`/partner/opportunities/${result.id}/edit`);
+      redirect(`/partner/opportunities/${result.id}/edit`);
+    }
   }
 
   const claimPath = `/claim-listing/${token}`;
@@ -141,7 +149,14 @@ export default async function ClaimListingPage({ params }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
-      <TrackClaimOpen token={token} />
+      {isAdminPreview ? (
+        <p className="border border-amber-300 bg-amber-50 text-amber-800 text-xs px-4 py-2.5">
+          Admin preview — this visit isn&rsquo;t counted as an open and nothing has been claimed.
+          This is what the organisation sees.
+        </p>
+      ) : (
+        <TrackClaimOpen token={token} />
+      )}
 
       {/* ── Claim banner ──────────────────────────────────────────────── */}
       <div className="bg-black text-white px-6 py-6 space-y-4">

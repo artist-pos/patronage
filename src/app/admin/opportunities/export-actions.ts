@@ -5,14 +5,21 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { buildClaimUrl } from "./claim-templates";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
 export interface ClaimExportRow {
   id: string;
   organiser: string;
   title: string;
+  description: string;
+  /** Public listing page, for opening from the export panel. */
+  listingUrl: string;
   claimUrl: string;
   /** True when this run minted a brand-new token (any previously sent link for it is now dead). */
   tokenIsNew: boolean;
-  claimTokenExpiresAt: string;
+  /** Already has an owner — a claim link would be rejected as "Already claimed". */
+  alreadyOwned: boolean;
+  claimTokenExpiresAt: string | null;
 }
 
 /**
@@ -34,7 +41,7 @@ export async function prepareClaimExport(
 
   const { data: opps, error } = await supabase
     .from("opportunities")
-    .select("id, title, organiser, claim_token, claim_token_expires_at")
+    .select("id, title, organiser, description, slug, profile_id, claim_token, claim_token_expires_at")
     .in("id", ids);
 
   if (error) return { error: error.message };
@@ -45,6 +52,26 @@ export async function prepareClaimExport(
 
   const rows = await Promise.all(
     opps.map(async (o) => {
+      const base = {
+        id: o.id,
+        organiser: o.organiser ?? "",
+        title: o.title ?? "",
+        description: o.description ?? "",
+        listingUrl: `${SITE_URL}/opportunities/${o.slug ?? o.id}`,
+      };
+
+      // Already owned — claimListing() would reject the link, so don't touch
+      // the token. The panel flags these so they can be dropped from the batch.
+      if (o.profile_id) {
+        return {
+          ...base,
+          claimUrl: "",
+          tokenIsNew: false,
+          alreadyOwned: true,
+          claimTokenExpiresAt: null,
+        };
+      }
+
       const expiresAt = o.claim_token_expires_at;
       const expired = !expiresAt || new Date(expiresAt).getTime() < now;
       const tokenIsNew = !o.claim_token || expired;
@@ -61,11 +88,10 @@ export async function prepareClaimExport(
       }
 
       return {
-        id: o.id,
-        organiser: o.organiser ?? "",
-        title: o.title ?? "",
+        ...base,
         claimUrl: buildClaimUrl(token),
         tokenIsNew,
+        alreadyOwned: false,
         claimTokenExpiresAt: finalExpiry,
       };
     })

@@ -24,8 +24,14 @@ interface RowInput {
   contactName: string;
   email: string;
   listingName: string;
+  description: string;
   currentTool: string;
   subjectSmiley: boolean;
+}
+
+/** Descriptions run to paragraphs — flatten so each CSV cell stays one line. */
+function flatten(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }
 
 interface Props {
@@ -67,6 +73,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
               contactName: "",
               email: "",
               listingName: r.title,
+              description: flatten(r.description),
               currentTool: "",
               subjectSmiley: false,
             };
@@ -111,6 +118,8 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
       "contact_name",
       "email",
       "listing_name",
+      "description",
+      "listing_url",
       "claim_url",
       "current_tool",
       "subject_smiley",
@@ -123,6 +132,8 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
         i.contactName.trim(),
         i.email.trim(),
         i.listingName.trim(),
+        flatten(i.description),
+        r.listingUrl,
         r.claimUrl,
         i.currentTool.trim(),
         i.subjectSmiley ? "yes" : "no",
@@ -146,8 +157,10 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
 
   const missingEmail = rows?.filter((r) => !inputs[r.id]?.email.trim()).length ?? 0;
   const newTokens = rows?.filter((r) => r.tokenIsNew).length ?? 0;
-  const expiryDate = rows?.[0]
-    ? new Date(rows[0].claimTokenExpiresAt).toLocaleDateString("en-NZ", {
+  const ownedCount = rows?.filter((r) => r.alreadyOwned).length ?? 0;
+  const firstExpiry = rows?.find((r) => r.claimTokenExpiresAt)?.claimTokenExpiresAt;
+  const expiryDate = firstExpiry
+    ? new Date(firstExpiry).toLocaleDateString("en-NZ", {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -262,13 +275,14 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-border text-left">
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[15%]">org_name</th>
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[13%]">contact_name</th>
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[18%]">email</th>
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[20%]">listing_name</th>
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[16%]">current_tool</th>
-                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[7%]">smiley</th>
-                      <th className="py-2 font-medium text-muted-foreground w-[11%]">claim_url</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[13%]">org_name</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[11%]">contact_name</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[15%]">email</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[16%]">listing_name</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[22%]">description</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[13%]">current_tool</th>
+                      <th className="py-2 pr-3 font-medium text-muted-foreground w-[5%]">smiley</th>
+                      <th className="py-2 font-medium text-muted-foreground w-[5%]">claim_url</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -308,6 +322,23 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                               onChange={(e) => update(r.id, { listingName: e.target.value })}
                               className={cell}
                             />
+                            <a
+                              href={r.listingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block mt-1 text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                            >
+                              View listing ↗
+                            </a>
+                          </td>
+                          <td className="py-2 pr-3">
+                            <textarea
+                              rows={3}
+                              value={i.description}
+                              onChange={(e) => update(r.id, { description: e.target.value })}
+                              placeholder="No description on this listing"
+                              className={`${cell} resize-y leading-relaxed`}
+                            />
                           </td>
                           <td className="py-2 pr-3">
                             <input
@@ -330,15 +361,24 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                             </label>
                           </td>
                           <td className="py-2">
-                            <a
-                              href={r.claimUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title={r.claimUrl}
-                              className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground break-all"
-                            >
-                              {r.tokenIsNew ? "New link ↗" : "Link ↗"}
-                            </a>
+                            {r.alreadyOwned ? (
+                              <span
+                                title="This listing already has an owner — a claim link would be rejected, so none was generated."
+                                className="flex items-center gap-1 text-[11px] text-amber-700 cursor-default"
+                              >
+                                <AlertCircle className="w-3 h-3 shrink-0" /> Owned
+                              </span>
+                            ) : (
+                              <a
+                                href={r.claimUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={r.claimUrl}
+                                className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground break-all"
+                              >
+                                {r.tokenIsNew ? "New link ↗" : "Link ↗"}
+                              </a>
+                            )}
                           </td>
                         </tr>
                       );
@@ -353,6 +393,13 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                   <span>
                     {newTokens} new link{newTokens !== 1 ? "s" : ""} generated (any older link for
                     those listings no longer works).
+                  </span>
+                )}
+                {ownedCount > 0 && (
+                  <span className="flex items-center gap-1 text-amber-700">
+                    <AlertCircle className="w-3 h-3" />
+                    {ownedCount} listing{ownedCount !== 1 ? "s" : ""} already owned — no claim link
+                    generated, claim_url exports blank.
                   </span>
                 )}
                 {missingEmail > 0 && (

@@ -26,22 +26,13 @@ import { X, Mail, Search, Star, Settings } from "lucide-react";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import { ClaimExportPanel } from "@/components/admin/ClaimExportPanel";
+import { ResetClaimDialog } from "@/components/admin/ResetClaimDialog";
+import { getClaimStatus, type ClaimStatus } from "@/lib/claim-status";
 import type { Opportunity } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
-type ClaimStatus = "none" | "scheduled" | "sent" | "opened" | "claimed";
 type ClaimFilter = "all" | ClaimStatus;
-
-function getClaimStatus(o: Opportunity): ClaimStatus {
-  // "claimed" only when an org went through the claim-link flow
-  // (profile_id set by a partner submission alone doesn't count)
-  if (o.profile_id && o.claim_token) return "claimed";
-  if (o.claim_link_opened_at) return "opened";
-  if (o.claim_invite_sent_at) return "sent";
-  if (o.claim_invite_scheduled_for) return "scheduled";
-  return "none";
-}
 
 function ClaimStatusBadge({ opp }: { opp: Opportunity }) {
   const status = getClaimStatus(opp);
@@ -127,6 +118,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPanelOpen, setBulkPanelOpen] = useState(false);
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
+  const [resetTargets, setResetTargets] = useState<Opportunity[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
@@ -334,6 +326,14 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               </button>
               <button
                 type="button"
+                onClick={() => setResetTargets(selectedOpps)}
+                title="Put these listings back to unclaimed and issue fresh claim links"
+                className="text-xs border border-border px-3 py-1.5 hover:border-black transition-colors text-muted-foreground hover:text-foreground"
+              >
+                Reset claim state ({selected.size})
+              </button>
+              <button
+                type="button"
                 onClick={() => setSelected(new Set())}
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
               >
@@ -404,8 +404,16 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       className="cursor-pointer"
                     />
                   </td>
-                  <td className="py-3 pr-4 max-w-[200px]">
-                    <span className="line-clamp-1">{o.title}</span>
+                  <td className="py-3 pr-4 max-w-[260px]">
+                    <Link
+                      href={`/opportunities/${o.slug ?? o.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View listing ↗"
+                      className="line-clamp-1 hover:underline underline-offset-2"
+                    >
+                      {o.title}
+                    </Link>
                     <span className="text-muted-foreground block truncate">{o.organiser}</span>
                     {isSlugBad(o.slug) && (
                       <span className="flex items-center gap-1.5 text-destructive">
@@ -622,6 +630,28 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                   </button>
                 </div>
               )}
+
+              {/* Shows once a listing has an owner or a recorded open — the two
+                  things a reset clears. */}
+              {(claimOpp.profile_id || claimOpp.claim_link_opened_at) && (
+                <div className="border-t border-black/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClaimTargetId(null);
+                      setResetTargets([claimOpp]);
+                    }}
+                    className="w-full text-xs border border-destructive/40 text-destructive px-3 py-1.5 hover:border-destructive transition-colors"
+                  >
+                    Reset claim state
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    {claimOpp.profile_id
+                      ? "Currently claimed — resets to unclaimed and issues a fresh link."
+                      : "Clears the recorded link open and issues a fresh link."}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -661,6 +691,28 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
           onClose={() => setExportPanelOpen(false)}
           onExported={(msg) => {
             setExportPanelOpen(false);
+            showToast(msg);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* ── Reset claim state dialog ──────────────────────────────────────── */}
+      {resetTargets && resetTargets.length > 0 && (
+        <ResetClaimDialog
+          opps={resetTargets}
+          onClose={() => setResetTargets(null)}
+          onDone={(msg, tokens) => {
+            setResetTargets(null);
+            setSelected(new Set());
+            // Keep the copy-link modal in step with the tokens just issued.
+            setClaimState((prev) => {
+              const next = { ...prev };
+              for (const [id, token] of Object.entries(tokens)) {
+                next[id] = { ...next[id], token, copied: false };
+              }
+              return next;
+            });
             showToast(msg);
             router.refresh();
           }}
