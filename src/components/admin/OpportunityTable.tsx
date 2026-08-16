@@ -25,6 +25,7 @@ import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditO
 import { X, Mail, Search, Star, Settings } from "lucide-react";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
+import { ClaimExportPanel } from "@/components/admin/ClaimExportPanel";
 import type { Opportunity } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -125,6 +126,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPanelOpen, setBulkPanelOpen] = useState(false);
+  const [exportPanelOpen, setExportPanelOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
@@ -313,15 +315,31 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
             </span>
           )}
 
-          {/* Bulk invite button */}
+          {/* Bulk invite + CSV export buttons */}
           {selected.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setBulkPanelOpen(true)}
-              className="text-xs bg-black text-white px-3 py-1.5 hover:bg-black/80 transition-colors"
-            >
-              Send claim invites ({selected.size})
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setBulkPanelOpen(true)}
+                className="text-xs bg-black text-white px-3 py-1.5 hover:bg-black/80 transition-colors"
+              >
+                Send claim invites ({selected.size})
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportPanelOpen(true)}
+                className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+              >
+                Export claim CSV ({selected.size})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                Clear
+              </button>
+            </>
           )}
         </div>
 
@@ -630,6 +648,19 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
           onDone={(msg) => {
             setBulkPanelOpen(false);
             setSelected(new Set());
+            showToast(msg);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* ── Claim CSV export panel ────────────────────────────────────────── */}
+      {exportPanelOpen && selectedOpps.length > 0 && (
+        <ClaimExportPanel
+          opps={selectedOpps}
+          onClose={() => setExportPanelOpen(false)}
+          onExported={(msg) => {
+            setExportPanelOpen(false);
             showToast(msg);
             router.refresh();
           }}
