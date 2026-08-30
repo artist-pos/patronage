@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
+import { getOpportunitySource } from "@/lib/opportunity-sources";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -95,6 +96,8 @@ export async function updateQueueOpportunity(
     opens_at: string | null;
     deadline: string | null;
     url: string | null;
+    source: string | null;
+    source_url: string | null;
     funding_range: string | null;
     full_description: string | null;
     featured_image_url: string | null;
@@ -130,6 +133,8 @@ export async function updateQueueOpportunity(
       opens_at: fields.opens_at || null,
       deadline: fields.deadline || null,
       url: fields.url?.trim() || null,
+      source: getOpportunitySource(fields.source) ? fields.source : null,
+      source_url: fields.source_url?.trim() || null,
       funding_range: fields.funding_range?.trim() || null,
       full_description: fields.full_description?.trim() || null,
       featured_image_url: fields.featured_image_url?.trim() || null,

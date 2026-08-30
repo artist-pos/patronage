@@ -143,6 +143,8 @@ export function PartnerEditForm({ opp }: Props) {
       travel_support: d.travelSupport,
       travel_support_details: d.travelSupportDetails.trim() || null,
       routing_type: d.routingType,
+      source: d.source || null,
+      source_url: d.sourceUrl.trim() || null,
       show_badges_in_submission: d.showBadges,
       pipeline_config: pipelineConfig,
     };

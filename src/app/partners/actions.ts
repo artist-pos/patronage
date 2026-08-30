@@ -10,6 +10,7 @@ import {
   grossUpForStripe,
 } from "@/lib/commerce-pricing";
 import { notifyOpportunitySubmission } from "@/lib/email";
+import { getOpportunitySource } from "@/lib/opportunity-sources";
 import { Resend } from "resend";
 
 // ── Admin: update an activation type row ─────────────────────────────────────
@@ -141,6 +142,9 @@ export async function submitOpportunityAction(
   const entryFeeCurrency = ((formData.get("entry_fee_currency") as string) || "NZD").trim().toUpperCase();
   const travelSupportRaw = formData.get("travel_support") as string;
   const routingType = (formData.get("routing_type") as string) || "external";
+  // Attribution is registry-keyed — anything else is stored as "not sourced".
+  const sourceRaw = (formData.get("source") as string)?.trim() || null;
+  const sourceKey = getOpportunitySource(sourceRaw) ? sourceRaw : null;
   const customFieldsRaw = (formData.get("custom_fields") as string) || "[]";
   const showBadgesRaw = (formData.get("show_badges_in_submission") as string) ?? "true";
   const pipelineConfigRaw = (formData.get("pipeline_config") as string) || "null";
@@ -206,6 +210,8 @@ export async function submitOpportunityAction(
     travel_support: travelSupportRaw === "true" ? true : null,
     travel_support_details: (formData.get("travel_support_details") as string)?.trim() || null,
     routing_type: routingType,
+    source: sourceKey,
+    source_url: sourceKey ? (formData.get("source_url") as string)?.trim() || null : null,
     custom_fields: customFields,
     show_badges_in_submission: showBadgesRaw === "true",
     pipeline_config: pipelineConfig,

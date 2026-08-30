@@ -147,8 +147,8 @@ export function OpportunitySubmissionForm({
     slug: null,
     is_active: true,
     status: "published",
-    source_url: null,
-    source: null,
+    source_url: formData.sourceUrl || null,
+    source: formData.source || null,
     profile_id: null,
     created_at: new Date().toISOString(),
     entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
@@ -253,6 +253,8 @@ export function OpportunitySubmissionForm({
         <input type="hidden" name="travel_support"             value={formData.travelSupport === true ? "true" : ""} />
         <input type="hidden" name="travel_support_details"     value={formData.travelSupportDetails} />
         <input type="hidden" name="routing_type"               value={formData.routingType} />
+        <input type="hidden" name="source"                     value={formData.source} />
+        <input type="hidden" name="source_url"                 value={formData.sourceUrl} />
         <input type="hidden" name="custom_fields"              value="[]" />
         <input type="hidden" name="show_badges_in_submission"  value={formData.showBadges ? "true" : "false"} />
         <input type="hidden" name="pipeline_config"            value={pipelineConfigValue ? JSON.stringify(pipelineConfigValue) : "null"} />

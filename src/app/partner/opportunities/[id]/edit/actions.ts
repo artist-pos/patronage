@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
+import { getOpportunitySource } from "@/lib/opportunity-sources";
 import type { ApplicationLink } from "@/types/database";
 
 async function getOpportunityForPartner(id: string) {
@@ -54,6 +55,8 @@ export async function updateOpportunityPartner(
     travel_support?: boolean | null;
     travel_support_details?: string | null;
     routing_type?: string | null;
+    source?: string | null;
+    source_url?: string | null;
     show_badges_in_submission?: boolean;
     pipeline_config?: object | null;
   }
@@ -68,6 +71,12 @@ export async function updateOpportunityPartner(
     updateData.application_links = updateData.application_links.filter(
       (l) => l && (l.url?.trim() || l.label?.trim())
     );
+  }
+
+  // Only keys the registry knows about can be stored — an unrecognised one
+  // would render no attribution anyway, so treat it as "not sourced".
+  if ("source" in updateData) {
+    updateData.source = getOpportunitySource(updateData.source) ? updateData.source : null;
   }
 
   const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();

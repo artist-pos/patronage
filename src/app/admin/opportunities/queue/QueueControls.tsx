@@ -32,6 +32,8 @@ function buildUpdatePayload(d: OpportunityFormData) {
     opens_at: d.opensAt || null,
     deadline: d.deadline || null,
     url: d.url.trim() || null,
+    source: d.source || null,
+    source_url: d.sourceUrl.trim() || null,
     funding_range: d.fundingRange.trim() || null,
     full_description: d.fullDescription.trim() || null,
     featured_image_url: d.featuredImageUrl.trim() || null,

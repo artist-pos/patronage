@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
 import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
 import type { ApplicationLink, Opportunity, OppTypeEnum } from "@/types/database";
+import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
 
 // ── AI Parser ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,9 @@ interface ParsedOpportunity {
   full_description?: string;
   application_url?: string;
   email?: string;
+  /** Set by /api/parse-opportunity from the domain, not by the model. */
+  source?: string | null;
+  source_url?: string | null;
 }
 
 const OPP_TYPE_VALUES = [
@@ -54,6 +58,10 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
   if (parsed.tags?.length) patch.tags = parsed.tags;
   if (parsed.application_url) patch.url = parsed.application_url;
   if (parsed.email) patch.contact_email = parsed.email;
+  // Attribution: only ever set, never cleared — a re-parse that fails to recognise
+  // the domain shouldn't wipe a source picked by hand.
+  if (parsed.source) patch.source = parsed.source;
+  if (parsed.source_url) patch.source_url = parsed.source_url;
   return patch;
 }
 
@@ -202,6 +210,8 @@ export interface Patch {
   tags?: string[] | null;
   url?: string | null;
   contact_email?: string | null;
+  source?: string | null;
+  source_url?: string | null;
 }
 
 const OPP_TYPES: OppTypeEnum[] = [
@@ -491,6 +501,37 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             placeholder="applications@example.com"
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black sm:max-w-sm"
           />
+        </div>
+
+        {/* Source attribution — filled in by autofill when the URL is a board we know */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Sourced from <span className="text-stone-400">optional</span>
+            </label>
+            <select
+              value={opp.source ?? ""}
+              onChange={(e) => onChange({ source: e.target.value || null })}
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            >
+              <option value="">— Not sourced —</option>
+              {OPPORTUNITY_SOURCES.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Source page URL <span className="text-stone-400">optional</span>
+            </label>
+            <input
+              type="url"
+              value={opp.source_url ?? ""}
+              onChange={(e) => onChange({ source_url: e.target.value || null })}
+              placeholder="Listing page on the source site"
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
         </div>
 
         {/* Featured image */}

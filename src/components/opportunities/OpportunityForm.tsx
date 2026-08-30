@@ -1607,41 +1607,39 @@ export function OpportunityForm({
         )}
       </Section>
 
-      {/* ── Source attribution (admin mode only) ──────────────────────── */}
-      {mode === "admin" && (
-        <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-8">
-          <p className="text-xs font-semibold uppercase tracking-widest">Source</p>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Set automatically when you autofill from a known board&apos;s URL. Attribution
-            shows on the public listing.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">Sourced from</label>
-              <select
-                value={value.source}
-                onChange={(e) => set({ source: e.target.value })}
-                className={FIELD}
-              >
-                <option value="">— Not sourced —</option>
-                {OPPORTUNITY_SOURCES.map((s) => (
-                  <option key={s.key} value={s.key}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">Source page URL</label>
-              <input
-                type="url"
-                value={value.sourceUrl}
-                onChange={(e) => set({ sourceUrl: e.target.value })}
-                placeholder="Listing page on the source site"
-                className={FIELD}
-              />
-            </div>
+      {/* ── Source attribution — every mode ───────────────────────────── */}
+      <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-8">
+        <p className="text-xs font-semibold uppercase tracking-widest">Source</p>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Filled in automatically when you autofill from a known board&apos;s URL.
+          Attribution shows at the foot of the public listing.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest">Sourced from</label>
+            <select
+              value={value.source}
+              onChange={(e) => set({ source: e.target.value })}
+              className={FIELD}
+            >
+              <option value="">— Not sourced —</option>
+              {OPPORTUNITY_SOURCES.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest">Source page URL</label>
+            <input
+              type="url"
+              value={value.sourceUrl}
+              onChange={(e) => set({ sourceUrl: e.target.value })}
+              placeholder="Listing page on the source site"
+              className={FIELD}
+            />
           </div>
         </div>
-      )}
+      </div>
 
       {/* ── Transparency (admin mode only) ────────────────────────────── */}
       {mode === "admin" && (
