@@ -212,7 +212,7 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
             loading={
               <div className="flex items-center justify-center h-80 text-sm text-muted-foreground">
-                Loading proposal…
+                Loading PDF…
               </div>
             }
             error={

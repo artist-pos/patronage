@@ -11,7 +11,7 @@ const PartnerPdfViewer = dynamic(
     ssr: false,
     loading: () => (
       <div className="border border-border rounded-xl flex items-center justify-center h-80 text-sm text-muted-foreground">
-        Loading proposal…
+        Loading PDF…
       </div>
     ),
   }

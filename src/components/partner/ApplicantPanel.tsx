@@ -10,6 +10,18 @@ import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPa
 import type { CustomField, PipelineConfig } from "@/types/database";
 import type { EnrichedApp, CreativeWorkLite } from "./ApplicationsManager";
 import { getStages, getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
+import { PartnerPdfViewerClient } from "@/components/partners/PartnerPdfViewerClient";
+
+const isImageUrl = (url: string) => /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i.test(url);
+const isPdfUrl = (url: string) => /\.pdf($|\?)/i.test(url);
+
+/** Human-readable name from a storage URL — drops the query and upload timestamp prefix. */
+function fileNameFromUrl(url: string, fallback: string): string {
+  const raw = url.split("/").pop()?.split("?")[0] ?? "";
+  let name = raw;
+  try { name = decodeURIComponent(raw); } catch { /* leave the raw segment as-is */ }
+  return name.replace(/^\d+-/, "") || fallback;
+}
 
 interface Artist {
   id: string;
@@ -278,13 +290,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   let urls: string[] = [];
                   try { const p = JSON.parse(answer); urls = Array.isArray(p) ? p : [answer]; }
                   catch { urls = [answer]; }
-                  const isImage = (url: string) => /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i.test(url);
+                  const images = urls.filter(isImageUrl);
+                  const pdfs = urls.filter(isPdfUrl);
+                  const otherFiles = urls.filter((u) => !isImageUrl(u) && !isPdfUrl(u));
                   return (
                     <div key={field.id} className="space-y-1.5">
                       <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{field.label}</p>
-                      {urls.some(isImage) && (
+                      {images.length > 0 && (
                         <div className="grid grid-cols-2 gap-3">
-                          {urls.filter(isImage).map((url) => (
+                          {images.map((url) => (
                             <a key={url} href={url} target="_blank" rel="noopener noreferrer">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={url} alt={field.label} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
@@ -292,16 +306,23 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                           ))}
                         </div>
                       )}
-                      {urls.some((u) => !isImage(u)) && (
+                      {/* Concept sketches and mock-ups arrive as PDFs — render them in
+                          place so reviewers can read them without leaving the panel.
+                          The viewer pages itself, so the panel's scroll is unaffected. */}
+                      {pdfs.map((url, i) => (
+                        <div key={url} className="space-y-1.5 pt-1">
+                          <p className="font-mono text-[11px] text-stone-400 truncate">
+                            {fileNameFromUrl(url, `Document ${i + 1}`)}
+                          </p>
+                          <PartnerPdfViewerClient pdfUrl={url} />
+                        </div>
+                      ))}
+                      {otherFiles.length > 0 && (
                         <ul className="space-y-1">
-                          {urls.filter((u) => !isImage(u)).map((url, i) => {
-                            const parts = url.split("/"); const raw = parts[parts.length - 1]?.split("?")[0] ?? "";
-                            const name = raw.replace(/^\d+-/, "") || `File ${i + 1}`;
-                            return (
-                              <li key={url}><a href={url} target="_blank" rel="noopener noreferrer"
-                                className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity">{name}</a></li>
-                            );
-                          })}
+                          {otherFiles.map((url, i) => (
+                            <li key={url}><a href={url} target="_blank" rel="noopener noreferrer"
+                              className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity">{fileNameFromUrl(url, `File ${i + 1}`)}</a></li>
+                          ))}
                         </ul>
                       )}
                     </div>
