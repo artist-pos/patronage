@@ -148,6 +148,7 @@ export function OpportunitySubmissionForm({
     is_active: true,
     status: "published",
     source_url: null,
+    source: null,
     profile_id: null,
     created_at: new Date().toISOString(),
     entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,

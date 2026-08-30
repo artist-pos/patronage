@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getOpportunityById } from "@/lib/opportunities";
+import { getOpportunitySource, sourceKeyForUrl } from "@/lib/opportunity-sources";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModalDynamic";
 import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
@@ -503,6 +504,15 @@ export default async function OpportunityPage({ params }: Props) {
   ).filter((l) => l.url?.trim());
 
   const canonicalUrl = `${SITE_URL}/opportunities/${opp.slug ?? opp.id}`;
+
+  // Attribution for listings taken off another board. Deep-link to the listing
+  // on their site where we have it, so the reader can check it at the source;
+  // otherwise fall back to the board's homepage.
+  const sourceInfo = getOpportunitySource(opp.source);
+  const sourceLinkUrl =
+    sourceInfo && sourceKeyForUrl(opp.source_url) === sourceInfo.key
+      ? (opp.source_url as string)
+      : sourceInfo?.url;
   const sharePayload = buildOpportunitySharePayload(opp, canonicalUrl);
   const schemaType = schemaTypeForOpp(opp.type);
   const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
@@ -840,14 +850,27 @@ export default async function OpportunityPage({ params }: Props) {
         </a>
       ) : null}
 
-      {/* ── Back link — STATIC ──────────────────────────────────────────── */}
-      <div className="mt-9 border-t border-border pt-5">
+      {/* ── Back link + source attribution — STATIC ─────────────────────── */}
+      <div className="mt-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border pt-5">
         <Link
           href="/opportunities"
           className="text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
         >
           ← Back to opportunities
         </Link>
+        {sourceInfo && (
+          <p className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+            Source:{" "}
+            <a
+              href={sourceLinkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              {sourceInfo.label}
+            </a>
+          </p>
+        )}
       </div>
       </div>{/* end main column */}
 

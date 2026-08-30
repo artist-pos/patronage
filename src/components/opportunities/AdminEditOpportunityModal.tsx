@@ -83,6 +83,8 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
         travel_support: formData.travelSupport,
         travel_support_details: formData.travelSupportDetails.trim() || null,
         routing_type: formData.routingType,
+        source: formData.source || null,
+        source_url: formData.sourceUrl.trim() || null,
         show_badges_in_submission: formData.showBadges,
         is_featured: formData.isFeatured,
         pipeline_config: pipelineConfig,

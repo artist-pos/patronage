@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendApplicationConfirmation } from "@/lib/email";
+import { getOpportunitySource } from "@/lib/opportunity-sources";
 import type { ApplicationLink, OpportunityApplicationDraft, PipelineConfig } from "@/types/database";
 
 export async function updateOpportunityAdmin(
@@ -37,6 +38,8 @@ export async function updateOpportunityAdmin(
     travel_support?: boolean | null;
     travel_support_details?: string | null;
     routing_type?: string | null;
+    source?: string | null;
+    source_url?: string | null;
     show_badges_in_submission?: boolean;
     is_featured?: boolean;
     pipeline_config?: object | null;
@@ -57,6 +60,12 @@ export async function updateOpportunityAdmin(
     updateData.application_links = updateData.application_links.filter(
       (l) => l && (l.url?.trim() || l.label?.trim())
     );
+  }
+
+  // Only keys the registry knows about can be stored — an unrecognised one
+  // would render no attribution anyway, so treat it as "not sourced".
+  if ("source" in updateData) {
+    updateData.source = getOpportunitySource(updateData.source) ? updateData.source : null;
   }
 
   const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();

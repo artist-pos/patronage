@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
 import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
 import type { ApplicationLink, Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
+import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
 import {
   FORM_TYPES,
   DISCIPLINES,
@@ -42,6 +43,9 @@ export interface OpportunityFormData {
   caption: string;
   fullDescription: string;
   url: string;
+  /** Third-party board this listing came from — registry key, null-ish "" = none. */
+  source: string;
+  sourceUrl: string;
   applicationLinks: ApplicationLink[];
   type: string;
   country: string;
@@ -91,6 +95,8 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     caption: "",
     fullDescription: "",
     url: "",
+    source: "",
+    sourceUrl: "",
     applicationLinks: [],
     type: "Grant",
     country: "NZ",
@@ -155,6 +161,8 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     caption: opp.caption ?? "",
     fullDescription: opp.full_description ?? "",
     url: opp.url ?? "",
+    source: opp.source ?? "",
+    sourceUrl: opp.source_url ?? "",
     applicationLinks: opp.application_links?.length
       ? opp.application_links
       : opp.url
@@ -332,6 +340,9 @@ interface ParsedOpportunity {
   full_description?: string;
   email?: string;
   application_url?: string;
+  /** Set by /api/parse-opportunity from the domain, not by the model. */
+  source?: string | null;
+  source_url?: string | null;
   type_specific?: {
     duration?: string;
     stipend?: string;
@@ -364,6 +375,10 @@ function mapParsedToFormData(parsed: ParsedOpportunity): Partial<OpportunityForm
   if (parsed.tags?.length) updates.selectedTags = parsed.tags;
   if (parsed.email) updates.submitterEmail = parsed.email;
   if (parsed.application_url) updates.url = parsed.application_url;
+  // Attribution: only ever set here, never cleared — a re-parse that fails to
+  // recognise the domain shouldn't wipe a source the admin picked by hand.
+  if (parsed.source) updates.source = parsed.source;
+  if (parsed.source_url) updates.sourceUrl = parsed.source_url;
   const ts = parsed.type_specific;
   if (ts) {
     if (ts.duration) updates.grantType = ts.duration;
@@ -1591,6 +1606,42 @@ export function OpportunityForm({
           </Field>
         )}
       </Section>
+
+      {/* ── Source attribution (admin mode only) ──────────────────────── */}
+      {mode === "admin" && (
+        <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-8">
+          <p className="text-xs font-semibold uppercase tracking-widest">Source</p>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Set automatically when you autofill from a known board&apos;s URL. Attribution
+            shows on the public listing.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-widest">Sourced from</label>
+              <select
+                value={value.source}
+                onChange={(e) => set({ source: e.target.value })}
+                className={FIELD}
+              >
+                <option value="">— Not sourced —</option>
+                {OPPORTUNITY_SOURCES.map((s) => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-widest">Source page URL</label>
+              <input
+                type="url"
+                value={value.sourceUrl}
+                onChange={(e) => set({ sourceUrl: e.target.value })}
+                placeholder="Listing page on the source site"
+                className={FIELD}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Transparency (admin mode only) ────────────────────────────── */}
       {mode === "admin" && (

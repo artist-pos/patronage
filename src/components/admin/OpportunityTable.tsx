@@ -28,6 +28,7 @@ import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import { ClaimExportPanel } from "@/components/admin/ClaimExportPanel";
 import { ResetClaimDialog } from "@/components/admin/ResetClaimDialog";
 import { getClaimStatus, type ClaimStatus } from "@/lib/claim-status";
+import { OPPORTUNITY_SOURCES, getOpportunitySource, sourceKeyForUrl } from "@/lib/opportunity-sources";
 import type { Opportunity } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -105,6 +106,31 @@ interface ClaimState {
   copied: boolean;
 }
 
+/**
+ * Attribution cell. Links straight through to the listing on the source board
+ * where we recorded its URL — that's the page you check to see whether they've
+ * taken it down.
+ */
+function SourceCell({ opp }: { opp: Opportunity }) {
+  const source = getOpportunitySource(opp.source);
+  if (!source) return <span className="text-muted-foreground">—</span>;
+
+  const href =
+    sourceKeyForUrl(opp.source_url) === source.key ? (opp.source_url as string) : source.url;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Open on ${source.label} ↗`}
+      className="underline underline-offset-2 hover:text-foreground text-muted-foreground"
+    >
+      {source.label}
+    </a>
+  );
+}
+
 export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -122,7 +148,20 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const [toast, setToast] = useState<string | null>(null);
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
+  // "all" | "none" (not sourced) | a registry key
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+
+  // Only offer sources that actually appear in the table, plus "not sourced" —
+  // this filter exists to pull one board's listings up for cross-referencing.
+  const sourceOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const o of opps) counts.set(o.source ?? "none", (counts.get(o.source ?? "none") ?? 0) + 1);
+    return OPPORTUNITY_SOURCES
+      .filter((s) => counts.has(s.key))
+      .map((s) => ({ key: s.key, label: s.label, count: counts.get(s.key) ?? 0 }))
+      .concat([{ key: "none", label: "Not sourced", count: counts.get("none") ?? 0 }]);
+  }, [opps]);
 
   // Country options, NZ/AUS first (the claim-outreach countries), then the rest
   // alphabetically — each with its listing count.
@@ -244,11 +283,12 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   const inviteOpp = inviteTargetId ? opps.find(o => o.id === inviteTargetId) ?? null : null;
   const selectedOpps = opps.filter(o => selected.has(o.id));
 
-  // Filter opps by search + claim status + country
+  // Filter opps by search + claim status + country + source
   const q = search.trim().toLowerCase();
   const filteredOpps = opps.filter(o => {
     if (claimFilter !== "all" && getClaimStatus(o) !== claimFilter) return false;
     if (countryFilter !== "all" && (o.country || "—") !== countryFilter) return false;
+    if (sourceFilter !== "all" && (o.source ?? "none") !== sourceFilter) return false;
     if (q && !o.title?.toLowerCase().includes(q) && !o.organiser?.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -300,6 +340,22 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               </option>
             ))}
           </select>
+
+          {/* Source filter — hidden until at least one listing is attributed */}
+          {sourceOptions.length > 1 && (
+            <select
+              value={sourceFilter}
+              onChange={e => setSourceFilter(e.target.value)}
+              className="text-xs border border-border px-2 py-1.5 focus:outline-none focus:border-black bg-background"
+            >
+              <option value="all">All sources ({opps.length})</option>
+              {sourceOptions.map(s => (
+                <option key={s.key} value={s.key}>
+                  {s.label} ({s.count})
+                </option>
+              ))}
+            </select>
+          )}
 
           {filteredOpps.length !== opps.length && (
             <span className="text-xs text-muted-foreground">
@@ -376,6 +432,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               <th className="py-3 pr-4 font-medium text-muted-foreground">Title</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Type</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Country</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Source</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Deadline</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Status</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Claim status</th>
@@ -436,6 +493,9 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                     <Badge variant="outline" className="text-xs font-normal">{o.type}</Badge>
                   </td>
                   <td className="py-3 pr-4 text-muted-foreground">{o.country}</td>
+                  <td className="py-3 pr-4">
+                    <SourceCell opp={o} />
+                  </td>
                   <td className="py-3 pr-4">
                     <span className={expired ? "text-destructive" : "text-muted-foreground"}>
                       {o.deadline ?? "Open"}{expired && " (expired)"}
@@ -529,7 +589,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
           <p className="text-sm text-muted-foreground py-8 text-center">
             {q
               ? `No opportunities matching "${search}".`
-              : countryFilter !== "all"
+              : countryFilter !== "all" || sourceFilter !== "all"
               ? "No opportunities match these filters."
               : claimFilter !== "all"
               ? "No opportunities with this claim status."

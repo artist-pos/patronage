@@ -164,6 +164,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
       is_active: true,
       status: "published",
       source_url: null,
+      source: null,
       profile_id: null,
       created_at: new Date().toISOString(),
       entry_fee: entryFee !== "" ? parseFloat(entryFee) : null,

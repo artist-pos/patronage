@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sourceKeyForText, sourceKeyForUrl } from "@/lib/opportunity-sources";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
@@ -102,9 +103,17 @@ export async function POST(req: NextRequest) {
 
   let content: MessageContent[];
 
+  // Source attribution is decided from the domain, not by Claude — a listing is
+  // The Big Idea's because we took it off their board, which the model can't
+  // know and shouldn't guess.
+  let sourceKey: string | null = null;
+  let sourcePageUrl: string | null = null;
+
   if (type === "url") {
     const url = formData.get("url") as string;
     if (!url) return NextResponse.json({ error: "URL required" }, { status: 400 });
+    sourceKey = sourceKeyForUrl(url);
+    if (sourceKey) sourcePageUrl = url.trim();
     try {
       const pageRes = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Patronage/1.0; +https://patronage.nz)" },
@@ -121,6 +130,8 @@ export async function POST(req: NextRequest) {
   } else if (type === "text") {
     const text = formData.get("text") as string;
     if (!text?.trim()) return NextResponse.json({ error: "Text required" }, { status: 400 });
+    // Pasted page text usually still carries the canonical URL or share links.
+    sourceKey = sourceKeyForText(text);
     content = [{ type: "text", text: text.slice(0, 15000) }];
   } else if (type === "file") {
     const file = formData.get("file") as File;
@@ -185,7 +196,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const parsed = JSON.parse(cleaned);
-    return NextResponse.json(parsed);
+    // Overwrite rather than merge — these two fields are ours, not the model's.
+    return NextResponse.json({ ...parsed, source: sourceKey, source_url: sourcePageUrl });
   } catch {
     return NextResponse.json({ error: "Invalid JSON from Claude", raw: rawText.slice(0, 500) }, { status: 502 });
   }

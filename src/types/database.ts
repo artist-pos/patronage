@@ -147,6 +147,7 @@ export interface Opportunity {
   is_active: boolean;
   status: string;                  // "pending" | "published" | "rejected"
   source_url: string | null;       // page the scraper found this on
+  source: string | null;           // attribution key for a third-party board (migration 179) — see lib/opportunity-sources
   profile_id: string | null;
   created_at: string;
   // Transparency fields (migration 035)
