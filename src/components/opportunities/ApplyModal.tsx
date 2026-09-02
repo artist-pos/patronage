@@ -6,6 +6,7 @@ import { X, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
+import { AutoGrowTextarea } from "@/components/ui/AutoGrowTextarea";
 import type { OpportunityApplicationDraft } from "@/types/database";
 import type { OpportunityForApply, AvailableWork } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
@@ -715,8 +716,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                             </p>
                           ) : (
                             <div className="space-y-1.5">
-                              <textarea
-                                rows={4}
+                              <AutoGrowTextarea
                                 value={override ?? ""}
                                 onChange={(e) => {
                                   const text = e.target.value;
@@ -724,7 +724,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                                   else writeWorkDescription(work.id, text);
                                 }}
                                 placeholder={`What ${opportunity.organiser} should know about this work…`}
-                                className={`w-full resize-none bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none ${
+                                className={`w-full bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none ${
                                   flagged
                                     ? "border border-[color:var(--urgent)] focus:border-[color:var(--urgent)]"
                                     : "border border-border focus:border-foreground"
@@ -732,7 +732,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                               />
                               {!existing && (
                                 <p className="t-mono-sm text-[color:var(--fg-subtle)]">
-                                  This work has no saved description — what you write here applies to this application only.
+                                  This work has no saved description, so what you write here applies to this application only.
                                 </p>
                               )}
                             </div>
@@ -765,11 +765,10 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                     />
                   )}
                   {field.type === "long" && (
-                    <textarea
-                      rows={4}
+                    <AutoGrowTextarea
                       value={answers[field.id] ?? ""}
                       onChange={(e) => setAnswers((prev) => ({ ...prev, [field.id]: e.target.value }))}
-                      className="w-full resize-none border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none focus:border-foreground"
+                      className="w-full border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none focus:border-foreground"
                     />
                   )}
                   {field.type === "file" && (
