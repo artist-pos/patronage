@@ -22,7 +22,7 @@ export function UnauthSaveModal({ onClose }: Props) {
         </div>
         <div className="p-5 space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Create a free Patronage account to save grants, residencies, and open calls — and track them in your personal dashboard with deadline reminders.
+            Create a free Patronage account to save grants, residencies, and open calls, and track them in your personal dashboard with deadline reminders.
           </p>
           <div className="flex flex-col gap-2">
             <Link

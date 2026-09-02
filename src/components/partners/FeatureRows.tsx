@@ -2,7 +2,7 @@ const FEATURES = [
   {
     code: "F.01",
     headline: "Applications without the spreadsheets.",
-    body: "Artists apply through their Patronage profile — portfolio, CV, exhibition history, and practice statement are already there. You get structured, consistent applications every time. No chasing, no formatting, no PDFs in your inbox.",
+    body: "Artists apply through their Patronage profile, where portfolio, CV, exhibition history, and practice statement are already there. You get structured, consistent applications every time. No chasing, no formatting, no PDFs in your inbox.",
     points: [
       "Custom questions and file upload fields",
       "Profile-aware fields (CV, portfolio, available works) pre-attached",
@@ -13,18 +13,18 @@ const FEATURES = [
   {
     code: "F.02",
     headline: "The full lifecycle, in one place.",
-    body: "From open call to final asset delivery — every stage of your pipeline is tracked in Patronage. Move artists through stages, score with your committee, send notifications when you're ready, and collect final assets through the platform.",
+    body: "From open call to final asset delivery, every stage of your pipeline is tracked in Patronage. Move artists through stages, score with your committee, send notifications when you're ready, and collect final assets through the platform.",
     points: [
       "Kanban, table, triage, and timeline pipeline views",
       "Committee scoring with rubric configuration",
-      "Staged notifications — hold and send in batches or immediately",
+      "Staged notifications, held and sent in batches or immediately",
       "Production asset delivery with signed download links",
     ],
   },
   {
     code: "F.03",
     headline: "Impact reporting that writes itself.",
-    body: "Six and twelve months after selection, Patronage sends automated follow-up surveys to selected artists. Responses feed directly into an impact report you can share with your board, funder, or community — no manual data collection required.",
+    body: "Six and twelve months after selection, Patronage sends automated follow-up surveys to selected artists. Responses feed directly into an impact report you can share with your board, funder, or community. No manual data collection required.",
     points: [
       "Automated follow-up at 6 and 12 months",
       "Outcome tracking: exhibitions, income, press, community projects",
@@ -56,7 +56,7 @@ export function FeatureRows() {
             <div className="space-y-0">
               {f.points.map((point) => (
                 <div key={point} className="flex gap-3 border-t border-black/10 py-3.5">
-                  <span className="text-stone-300 mt-0.5 shrink-0">—</span>
+                  <span className="text-stone-300 mt-0.5 shrink-0">–</span>
                   <p className="text-sm leading-relaxed">{point}</p>
                 </div>
               ))}

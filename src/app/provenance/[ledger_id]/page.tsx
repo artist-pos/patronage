@@ -17,11 +17,11 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { ledger_id } = await params;
   const data = await getLedgerByLedgerId(ledger_id);
-  if (!data) return { title: "Provenance — Patronage" };
+  if (!data) return { title: "Provenance | Patronage" };
   const title = data.artwork.title ?? data.artwork.caption ?? "Untitled";
   const artist = data.artist.full_name ?? data.artist.username;
   return {
-    title: `${title} by ${artist} — Provenance`,
+    title: `${title} by ${artist} | Provenance`,
     description: `Provenance record for ${title} by ${artist}, recorded on Patronage. Ledger ID: ${ledger_id}`,
   };
 }
@@ -107,7 +107,7 @@ export default async function ProvenancePage({ params }: PageProps) {
   const TRUST_COPY: Record<string, { title: string; body: string }> = {
     recorded_by_artist: {
       title: "Recorded by artist",
-      body: "This record was lodged by the artist on Patronage. It reflects what the artist submitted — not an independent authentication of the physical work.",
+      body: "This record was lodged by the artist on Patronage. It reflects what the artist submitted, not an independent authentication of the physical work.",
     },
     confirmed_by_artist: {
       title: "Confirmed by artist",

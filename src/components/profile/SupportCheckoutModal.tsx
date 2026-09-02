@@ -73,7 +73,7 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-1">
             <p className="text-sm">
-              <span className="font-medium">{tier.title}</span> — NZD{" "}
+              <span className="font-medium">{tier.title}</span> · NZD{" "}
               {tier.price.toLocaleString("en-NZ")}
               {isRecurring && <span className="text-muted-foreground"> / month</span>}
             </p>

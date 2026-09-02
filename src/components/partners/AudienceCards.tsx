@@ -2,7 +2,7 @@ const AUDIENCE = [
   {
     type: "Foundations",
     headline: "Distribute grants and commissions",
-    body: "Create a managed application pipeline. Artists apply with their Patronage profile — portfolio, CV, and practice statement in one place. No emailed PDFs.",
+    body: "Create a managed application pipeline. Artists apply with their Patronage profile: portfolio, CV, and practice statement in one place. No emailed PDFs.",
     cta: "Set up a pipeline →",
     href: "/partner/opportunities/new?type=pipeline",
   },
@@ -23,7 +23,7 @@ const AUDIENCE = [
   {
     type: "Brands",
     headline: "Activations and commissions",
-    body: "Turn existing budgets — hoardings, vehicles, packaging, screens — into commissioned public art with full impact reporting for your organisation.",
+    body: "Turn existing budgets for hoardings, vehicles, packaging, and screens into commissioned public art, with full impact reporting for your organisation.",
     cta: "Talk to activations →",
     href: "#activations",
   },

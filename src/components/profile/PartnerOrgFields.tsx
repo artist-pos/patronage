@@ -132,7 +132,7 @@ export function PartnerOrgFields({ profile }: Props) {
 
           <p className="text-xs text-muted-foreground">
             {profile.donation_enabled
-              ? "Approved — your donation CTA is live on your profile."
+              ? "Approved. Your donation CTA is live on your profile."
               : "Patronage will verify the registration number, then enable the donation CTA on your profile. Patronage doesn't process donations directly."}
           </p>
         </div>

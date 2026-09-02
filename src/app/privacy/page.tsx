@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Privacy Policy — Patronage",
+  title: "Privacy Policy | Patronage",
   description: "Privacy Policy for Patronage.",
 };
 
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           </Item>
           <Item label="Profile information">
             Name, bio, location, and any portfolio content you choose to add. This is
-            voluntary — you control what appears on your profile.
+            voluntary. You control what appears on your profile.
           </Item>
           <Item label="Messages">
             Conversations between users are stored so both parties can access them. We do

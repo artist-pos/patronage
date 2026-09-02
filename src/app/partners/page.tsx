@@ -6,9 +6,9 @@ import { ActivationTiles } from "@/components/partners/ActivationTiles";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Partners — Patronage",
+  title: "Partners | Patronage",
   description:
-    "List opportunities for artists across Aotearoa and Australia, or work with us on activations — hoardings, billboards, and surfaces that turn existing budgets into commissioned public art.",
+    "List opportunities for artists across Aotearoa and Australia, or work with us on activations: hoardings, billboards, and surfaces that turn existing budgets into commissioned public art.",
 };
 
 export type ActivationType = {
@@ -159,7 +159,7 @@ export default async function PartnersPage() {
                 href={user ? "/partner/opportunities/new?type=pipeline" : "/auth/signup?intent=partner"}
                 className="bg-brand px-[22px] py-[11px] text-sm font-medium text-white transition-opacity hover:opacity-85"
               >
-                {pipelineFirstRoundUsed ? "List with Pipeline →" : "List with Pipeline — first round free →"}
+                {pipelineFirstRoundUsed ? "List with Pipeline →" : "List with Pipeline, first round free →"}
               </Link>
               <a
                 href="#pricing"
@@ -214,11 +214,11 @@ export default async function PartnersPage() {
                 </h2>
                 <p className="mb-5 text-[15px] leading-[1.65] text-[color:var(--fg-muted)]">
                   For organisations that don&rsquo;t have internal arts expertise but want a
-                  considered, ongoing relationship with art — not a one-off purchase.
+                  considered, ongoing relationship with art, not a one-off purchase.
                 </p>
                 <div className="mb-6 border-l-2 border-brand py-1 pl-4">
                   <p className="text-sm leading-[1.6]">
-                    We designed WEL Networks&rsquo; utility box programme — 300 assets across
+                    We designed WEL Networks&rsquo; utility box programme: 300 assets across
                     Hamilton, artist fees structured by panel size, anti-graffiti coating
                     positioned as asset management. That&rsquo;s what art strategy looks like.
                   </p>
@@ -266,10 +266,10 @@ export default async function PartnersPage() {
                   Reviewed within two business days.
                 </p>
                 <div className="mb-7 flex flex-1 flex-col gap-[11px] text-[13px] text-[color:var(--fg-muted)]">
-                  <p>— Opportunity feed and search</p>
-                  <p>— Weekly digest email to artists</p>
-                  <p>— Save and apply tracking</p>
-                  <p>— No commitment</p>
+                  <p>– Opportunity feed and search</p>
+                  <p>– Weekly digest email to artists</p>
+                  <p>– Save and apply tracking</p>
+                  <p>– No commitment</p>
                 </div>
                 <Link
                   href="/partner/list-free"
@@ -302,16 +302,16 @@ export default async function PartnersPage() {
                 )}
                 <p className="mb-[22px] text-[13.5px] leading-[1.6] text-[color:var(--fg-muted)]">
                   Managed application pipeline with a full partner dashboard. Artists apply with
-                  their Patronage profile — no emails, no spreadsheets.
+                  their Patronage profile. No emails, no spreadsheets.
                 </p>
                 <div className="mb-7 flex flex-1 flex-col gap-[11px] text-[13px] text-[color:var(--fg-muted)]">
-                  <p>— Everything in Standard</p>
-                  <p>— Custom application questions</p>
-                  <p>— Full pipeline dashboard (Kanban, Table, Triage)</p>
-                  <p>— Committee scoring and rubric</p>
-                  <p>— Staged notification system</p>
-                  <p>— Production asset delivery</p>
-                  <p>— 6 and 12-month impact reporting</p>
+                  <p>– Everything in Standard</p>
+                  <p>– Custom application questions</p>
+                  <p>– Full pipeline dashboard (Kanban, Table, Triage)</p>
+                  <p>– Committee scoring and rubric</p>
+                  <p>– Staged notification system</p>
+                  <p>– Production asset delivery</p>
+                  <p>– 6 and 12-month impact reporting</p>
                 </div>
                 <Link
                   href={user ? "/partner/opportunities/new?type=pipeline" : "/auth/signup?intent=partner"}
@@ -329,7 +329,7 @@ export default async function PartnersPage() {
                 <p className="mb-4 text-[32px] font-semibold tracking-[-0.02em]">Custom</p>
                 <p className="mb-[18px] text-[13.5px] leading-[1.6] text-[color:var(--fg-muted)]">
                   Full-service commissioning or ongoing art strategy. Tell us about your
-                  programme — we&rsquo;ll reply within two business days.
+                  programme and we&rsquo;ll reply within two business days.
                 </p>
                 <PartnerContactForm />
               </div>

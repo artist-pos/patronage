@@ -213,7 +213,7 @@ export function InfiniteFeed({
             ? "No updates from artists you support yet. Support an artist to see their studio updates here."
             : audience === "following"
               ? "No updates from artists you follow yet. Follow an artist to see their studio updates here."
-              : "Nothing here yet. Studio updates are for works in progress, process shots, thoughts — whatever you're working on right now."}
+              : "Nothing here yet. Studio updates are for works in progress, process shots, thoughts, whatever you're working on right now."}
         </p>
       )}
 

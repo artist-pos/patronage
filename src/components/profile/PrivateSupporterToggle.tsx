@@ -33,7 +33,7 @@ export function PrivateSupporterToggle({ initial }: Props) {
         <p className="text-sm font-medium">Private supporter</p>
         <p className="text-xs text-muted-foreground">
           {enabled
-            ? "Visitors see “Private supporter” instead of your name — your bio, links, and collection are hidden. The artists you follow stay visible."
+            ? "Visitors see “Private supporter” instead of your name. Your bio, links, and collection are hidden. The artists you follow stay visible."
             : "Mask your identity on your public profile. The artists you follow stay visible; your name, bio, links, and collection are hidden."}
         </p>
         {toast && <p className="text-xs text-muted-foreground mt-1">{toast}</p>}

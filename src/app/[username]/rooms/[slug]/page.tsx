@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .maybeSingle();
   if (!room) return { title: "Not Found" };
   return {
-    title: `${room.title} — ${profile.full_name ?? profile.username}`,
+    title: `${room.title} | ${profile.full_name ?? profile.username}`,
     robots: { index: false, follow: false },
   };
 }

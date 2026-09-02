@@ -31,9 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { data: post } = await getPost(slug);
 
-  if (!post) return { title: "Post not found — Patronage" };
+  if (!post) return { title: "Post not found | Patronage" };
 
-  const title = `${post.title} — Patronage Blog`;
+  const title = `${post.title} | Patronage Blog`;
   const canonicalUrl = `${BASE_URL}/blog/${slug}`;
 
   // Strip HTML tags for description, take first 155 chars

@@ -28,7 +28,7 @@ export async function saveWorksLayout(rowH: number, hGap: number, vGap: number, 
     .single();
 
   if (error) return { error: error.message };
-  if (!data) return { error: "Update returned no data — check columns exist in DB" };
+  if (!data) return { error: "Update returned no data. Check columns exist in DB" };
 
   return {};
 }

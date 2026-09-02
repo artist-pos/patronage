@@ -35,7 +35,7 @@ const PRESET_GROUPS: Array<{
     label: "One-Off Support",
     bestFor: "Low-friction validation.",
     presets: [
-      { title: "Studio Fuel", price: 10, priceLabel: "$10 – $50", description: "A quick contribution to cover a specific material cost — like a tube of paint, a roll of film, or a 3D scan processing fee." },
+      { title: "Studio Fuel", price: 10, priceLabel: "$10 – $50", description: "A quick contribution to cover a specific material cost, like a tube of paint, a roll of film, or a 3D scan processing fee." },
       { title: "Research Grant", price: 100, priceLabel: "$100 – $500", description: "A one-time boost to fund the deep-work phase of a new concept, helping you step away from commercial work for a few days." },
     ],
   },
@@ -44,7 +44,7 @@ const PRESET_GROUPS: Array<{
     label: "Recurring Support",
     bestFor: "Consistent income and community building.",
     presets: [
-      { title: "Studio Pass", price: 5, priceLabel: "$5 – $15/month", description: "Monthly access to a process feed — behind-the-scenes sketches, experiments, or drafts that aren't ready for the public eye." },
+      { title: "Studio Pass", price: 5, priceLabel: "$5 – $15/month", description: "Monthly access to a process feed: behind-the-scenes sketches, experiments, or drafts that aren't ready for the public eye." },
       { title: "Patron", price: 25, priceLabel: "$25 – $50/month", description: "A commitment to your long-term practice. Often includes a monthly shout-out or an invitation to a private annual studio tour." },
     ],
   },
@@ -54,7 +54,7 @@ const PRESET_GROUPS: Array<{
     bestFor: "Creating tangible value for the supporter.",
     presets: [
       { title: "Print Club", price: 50, priceLabel: "$50 – $150/quarter", description: "Every three months, the supporter receives a signed, limited-edition small-format print or high-res digital asset." },
-      { title: "Monthly Demo", price: 20, priceLabel: "$20/month", description: "An unreleased track, a raw file, or a project source file delivered once a month — for musicians and digital artists." },
+      { title: "Monthly Demo", price: 20, priceLabel: "$20/month", description: "An unreleased track, a raw file, or a project source file delivered once a month, for musicians and digital artists." },
     ],
   },
   {
@@ -63,7 +63,7 @@ const PRESET_GROUPS: Array<{
     bestFor: "Funding a specific outcome with measurable impact.",
     presets: [
       { title: "Production Partner", price: 500, priceLabel: "$500 – $2,500", description: "Directly funds the fabrication of a single public work. The supporter is credited in the project's digital provenance on the platform." },
-      { title: "Exhibition Sponsor", price: 5000, priceLabel: "$5,000+", description: "Covers the logistical costs of a full installation or exhibition — including site permits, insurance, and professional documentation." },
+      { title: "Exhibition Sponsor", price: 5000, priceLabel: "$5,000+", description: "Covers the logistical costs of a full installation or exhibition, including site permits, insurance, and professional documentation." },
     ],
   },
 ];
@@ -356,7 +356,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       NZD {tier.price.toLocaleString("en-NZ")}
-                      {tier.description ? ` — ${tier.description}` : ""}
+                      {tier.description ? `: ${tier.description}` : ""}
                       {!tier.is_active && " · Hidden"}
                     </p>
                     {/* Intent count badge */}
@@ -567,7 +567,7 @@ function TierForm({
           onChange={e => setForm(f => ({ ...f, tier_type: e.target.value as SupportTierType | "" }))}
           className={inputCls}
         >
-          <option value="">— select type —</option>
+          <option value="">– select type –</option>
           <option value="one_off">One-Off</option>
           <option value="recurring">Recurring</option>
           <option value="service">Service</option>
@@ -631,7 +631,7 @@ function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRe
         <span className="font-mono font-medium">NZD {takeHome.toFixed(2)}</span>
       </div>
       <p className="text-[10px] text-muted-foreground pt-1 leading-relaxed">
-        Card processing fee (2.9% + 30c) is added to the supporter&rsquo;s total at checkout — it doesn&rsquo;t come out of your share.
+        Card processing fee (2.9% + 30c) is added to the supporter&rsquo;s total at checkout. It doesn&rsquo;t come out of your share.
       </p>
     </div>
   );

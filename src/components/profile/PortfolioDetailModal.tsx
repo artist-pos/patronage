@@ -290,7 +290,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
                 </button>
                 {featErr && <p className="text-[11px] text-destructive">{featErr}</p>}
                 <p className="text-[11px] text-muted-foreground">
-                  Featured works appear on your profile overview — up to 8.
+                  Featured works appear on your profile overview, up to 8.
                 </p>
               </div>
             )}

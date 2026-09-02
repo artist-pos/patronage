@@ -66,15 +66,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const meta = SLUG_MAP[slug];
-  if (!meta) return { title: "Artists — Patronage" };
+  if (!meta) return { title: "Artists | Patronage" };
 
   const h1 = meta.kind === "country"
     ? `${meta.label} Artists`
     : meta.label;
 
   const description = meta.kind === "country"
-    ? `Browse portfolios and available works from ${meta.adjective} artists on Patronage — discover exhibition histories, studio updates, and original works.`
-    : `Discover ${meta.prose} on Patronage — browse portfolios, available works, and exhibition history.`;
+    ? `Browse portfolios and available works from ${meta.adjective} artists on Patronage: discover exhibition histories, studio updates, and original works.`
+    : `Discover ${meta.prose} on Patronage: browse portfolios, available works, and exhibition history.`;
 
   return {
     title: `${h1} | Patronage`,
@@ -136,8 +136,8 @@ export default async function ArtistCategoryPage({
     : meta.label;
 
   const prose = meta.kind === "country"
-    ? `Discover ${meta.adjective} artists on Patronage — browse portfolios, available works, studio updates, and exhibition history from active ${meta.adjective} artists in our community.`
-    : `Discover ${meta.prose} on Patronage — browse portfolios, available works, studio updates, and exhibition history from active ${meta.singular}s in our community.`;
+    ? `Discover ${meta.adjective} artists on Patronage: browse portfolios, available works, studio updates, and exhibition history from active ${meta.adjective} artists in our community.`
+    : `Discover ${meta.prose} on Patronage: browse portfolios, available works, studio updates, and exhibition history from active ${meta.singular}s in our community.`;
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">

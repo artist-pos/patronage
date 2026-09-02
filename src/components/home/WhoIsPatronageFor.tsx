@@ -12,19 +12,19 @@ const CARDS: Card[] = [
   {
     label: "Artist",
     headline: "One URL for your whole practice.",
-    body: "Profile, CV, studio feed, available works — free to join.",
+    body: "Profile, CV, studio feed, available works. Free to join.",
     features: [
       "Find grants and residencies",
       "Build a public profile and CV",
       "Share studio updates and works",
       "Be discovered by patrons and partners",
     ],
-    cta: { text: "Create artist account — free", href: "/get-started" },
+    cta: { text: "Create a free artist account", href: "/get-started" },
   },
   {
     label: "Patron",
     headline: "Support the artists you love.",
-    body: "Back an artist monthly or one-off — support goes directly to them.",
+    body: "Back an artist monthly or one-off. Support goes directly to them.",
     features: [
       "Monthly or one-off support",
       "Follow studio updates and posts",
@@ -36,9 +36,9 @@ const CARDS: Card[] = [
   {
     label: "Partner / Funder",
     headline: "Reach the right artists.",
-    body: "Post opportunities and run applications through a built-in pipeline — no more Google Forms.",
+    body: "Post opportunities and run applications through a built-in pipeline. No more Google Forms.",
     features: [
-      "Post opportunities — free",
+      "Post opportunities for free",
       "Replace Google Forms with Patronage Pipeline",
       "Review and shortlist applications online",
       "Reach NZ & Australian artists",
@@ -79,7 +79,7 @@ export function WhoIsPatronageFor() {
                     key={feature}
                     className="text-[13px] leading-relaxed text-[color:var(--fg-muted)]"
                   >
-                    — {feature}
+                    – {feature}
                   </li>
                 ))}
               </ul>

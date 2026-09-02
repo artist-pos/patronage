@@ -141,7 +141,7 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
       {/* Live opportunities grid */}
       {opportunities.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
-          No {typeLabel.toLowerCase()} listed right now — check back soon or{" "}
+          No {typeLabel.toLowerCase()} listed right now. Check back soon or{" "}
           <Link href="/opportunities" className="underline underline-offset-2">browse all opportunities</Link>.
         </p>
       ) : (

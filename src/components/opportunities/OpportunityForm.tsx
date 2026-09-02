@@ -796,7 +796,7 @@ function PipelinePreviewModal({
       <div className="bg-background border border-black w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-black bg-background z-10">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-widest">Artist view — Application form</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-widest">Artist view: Application form</h2>
             <p className="text-xs text-muted-foreground mt-0.5">This is how the form appears to applicants. Read-only preview.</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground ml-4">
@@ -871,7 +871,7 @@ function PipelinePreviewModal({
           )}
 
           <p className="text-xs text-muted-foreground pt-2 border-t border-black/10">
-            Artists apply using their Patronage profile — portfolio, bio, and CV already on file.
+            Artists apply using their Patronage profile: portfolio, bio, and CV already on file.
           </p>
         </div>
       </div>
@@ -1113,7 +1113,7 @@ export function OpportunityForm({
           />
         </Field>
 
-        <Field label={mode === "admin" ? "Caption — shown on card (max 500 chars)" : "Caption (shown on card — max 160 characters)"}>
+        <Field label={mode === "admin" ? "Caption, shown on card (max 500 chars)" : "Caption (shown on card, max 160 characters)"}>
           <textarea
             value={value.caption}
             onChange={(e) => set({ caption: e.target.value })}
@@ -1223,7 +1223,7 @@ export function OpportunityForm({
               onChange={(e) => set({ grantType: e.target.value })}
               className={FIELD}
             >
-              <option value="">— Select —</option>
+              <option value="">– Select –</option>
               {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </Field>
@@ -1248,7 +1248,7 @@ export function OpportunityForm({
               onChange={(e) => set({ grantType: e.target.value })}
               className={FIELD}
             >
-              <option value="">— Select —</option>
+              <option value="">– Select –</option>
               {CONTRACT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </Field>
@@ -1337,7 +1337,7 @@ export function OpportunityForm({
                 onChange={(e) => set({ recurrencePattern: e.target.value as RecurrencePattern | "" })}
                 className={FIELD}
               >
-                <option value="">— Select frequency —</option>
+                <option value="">– Select frequency –</option>
                 {RECURRENCE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
@@ -1382,7 +1382,7 @@ export function OpportunityForm({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest">
                 Schedule ends
-                <span className="text-muted-foreground font-normal normal-case tracking-normal"> — leave blank for indefinite</span>
+                <span className="text-muted-foreground font-normal normal-case tracking-normal"> (leave blank for indefinite)</span>
               </label>
               <input
                 type="date"
@@ -1477,7 +1477,7 @@ export function OpportunityForm({
 
       {/* ── Section 7: Description & Media ────────────────────────────── */}
       <Section label="Description & Media">
-        <Field label={mode === "admin" ? "Description — shown on detail page" : "Full Description"}>
+        <Field label={mode === "admin" ? "Description, shown on detail page" : "Full Description"}>
           <DescriptionToolbar
             textareaRef={descriptionRef}
             onChange={(v) => set({ fullDescription: v })}
@@ -1546,7 +1546,7 @@ export function OpportunityForm({
         {(mode === "admin" || mode === "create") && (
           <Field label="Second Image (optional)">
             <p className="text-xs text-muted-foreground -mt-0.5 mb-2">
-              Shown on the detail page hero as a second frame — visitors click a right arrow to view it, then a left arrow to go back to the main image. Not shown on cards.
+              Shown on the detail page hero as a second frame. Visitors click a right arrow to view it, then a left arrow to go back to the main image. Not shown on cards.
             </p>
             {value.secondaryImageUrl && (
               <div className="relative border border-black bg-[#E5E7EB] h-32 overflow-hidden flex items-center justify-center mb-2">
@@ -1622,7 +1622,7 @@ export function OpportunityForm({
               onChange={(e) => set({ source: e.target.value })}
               className={FIELD}
             >
-              <option value="">— Not sourced —</option>
+              <option value="">– Not sourced –</option>
               {OPPORTUNITY_SOURCES.map((s) => (
                 <option key={s.key} value={s.key}>{s.label}</option>
               ))}
@@ -1680,7 +1680,7 @@ export function OpportunityForm({
                 onChange={(e) => set({ artistPaymentType: e.target.value })}
                 className={FIELD}
               >
-                <option value="">— None / N/A —</option>
+                <option value="">– None / N/A –</option>
                 <option value="Honorarium">Honorarium</option>
                 <option value="Commission">Commission</option>
                 <option value="Stipend">Stipend</option>
@@ -1699,7 +1699,7 @@ export function OpportunityForm({
     <div className="space-y-0">
       {/* Info banner */}
       <div className="bg-blue-50 border border-blue-200 px-4 py-3 mt-2 mb-2 text-sm text-blue-800">
-        Suggested questions for a <strong>{value.type}</strong>. Artists apply with their Patronage profile — CV, bio, and portfolio already attached.
+        Suggested questions for a <strong>{value.type}</strong>. Artists apply with their Patronage profile: CV, bio, and portfolio already attached.
       </div>
 
       <Section label="Application Questions">

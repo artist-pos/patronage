@@ -70,7 +70,7 @@ export function ManageNotesList({ initialNotes }: { initialNotes: NoteIWrote[] }
                   {artistName}
                 </Link>
                 {note.update_caption && (
-                  <span className="text-muted-foreground"> — {note.update_caption.slice(0, 60)}{note.update_caption.length > 60 ? "…" : ""}</span>
+                  <span className="text-muted-foreground"> · {note.update_caption.slice(0, 60)}{note.update_caption.length > 60 ? "…" : ""}</span>
                 )}
               </p>
               <p className="text-xs text-muted-foreground font-mono">

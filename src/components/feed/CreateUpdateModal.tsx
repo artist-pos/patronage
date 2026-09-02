@@ -491,7 +491,7 @@ export function CreateUpdateModal({
                 type="text"
                 value={updateTitle}
                 onChange={(e) => setUpdateTitle(e.target.value)}
-                placeholder="Title / TL;DR (optional) — shown in project thread"
+                placeholder="Title / TL;DR (optional, shown in project thread)"
                 className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
               />
 

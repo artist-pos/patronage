@@ -103,7 +103,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
                     )}
                   </span>
                 )}
-                {item.author && <span className="text-muted-foreground"> — {item.author}</span>}
+                {item.author && <span className="text-muted-foreground">, {item.author}</span>}
                 {item.publication && <span className="italic text-muted-foreground">, {item.publication}</span>}
                 {item.date && <span className="text-muted-foreground">, {item.date}</span>}
                 {item.type && (

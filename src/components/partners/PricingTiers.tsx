@@ -63,7 +63,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
               </div>
               <p className="text-sm text-stone-500 leading-relaxed">
                 Managed application pipeline with a full partner dashboard. Artists apply
-                with their Patronage profile — no emails, no spreadsheets.
+                with their Patronage profile. No emails, no spreadsheets.
               </p>
               <ul className="space-y-2 pt-2">
                 {[
@@ -96,7 +96,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
               <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Activations</p>
               <p className="text-3xl font-semibold tracking-tight">Custom</p>
               <p className="text-sm text-stone-500 leading-relaxed">
-                Commission artists for surfaces you already own — hoardings, vehicles,
+                Commission artists for surfaces you already own: hoardings, vehicles,
                 packaging, screens. Turn existing budgets into public art.
               </p>
               <ul className="space-y-2 pt-2">

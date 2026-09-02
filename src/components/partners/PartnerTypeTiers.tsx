@@ -26,17 +26,17 @@ const RECS: Record<TypeKey, { title: string; desc: string; pills: Array<[string,
   },
   residency: {
     title: "Built for residency applications",
-    desc: "Pipeline replaces the shared inbox — committee scoring with rubrics, staged notifications when you select artists, and a record of every round for next year.",
+    desc: "Pipeline replaces the shared inbox, with committee scoring on rubrics, staged notifications when you select artists, and a record of every round for next year.",
     pills: [["#pipeline", "How Pipeline works"], ["#pricing", "Pricing"]],
   },
   gallery: {
     title: "Built for exhibition proposals & open calls",
-    desc: "Applications arrive with full artist profiles attached — no separate portfolio review. Pipeline handles scoring, selection, and follow-up in one place.",
+    desc: "Applications arrive with full artist profiles attached, so there is no separate portfolio review. Pipeline handles scoring, selection, and follow-up in one place.",
     pills: [["#tiers", "See Pipeline"], ["#pricing", "Pricing"]],
   },
   council: {
     title: "Built for public art at scale",
-    desc: "Activations manages the whole process on your surfaces — brief, open call, production, installation, and reporting. Art Strategy helps first if you need to plan before you commission.",
+    desc: "Activations manages the whole process on your surfaces: brief, open call, production, installation, and reporting. Art Strategy helps first if you need to plan before you commission.",
     pills: [["#activations", "See Activations"], ["#strategy", "Art Strategy"]],
   },
   corporate: {
@@ -46,7 +46,7 @@ const RECS: Record<TypeKey, { title: string; desc: string; pills: Array<[string,
   },
   assetmanager: {
     title: "Built for hoardings, fleet & utility assets",
-    desc: "We source and manage artists for surfaces you already own — full production, QR-linked provenance, and impact reporting across your portfolio.",
+    desc: "We source and manage artists for surfaces you already own, with full production, QR-linked provenance, and impact reporting across your portfolio.",
     pills: [["#activations", "See Activations"], ["#strategy", "Art Strategy"]],
   },
 };
@@ -180,7 +180,7 @@ export function PartnerTypeTiers() {
                   <div>
                     <p className="mb-[3px] font-mono text-[9px] uppercase text-[color:var(--fg-subtle)]">Title</p>
                     <p className="border border-border px-2.5 py-2 text-[13px] text-[color:var(--fg-muted)]">
-                      Public Art Commission — Cuba St
+                      Public Art Commission, Cuba St
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -258,7 +258,7 @@ export function PartnerTypeTiers() {
                   Art strategy &amp; consultancy
                 </h3>
                 <p className="mb-4 text-sm leading-[1.6] text-[color:var(--fg-muted)]">
-                  We advise on how to integrate art into your operations — audits, strategy,
+                  We advise on how to integrate art into your operations: audits, strategy,
                   artist matching, budget planning. We do the thinking for you.
                 </p>
                 <div className="mb-5 flex flex-col gap-[7px]">

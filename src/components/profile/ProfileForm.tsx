@@ -108,7 +108,7 @@ export function ProfileForm({ profile, role }: Props) {
             required
             className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
           >
-            <option value="">— Select —</option>
+            <option value="">– Select –</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -117,7 +117,7 @@ export function ProfileForm({ profile, role }: Props) {
             <p className="text-xs text-destructive">{state.fieldErrors.country}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Where you&rsquo;re based — choose Global if you&rsquo;re outside NZ and Australia.
+            Where you&rsquo;re based. Choose Global if you&rsquo;re outside NZ and Australia.
           </p>
         </div>
       </div>
@@ -131,7 +131,7 @@ export function ProfileForm({ profile, role }: Props) {
             defaultValue={profile?.career_stage ?? ""}
             className="w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none"
           >
-            <option value="">— Select —</option>
+            <option value="">– Select –</option>
             {STAGES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -249,7 +249,7 @@ export function ProfileForm({ profile, role }: Props) {
 
         <div className="space-y-2">
           <Label>
-            How do you identify? <span className="text-xs text-muted-foreground font-normal">(optional — select all that apply)</span>
+            How do you identify? <span className="text-xs text-muted-foreground font-normal">(optional, select all that apply)</span>
           </Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
             {IDENTITY_TAGS.map((tag) => {

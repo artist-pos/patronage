@@ -14,7 +14,7 @@ const HOW_IT_WORKS = [
   "You select artists through a shortlisting dashboard",
   "We manage production, printing, and installation",
   "QR codes on every surface link to artist profiles",
-  "You receive a full impact report — scans, engagement, reach",
+  "You receive a full impact report covering scans, engagement, and reach",
 ] as const;
 
 const INTEREST_OPTIONS = [
@@ -152,8 +152,8 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
         <div className="space-y-2 border-b border-black pb-6">
           <h2 className="text-xl font-semibold tracking-tight">Activations</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Partner with us to commission artists for surfaces you already own — hoardings,
-            vehicles, packaging, screens — and turn existing budgets into public art with full
+            Partner with us to commission artists for surfaces you already own: hoardings,
+            vehicles, packaging, and screens. Turn existing budgets into public art with full
             impact reporting.
           </p>
         </div>
@@ -371,7 +371,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
         <div className={`${enquiryOpen ? "block" : "hidden"} lg:block px-6 pb-6 pt-3 lg:pt-3 space-y-5`}>
         {sent ? (
           <p className="text-sm text-muted-foreground">
-            Thanks — we&apos;ll be in touch. Usually within 48 hours.
+            Thanks, we&apos;ll be in touch. Usually within 48 hours.
           </p>
         ) : (
           <form onSubmit={handleEnquiry} className="space-y-4">

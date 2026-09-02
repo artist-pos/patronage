@@ -42,14 +42,14 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
         label: "Pipeline",
         price: "$200 NZD",
         popular: true,
-        body: "Artists apply with their Patronage profile — portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
+        body: "Artists apply with their Patronage profile: portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
       }
     : {
         id: "pipeline" as const,
         label: "Pipeline",
         price: "First round free",
         popular: true,
-        body: "Artists apply with their Patronage profile — portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
+        body: "Artists apply with their Patronage profile: portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
       };
 
   const TIERS = [STANDARD_TIER, FEATURED_TIER, pipelineTier] as const;
@@ -90,10 +90,10 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
 
   // ── Right column header content — switches based on state ──────────────────
   const rightHeader = pipelineSelected && pipelineConfigActive
-    ? { title: "Application setup", desc: "Configure how artists apply. Defaults for your opportunity type are pre-filled — customise as needed." }
+    ? { title: "Application setup", desc: "Configure how artists apply. Defaults for your opportunity type are pre-filled, so customise as needed." }
     : pipelineSelected
-    ? { title: "Pipeline", desc: "Manage the full application lifecycle through Patronage. Artists apply with their profile — no emails, no spreadsheets." }
-    : { title: "Activations", desc: "Partner with us to commission artists for surfaces you already own — hoardings, vehicles, packaging, screens — and turn existing budgets into public art with full impact reporting." };
+    ? { title: "Pipeline", desc: "Manage the full application lifecycle through Patronage. Artists apply with their profile. No emails, no spreadsheets." }
+    : { title: "Activations", desc: "Partner with us to commission artists for surfaces you already own: hoardings, vehicles, packaging, screens. Turn existing budgets into public art with full impact reporting." };
 
   return (
     <div ref={sectionRef}>
@@ -161,7 +161,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
               <div className="space-y-0.5">
                 <p className="text-xs">
                   <span className="font-medium text-foreground">Add featured placement</span>
-                  {" — "}
+                  {": "}
                   <s className="text-muted-foreground opacity-60">$150</s>
                   {" "}
                   <span className="font-medium text-foreground">$75 NZD</span>
@@ -279,7 +279,7 @@ function PipelineInfoPanel({ pipelineFirstRoundUsed }: { pipelineFirstRoundUsed:
       <div className="space-y-0">
         {[
           { step: "01", heading: "Custom application questions", body: "Add short-answer, file upload, or URL fields. We provide smart defaults based on your opportunity type." },
-          { step: "02", heading: "Shortlisting dashboard", body: "Review applications, leave notes, and move artists through stages — pending, shortlisted, selected." },
+          { step: "02", heading: "Shortlisting dashboard", body: "Review applications, leave notes, and move artists through stages: pending, shortlisted, selected." },
           { step: "03", heading: "Status tracking", body: "Artists see their application status in real time. No manual updates required." },
           { step: "04", heading: "Production pipeline", body: "Once selected, artists upload final assets through the platform. You download print-ready files with one click." },
           { step: "05", heading: "Impact reporting", body: "6 and 12-month automated follow-ups collect outcome data. Aggregated into a clean impact report for your organisation." },

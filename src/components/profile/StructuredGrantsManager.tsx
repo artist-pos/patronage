@@ -213,7 +213,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
               type="text"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Optional — e.g. residency component"
+              placeholder="Optional, e.g. residency component"
               className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
             />
           </div>

@@ -7,14 +7,14 @@ export function ForYouTeaser() {
         See opportunities matched to your practice
       </p>
       <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
-        We score every open opportunity against your disciplines, location, and career stage — so the most relevant ones rise to the top.
+        We score every open opportunity against your disciplines, location, and career stage, so the most relevant ones rise to the top.
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
         <Link
           href="/get-started"
           className="inline-block text-sm font-medium px-6 py-2.5 bg-black text-white hover:opacity-80 transition-opacity"
         >
-          Get matched — it&apos;s free
+          Get matched, it&apos;s free
         </Link>
         <Link
           href="/auth/login"

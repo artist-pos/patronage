@@ -160,7 +160,7 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
   const footerBar = (
     <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-white">
       <span className="font-mono text-xs text-muted-foreground">
-        {pageNumber} / {numPages || "—"}
+        {pageNumber} / {numPages || "–"}
       </span>
       <div className="flex items-center gap-2">
         <button
@@ -255,7 +255,7 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
           {/* Footer */}
           <div className="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10">
             <span className="font-mono text-xs text-white/60">
-              {pageNumber} / {numPages || "—"}
+              {pageNumber} / {numPages || "–"}
             </span>
             <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest">
               Rotate device for landscape

@@ -150,7 +150,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const opp = await getOpportunityById(id);
-  if (!opp) return { title: "Opportunity not found — Patronage" };
+  if (!opp) return { title: "Opportunity not found | Patronage" };
 
   const rawDescription = opp.caption ?? opp.description ?? opp.full_description ?? null;
   const description = rawDescription
@@ -159,7 +159,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : rawDescription
     : `${opp.type} offered by ${opp.organiser} on Patronage.`;
 
-  const title = `${opp.title} — ${opp.organiser} | Patronage`;
+  const title = `${opp.title}, ${opp.organiser} | Patronage`;
   const canonicalPath = `/opportunities/${opp.slug ?? opp.id}`;
 
   return {
@@ -753,7 +753,7 @@ export default async function OpportunityPage({ params }: Props) {
           <Fact
             label="Travel Support"
             value={`${opp.travel_support ? "Yes" : "No"}${
-              opp.travel_support && opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""
+              opp.travel_support && opp.travel_support_details ? `: ${opp.travel_support_details}` : ""
             }`}
           />
         )}

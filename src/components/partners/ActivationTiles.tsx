@@ -71,7 +71,7 @@ export function ActivationTiles({ tiles: initial, isAdmin }: Props) {
       });
       if (url) setDraftImage(url);
     } catch {
-      setError("Upload failed — try a smaller image.");
+      setError("Upload failed. Try a smaller image.");
     }
     setUploading(false);
   }

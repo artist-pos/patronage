@@ -41,7 +41,7 @@ export function PartnerContactForm() {
   if (sent) {
     return (
       <div className="border-l-[3px] border-brand bg-card px-[18px] py-4">
-        <p className="text-sm font-semibold">Thanks — we&rsquo;ve got it.</p>
+        <p className="text-sm font-semibold">Thanks, we&rsquo;ve got it.</p>
         <p className="mt-1 text-[12.5px] leading-[1.55] text-[color:var(--fg-muted)]">
           We&rsquo;ll reply to {email} within two business days.
         </p>

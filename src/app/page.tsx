@@ -130,12 +130,12 @@ const getCachedHomeData = unstable_cache(
 );
 
 export const metadata: Metadata = {
-  title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+  title: "Patronage | Art Grants & Opportunities for NZ & Australian Artists",
   description:
     "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Live opportunities updated weekly.",
   alternates: { canonical: "https://patronage.nz" },
   openGraph: {
-    title: "Patronage — Art Grants & Opportunities for NZ & Australian Artists",
+    title: "Patronage | Art Grants & Opportunities for NZ & Australian Artists",
     description:
       "Patronage connects New Zealand and Australian artists with grants, residencies, commissions, and open calls. Live opportunities updated weekly.",
     url: "https://patronage.nz",

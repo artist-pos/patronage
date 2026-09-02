@@ -2,7 +2,7 @@ import { ProvenanceLookup } from "./ProvenanceLookup";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Verify provenance — Patronage",
+  title: "Verify provenance | Patronage",
   description: "Verify a Patronage provenance record by scanning the QR code or entering the ledger ID.",
 };
 

@@ -242,7 +242,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                 </ModalField>
                 <ModalField label="Sub-type">
                   <select value={grantType} onChange={(e) => setGrantType(e.target.value)} className={`${FIELD} bg-background`}>
-                    <option value="">— Select —</option>
+                    <option value="">– Select –</option>
                     {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </ModalField>
@@ -353,7 +353,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                   onClick={() => fileInputRef.current?.click()}
                   className="border border-black p-4 text-center cursor-pointer hover:bg-muted/40 transition-colors text-xs text-muted-foreground"
                 >
-                  {uploadingImg ? "Uploading…" : imgUrl ? "Image uploaded — click to replace." : "Click to upload image"}
+                  {uploadingImg ? "Uploading…" : imgUrl ? "Image uploaded. Click to replace." : "Click to upload image"}
                   <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
                     className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
                 </div>
@@ -375,7 +375,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
                       onChange={() => setRoutingType("pipeline")} className="mt-0.5 shrink-0" />
                     <div>
                       <p className="text-sm font-medium leading-snug">Patronage Pipeline</p>
-                      <p className="text-xs text-muted-foreground">Artists apply natively on Patronage — review submissions in your partner dashboard</p>
+                      <p className="text-xs text-muted-foreground">Artists apply natively on Patronage. Review submissions in your partner dashboard</p>
                     </div>
                   </label>
                 </div>

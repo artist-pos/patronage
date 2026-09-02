@@ -88,7 +88,7 @@ export async function submitActivationEnquiry(data: {
     from,
     to: "hello@patronage.nz",
     replyTo: email,
-    subject: `Activation enquiry — ${name}${data.organisation ? ` (${data.organisation})` : ""}`,
+    subject: `Activation enquiry from ${name}${data.organisation ? ` (${data.organisation})` : ""}`,
     html,
   });
 
@@ -284,7 +284,7 @@ export async function submitOpportunityAction(
     lineItems.push({
       amountCents: featuredPlan.amountCents,
       currency: PRICING_CURRENCY,
-      productName: `Featured placement — ${title}`,
+      productName: `Featured placement: ${title}`,
       productDescription: `Promotes this opportunity in featured slots for ${featuredPlan.days} days.`,
     });
   }
@@ -307,7 +307,7 @@ export async function submitOpportunityAction(
     lineItems.push({
       amountCents: PIPELINE_ACTIVATION_PRICE_CENTS,
       currency: PRICING_CURRENCY,
-      productName: `Pipeline activation — ${title}`,
+      productName: `Pipeline activation: ${title}`,
       productDescription:
         "Activates Patronage's pipeline submission flow for this opportunity.",
     });

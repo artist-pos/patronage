@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const TITLE = "Patronage — Professional Infrastructure for Artists";
+const TITLE = "Patronage | Professional Infrastructure for Artists";
 const DESCRIPTION =
   "A free e-portfolio and opportunity directory for NZ and Australian artists. Manage your CV, portfolio, and discover grants, jobs, and residencies in one place.";
 
@@ -99,7 +99,7 @@ const siteSchema = {
         url: "https://patronage.nz/Favicon_Bleed_512.png",
       },
       description:
-        "Free professional infrastructure for NZ and Australian artists — portfolio, CV, and opportunity directory.",
+        "Free professional infrastructure for NZ and Australian artists: portfolio, CV, and opportunity directory.",
     },
     {
       "@type": "WebSite",

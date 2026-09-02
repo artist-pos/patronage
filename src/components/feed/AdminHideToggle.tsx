@@ -53,9 +53,9 @@ export function AdminHideToggle({ updateId, initialHidden, onDark = false }: Pro
   }
 
   const label = failed
-    ? "Couldn't save — try again"
+    ? "Couldn't save. Try again"
     : hidden
-      ? "Hidden from the landing page and feed for signed-out visitors — click to unhide"
+      ? "Hidden from the landing page and feed for signed-out visitors. Click to unhide"
       : "Hide from the landing page and feed for signed-out visitors";
 
   return (

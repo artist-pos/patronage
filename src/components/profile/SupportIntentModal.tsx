@@ -67,7 +67,7 @@ export function SupportIntentModal({ tier, artistName, onClose }: Props) {
                 <p className="text-sm text-muted-foreground">
                   Enter your email to be notified the moment{" "}
                   <span className="font-medium">
-                    {tier.title} — NZD {tier.price.toLocaleString("en-NZ")}
+                    {tier.title} · NZD {tier.price.toLocaleString("en-NZ")}
                   </span>{" "}
                   goes live.
                 </p>

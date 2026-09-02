@@ -211,7 +211,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         <div className="flex items-center gap-2 border border-dashed border-stone-300 px-4 py-3 rounded-lg text-sm text-muted-foreground">
           <Lock className="w-4 h-4 shrink-0" />
           <span>
-            You need a Verified profile to apply — partners review your profile alongside your application.
+            You need a Verified profile to apply. Partners review your profile alongside your application.
           </span>
           <button
             type="button"
@@ -224,7 +224,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         </div>
         {showVerifiedTip && (
           <p className="text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-lg p-3">
-            Verified means your profile has a photo, a bio, and at least 3 works in your portfolio — it&apos;s the same badge shown on your public profile.
+            Verified means your profile has a photo, a bio, and at least 3 works in your portfolio. It&apos;s the same badge shown on your public profile.
           </p>
         )}
         <p className="text-xs text-muted-foreground">

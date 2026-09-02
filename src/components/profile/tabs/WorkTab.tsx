@@ -175,7 +175,7 @@ export function WorkTab({
           {selectedItems.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nothing selected yet. Mark works as featured in your studio to
-              curate this section — it&rsquo;s the first thing visitors see.
+              curate this section. It&rsquo;s the first thing visitors see.
             </p>
           ) : (
             <div className="space-y-6">

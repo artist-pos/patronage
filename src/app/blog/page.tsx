@@ -5,9 +5,9 @@ import { stripBodyHtml } from "@/lib/blog-text";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog — Patronage",
+  title: "Blog | Patronage",
   description:
-    "Insights, news, and stories from the Patronage team — connecting artists with opportunity in Aotearoa and beyond.",
+    "Insights, news, and stories from the Patronage team, connecting artists with opportunity in Aotearoa and beyond.",
   alternates: { canonical: "https://patronage.nz/blog" },
 };
 
@@ -45,7 +45,7 @@ export default async function BlogPage() {
       </p>
 
       {(!posts || posts.length === 0) ? (
-        <p className="text-muted-foreground">No posts yet — check back soon.</p>
+        <p className="text-muted-foreground">No posts yet. Check back soon.</p>
       ) : (
         /* Cards sit directly on the page background, separated by gap alone,
            packed into masonry columns so short cards don't leave dead space. */

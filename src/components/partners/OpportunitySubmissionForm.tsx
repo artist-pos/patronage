@@ -467,7 +467,7 @@ function ListingPreviewModal({
           {/* Preview banner */}
           <div className="bg-muted border-b border-black px-6 py-3 flex items-center justify-between">
             <p className="text-xs text-muted-foreground font-mono">
-              Preview — how your listing will appear when published
+              Preview: how your listing will appear when published
             </p>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="w-4 h-4" />
@@ -554,7 +554,7 @@ function ListingPreviewModal({
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Accommodation</p>
                   <p className="font-mono text-sm">
-                    Included{opp.travel_support_details ? ` — ${opp.travel_support_details}` : ""}
+                    Included{opp.travel_support_details ? `: ${opp.travel_support_details}` : ""}
                   </p>
                 </div>
               )}

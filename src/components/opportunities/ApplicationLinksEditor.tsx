@@ -46,7 +46,7 @@ export function ApplicationLinksEditor({ links, onChange }: Props) {
               type="text"
               value={link.label}
               onChange={(e) => update(i, { label: e.target.value })}
-              placeholder="Link label — e.g. Franklin Arts Centre"
+              placeholder="Link label, e.g. Franklin Arts Centre"
               className={`${FIELD} sm:w-2/5 shrink-0`}
             />
             <input

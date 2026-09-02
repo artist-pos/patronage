@@ -125,7 +125,7 @@ export function SeriesDetailClient({ series, artworks, artistName, artistUsernam
           {/* Series title + subtitle */}
           <div className="pb-5 border-b border-border space-y-1">
             <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
-              Series — {artworks.length} {artworks.length === 1 ? "work" : "works"}
+              Series, {artworks.length} {artworks.length === 1 ? "work" : "works"}
             </p>
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl font-bold leading-snug">{series.title}</h1>

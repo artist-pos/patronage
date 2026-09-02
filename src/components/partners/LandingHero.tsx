@@ -13,7 +13,7 @@ export function LandingHero({ opportunityCount, artistCount }: Props) {
             The home for arts funding opportunities in Aotearoa and Australia.
           </h1>
           <p className="text-sm text-stone-500 max-w-2xl leading-relaxed pt-0.5">
-            Free listings, managed application pipelines, and activation partnerships —
+            Free listings, managed application pipelines, and activation partnerships,
             built for arts organisations, councils, galleries, and foundations.
           </p>
         </div>

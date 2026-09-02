@@ -381,7 +381,7 @@ export function PartnerProfileView({
             <h2 className={`${SECTION_LABEL} mb-3.5`}>About the programme</h2>
             <p className="text-[15.5px] leading-[1.72] text-[color:var(--fg-muted)]">
               {displayName} lists opportunities for artists through Patronage
-              {sinceYear ? ` — a partner since ${sinceYear}.` : "."}
+              {sinceYear ? `, a partner since ${sinceYear}.` : "."}
             </p>
           </div>
           <div>

@@ -144,7 +144,7 @@ export function OverviewTab({
                 {selectedExhibitions.map((ex, i) => (
                   <p key={i} className="text-sm">
                     <span className="font-mono text-muted-foreground">{ex.year}</span>
-                    {" — "}
+                    {" · "}
                     <span className="font-semibold">{ex.title}</span>
                     {ex.venue && `, ${ex.venue}`}
                   </p>

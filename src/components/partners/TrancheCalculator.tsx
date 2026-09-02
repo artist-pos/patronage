@@ -193,7 +193,7 @@ export function TrancheCalculator({ tiers, defaultQtys }: Props) {
       <div className="flex flex-wrap gap-8 pt-2">
           <div>
             <p className="text-3xl font-semibold tabular-nums">
-              {totalBoxCost > 0 ? `${pctToArtists}%` : "—"}
+              {totalBoxCost > 0 ? `${pctToArtists}%` : "–"}
             </p>
             <p className="font-mono text-xs uppercase tracking-wider text-stone-400 mt-1">
               To artists

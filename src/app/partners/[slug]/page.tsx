@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const config = PARTNER_CONFIGS[slug.toUpperCase()];
   if (!config) return {};
   return {
-    title: `${config.eyebrow} — Patronage`,
+    title: `${config.eyebrow} | Patronage`,
     description: config.subtitle,
     robots: { index: false, follow: false },
   };

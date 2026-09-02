@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { claimEmailInvitation } from "@/app/profile/collective-actions";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Accept Invitation — Patronage" };
+export const metadata: Metadata = { title: "Accept Invitation | Patronage" };
 
 interface Props {
   searchParams: Promise<{ token?: string }>;

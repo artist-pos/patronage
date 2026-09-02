@@ -128,12 +128,12 @@ const getWorkData = cache(async function getWorkData(username: string, slug: str
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, slug } = await params;
   const result = await getWorkData(username, slug);
-  if (!result) return { title: "Work not found — Patronage" };
+  if (!result) return { title: "Work not found | Patronage" };
   const { profile, work } = result;
   const artistName = profile.full_name ?? profile.username;
   const title = work.title ?? work.caption ?? "Untitled";
   return {
-    title: `${title} — ${artistName} | Patronage`,
+    title: `${title}, ${artistName} | Patronage`,
     description: work.description ? work.description.slice(0, 155) : `${title} by ${artistName}.`,
     openGraph: { images: work.url ? [{ url: work.url }] : [] },
   };

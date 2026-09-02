@@ -13,17 +13,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, slug } = await params;
   const supabase = await createClient();
   const profile = await getProfile(username);
-  if (!profile) return { title: "Series not found — Patronage" };
+  if (!profile) return { title: "Series not found | Patronage" };
   const { data: series } = await supabase
     .from("series")
     .select("title, description, hero_image_url")
     .eq("artist_id", profile.id)
     .eq("slug", slug)
     .single();
-  if (!series) return { title: "Series not found — Patronage" };
+  if (!series) return { title: "Series not found | Patronage" };
   const artistName = profile.full_name ?? profile.username;
   return {
-    title: `${series.title} — ${artistName} | Patronage`,
+    title: `${series.title}, ${artistName} | Patronage`,
     description: series.description?.slice(0, 155) ?? `${series.title} by ${artistName}.`,
     openGraph: { images: series.hero_image_url ? [{ url: series.hero_image_url }] : [] },
   };

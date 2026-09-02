@@ -11,7 +11,7 @@ import { computeBadges } from "@/lib/badges";
 import type { CountryEnum, CareerStageEnum, ProfileWithImage } from "@/types/database";
 
 export const metadata = {
-  title: "Artists — Patronage",
+  title: "Artists | Patronage",
   description: "Browse verified New Zealand and Australian artists.",
   alternates: { canonical: "https://patronage.nz/artists" },
 };

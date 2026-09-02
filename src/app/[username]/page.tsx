@@ -56,7 +56,7 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { username } = await params;
   const profile = await getProfile(username);
-  if (!profile) return { title: "Artist not found — Patronage" };
+  if (!profile) return { title: "Artist not found | Patronage" };
 
   const displayName = profile.full_name ?? profile.username;
 
@@ -79,7 +79,7 @@ export async function generateMetadata({ params }: Props) {
   const disciplineStr = disciplineLabels.join(", ");
 
   const title = disciplineStr
-    ? `${displayName} — ${disciplineStr} | Patronage`
+    ? `${displayName}, ${disciplineStr} | Patronage`
     : `${displayName} | Patronage`;
 
   // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from available data
@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: Props) {
   // OG image: featured banner first, avatar fallback
   const ogImageUrl = profile.featured_image_url ?? profile.avatar_url ?? null;
   const ogImage = ogImageUrl
-    ? { url: ogImageUrl, width: 1200, height: 630, alt: `${displayName} — Patronage` }
+    ? { url: ogImageUrl, width: 1200, height: 630, alt: `${displayName} | Patronage` }
     : null;
 
   const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";

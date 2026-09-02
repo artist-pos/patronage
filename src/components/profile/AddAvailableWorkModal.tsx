@@ -201,7 +201,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
                 </span>
                 {file ? (
                   <span className="text-xs text-muted-foreground truncate">
-                    {file.name} — {formatSize(file.size)}
+                    {file.name} · {formatSize(file.size)}
                   </span>
                 ) : (
                   <span className="text-xs text-muted-foreground">No file chosen</span>
@@ -272,7 +272,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
                 onChange={(e) => setSurfaceOrSubstrate(e.target.value)}
                 className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground"
               >
-                <option value="">— none —</option>
+                <option value="">– none –</option>
                 {SURFACE_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
