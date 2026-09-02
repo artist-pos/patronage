@@ -4,7 +4,6 @@ import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArti
 import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
-import { FoundOpportunityButton } from "@/components/opportunities/FoundOpportunityButton";
 import { FeaturedOpportunityHero } from "@/components/opportunities/FeaturedOpportunityHero";
 import { OpportunitiesTabSwitch } from "@/components/opportunities/OpportunitiesTabSwitch";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
@@ -121,7 +120,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-semibold tracking-[-0.025em]">
               Art Grants &amp; Opportunities
             </h1>
-            <FoundOpportunityButton />
+            <Link
+              href="/list-an-opportunity"
+              className="btn btn-brand btn-sm shrink-0"
+            >
+              List opportunity
+            </Link>
           </div>
 
           {/* AI-extractable description */}
@@ -162,7 +166,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </div>
             <div className="mb-2 py-3">
               <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
-                {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "—"}
+                {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "–"}
               </p>
               <p className="mt-1 font-mono text-[11px] text-muted-foreground">approx. funding tracked</p>
             </div>
