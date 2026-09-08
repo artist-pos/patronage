@@ -40,7 +40,8 @@ export const sources: Source[] = [
   // ArtConnect moved /open-calls → /opportunities
   { name: "ArtConnect Open Calls", url: "https://www.artconnect.com/opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
   { name: "ArtRabbit Opportunities", url: "https://www.artrabbit.com/artist-opportunities", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true, strictGeo: true },
-  { name: "On the Move", url: "https://www.on-the-move.org/", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, isAggregator: true },
+  // Axios times out from CI (datacenter-IP tarpit) — serves in ~1s to a browser
+  { name: "On the Move", url: "https://www.on-the-move.org/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, isAggregator: true },
   // 403s from CI (datacenter IP) — browser fetch passes the JS challenge
   { name: "ArtJobs", url: "https://www.artjobs.com/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, isAggregator: true, strictGeo: true },
   { name: "e-flux Announcements", url: "https://www.e-flux.com/announcements/", country: "Global", isListPage: true, followLinks: true, maxLinks: 10, isAggregator: true },
@@ -55,7 +56,8 @@ export const sources: Source[] = [
   // CaFE/ZAPP/ArtCall overlap regardless.
   { name: "EntryThingy Calls", url: "https://www.entrythingy.com/calls/deadlines", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, linkPattern: /\/calls\//, isAggregator: true, authority: 3, strictGeo: true },
   { name: "ZAPPlication", url: "https://www.zapplication.org/", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
-  { name: "ArtCall", url: "https://artcall.org/calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 20, allowExternalDomains: true, linkPattern: /\.artcall\.org/, isAggregator: true, authority: 3, strictGeo: true },
+  // 403s from CI (WAF TLS fingerprint) — browser fetch passes
+  { name: "ArtCall", url: "https://artcall.org/calls", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 20, allowExternalDomains: true, linkPattern: /\.artcall\.org/, isAggregator: true, authority: 3, strictGeo: true },
   { name: "ShowSubmit", url: "https://showsubmit.com/shows", country: "Global", isListPage: true, needsBrowser: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
   { name: "Reviewed by Artists", url: "https://www.reviewedbyartists.com/open-calls", country: "Global", isListPage: true, followLinks: true, maxLinks: 15, isAggregator: true, authority: 3, strictGeo: true },
 

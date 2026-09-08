@@ -186,13 +186,32 @@ async function buildContext(browser: Browser, url: string) {
     return context;
 }
 
+const GOTO_TIMEOUT = 30000;
+
+/**
+ * Navigate, retrying once on a transport failure. A datacenter IP draws
+ * intermittent tarpits and connection resets that a second attempt clears —
+ * without this, one flaky navigation costs a whole source for the week.
+ * Anything else (an HTTP error page, a closed context) throws immediately.
+ */
+async function gotoWithRetry(page: import("playwright").Page, url: string): Promise<void> {
+    try {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: GOTO_TIMEOUT });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!/Timeout|net::ERR_/i.test(msg)) throw err;
+        await page.waitForTimeout(2000);
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: GOTO_TIMEOUT });
+    }
+}
+
 async function fetchPageWithContext(context: import("playwright").BrowserContext, url: string): Promise<{ text: string; ogImage: string | null; links: string[] }> {
     const page = await context.newPage();
     try {
         // "networkidle" never fires on pages holding a connection open (analytics
         // beacons, websockets — this is what broke opencalls.net). Land on
         // domcontentloaded, then wait for idle only as a best effort.
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await gotoWithRetry(page, url);
         await page.waitForLoadState("networkidle", { timeout: 12000 }).catch(() => {});
         const ogImage = await page
             .$eval('meta[property="og:image"], meta[name="twitter:image"]', (el) => el.getAttribute("content"))
@@ -225,7 +244,7 @@ export async function fetchJsonWithBrowser(url: string): Promise<unknown> {
     const context = await buildContext(browser, url);
     try {
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await gotoWithRetry(page, url);
         const body = await page.evaluate(() => document.body?.innerText ?? "");
         return JSON.parse(body);
     } finally {
