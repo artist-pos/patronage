@@ -11,13 +11,13 @@ export function ForYouTeaser() {
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
         <Link
-          href="/get-started"
+          href="/auth/signup?role=artist&next=%2Fopportunities"
           className="inline-block text-sm font-medium px-6 py-2.5 bg-black text-white hover:opacity-80 transition-opacity"
         >
           Get matched, it&apos;s free
         </Link>
         <Link
-          href="/auth/login"
+          href="/auth/login?next=%2Fopportunities"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
         >
           Already have an account?

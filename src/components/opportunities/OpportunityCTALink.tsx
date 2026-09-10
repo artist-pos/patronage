@@ -1,7 +1,7 @@
 "use client";
 
 import { track } from "@vercel/analytics";
-import { trackEvent } from "@/actions/trackEvent";
+import { trackEvent } from "@/lib/analytics";
 import { withUtm } from "@/lib/utm";
 
 interface Props {

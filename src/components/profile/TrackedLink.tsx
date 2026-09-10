@@ -1,6 +1,6 @@
 "use client";
 
-import { trackEvent } from "@/actions/trackEvent";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   href: string;

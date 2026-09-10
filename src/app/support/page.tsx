@@ -327,7 +327,7 @@ export default async function SupportPage() {
         <p className="text-xs text-stone-400">
           Are you an artist?{" "}
           <Link
-            href={user ? "/studio" : "/get-started"}
+            href={user ? "/studio" : "/auth/signup?role=artist"}
             className="underline underline-offset-2 hover:text-stone-600 transition-colors"
           >
             Enable support on your profile.

@@ -49,7 +49,10 @@ async function applyRole(role: string, next?: string | null) {
 
   // Resume an interrupted flow (e.g. a free listing) if a safe next was carried.
   const safeNext = next && next.startsWith("/") ? next : null;
-  redirect(safeNext ?? (isArtist ? "/studio?welcome=1" : "/dashboard"));
+  // signup=1 lets the client capture signup_completed. This action runs exactly
+  // once per account, so it is the only honest marker of a finished signup.
+  const destination = safeNext ?? (isArtist ? "/studio?welcome=1" : "/dashboard");
+  redirect(`${destination}${destination.includes("?") ? "&" : "?"}signup=1`);
 }
 
 async function setRole(formData: FormData) {

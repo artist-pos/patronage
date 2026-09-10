@@ -19,7 +19,7 @@ const CARDS: Card[] = [
       "Share studio updates and works",
       "Be discovered by patrons and partners",
     ],
-    cta: { text: "Create a free artist account", href: "/get-started" },
+    cta: { text: "Create a free artist account", href: "/auth/signup?role=artist" },
   },
   {
     label: "Patron",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { trackEvent } from "@/actions/trackEvent";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   profileId: string;

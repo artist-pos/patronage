@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { track } from "@vercel/analytics";
-import { trackEvent } from "@/actions/trackEvent";
+import { trackEvent } from "@/lib/analytics";
 
 // ── Structured description renderer ───────────────────────────────────────────
 

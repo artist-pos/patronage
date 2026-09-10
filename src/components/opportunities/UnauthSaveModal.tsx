@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 
 interface Props {
@@ -8,6 +9,11 @@ interface Props {
 }
 
 export function UnauthSaveModal({ onClose }: Props) {
+  // Saving an opportunity is an artist action, so the role picker adds nothing.
+  // Link straight to the form and come back to the page they were saving from.
+  const pathname = usePathname();
+  const next = encodeURIComponent(pathname ?? "/opportunities");
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md p-4"
@@ -26,13 +32,13 @@ export function UnauthSaveModal({ onClose }: Props) {
           </p>
           <div className="flex flex-col gap-2">
             <Link
-              href="/get-started"
+              href={`/auth/signup?role=artist&next=${next}`}
               className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
             >
               Create account →
             </Link>
             <Link
-              href="/auth/login"
+              href={`/auth/login?next=${next}`}
               className="w-full border border-border text-sm py-2.5 px-4 text-center hover:bg-muted transition-colors"
             >
               Sign in

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight, Music, Play, Type, ExternalLink } from "lucide-react";
 import type { PortfolioImage } from "@/types/database";
-import { trackEvent } from "@/actions/trackEvent";
+import { trackEvent } from "@/lib/analytics";
 import { toggleFeaturedWork } from "@/app/profile/available-work-actions";
 
 interface Props {

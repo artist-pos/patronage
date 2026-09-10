@@ -15,7 +15,7 @@ const COLUMNS: FooterColumn[] = [
       { text: "Browse opportunities", href: "/opportunities" },
       { text: "Studio feed", href: "/feed" },
       { text: "Artist directory", href: "/artists" },
-      { text: "Join as an artist", href: "/get-started" },
+      { text: "Join as an artist", href: "/auth/signup?role=artist" },
     ],
   },
   {
@@ -24,7 +24,7 @@ const COLUMNS: FooterColumn[] = [
       { text: "Support an artist", href: "/support" },
       { text: "Your collection", href: "/dashboard/collection" },
       { text: "Live campaigns", href: "/live" },
-      { text: "Become a patron", href: "/get-started" },
+      { text: "Become a patron", href: "/auth/signup?role=patron" },
     ],
   },
   {

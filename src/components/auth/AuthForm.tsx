@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import { signInAction, signUpAction } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,10 @@ export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
         if (result.error) {
           setError(result.error);
         } else {
+          // Signup is only half done here: the account still needs email
+          // confirmation. Captured separately from signup_completed so the gap
+          // between the two is visible.
+          posthog.capture("signup_submitted", { role: role ?? "" });
           router.push("/auth/verify");
           return;
         }
