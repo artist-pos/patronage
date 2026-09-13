@@ -58,6 +58,19 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: P
     return `${location.origin}${path}?${params.toString()}`;
   }
 
+  /** Where a password signup goes once Supabase returns a session directly.
+   *  Mirrors /auth/callback: the role travels as a top-level param so the
+   *  role step can apply it without asking again, and a real resume target
+   *  rides alongside it. An onboarding path is not a resume target. */
+  function signupDestination(): string {
+    if (!role) return next;
+    const params = new URLSearchParams({ role });
+    if (next && next.startsWith("/") && !next.startsWith("/onboarding")) {
+      params.set("next", next);
+    }
+    return `/onboarding/role?${params.toString()}`;
+  }
+
   function validate(): boolean {
     const errs: FieldErrors = {};
     if (!email.trim()) {
@@ -115,7 +128,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: P
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
-          router.push(result.needsEmailConfirmation ? "/auth/verify" : next);
+          router.push(result.needsEmailConfirmation ? "/auth/verify" : signupDestination());
           router.refresh();
           return;
         }
