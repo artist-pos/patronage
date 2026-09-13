@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfileById } from "@/lib/profiles";
@@ -117,19 +118,25 @@ async function applyRole(role: string, next?: string | null) {
   // the same browser inheriting the first one's source.
   if (signupCtx) cookieStore.delete(SIGNUP_CONTEXT_COOKIE);
 
-  // The upsert above set weekly_digest for artists, but the first issue waits
-  // until the address is proved (190): mailing an unverified address risks a
-  // bounce, and bounces cost the sender reputation every later digest needs.
-  // /auth/verify/[token] sends it once confirmed. OAuth is already proved.
-  if (isArtist && isOAuth && user.email) {
-    sendWelcomeDigest(user.email.toLowerCase().trim()).catch(console.error);
-  }
+  // Everything below runs after the response. A bare floating promise would
+  // not: this function ends in redirect(), which throws, and the serverless
+  // invocation can be frozen before the send resolves — silently costing a
+  // password signup the one email that lets them apply.
+  after(async () => {
+    // The upsert above set weekly_digest for artists, but the first issue
+    // waits until the address is proved (190): mailing an unverified address
+    // risks a bounce, and bounces cost the sender reputation every later
+    // digest needs. /auth/verify/[token] sends it once confirmed.
+    if (isArtist && isOAuth && user.email) {
+      await sendWelcomeDigest(user.email.toLowerCase().trim()).catch(console.error);
+    }
 
-  // Password signups get the link that switches on applications and the digest.
-  if (!isOAuth) issueEmailVerification(user.id).catch(console.error);
+    // Password signups get the link that switches on applications and the digest.
+    if (!isOAuth) await issueEmailVerification(user.id).catch(console.error);
 
-  // Send role-specific welcome DM from @patronagenz
-  sendWelcomeDm(user.id, role).catch(console.error);
+    // Role-specific welcome DM from @patronagenz.
+    await sendWelcomeDm(user.id, role).catch(console.error);
+  });
 
   // Resume an interrupted flow (e.g. a free listing) if a safe next was carried.
   // An onboarding route is never something to resume: /auth/signup carries
