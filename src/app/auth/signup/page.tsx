@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { SIGNUP_CONTEXT_COOKIE, decodeSignupContext } from "@/lib/signup-context";
 import { AuthForm } from "@/components/auth/AuthForm";
 
 export const metadata = { title: "Create Account — Patronage" };
@@ -36,7 +38,17 @@ interface Props {
 
 export default async function SignupPage({ searchParams }: Props) {
   const { next, role: roleParam, invited_by: invitedBy, email: invitedEmail } = await searchParams;
-  const role = VALID_ROLES.includes(roleParam as Role) ? (roleParam as Role) : null;
+  // A role in the URL wins. Failing that, a role the person already declared
+  // on the way here — an organisation invitation, an org type they picked —
+  // stands in for the picker. Passive signals (reading an opportunity) are
+  // deliberately not in the cookie's explicitRole, so they still get asked.
+  const ctx = decodeSignupContext((await cookies()).get(SIGNUP_CONTEXT_COOKIE)?.value);
+  const declared = ctx?.explicitRole;
+  const role = VALID_ROLES.includes(roleParam as Role)
+    ? (roleParam as Role)
+    : VALID_ROLES.includes(declared as Role)
+      ? (declared as Role)
+      : null;
 
   // Where to land after auth if no role is set. When a role IS set, the callback
   // routes through /onboarding/role using the top-level role param instead.

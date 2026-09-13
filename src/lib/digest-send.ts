@@ -61,7 +61,11 @@ export async function getDigestRecipients(): Promise<DigestRecipient[]> {
       .from("profiles")
       .select("id, email, digest_unsubscribe_token")
       .eq("weekly_digest", true)
-      .not("email", "is", null),
+      .not("email", "is", null)
+      // Unproved addresses are unvalidated addresses (190). A typo that
+      // bounces costs the sender reputation every other recipient relies
+      // on, so an account joins the list only once it has confirmed.
+      .not("email_verified_at", "is", null),
     admin.from("subscribers").select("email, unsubscribe_token"),
   ]);
 

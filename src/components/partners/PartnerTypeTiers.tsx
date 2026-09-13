@@ -95,6 +95,7 @@ export function PartnerTypeTiers() {
                   if (next) {
                     stashSignupContext({
                       source: "partners_page",
+                      explicitRole: "partner",
                       orgCategory: PARTNER_PAGE_TYPE_TO_CATEGORY[next],
                     });
                   }

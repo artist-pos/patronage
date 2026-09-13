@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { computeBadges } from "@/lib/badges";
 import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { getDraft } from "@/app/opportunities/[id]/actions";
+import { resendVerificationEmail } from "@/actions/verification";
 import type { ApplyModalProps } from "./ApplyModal";
 import type { OpportunityApplicationDraft, PipelineConfig, CustomField, OppTypeEnum, Artwork } from "@/types/database";
 
@@ -56,6 +57,7 @@ interface ServerProfile {
   exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }>;
   received_grants: string[];
   is_patronage_supported: boolean;
+  email_verified_at: string | null;
 }
 
 interface MissingField {
@@ -76,6 +78,8 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [lockedFields, setLockedFields] = useState<MissingField[] | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "wait" | "error">("idle");
   const [showVerifiedTip, setShowVerifiedTip] = useState(false);
   const [applicantData, setApplicantData] = useState<{
     profile: ApplyModalProps["artistProfile"];
@@ -132,7 +136,7 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         : Promise.resolve(null),
       serverProfile
         ? Promise.resolve({ data: serverProfile })
-        : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported").eq("id", user.id).single(),
+        : supabase.from("profiles").select("id, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported, email_verified_at").eq("id", user.id).single(),
     ]);
 
     const artistWorks = (worksResult.data ?? []) as AvailableWork[];
@@ -144,6 +148,16 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
       // Gate pipeline applications behind the "Verified" badge — bio + avatar +
       // at least 3 works (see computeBadges in src/lib/badges.ts). Job opportunities
       // don't fetch works at all (isJobOpportunity above), so they're exempt.
+      // An unproved address cannot apply (190). Checked before profile
+      // completeness so the artist is not sent to fill in five fields only
+      // to hit a second gate — and this is the moment they have the most
+      // reason to go and confirm.
+      if (opportunity.routing_type === "pipeline" && !profile.email_verified_at) {
+        setNeedsVerification(true);
+        setLoading(false);
+        return;
+      }
+
       if (opportunity.routing_type === "pipeline") {
         const missing: MissingField[] = getMissingFields({
           avatar_url: profile.avatar_url,
@@ -201,6 +215,39 @@ export function ApplyButton({ opportunity, isJobOpportunity = false, professiona
         </a>
         .
       </p>
+    );
+  }
+
+  // Unverified email — the one gate the artist can clear without leaving the
+  // page, so the resend sits right here rather than pointing at settings.
+  if (needsVerification) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 border border-dashed border-stone-300 px-4 py-3 rounded-lg text-sm text-muted-foreground">
+          <Lock className="w-4 h-4 shrink-0" />
+          <span>Confirm your email to apply. Check your inbox for the link.</span>
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            setResendStatus("sending");
+            const { status } = await resendVerificationEmail();
+            setResendStatus(status === "sent" ? "sent" : status === "rate_limited" ? "wait" : "error");
+          }}
+          disabled={resendStatus === "sending" || resendStatus === "sent"}
+          className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          {resendStatus === "sent"
+            ? "Sent — check your inbox and spam folder."
+            : resendStatus === "wait"
+              ? "One was sent in the last minute. Give it a moment."
+              : resendStatus === "error"
+                ? "Couldn’t send just now. Try again shortly."
+                : resendStatus === "sending"
+                  ? "Sending…"
+                  : "Resend the confirmation email"}
+        </button>
+      </div>
     );
   }
 

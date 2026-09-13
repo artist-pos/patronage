@@ -398,6 +398,17 @@ export interface Profile {
    *  record of the subscription; the subscribers table holds addresses with
    *  no account and nothing else. */
   digest_unsubscribe_token?: string;
+  /** Mirrored from auth.users at signup so server code can address an account
+   *  without an admin lookup. */
+  email: string | null;
+  /** Migration 190: verification we own, not Supabase's. Null means the
+   *  address is unproved — the account browses and saves normally but cannot
+   *  apply and receives no digest. */
+  email_verified_at: string | null;
+  /** SHA-256 of the outstanding verification token; the raw value lives only
+   *  in the email. Never exposed to the client. */
+  email_verify_hash?: string | null;
+  email_verify_sent_at?: string | null;
   support_enabled: boolean;
   // Migration 167: commission availability status + blurb
   open_for_commissions: boolean;

@@ -62,6 +62,11 @@ export default async function OrphanedUsersPage() {
   const { data: profileRows } = await admin.from("profiles").select("id");
   const profileIds = new Set((profileRows ?? []).map((p) => p.id));
 
+  // Since 190 Supabase stamps email_confirmed_at at creation (our own
+  // verification lives on profiles.email_verified_at instead), so for accounts
+  // made after that change everything lands in "orphaned" and "pending" only
+  // ever holds older rows. Both still mean the same thing here: an auth user
+  // who never finished the role step and so has no profile to verify against.
   // Orphaned = confirmed email, but no profiles row
   const orphaned = allAuthUsers.filter(
     (u) => u.email_confirmed_at && !profileIds.has(u.id)

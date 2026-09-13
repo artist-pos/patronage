@@ -346,7 +346,7 @@ async function UserCTA({
       .single(),
     supabase
       .from("profiles")
-      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported")
+      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported, email_verified_at")
       .eq("id", user.id)
       .single(),
   ]);
@@ -392,6 +392,7 @@ async function UserCTA({
           }>,
           received_grants: (pd.received_grants ?? []) as string[],
           is_patronage_supported: (pd.is_patronage_supported ?? false) as boolean,
+          email_verified_at: (pd.email_verified_at ?? null) as string | null,
         }
       : null;
 

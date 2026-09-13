@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfileById } from "@/lib/profiles";
 import { sendWelcomeDigest } from "@/lib/digest-send";
+import { issueEmailVerification } from "@/lib/email-verification";
 import { sendWelcomeDm } from "@/lib/welcome-dm";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { isOrgCategory } from "@/lib/org-categories";
@@ -33,6 +34,7 @@ async function applyRole(role: string, next?: string | null) {
     .slice(0, 30) ?? user.id.slice(0, 8);
 
   const isArtist = role === "artist" || role === "owner";
+  const isOAuth = user.app_metadata?.provider === "google";
 
   // Attribution and seeded matching preferences, left behind by whichever
   // public surface sent this person here (e.g. the opportunity page banner).
@@ -54,6 +56,9 @@ async function applyRole(role: string, next?: string | null) {
       email: user.email?.toLowerCase().trim() ?? null,
       role,
       is_active: true,
+      // Google has already proved this address, so an OAuth signup is verified
+      // on arrival and never sees the banner. Password signups owe us a click.
+      ...(isOAuth && { email_verified_at: new Date().toISOString() }),
       ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
       ...(signupCtx && {
         signup_source: signupCtx.source,
@@ -112,11 +117,16 @@ async function applyRole(role: string, next?: string | null) {
   // the same browser inheriting the first one's source.
   if (signupCtx) cookieStore.delete(SIGNUP_CONTEXT_COOKIE);
 
-  // The upsert above already set weekly_digest for artists, which is the whole
-  // subscription since 185. Nothing to add to a list; just send the first one.
-  if (isArtist && user.email) {
+  // The upsert above set weekly_digest for artists, but the first issue waits
+  // until the address is proved (190): mailing an unverified address risks a
+  // bounce, and bounces cost the sender reputation every later digest needs.
+  // /auth/verify/[token] sends it once confirmed. OAuth is already proved.
+  if (isArtist && isOAuth && user.email) {
     sendWelcomeDigest(user.email.toLowerCase().trim()).catch(console.error);
   }
+
+  // Password signups get the link that switches on applications and the digest.
+  if (!isOAuth) issueEmailVerification(user.id).catch(console.error);
 
   // Send role-specific welcome DM from @patronagenz
   sendWelcomeDm(user.id, role).catch(console.error);
@@ -125,7 +135,10 @@ async function applyRole(role: string, next?: string | null) {
   const safeNext = next && next.startsWith("/") ? next : null;
   // signup=1 lets the client capture signup_completed. This action runs exactly
   // once per account, so it is the only honest marker of a finished signup.
-  const destination = safeNext ?? (isArtist ? "/studio?welcome=1" : "/dashboard");
+  // Artists take one more step before landing: the four fields the matching
+  // filter needs, so the page they arrive on has something on it. Everyone
+  // else has no disciplines to match on and goes straight to their dashboard.
+  const destination = safeNext ?? (isArtist ? "/onboarding/profile" : "/dashboard");
   redirect(`${destination}${destination.includes("?") ? "&" : "?"}signup=1`);
 }
 

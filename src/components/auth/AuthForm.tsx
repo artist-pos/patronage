@@ -110,11 +110,13 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: P
         if (result.error) {
           setError(result.error);
         } else {
-          // Signup is only half done here: the account still needs email
-          // confirmation. Captured separately from signup_completed so the gap
-          // between the two is visible.
+          // Signup now returns a session (190), so the account is usable
+          // immediately and the address is proved afterwards from the
+          // banner. Captured separately from signup_completed, which fires
+          // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
-          router.push("/auth/verify");
+          router.push(result.needsEmailConfirmation ? "/auth/verify" : next);
+          router.refresh();
           return;
         }
       } else {

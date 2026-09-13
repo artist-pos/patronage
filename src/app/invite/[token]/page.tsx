@@ -78,6 +78,9 @@ export default async function InvitePage({ params }: Props) {
 
   const ctx: SignupContext = {
     source: "org_invite",
+    // They were invited by name, as an artist. Asking again would be asking
+    // them to re-state what the invitation already settled.
+    explicitRole: "artist",
     invitedByOrgId: invite.org_profile_id,
     inviteToken: token,
     ref: "invite",

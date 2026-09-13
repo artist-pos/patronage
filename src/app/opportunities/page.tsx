@@ -9,7 +9,8 @@ import { OpportunitiesTabSwitch } from "@/components/opportunities/Opportunities
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
-import type { CountryEnum, OppTypeEnum } from "@/types/database";
+import { selectInstantMatches } from "@/lib/opportunity-match";
+import type { CountryEnum, OppTypeEnum, Opportunity, Profile } from "@/types/database";
 import Link from "next/link";
 
 export const metadata = {
@@ -53,6 +54,10 @@ interface PageProps {
     eligibility?: string;
     careerStage?: string;
     search?: string;
+    /** One-time, set by the onboarding profile step. The verification prompt
+     *  is not here — it lives in the global banner, keyed on the profile, so
+     *  it survives the trip into a listing and back. */
+    welcome?: string;
   }>;
 }
 
@@ -73,8 +78,9 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   // Check if this is an artist with disciplines set
   let isArtist = false;
   let hasDisciplines = false;
+  let profile: Profile | null = null;
   if (user) {
-    const profile = await getProfileById(user.id);
+    profile = await getProfileById(user.id);
     isArtist = profile?.role === "artist" || profile?.role === "owner";
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
@@ -100,6 +106,18 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const stats = browse.stats;
   const rawAllOpps = wantsAllList ? (filteredOpps ?? browse.opps) : [];
 
+  // The scorer fills opportunity_artist_matches on the weekly run, so an artist
+  // who signed up since the last one has no scores at all. Fall back to a
+  // deterministic discipline filter over the pool already fetched above — pure,
+  // so it costs no extra round-trip. The count and label below say which of the
+  // two is on screen: the filter is an overlap test, not a judgement of fit.
+  const instantOpps =
+    tab === "for-you" && isArtist && hasDisciplines && matchedOpps.length === 0 && profile
+      ? selectInstantMatches(browse.opps, profile, 12)
+      : [];
+  const forYouOpps: Opportunity[] = matchedOpps.length > 0 ? matchedOpps : instantOpps;
+  const matchMode: "scored" | "instant" = matchedOpps.length > 0 ? "scored" : "instant";
+
   // Merge scores onto all-tab results (score only, no reason — reason is For You only)
   const allOpps = scoreMap.size > 0
     ? rawAllOpps.map((o) => scoreMap.has(o.id) ? { ...o, match_score: scoreMap.get(o.id) } : o)
@@ -108,7 +126,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const featuredOpp = (tab === "all" && !hasManualFilters)
     ? (allOpps.find((o) => o.is_featured) ?? null)
     : null;
-  const gridOpps = tab === "for-you" ? matchedOpps : (featuredOpp ? allOpps.filter((o) => o.id !== featuredOpp.id) : allOpps);
+  const gridOpps = tab === "for-you" ? forYouOpps : (featuredOpp ? allOpps.filter((o) => o.id !== featuredOpp.id) : allOpps);
 
   return (
     <div>
@@ -143,12 +161,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             <div className="mb-2 mr-6 border-r border-border py-3 pr-6">
               <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
                 {tab === "for-you"
-                  ? matchedOpps.length
+                  ? forYouOpps.length
                   : (hasManualFilters && allOpps.length < stats.count ? allOpps.length : stats.count)}
               </p>
               <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                 {tab === "for-you"
-                  ? "matched for you"
+                  ? (matchMode === "scored" ? "matched for you" : "open in your disciplines")
                   : (hasManualFilters && allOpps.length < stats.count ? "filtered results" : "active opportunities")}
               </p>
             </div>
@@ -174,7 +192,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
           {/* Tab switch — always visible */}
           <Suspense>
-            <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={matchedOpps.length} />
+            <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={forYouOpps.length} />
           </Suspense>
 
           {/* Filters — inside the header block, per v2 */}
@@ -189,6 +207,17 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
       {/* ══ Content — pins on the feed surface ══ */}
       <div className="min-h-screen bg-feed-bg">
         <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6">
+          {params.welcome === "1" && isArtist && (
+            <div className="border border-black bg-black px-6 py-4 text-white">
+              <p className="text-sm font-semibold">Your profile is set up.</p>
+              <p className="text-sm opacity-80">
+                {profile?.email_verified_at
+                  ? "These are open in your disciplines right now. We’ll email you new ones every week."
+                  : "These are open in your disciplines right now. Confirm your email and they’ll land in your inbox every week."}
+              </p>
+            </div>
+          )}
+
           {/* For You tab content */}
           {tab === "for-you" && (
             <>
@@ -213,11 +242,11 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                         Edit profile
                       </Link>
                     </div>
-                  ) : matchedOpps.length === 0 ? (
+                  ) : forYouOpps.length === 0 ? (
                     <div className="space-y-2 bg-card p-8 text-center">
-                      <p className="text-sm font-medium">Your matches are being calculated</p>
+                      <p className="text-sm font-medium">Nothing open in your disciplines right now</p>
                       <p className="text-xs text-muted-foreground">
-                        Scores are updated weekly after new opportunities are scraped.{" "}
+                        New listings are added weekly, and you&rsquo;ll see them here first.{" "}
                         <Link href="/opportunities?tab=all" className="underline underline-offset-2">Browse all opportunities</Link>{" "}
                         in the meantime.
                       </p>

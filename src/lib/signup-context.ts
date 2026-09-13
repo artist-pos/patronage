@@ -18,6 +18,12 @@ export const SIGNUP_CONTEXT_MAX_AGE = 60 * 60;
 export interface SignupContext {
   /** Surface that produced the signup, e.g. "opportunity_page". */
   source: string;
+  /** A role the person actually declared — took an organisation invitation,
+   *  picked an organisation type — not one inferred from what they were
+   *  reading. Only this skips the role picker: role cannot be changed once
+   *  set, and browsing an opportunity is something curators and gallery
+   *  directors do constantly, so a passive signal must never decide it. */
+  explicitRole?: "artist" | "patron" | "partner";
   /** Opportunity being viewed, where the surface was an opportunity page. */
   opportunityId?: string;
   /** Matching preferences to seed, taken from the listing they were reading. */
@@ -50,7 +56,7 @@ const DISCIPLINE_MAP: Array<[RegExp, DisciplineEnum]> = [
   [/film|video|moving image|screen|animation/i, "film"],
   [/music|sound|composition|audio/i, "music"],
   [/poet/i, "poetry"],
-  [/writ|literat|publish|text/i, "writing"],
+  [/writ|literat|publish|\btext\b/i, "writing"],
   [/dance|choreograph/i, "dance"],
   [/performance|theatre|theater|live art/i, "performance"],
   [/craft|ceramic|textile|jewell|weav|glass|wood|object/i, "craft"],

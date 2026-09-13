@@ -12,6 +12,9 @@ const supabase = createClient(
 const SCORE_THRESHOLD = 0;      // store all scores; UI applies the 70+ filter
 const BATCH_SIZE = 8;           // concurrent Haiku calls per opportunity
 const DELAY_MS = 120;           // ~8 req/s — well within Haiku limits
+// Mirrors ELIGIBLE_ARTIST_COUNTRIES in src/lib/opportunity-match.ts, which is
+// canonical. This package has its own tsconfig and cannot import from src/, so
+// the two copies have to be changed together.
 const COUNTRY_MAP: Record<string, string[]> = {
   NZ:     ["NZ"],
   AUS:    ["AUS"],

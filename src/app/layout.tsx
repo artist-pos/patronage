@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { Footer } from "@/components/layout/Footer";
 import { MobileTabBarServer } from "@/components/layout/MobileTabBarServer";
 import { PostHogProvider } from "@/components/PostHogProvider";
@@ -138,6 +139,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <PostHogProvider>
           <Header />
+          <VerifyEmailBanner />
           <main className="flex-1">{children}</main>
           <Footer />
           <MobileTabBarServer />

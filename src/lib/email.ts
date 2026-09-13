@@ -1821,3 +1821,69 @@ export function buildArtistInviteEmail({
 </html>`,
   };
 }
+
+/**
+ * Prove ownership of the signup address.
+ *
+ * Sent after the account already works, so this is not a gate the artist is
+ * waiting behind — it is the thing that switches on applications and the
+ * weekly digest. The copy says both, because one reason is easy to ignore.
+ */
+export async function sendVerificationEmail({
+  email,
+  name,
+  token,
+}: {
+  email: string;
+  name: string;
+  token: string;
+}): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: "Confirm your email to start applying",
+    html: buildVerificationHtml({ name, token }),
+  });
+}
+
+function buildVerificationHtml({ name, token }: { name: string; token: string }): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const url = `${SITE_URL}/auth/verify/${token}`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Confirm your email</p>
+
+      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(name)}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">
+        Your account is already set up &mdash; you can browse and save opportunities right now.
+        Confirming your address switches on the two things that need it:
+      </p>
+      <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#555;">
+        <li style="margin-bottom:6px;">Applying to opportunities through Patronage</li>
+        <li>Your weekly digest of opportunities matched to your practice</li>
+      </ul>
+
+      <a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
+        Confirm my email &rarr;
+      </a>
+
+      <p style="margin:24px 0 0;font-size:12px;color:#888;">
+        Or paste this into your browser:<br>
+        <span style="word-break:break-all;">${url}</span>
+      </p>
+
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">
+        You&rsquo;re receiving this because an account was created at
+        <a href="${SITE_URL}" style="color:#888;">Patronage</a> with this address.
+        If that wasn&rsquo;t you, ignore this email and nothing further will happen.
+      </p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}

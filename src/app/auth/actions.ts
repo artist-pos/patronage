@@ -13,6 +13,11 @@ interface AuthResult {
   error?: string;
   /** Sign-in only — where the client should navigate on success. */
   redirectTo?: string;
+  /** Sign-up only. False once Supabase email confirmation is switched off
+   *  (190) and signUp returns a session: the account is usable at once and
+   *  proves its address afterwards. True while the setting is still on, so
+   *  the form keeps working either side of that change. */
+  needsEmailConfirmation?: boolean;
 }
 
 // Server→Supabase fetch failures produce messages like "fetch failed" —
@@ -61,13 +66,13 @@ export async function signUpAction(input: {
   const emailRedirectTo = `${await siteOrigin()}/auth/confirm?${params.toString()}`;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { emailRedirectTo },
   });
   if (error) return { error: friendlyAuthError(error.message) };
-  return {};
+  return { needsEmailConfirmation: !data.session };
 }
 
 export async function signInAction(input: {
