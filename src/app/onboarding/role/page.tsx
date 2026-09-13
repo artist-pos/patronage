@@ -150,7 +150,14 @@ async function applyRole(role: string, next?: string | null) {
   // Artists take one more step before landing: the four fields the matching
   // filter needs, so the page they arrive on has something on it. Everyone
   // else has no disciplines to match on and goes straight to their dashboard.
-  const destination = safeNext ?? (isArtist ? "/onboarding/profile" : "/dashboard");
+  // An artist always goes through the profile step: it is what makes the page
+  // after it worth arriving on, and no stale next may skip it. /profile/edit
+  // is AuthForm's own default and a redirect stub to /studio, so honouring it
+  // here landed new artists in the thirteen-field form this step replaced.
+  // A genuine resume target rides along and is honoured once the step is done.
+  const destination = isArtist
+    ? `/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
+    : (safeNext ?? "/dashboard");
   redirect(`${destination}${destination.includes("?") ? "&" : "?"}signup=1`);
 }
 

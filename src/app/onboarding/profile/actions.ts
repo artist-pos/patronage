@@ -42,6 +42,13 @@ export async function saveOnboardingProfile(
     .filter((d): d is DisciplineEnum => VALID_DISCIPLINES.includes(d as DisciplineEnum));
   const medium = String(formData.get("medium") ?? "").trim();
   const weeklyDigest = formData.get("weekly_digest") === "on";
+  // Where they were headed before signup interrupted them, carried through
+  // the role step. Same-site paths only, and never back into onboarding.
+  const nextRaw = String(formData.get("next") ?? "");
+  const next =
+    nextRaw.startsWith("/") && !nextRaw.startsWith("//") && !nextRaw.startsWith("/onboarding")
+      ? nextRaw
+      : null;
 
   if (!fullName) return { error: "Add the name you want to show on your profile." };
   if (!isSelectableCountry(country)) return { error: "Choose where you're based." };
@@ -70,5 +77,5 @@ export async function saveOnboardingProfile(
   // Straight to the payoff. Not a bespoke summary screen: this is the real
   // For You page, so tapping a listing and coming back lands somewhere that
   // still works rather than on a consumed onboarding step.
-  redirect("/opportunities?tab=for-you&welcome=1");
+  redirect(next ?? "/opportunities?tab=for-you&welcome=1");
 }

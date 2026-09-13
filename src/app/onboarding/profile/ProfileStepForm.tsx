@@ -17,6 +17,7 @@ interface Props {
   defaultCityId: string | null;
   defaultRegionId: string | null;
   defaultDisciplines: DisciplineEnum[];
+  next: string | null;
 }
 
 export function ProfileStepForm({
@@ -27,6 +28,7 @@ export function ProfileStepForm({
   defaultCityId,
   defaultRegionId,
   defaultDisciplines,
+  next,
 }: Props) {
   const [state, formAction, pending] = useActionState<ProfileStepState, FormData>(
     saveOnboardingProfile,
@@ -35,6 +37,7 @@ export function ProfileStepForm({
 
   return (
     <form action={formAction} className="space-y-8">
+      {next && <input type="hidden" name="next" value={next} />}
       <div className="space-y-2">
         <label htmlFor="full_name" className="text-sm font-medium">
           Your name

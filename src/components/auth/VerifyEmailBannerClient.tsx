@@ -35,22 +35,22 @@ export function VerifyEmailBannerClient({ email, isArtist }: Props) {
   }
 
   return (
-    <div className="border-b border-black bg-black text-white">
+    <div className="border-b border-border bg-stone-100 text-stone-700">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:px-6">
         <p className="text-sm">
           {isArtist
             ? "Confirm your email to apply for opportunities and start your weekly digest."
             : "Confirm your email so you can recover your account."}
-          {email && <span className="opacity-60"> Sent to {email}.</span>}
+          {email && <span className="text-stone-500"> Sent to {email}.</span>}
         </p>
         {status ? (
-          <span className="text-sm opacity-80">{status}</span>
+          <span className="text-sm text-stone-500">{status}</span>
         ) : (
           <button
             type="button"
             onClick={resend}
             disabled={sending}
-            className="text-sm underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+            className="text-sm font-medium text-foreground underline underline-offset-2 hover:opacity-70 disabled:opacity-50"
           >
             {sending ? "Sending…" : "Resend"}
           </button>

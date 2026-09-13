@@ -17,7 +17,16 @@ export const metadata = { title: "Set Up Your Profile — Patronage" };
  * Artists only. A patron or partner has no disciplines to match on and goes
  * straight to their dashboard from the role step.
  */
-export default async function OnboardingProfilePage() {
+interface Props {
+  searchParams: Promise<{ next?: string }>;
+}
+
+export default async function OnboardingProfilePage({ searchParams }: Props) {
+  const { next } = await searchParams;
+  const resume =
+    next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/onboarding")
+      ? next
+      : null;
   const { user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
@@ -32,7 +41,7 @@ export default async function OnboardingProfilePage() {
 
   // Already answered — this step is not a place to come back to.
   if (profile.disciplines?.length && profile.full_name?.trim()) {
-    redirect("/opportunities?tab=for-you");
+    redirect(resume ?? "/opportunities?tab=for-you");
   }
 
   const seeded = profile as Profile & { city_id?: string | null; region_id?: string | null };
@@ -60,6 +69,7 @@ export default async function OnboardingProfilePage() {
           defaultCityId={seeded.city_id ?? null}
           defaultRegionId={seeded.region_id ?? null}
           defaultDisciplines={(profile.disciplines ?? []) as DisciplineEnum[]}
+          next={resume}
         />
       </div>
     </div>
