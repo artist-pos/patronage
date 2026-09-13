@@ -132,7 +132,12 @@ async function applyRole(role: string, next?: string | null) {
   sendWelcomeDm(user.id, role).catch(console.error);
 
   // Resume an interrupted flow (e.g. a free listing) if a safe next was carried.
-  const safeNext = next && next.startsWith("/") ? next : null;
+  // An onboarding route is never something to resume: /auth/signup carries
+  // next=/onboarding/role as its own default, and honouring that sent the
+  // artist back here, where a role now exists, and on to /settings. Only a
+  // destination outside onboarding is a real interrupted flow.
+  const safeNext =
+    next && next.startsWith("/") && !next.startsWith("/onboarding") ? next : null;
   // signup=1 lets the client capture signup_completed. This action runs exactly
   // once per account, so it is the only honest marker of a finished signup.
   // Artists take one more step before landing: the four fields the matching
