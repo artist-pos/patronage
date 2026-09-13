@@ -289,6 +289,7 @@ export default async function ProjectPage({ params }: Props) {
                 handle: `@${update.artist_username}`,
                 imageUrl: update.content_type === "image" ? update.image_url : null,
                 shareUrl: `${SITE_URL}/projects/${id}`,
+                artistName: name,
               }}
             />
           </div>

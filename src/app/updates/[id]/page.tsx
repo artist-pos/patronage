@@ -15,13 +15,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const update = await getUpdateById(id);
   if (!update) return { title: "Update not found — Patronage" };
   const name = update.artist_full_name ?? update.artist_username;
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const url = `${base}/updates/${id}`;
+
+  const title = `${name} — Studio Update | Patronage`;
+  const rawCaption = update.caption?.trim();
+  const description = rawCaption
+    ? rawCaption.length > 155
+      ? rawCaption.slice(0, 152) + "…"
+      : rawCaption
+    : `Studio update from ${name} on Patronage.`;
+
+  // The update's own image is the preview. Where an update has none (text,
+  // audio, embed), the root opengraph-image card is inherited rather than
+  // shipping a link with no picture at all.
   const ogImages = update.image_url
-    ? [{ url: update.image_url, alt: update.caption ?? name }]
+    ? [{ url: update.image_url, alt: rawCaption ?? `Studio update by ${name}` }]
     : [];
+
   return {
-    title: `${name} — Studio Update | Patronage`,
-    description: update.caption ?? `Studio update from ${name} on Patronage.`,
-    openGraph: { images: ogImages },
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "article",
+      siteName: "Patronage",
+      locale: "en_NZ",
+      ...(ogImages.length > 0 && { images: ogImages }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(update.image_url && { images: [update.image_url] }),
+    },
   };
 }
 

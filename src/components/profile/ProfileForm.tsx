@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MediumInput } from "./MediumInput";
 import { DisciplineInput } from "./DisciplineInput";
-import type { Profile, DisciplineEnum } from "@/types/database";
+import { LocationPicker } from "./LocationPicker";
+import type { Profile, DisciplineEnum, CityWithRegion } from "@/types/database";
+import type { ArtsOrganisation } from "@/lib/regions";
 import { IDENTITY_TAGS } from "@/lib/constants/demographics";
 import { SELECTABLE_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
 
@@ -16,9 +18,13 @@ const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 interface Props {
   profile: Profile | null;
   role: Profile["role"];
+  /** NZ location taxonomy for the type-to-search field. */
+  cities: CityWithRegion[];
+  /** Regional arts bodies an artist may name as theirs (189). */
+  artsOrgs: ArtsOrganisation[];
 }
 
-export function ProfileForm({ profile, role }: Props) {
+export function ProfileForm({ profile, role, cities, artsOrgs }: Props) {
   const isArtist = role === "artist" || role === "owner";
   const [state, action, isPending] = useActionState<ProfileFormState, FormData>(
     upsertProfileAction,
@@ -80,22 +86,44 @@ export function ProfileForm({ profile, role }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="city">
-            City <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="city"
-            name="city"
-            defaultValue={(profile as Profile & { city?: string | null })?.city ?? ""}
-            placeholder="e.g. Auckland, Melbourne, Christchurch"
-            required
-            className="border-black"
-          />
-          {state.fieldErrors?.city && (
-            <p className="text-xs text-destructive">{state.fieldErrors.city}</p>
-          )}
-        </div>
+        <LocationPicker
+          cities={cities}
+          defaultCityId={(profile as Profile & { city_id?: string | null })?.city_id ?? null}
+          defaultFreeform={(profile as Profile & { city?: string | null })?.city ?? null}
+          defaultRegionId={(profile as Profile & { region_id?: string | null })?.region_id ?? null}
+          required
+          error={state.fieldErrors?.city}
+        />
+
+        {/* Which arts body is theirs. A region can be served by more than one,
+            and the artist is the one who knows. Kept off the public profile:
+            naming an organisation in public would associate them with it
+            without the organisation agreeing, which is the thing consent is
+            for. This only decides whose list they show up on privately. */}
+        {isArtist && artsOrgs.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="arts_org_id">Your regional arts organisation</Label>
+            <select
+              id="arts_org_id"
+              name="arts_org_id"
+              defaultValue={
+                (profile as Profile & { arts_org_id?: string | null })?.arts_org_id ?? ""
+              }
+              className="w-full border border-border bg-background px-3 py-2 text-base focus-visible:outline-none sm:text-sm"
+            >
+              <option value="">None</option>
+              {artsOrgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Optional. Only they can see it, and it does not appear on your
+              profile or change which regional page you show on.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="country">

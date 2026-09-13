@@ -14,6 +14,9 @@ interface Props {
   next?: string;
   /** Role chosen at signup — carried to the auth callback as a top-level param. */
   role?: string;
+  /** Prefilled address, used when an invitation already named it. Editable: the
+   *  artist may prefer a different one to the one their organisation had. */
+  initialEmail?: string;
 }
 
 interface FieldErrors {
@@ -34,9 +37,9 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export function AuthForm({ mode, next = "/profile/edit", role }: Props) {
+export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: Props) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

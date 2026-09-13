@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { X, Download, Link, Check, RotateCcw } from "lucide-react";
+import { X, Download, Link, Check, RotateCcw, Instagram, AtSign } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import type {
   SharePayload,
   ShareTemplate,
@@ -34,6 +35,17 @@ const VARIANT_LABELS: { id: OpportunityVariant; label: string; hint: string }[] 
 
 const NO_TRANSFORM: OpportunityImageTransform = { zoom: 1, ox: 0, oy: 0 };
 
+/** Event names per surface. Studio updates are the ones the growth work is
+ *  measuring; everything else still reports so the picture stays complete. */
+function shareEvent(
+  type: SharePayload["type"],
+  channel: "instagram" | "threads" | "copy_link" | "download"
+): string {
+  return type === "update"
+    ? `studio_update_share_${channel}`
+    : `share_${type}_${channel}`;
+}
+
 export function ShareSheet({ payload, onClose }: Props) {
   const isOpportunity = payload.type === "opportunity";
   const oppData = payload.opportunity ?? null;
@@ -57,6 +69,17 @@ export function ShareSheet({ payload, onClose }: Props) {
   const dragRef = useRef<{ active: boolean; x: number; y: number }>({ active: false, x: 0, y: 0 });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Instagram Stories is a phone-only action. Computed in a lazy initialiser
+  // rather than an effect: ShareTrigger loads this sheet with ssr:false, so it
+  // only ever renders in a browser and there is no markup to mismatch.
+  const [isMobile] = useState(
+    () =>
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      // iPadOS reports as Macintosh; touch points are what give it away.
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+  );
+  const [igFellBack, setIgFellBack] = useState(false);
 
   // Load selected image when it changes; reset its framing on (re)load.
   useEffect(() => {
@@ -104,30 +127,97 @@ export function ShareSheet({ payload, onClose }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  async function handleDownload() {
-    if (!canvasRef.current) return;
-    let dataUrl: string;
+  /** PNG data URL for the current canvas, redrawing without the image if a
+   *  cross-origin source has tainted it. */
+  async function canvasDataUrl(): Promise<string | null> {
+    if (!canvasRef.current) return null;
     try {
-      dataUrl = canvasRef.current.toDataURL("image/png");
+      return canvasRef.current.toDataURL("image/png");
     } catch {
-      // CORS taint — redraw without image and try again
       await drawShareCanvas(canvasRef.current, payload, template, format, null, showPrice, caption, oppOptions);
-      try { dataUrl = canvasRef.current.toDataURL("image/png"); } catch { return; }
-      // Restore
+      let url: string | null = null;
+      try { url = canvasRef.current.toDataURL("image/png"); } catch { url = null; }
       redraw();
+      return url;
     }
+  }
+
+  async function canvasFile(): Promise<File | null> {
+    const dataUrl = await canvasDataUrl();
+    if (!dataUrl) return null;
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], `patronage-${payload.type}.png`, { type: "image/png" });
+  }
+
+  async function handleDownload() {
+    const dataUrl = await canvasDataUrl();
+    if (!dataUrl) return;
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = `patronage-share-${payload.type}.png`;
     a.click();
+    trackEvent(shareEvent(payload.type, "download"), { share_url: payload.shareUrl });
     // Also copy link
-    copyLink();
+    copyLink({ silent: true });
   }
 
-  function copyLink() {
+  function copyLink({ silent = false }: { silent?: boolean } = {}) {
     navigator.clipboard.writeText(payload.shareUrl).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+    if (!silent) {
+      trackEvent(shareEvent(payload.type, "copy_link"), { share_url: payload.shareUrl });
+    }
+  }
+
+  /**
+   * Instagram Stories, mobile only.
+   *
+   * The Web Share API is the path that actually works from a browser: handing
+   * Instagram the rendered card as a file lets the artist drop it straight into
+   * a story. The instagram-stories:// scheme is kept as a fallback, but it can
+   * only open the app — a web page cannot populate the story background the way
+   * a native app can, so the card is saved first and the note below says so.
+   */
+  async function handleInstagram() {
+    trackEvent(shareEvent(payload.type, "instagram"), { share_url: payload.shareUrl });
+
+    const file = await canvasFile();
+
+    if (file && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: payload.title,
+          text: payload.shareUrl,
+        });
+        return;
+      } catch {
+        // Cancelled, or the sheet refused the payload. Fall through to the
+        // save-then-open path rather than leaving the button dead.
+      }
+    }
+
+    const dataUrl = await canvasDataUrl();
+    if (dataUrl) {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `patronage-${payload.type}.png`;
+      a.click();
+    }
+    copyLink({ silent: true });
+    setIgFellBack(true);
+    window.location.href = "instagram-stories://share";
+  }
+
+  function handleThreads() {
+    trackEvent(shareEvent(payload.type, "threads"), { share_url: payload.shareUrl });
+    const text = `${payload.title}\n\n${payload.shareUrl}`;
+    window.open(
+      `https://www.threads.net/intent/post?text=${encodeURIComponent(text)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   function pickVariant(v: OpportunityVariant) {
@@ -395,22 +485,54 @@ export function ShareSheet({ payload, onClose }: Props) {
             )}
           </div>
 
-          {/* Actions */}
+          {/* Actions — Instagram Stories, Threads, Copy link, Download.
+              Instagram is hidden on desktop, where there is nothing to open. */}
           <div className="shrink-0 px-4 py-4 border-t border-border space-y-2">
+            {isMobile && (
+              <button
+                onClick={handleInstagram}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors"
+              >
+                <Instagram className="w-4 h-4" />
+                Share to Stories
+              </button>
+            )}
+
             <button
-              onClick={handleDownload}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors"
+              onClick={handleThreads}
+              className={`w-full flex items-center justify-center gap-2 text-sm transition-colors ${
+                isMobile
+                  ? "py-2 border border-border hover:bg-muted"
+                  : "py-2.5 bg-black text-white font-medium hover:bg-stone-800"
+              }`}
             >
-              <Download className="w-4 h-4" />
-              {format === "story" ? "Save for Instagram Story" : "Save image"}
+              <AtSign className="w-4 h-4" />
+              Share to Threads
             </button>
+
             <button
-              onClick={copyLink}
+              onClick={() => copyLink()}
               className="w-full flex items-center justify-center gap-2 py-2 border border-border text-sm hover:bg-muted transition-colors"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Link className="w-4 h-4" />}
               {copied ? "Link copied" : "Copy link"}
             </button>
+
+            <button
+              onClick={handleDownload}
+              className="w-full flex items-center justify-center gap-2 py-2 border border-border text-sm hover:bg-muted transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download image
+            </button>
+
+            {igFellBack && (
+              <p className="text-[11px] leading-[1.5] text-muted-foreground">
+                Card saved to your photos and the link copied. Instagram cannot be
+                handed a story background from a browser, so add the saved image
+                yourself and paste the link as a sticker.
+              </p>
+            )}
           </div>
         </div>
       </div>

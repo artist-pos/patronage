@@ -13,24 +13,54 @@ export default async function UnsubscribePage({ searchParams }: Props) {
 
   let status: "success" | "missing" | "not_found" | "error" = "missing";
 
-  if (token) {
+  // Both token columns are uuid, so a malformed value would make Postgres
+  // raise a type error rather than simply miss. Reject it as a bad link.
+  const wellFormed =
+    !!token &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
+
+  if (token && !wellFormed) {
+    status = "not_found";
+  } else if (token) {
     const admin = createAdminClient();
-    const { data: sub, error: fetchErr } = await admin
-      .from("subscribers")
-      .select("email")
-      .eq("unsubscribe_token", token)
+
+    // Two kinds of token reach this page. An account holder carries one on
+    // their profile, and unsubscribing means turning the flag off: their row
+    // is their account and must survive. Someone who only ever typed their
+    // address into the home page form carries the subscribers token, and for
+    // them the row is the subscription, so it goes.
+    const { data: profile, error: profileErr } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("digest_unsubscribe_token", token)
       .maybeSingle();
 
-    if (fetchErr) {
+    if (profileErr) {
       status = "error";
-    } else if (!sub) {
-      status = "not_found";
+    } else if (profile) {
+      const { error: flagErr } = await admin
+        .from("profiles")
+        .update({ weekly_digest: false, marketing_subscription: false })
+        .eq("id", (profile as { id: string }).id);
+      status = flagErr ? "error" : "success";
     } else {
-      const { error: deleteErr } = await admin
+      const { data: sub, error: fetchErr } = await admin
         .from("subscribers")
-        .delete()
-        .eq("unsubscribe_token", token);
-      status = deleteErr ? "error" : "success";
+        .select("email")
+        .eq("unsubscribe_token", token)
+        .maybeSingle();
+
+      if (fetchErr) {
+        status = "error";
+      } else if (!sub) {
+        status = "not_found";
+      } else {
+        const { error: deleteErr } = await admin
+          .from("subscribers")
+          .delete()
+          .eq("unsubscribe_token", token);
+        status = deleteErr ? "error" : "success";
+      }
     }
   }
 

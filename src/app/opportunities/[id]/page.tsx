@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getOpportunityById } from "@/lib/opportunities";
+import { getOpportunityById, getSimilarOpenOpportunities } from "@/lib/opportunities";
 import { getOpportunitySource, sourceKeyForUrl } from "@/lib/opportunity-sources";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModalDynamic";
@@ -18,6 +18,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { SendToFriendButton } from "@/components/opportunities/SendToFriendButton";
+import { OpportunitySignupBanner } from "@/components/opportunities/OpportunitySignupBanner";
+import {
+  ClosedOpportunityRecovery,
+  type RecoverySuggestion,
+} from "@/components/opportunities/ClosedOpportunityRecovery";
 import { buildOpportunitySharePayload } from "@/lib/opportunity-share";
 import type { Opportunity, RecurrencePattern } from "@/types/database";
 
@@ -159,27 +165,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : rawDescription
     : `${opp.type} offered by ${opp.organiser} on Patronage.`;
 
+  // Share previews get the facts, not the prose. Someone glancing at a link in
+  // a group chat decides on location, type, money and closing date, so those
+  // lead — the descriptive copy is what search results want, not iMessage.
+  const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
+  const shareDescription =
+    [
+      rawLocation === "Global" ? "Open to all" : rawLocation,
+      opp.type,
+      opp.funding_range?.trim() ||
+        (opp.funding_amount != null
+          ? `$${opp.funding_amount.toLocaleString("en-NZ")}`
+          : null),
+      opp.deadline
+        ? `Closes ${new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}`
+        : "Rolling deadline",
+    ]
+      .filter(Boolean)
+      .join(" · ") || description;
+
   const title = `${opp.title}, ${opp.organiser} | Patronage`;
   const canonicalPath = `/opportunities/${opp.slug ?? opp.id}`;
 
+  // og:image is intentionally left to the route's opengraph-image.tsx, which
+  // composes the listing image into a 1200x630 branded card. Naming images
+  // here would override it and re-introduce undersized logo previews.
   return {
     title,
     description,
     alternates: { canonical: canonicalPath },
     openGraph: {
       title,
-      description,
+      description: shareDescription,
       url: canonicalPath,
       type: "website",
-      ...(opp.featured_image_url && {
-        images: [{ url: opp.featured_image_url, width: 1200, height: 630, alt: opp.title }],
-      }),
+      siteName: "Patronage",
+      locale: "en_NZ",
     },
     twitter: {
-      card: opp.featured_image_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
-      description,
-      ...(opp.featured_image_url && { images: [opp.featured_image_url] }),
+      description: shareDescription,
     },
   };
 }
@@ -402,6 +432,33 @@ async function UserCTA({
   return null;
 }
 
+// ─── Island 4: Signup banner ──────────────────────────────────────────────────
+// Signed-in readers already get notifications, so the banner is theirs to not
+// see. Auth needs cookies(), hence its own Suspense boundary — the rest of the
+// page stays statically pre-rendered.
+
+async function SignupBannerIsland({
+  opp,
+  placement,
+}: {
+  opp: Opportunity;
+  placement: "detail" | "closed_recovery";
+}) {
+  const { user } = await getServerUser();
+  if (user) return null;
+
+  return (
+    <OpportunitySignupBanner
+      opportunityId={opp.id}
+      returnTo={`/opportunities/${opp.slug ?? opp.id}`}
+      disciplines={opp.sub_categories}
+      city={opp.city}
+      country={opp.country}
+      placement={placement}
+    />
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function OpportunityPage({ params }: Props) {
@@ -439,10 +496,16 @@ export default async function OpportunityPage({ params }: Props) {
   // All null paths above call notFound() which throws — opp is always set here
   if (!opp) notFound();
 
+  // A listing is closed once its deadline is behind us, or once it has been
+  // deactivated. Either way the reader needs somewhere to go next, so the
+  // suggestion query joins the batch below rather than waterfalling after it.
+  const todayStr = new Date().toISOString().split("T")[0];
+  const isClosed = (!!opp.deadline && opp.deadline < todayStr) || !opp.is_active;
+
   // Fetch related opportunities + claimed partner profile in parallel — admin client avoids cookies() so PPR stays intact.
   const adminDb = createAdminClient();
   const RELATED_SELECT = "id, slug, title, organiser, type, country, deadline, featured_image_url, caption, funding_range, sub_categories";
-  const [byTypeRes, byCountryRes, partnerProfileRes] = await Promise.all([
+  const [byTypeRes, byCountryRes, partnerProfileRes, similarOpen] = await Promise.all([
     adminDb.from("opportunities").select(RELATED_SELECT)
       .eq("is_active", true).eq("status", "published")
       .eq("type", opp.type).neq("id", opp.id)
@@ -454,6 +517,7 @@ export default async function OpportunityPage({ params }: Props) {
     opp.profile_id
       ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", opp.profile_id).single()
       : Promise.resolve({ data: null }),
+    isClosed ? getSimilarOpenOpportunities(opp, 6) : Promise.resolve([]),
   ]);
   // Only link to the profile if it belongs to a dedicated partner account.
   // Admins, owners, and artists who submitted on behalf of an org should
@@ -490,6 +554,30 @@ export default async function OpportunityPage({ params }: Props) {
 
   const rawLocation = opp.city ? `${opp.city}, ${opp.country}` : opp.country;
   const location = rawLocation === "Global" ? "Open to all countries" : rawLocation;
+
+  // Only the fields the recovery cards render cross the client boundary.
+  const recoverySuggestions: RecoverySuggestion[] = similarOpen.map((s) => {
+    const loc = s.city ? `${s.city}, ${s.country}` : s.country;
+    return {
+      id: s.id,
+      href: `/opportunities/${s.slug ?? s.id}`,
+      title: s.title,
+      organiser: s.organiser,
+      type: s.type,
+      location: loc === "Global" ? "Open to all" : loc,
+      value:
+        s.funding_range?.trim() ||
+        (s.funding_amount != null ? formatFunding(s.funding_amount) : null),
+      deadline: s.deadline
+        ? new Date(s.deadline + "T00:00:00").toLocaleDateString("en-NZ", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : null,
+      imageUrl: s.featured_image_url,
+    };
+  });
 
   const isPipeline = opp.routing_type === "pipeline";
 
@@ -849,6 +937,35 @@ export default async function OpportunityPage({ params }: Props) {
           Apply via email →
         </a>
       ) : null}
+
+      {/* ── Send to a friend — a primary action, not a menu item. No auth. ─ */}
+      <div className="mt-4">
+        <SendToFriendButton
+          opportunityId={opp.id}
+          title={opp.title}
+          url={canonicalUrl}
+          location={location}
+          type={opp.type}
+          value={fundingLabel}
+          deadline={deadline}
+        />
+      </div>
+
+      {/* ── Closed listing: live alternatives instead of a dead end ──────── */}
+      {isClosed && recoverySuggestions.length > 0 && (
+        <ClosedOpportunityRecovery
+          opportunityId={opp.id}
+          suggestions={recoverySuggestions}
+        />
+      )}
+
+      {/* ── Signup prompt — signed-out readers only ──────────────────────── */}
+      <Suspense fallback={null}>
+        <SignupBannerIsland
+          opp={opp}
+          placement={isClosed && recoverySuggestions.length > 0 ? "closed_recovery" : "detail"}
+        />
+      </Suspense>
 
       {/* ── Back link + source attribution — STATIC ─────────────────────── */}
       <div className="mt-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border pt-5">

@@ -1662,3 +1662,162 @@ export function buildRejectionEmailContent({ artistName, opportunityTitle, reaso
 </html>`,
   };
 }
+
+/**
+ * The words an organisation may change in its artist invitation.
+ *
+ * Null on any field means "use the Patronage default". The defaults are
+ * computed from the organisation's own name and region, so an organisation that
+ * edits nothing still sends something specific to it.
+ */
+export interface OrgInviteCopy {
+  subject?: string | null;
+  headline?: string | null;
+  subhead?: string | null;
+  /** Optional extra paragraph in the organisation's own voice. Omitted if null. */
+  message?: string | null;
+  replyTo?: string | null;
+}
+
+/** Plain text into HTML. These fields are typed by a person into a form. */
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Paragraph breaks survive; nothing else does. */
+function escParagraphs(s: string): string {
+  return escHtml(s.trim())
+    .split(/\n{2,}/)
+    .map((p) => p.replace(/\n/g, "<br />"))
+    .join("</p><p style=\"margin:14px 0 0;color:#0a0a0a;font-size:15px;line-height:1.6;\">");
+}
+
+/**
+ * The default wording, exposed so the editing form can pre-fill with exactly
+ * what would otherwise be sent. One source of truth: change it here and every
+ * organisation that has not written its own follows.
+ */
+export function defaultInviteCopy({
+  orgName,
+  regionName,
+}: {
+  orgName: string;
+  regionName: string | null;
+}): { subject: string; headline: string; subhead: string } {
+  const directory = regionName
+    ? `the ${regionName} artist directory`
+    : "the artist directory";
+
+  return {
+    subject: `${orgName} has invited you to join ${directory} on Patronage`,
+    headline: `${orgName} has invited you to join ${directory} on Patronage.`,
+    subhead: "Create your free profile and get matched with opportunities in your region.",
+  };
+}
+
+/**
+ * An artist invitation sent on an organisation's behalf.
+ *
+ * The organisation is the sender in every way that matters to the reader: its
+ * name is in the subject, the first line and the reply-to. Patronage is named
+ * only as the place the profile lives. That is the whole point of the
+ * mechanism, because the artist already knows and trusts their regional arts
+ * body and does not know us.
+ *
+ * The frame is not editable. The link, the paragraph telling the artist their
+ * profile is their own, and the line saying they can ignore this all stay,
+ * whatever an organisation writes above them. They are what makes it safe for
+ * an organisation to put its whole contact list through us.
+ *
+ * Batched by the caller. Resend allows 100 per batch call.
+ */
+export function buildArtistInviteEmail({
+  orgName,
+  regionName,
+  firstName,
+  token,
+  copy,
+}: {
+  orgName: string;
+  /** Named when we know it, so the ask is about their own place. */
+  regionName: string | null;
+  firstName: string | null;
+  token: string;
+  copy?: OrgInviteCopy;
+}): { subject: string; html: string; replyTo?: string } {
+  const joinUrl = `${SITE_URL}/invite/${token}`;
+  const defaults = defaultInviteCopy({ orgName, regionName });
+  const greeting = firstName ? `Kia ora ${firstName},` : "Kia ora,";
+
+  const subject = copy?.subject?.trim() || defaults.subject;
+  const headline = copy?.headline?.trim() || defaults.headline;
+  const subhead = copy?.subhead?.trim() || defaults.subhead;
+  const message = copy?.message?.trim() || null;
+
+  return {
+    subject,
+    ...(copy?.replyTo?.trim() && { replyTo: copy.replyTo.trim() }),
+    html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#FAFAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="552" cellpadding="0" cellspacing="0" role="presentation" style="max-width:552px;">
+
+        <tr><td style="padding:0 0 28px;">
+          <p style="margin:0;color:#6c6c6c;font-size:13px;line-height:1.5;">${escHtml(greeting)}</p>
+        </td></tr>
+
+        <tr><td style="padding:0 0 20px;">
+          <p style="margin:0;color:#0a0a0a;font-size:19px;line-height:1.35;font-weight:600;">
+            ${escHtml(headline)}
+          </p>
+        </td></tr>
+
+        <tr><td style="padding:0 0 ${message ? "20px" : "28px"};">
+          <p style="margin:0;color:#0a0a0a;font-size:15px;line-height:1.6;">
+            ${escHtml(subhead)}
+          </p>
+        </td></tr>
+
+        ${
+          message
+            ? `<tr><td style="padding:0 0 28px;">
+          <p style="margin:0;color:#0a0a0a;font-size:15px;line-height:1.6;">${escParagraphs(message)}</p>
+        </td></tr>`
+            : ""
+        }
+
+        <tr><td style="padding:0 0 28px;">
+          <a href="${joinUrl}" style="display:inline-block;background:#005a56;color:#ffffff;padding:13px 24px;font-size:15px;font-weight:500;text-decoration:none;">
+            Create your profile &rarr;
+          </a>
+        </td></tr>
+
+        <tr><td style="padding:0 0 8px;border-top:1px solid #e1e1e1;">
+          <p style="margin:20px 0 0;color:#8f8f8f;font-size:12px;line-height:1.6;">
+            Patronage is a free platform where artists in Aotearoa and Australia
+            find grants, residencies, commissions and open calls. Your profile is
+            yours: ${escHtml(orgName)} cannot edit it, and nothing is shared with
+            them beyond what you choose to make public.
+          </p>
+        </td></tr>
+
+        <tr><td>
+          <p style="margin:16px 0 0;color:#8f8f8f;font-size:12px;line-height:1.6;">
+            Not an artist, or not interested? You can ignore this email and you
+            will not hear from us again.
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  };
+}

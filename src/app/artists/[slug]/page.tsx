@@ -2,10 +2,19 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProfiles } from "@/lib/profiles";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { computeBadges } from "@/lib/badges";
 import type { CountryEnum, DisciplineEnum } from "@/types/database";
 import Link from "next/link";
+import {
+  getRegions,
+  getRegionBySlug,
+  getCitiesForRegion,
+  getRegionalPageData,
+  regionFullName,
+} from "@/lib/regions";
+import { RegionView } from "@/components/artists/RegionView";
 
 // Revalidate every 24 hours — new artists joining won't require a full rebuild
 export const revalidate = 86400;
@@ -53,8 +62,15 @@ const SLUG_MAP: Record<string, SlugMeta> = {
 
 // ── Static params ─────────────────────────────────────────────────────────────
 
-export function generateStaticParams() {
-  return Object.keys(SLUG_MAP).map((slug) => ({ slug }));
+// Country and discipline slugs are fixed; region slugs come from the taxonomy
+// table. dynamicParams stays false, so anything not listed here 404s rather
+// than becoming an accidental public page.
+export async function generateStaticParams() {
+  const regions = await getRegions();
+  return [
+    ...Object.keys(SLUG_MAP).map((slug) => ({ slug })),
+    ...regions.map((r) => ({ slug: r.slug })),
+  ];
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -66,7 +82,49 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const meta = SLUG_MAP[slug];
-  if (!meta) return { title: "Artists | Patronage" };
+
+  if (!meta) {
+    // Region page. Artist count is part of the description because it is the
+    // thing a searcher is actually weighing up before they click.
+    const region = await getRegionBySlug(slug);
+    if (!region) return { title: "Artists | Patronage" };
+
+    const cities = await getCitiesForRegion(region.id);
+    const { artists } = await getRegionalPageData(region, cities);
+    const fullName = regionFullName(region);
+    const h1 = `Artists in ${region.name}`;
+    const description =
+      artists.length > 0
+        ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} based in ${fullName}. Browse portfolios, available works, studio updates, and open opportunities in the region.`
+        : `Artists based in ${fullName} on Patronage. Browse portfolios, available works, and open opportunities in the region.`;
+
+    return {
+      title: `${h1} | Patronage`,
+      description,
+      alternates: { canonical: `/artists/${slug}` },
+      openGraph: {
+        title: `${h1} | Patronage`,
+        description,
+        url: `/artists/${slug}`,
+        type: "website",
+        siteName: "Patronage",
+        locale: "en_NZ",
+        // Representative image: the first artist banner we have for the region,
+        // falling back to the inherited site card when the region is empty.
+        ...(artists.find((a) => a.featured_image_url) && {
+          images: [
+            {
+              url: artists.find((a) => a.featured_image_url)!.featured_image_url!,
+              width: 1200,
+              height: 630,
+              alt: h1,
+            },
+          ],
+        }),
+      },
+      twitter: { card: "summary_large_image", title: `${h1} | Patronage`, description },
+    };
+  }
 
   const h1 = meta.kind === "country"
     ? `${meta.label} Artists`
@@ -97,7 +155,63 @@ export default async function ArtistCategoryPage({
 }) {
   const { slug } = await params;
   const meta = SLUG_MAP[slug];
-  if (!meta) notFound();
+
+  // ── Region page ──
+  // Shares this route so the URL reads /artists/waikato rather than being
+  // nested under a second segment. Region slugs cannot collide with the
+  // country and discipline slugs above.
+  if (!meta) {
+    const region = await getRegionBySlug(slug);
+    if (!region) notFound();
+
+    const cities = await getCitiesForRegion(region.id);
+    const regionData = await getRegionalPageData(region, cities);
+
+    // Cookie-free client throughout this branch: touching cookies() would opt
+    // the page out of prerendering, and these are public reads either way.
+    const supabaseRegion = createPublicClient();
+
+    // Badge inputs, scoped to this region's artists rather than the whole
+    // artworks table. The ids are only known once the artists are loaded, so
+    // this is a genuine dependency, not an avoidable waterfall.
+    const regionArtistIds = regionData.artists.map((a) => a.id);
+    const [collectedRes, worksRes] = regionArtistIds.length
+      ? await Promise.all([
+          supabaseRegion
+            .from("artworks")
+            .select("creator_id, current_owner_id")
+            .in("creator_id", regionArtistIds),
+          supabaseRegion
+            .from("artworks")
+            .select("profile_id")
+            .in("profile_id", regionArtistIds),
+        ])
+      : [{ data: [] }, { data: [] }];
+
+    const regionCollected = new Set(
+      (collectedRes.data ?? [])
+        .filter(
+          (r: { creator_id: string | null; current_owner_id: string | null }) =>
+            r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id
+        )
+        .map((r: { creator_id: string | null }) => r.creator_id as string)
+    );
+
+    const regionWorksCount = new Map<string, number>();
+    for (const row of worksRes.data ?? []) {
+      const r = row as { profile_id: string };
+      regionWorksCount.set(r.profile_id, (regionWorksCount.get(r.profile_id) ?? 0) + 1);
+    }
+
+    return (
+      <RegionView
+        region={region}
+        data={regionData}
+        worksCountMap={regionWorksCount}
+        collectedSet={regionCollected}
+      />
+    );
+  }
 
   const filter =
     meta.kind === "country"

@@ -230,6 +230,7 @@ function ThreadPostItem({
                 handle: `@${post.artist_username}`,
                 imageUrl: post.image_url ?? null,
                 shareUrl: `${SITE_URL}/threads/${projectSlug}?scroll=${post.id}`,
+                artistName: artistName,
               }}
             />
           </div>

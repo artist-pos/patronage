@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfileById } from "@/lib/profiles";
-import { sendWelcomeDigest } from "@/lib/digest";
+import { sendWelcomeDigest } from "@/lib/digest-send";
 import { sendWelcomeDm } from "@/lib/welcome-dm";
+import { isSelectableCountry } from "@/lib/constants/countries";
+import { isOrgCategory } from "@/lib/org-categories";
+import {
+  SIGNUP_CONTEXT_COOKIE,
+  decodeSignupContext,
+  toDisciplineEnums,
+} from "@/lib/signup-context";
 
 export const metadata = { title: "Get Started — Patronage" };
 
@@ -24,6 +33,20 @@ async function applyRole(role: string, next?: string | null) {
     .slice(0, 30) ?? user.id.slice(0, 8);
 
   const isArtist = role === "artist" || role === "owner";
+
+  // Attribution and seeded matching preferences, left behind by whichever
+  // public surface sent this person here (e.g. the opportunity page banner).
+  // Read before the upsert so both land in a single write.
+  const cookieStore = await cookies();
+  const signupCtx = decodeSignupContext(
+    cookieStore.get(SIGNUP_CONTEXT_COOKIE)?.value
+  );
+
+  // Only artists get preferences seeded — a patron or partner has no use for
+  // a discipline list, and guessing one would show up as wrong data on their
+  // profile rather than a helpful default.
+  const seededDisciplines = isArtist ? toDisciplineEnums(signupCtx?.disciplines) : [];
+
   await supabase.from("profiles").upsert(
     {
       id: user.id,
@@ -32,16 +55,67 @@ async function applyRole(role: string, next?: string | null) {
       role,
       is_active: true,
       ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
+      ...(signupCtx && {
+        signup_source: signupCtx.source,
+        ...(signupCtx.opportunityId && {
+          signup_source_opportunity_id: signupCtx.opportunityId,
+        }),
+        ...(signupCtx.ref && { signup_source_ref: signupCtx.ref }),
+      }),
+      ...(isArtist && signupCtx?.disciplines?.length && {
+        // The listing's own wording, kept as the free-text medium…
+        medium: signupCtx.disciplines,
+      }),
+      // …and the constrained enum where a term mapped onto one.
+      ...(seededDisciplines.length > 0 && { disciplines: seededDisciplines }),
+      // Partners arriving from the partners page already said what they do,
+      // and from a regional CTA they already said where. Neither should be
+      // asked twice.
+      ...(role === "partner" && isOrgCategory(signupCtx?.orgCategory) && {
+        org_category: signupCtx.orgCategory,
+      }),
+      ...(signupCtx?.regionId && { region_id: signupCtx.regionId }),
+      // Which organisation's invitation produced this account (187). Attribution
+      // only: it gives them no claim on the artist and appears nowhere public.
+      ...(isArtist && signupCtx?.invitedByOrgId && {
+        invited_by_org_id: signupCtx.invitedByOrgId,
+      }),
+      // Their organisation had a name on file. Offered as the starting value
+      // because a blank profile is the main reason people abandon onboarding.
+      ...(isArtist && signupCtx?.fullName && { full_name: signupCtx.fullName }),
+      ...(isArtist && signupCtx?.city && { city: signupCtx.city }),
+      // "Global" and other listing-only country values are not places a person
+      // lives, so they never become a profile country.
+      ...(isArtist && isSelectableCountry(signupCtx?.country) && {
+        country: signupCtx.country,
+      }),
     },
     { onConflict: "id", ignoreDuplicates: false }
   );
 
+  // Close the loop on the invitation so the inviting organisation can see that
+  // this one converted. Not awaited for correctness of the signup: a failure
+  // here costs a row in their funnel, not the artist's account.
+  if (isArtist && signupCtx?.inviteToken) {
+    const admin = createAdminClient();
+    await admin
+      .from("artist_invitations")
+      .update({
+        status: "joined",
+        joined_at: new Date().toISOString(),
+        joined_profile_id: user.id,
+      })
+      .eq("token", signupCtx.inviteToken);
+  }
+
+  // One signup, one attribution. Clearing it stops a second account made in
+  // the same browser inheriting the first one's source.
+  if (signupCtx) cookieStore.delete(SIGNUP_CONTEXT_COOKIE);
+
+  // The upsert above already set weekly_digest for artists, which is the whole
+  // subscription since 185. Nothing to add to a list; just send the first one.
   if (isArtist && user.email) {
-    const email = user.email.toLowerCase().trim();
-    await supabase
-      .from("subscribers")
-      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
-    sendWelcomeDigest(email).catch(console.error);
+    sendWelcomeDigest(user.email.toLowerCase().trim()).catch(console.error);
   }
 
   // Send role-specific welcome DM from @patronagenz

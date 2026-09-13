@@ -166,6 +166,12 @@ export async function drawShareCanvas(
     return
   }
 
+  // Studio updates get their own artist-forward layout.
+  if (payload.type === 'update') {
+    await drawUpdateCanvas(canvas, payload, template, format, imgEl, caption)
+    return
+  }
+
   const t = TEMPLATES[template]
   const f = FORMATS[format]
   const W = f.w, H = f.h
@@ -312,4 +318,106 @@ export function formatSharePrice(
   if (acquisitionMode === 'enquire_first') return null
   if (!priceCents) return null
   return `${currency} ${(priceCents / 100).toLocaleString()}`
+}
+
+/**
+ * Studio update card — artist-forward.
+ *
+ * The generic card leads with the update's own title and puts Patronage in the
+ * footer sticker. For a studio update that is the wrong way round: what makes
+ * someone stop scrolling is the work and whose it is. So the image takes the
+ * top two thirds, the artist's name is the headline, "Studio Update" is a small
+ * label above it, and the Patronage URL sits quietly at the bottom.
+ */
+export async function drawUpdateCanvas(
+  canvas: HTMLCanvasElement,
+  payload: SharePayload,
+  template: ShareTemplate,
+  format: ShareFormat,
+  imgEl: HTMLImageElement | null,
+  caption = ''
+): Promise<void> {
+  const t = TEMPLATES[template]
+  const f = FORMATS[format]
+  const W = f.w
+  const H = f.h
+  const m = W * 0.08
+
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = t.bg
+  ctx.fillRect(0, 0, W, H)
+
+  // ── Image: full-bleed width, generous height ──
+  // Reserve the text block first so the image can take everything else.
+  const textBlock = Math.round(H * (format === 'story' ? 0.3 : 0.34))
+  const imgTop = Math.round(H * (format === 'story' ? 0.08 : 0.05))
+  const imgMaxH = H - textBlock - imgTop
+
+  let textY = imgTop
+  if (imgEl) {
+    const ia = imgEl.naturalWidth / imgEl.naturalHeight
+    let iw = W - m * 2
+    let ih = iw / ia
+    if (ih > imgMaxH) {
+      ih = imgMaxH
+      iw = ih * ia
+    }
+    const ix = (W - iw) / 2
+    ctx.drawImage(imgEl, ix, imgTop, iw, ih)
+    textY = imgTop + ih + Math.round(W * 0.05)
+  } else {
+    textY = Math.round(H * 0.3)
+  }
+
+  // ── "Studio Update" label ──
+  const ls = Math.round(W * 0.022)
+  ctx.font = `600 ${ls}px ${GF}`
+  ctx.fillStyle = t.sub
+  ctx.textBaseline = 'top'
+  ctx.letterSpacing = `${Math.round(ls * 0.14)}px`
+  ctx.fillText('STUDIO UPDATE', m, textY)
+  ctx.letterSpacing = '0px'
+  textY += ls * 2
+
+  // ── Artist name — the headline ──
+  const name = payload.artistName ?? payload.sub ?? ''
+  const ns = Math.round(W * (format === 'story' ? 0.062 : 0.056))
+  ctx.font = `600 ${ns}px ${GF}`
+  ctx.fillStyle = t.text
+  const nameLines = wrapText(ctx, name, W - m * 2, 2)
+  nameLines.forEach((l) => {
+    ctx.fillText(l, m, textY)
+    textY += ns * 1.2
+  })
+  textY += ns * 0.25
+
+  // ── Optional note: the artist's caption, or the update title ──
+  const note = caption.trim() || (payload.title !== name ? payload.title : '')
+  if (note) {
+    const cs = Math.round(W * 0.027)
+    ctx.font = `${cs}px ${GF}`
+    ctx.fillStyle = t.text
+    ctx.globalAlpha = 0.55
+    const room = H - Math.round(W * 0.11) - textY
+    const maxLines = Math.max(0, Math.floor(room / (cs * 1.42)))
+    if (maxLines > 0) {
+      wrapText(ctx, note, W - m * 2, Math.min(maxLines, 3)).forEach((l) => {
+        ctx.fillText(l, m, textY)
+        textY += cs * 1.42
+      })
+    }
+    ctx.globalAlpha = 1
+  }
+
+  // ── Patronage URL — subtle, bottom ──
+  const us = Math.round(W * 0.022)
+  ctx.font = `${us}px ${GF}`
+  ctx.fillStyle = t.sub
+  ctx.globalAlpha = 0.75
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText('patronage.nz', m, H - Math.round(W * 0.055))
+  ctx.globalAlpha = 1
 }

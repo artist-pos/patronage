@@ -1,76 +1,149 @@
-import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity } from "@/types/database";
 
-const FROM = process.env.RESEND_FROM ?? "Patronage <noreply@patronage.nz>";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+/** How many listings a digest carries. Curated, not comprehensive — we would
+ *  rather send four good ones than seven padded with filler. */
+export const DIGEST_SIZE = 7;
 
-/**
- * Send the current digest to a single email address (e.g. on artist sign-up).
- * Fire-and-forget — call with .catch(console.error).
- */
-export async function sendWelcomeDigest(email: string): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return;
+// ── Palette ──────────────────────────────────────────────────────────────────
+// Design-system tokens resolved to hex. Email clients have no CSS custom
+// properties, so these are the oklch values from globals.css converted once
+// here rather than eyeballed per template.
+const INK = "#0a0a0a";        // --foreground
+const MUTED = "#6c6c6c";      // --fg-muted
+const SUBTLE = "#8f8f8f";     // --fg-subtle
+const RULE = "#e1e1e1";       // --border
+const BRAND = "#005a56";      // --brand (civic teal)
+const BRAND_SUB = "#e7f5f4";  // --brand-sub
+const URGENT = "#DC2626";     // --urgent
+const PAPER = "#FAFAF9";      // --background
 
-  const data = await getDigestData();
-  if (data.newOpps.length === 0 && data.closingSoon.length === 0) return;
+// Geist is a webfont the mail clients will not have. Name it first so Apple
+// Mail and anything rendering in a browser picks it up, then fall back.
+const SANS = "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+const MONO = "'Geist Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace";
 
-  // Look up unsubscribe token for this subscriber
-  const supabase = await createClient();
-  const { data: sub } = await supabase
-    .from("subscribers")
-    .select("unsubscribe_token")
-    .eq("email", email.toLowerCase().trim())
-    .maybeSingle();
-
-  const resend = new Resend(key);
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject: "Welcome to Patronage — your first opportunities digest",
-    html: buildDigestHtml(data, SITE_URL, (sub as { unsubscribe_token?: string } | null)?.unsubscribe_token),
-  });
-}
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface DigestData {
-  newOpps: Opportunity[];
-  closingSoon: Opportunity[];
+  /** The curated set, already ordered for the email. At most DIGEST_SIZE. */
+  opportunities: Opportunity[];
   generatedAt: string;
 }
 
+// ── Selection ────────────────────────────────────────────────────────────────
+
+/** Days until the deadline. Rolling/open deadlines sort last: they are never
+ *  urgent, so they should not displace something that actually closes. */
+function daysToDeadline(o: Opportunity): number {
+  if (!o.deadline) return Number.MAX_SAFE_INTEGER;
+  return Math.ceil(
+    (new Date(o.deadline + "T23:59:59").getTime() - Date.now()) / 86_400_000
+  );
+}
+
+/** Best available read of an opportunity's monetary value, for ranking only. */
+function valueOf(o: Opportunity): number {
+  if (o.funding_amount != null) return o.funding_amount;
+  // Fall back to the largest figure named in a range string ("$25,000 – $50,000").
+  const figures = (o.funding_range ?? "").match(/\d[\d,]*/g);
+  if (!figures) return 0;
+  return Math.max(...figures.map((f) => Number(f.replace(/,/g, "")) || 0));
+}
+
+/** Geographic bucket for spread. City where we have one, country otherwise —
+ *  seven Auckland grants are not "spread" just because they are all NZ. */
+function geoKey(o: Opportunity): string {
+  return (o.city?.trim() || o.country || "unknown").toLowerCase();
+}
+
+/** Discipline bucket for variety. Falls back to the opportunity type so that
+ *  listings with no sub_categories still diversify against each other. */
+function disciplineKey(o: Opportunity): string {
+  const first = (o.sub_categories ?? []).find((d) => d?.trim());
+  return (first || o.type || "unknown").toLowerCase();
+}
+
+/**
+ * Picks up to `limit` opportunities.
+ *
+ * Priority is the order given in the brief: closing soonest, then highest
+ * value, then geographic spread, then discipline variety. The first two are a
+ * sort; the last two are a diversity filter layered on top, applied as
+ * widening quotas. Pass one allows a single listing per city and per
+ * discipline, pass two allows a second, and so on — so spread is honoured
+ * while it can be, and urgency wins once it cannot.
+ *
+ * Never pads: if the pool holds four, four are returned.
+ */
+export function selectDigestOpportunities(
+  pool: Opportunity[],
+  limit: number = DIGEST_SIZE
+): Opportunity[] {
+  const ranked = [...pool].sort((a, b) => {
+    const da = daysToDeadline(a);
+    const db = daysToDeadline(b);
+    if (da !== db) return da - db;               // closing soonest
+    const va = valueOf(a);
+    const vb = valueOf(b);
+    if (va !== vb) return vb - va;               // highest value
+    return a.title.localeCompare(b.title);       // stable
+  });
+
+  const picked: Opportunity[] = [];
+  const chosen = new Set<string>();
+  const geoCount = new Map<string, number>();
+  const discCount = new Map<string, number>();
+
+  for (let quota = 1; picked.length < limit && quota <= limit; quota++) {
+    for (const o of ranked) {
+      if (picked.length >= limit) break;
+      if (chosen.has(o.id)) continue;
+
+      const g = geoKey(o);
+      const d = disciplineKey(o);
+      if ((geoCount.get(g) ?? 0) >= quota) continue;
+      if ((discCount.get(d) ?? 0) >= quota) continue;
+
+      picked.push(o);
+      chosen.add(o.id);
+      geoCount.set(g, (geoCount.get(g) ?? 0) + 1);
+      discCount.set(d, (discCount.get(d) ?? 0) + 1);
+    }
+  }
+
+  return picked;
+}
+
+/** The unsuppressed issue: what a brand new subscriber would receive today.
+ *  Used by the admin preview. Real sends go through sendWeeklyDigest, which
+ *  also skips what each recipient has already been shown. */
 export async function getDigestData(): Promise<DigestData> {
   const supabase = await createClient();
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
-  const weekAgo = new Date(today.getTime() - 7 * 864e5).toISOString().split("T")[0];
-  const weekAhead = new Date(today.getTime() + 7 * 864e5).toISOString().split("T")[0];
 
-  const [{ data: newData }, { data: closingData }] = await Promise.all([
-    // New: added in the last 7 days, still active
-    supabase
-      .from("opportunities")
-      .select("*")
-      .eq("is_active", true)
-      .gte("created_at", weekAgo)
-      .or(`deadline.is.null,deadline.gte.${todayStr}`)
-      .order("created_at", { ascending: false }),
-
-    // Closing soon: deadline within the next 7 days
-    supabase
-      .from("opportunities")
-      .select("*")
-      .eq("is_active", true)
-      .gte("deadline", todayStr)
-      .lte("deadline", weekAhead)
-      .order("deadline", { ascending: true }),
-  ]);
+  // Everything still open. Curation happens in selectDigestOpportunities —
+  // the query's job is only to bound the pool to live, published listings.
+  const { data } = await supabase
+    .from("opportunities")
+    .select("*")
+    .eq("is_active", true)
+    .eq("status", "published")
+    .or(`deadline.is.null,deadline.gte.${todayStr}`)
+    .order("deadline", { ascending: true, nullsFirst: false })
+    .limit(200);
 
   return {
-    newOpps: (newData ?? []) as Opportunity[],
-    closingSoon: (closingData ?? []) as Opportunity[],
+    opportunities: selectDigestOpportunities((data ?? []) as Opportunity[]),
     generatedAt: today.toISOString(),
   };
+}
+
+/** Subject line. Counts down honestly when the pool is thin. */
+export function digestSubject(count: number): string {
+  if (count === 1) return "1 opportunity worth knowing about this week";
+  return `${count} opportunities worth knowing about this week`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -79,11 +152,12 @@ function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function fmtDate(d: string | null): string {
-  if (!d) return "Open deadline";
+  if (!d) return "Rolling deadline";
   return new Date(d + "T00:00:00").toLocaleDateString("en-NZ", {
     day: "numeric",
     month: "long",
@@ -101,200 +175,236 @@ function fmtFunding(o: Opportunity): string | null {
   return null;
 }
 
-function countryPriority(country: string): number {
-  if (country === "NZ") return 0;
-  if (country === "AUS") return 1;
-  return 2;
+function fmtLocation(o: Opportunity): string | null {
+  if (o.country === "Global") return "Open to all";
+  const city = o.city?.trim();
+  if (city && o.country) return `${city}, ${o.country}`;
+  return city || o.country || null;
 }
 
-function sortByDeadline(a: Opportunity, b: Opportunity): number {
-  if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
-  if (a.deadline) return -1;
-  if (b.deadline) return 1;
-  return 0;
+/** Canonical public URL, slug-first to match the rest of the site. */
+export function opportunityUrl(o: Opportunity, siteUrl: string, ref?: string): string {
+  const base = `${siteUrl}/opportunities/${o.slug ?? o.id}`;
+  return ref ? `${base}?ref=${ref}` : base;
 }
 
-function formatCountryList(countries: string[]): string {
-  const labels: Record<string, string> = {
-    NZ: "New Zealand",
-    AUS: "Australia",
-    Global: "global programmes",
-    UK: "the United Kingdom",
-    US: "the United States",
-    EU: "Europe",
-  };
-  const formatted = [...new Set(countries)].map((c) => labels[c] ?? c);
-  if (formatted.length === 0) return "";
-  if (formatted.length === 1) return formatted[0];
-  return `${formatted.slice(0, -1).join(", ")} and ${formatted[formatted.length - 1]}`;
+/** Images come from our own compressor and are already absolute Supabase
+ *  object URLs. Anything relative would break in a mail client, so drop it. */
+function absoluteImage(url: string | null): string | null {
+  if (!url) return null;
+  return /^https?:\/\//i.test(url) ? url : null;
 }
 
-function formatHighlights(titles: string[]): string {
-  const escaped = titles.map(esc);
-  if (escaped.length === 1) return `the ${escaped[0]}`;
-  if (escaped.length === 2) return `the ${escaped[0]} and the ${escaped[1]}`;
-  return `the ${escaped.slice(0, -1).join(", the ")}, and the ${escaped[escaped.length - 1]}`;
+/** mailto: for the "know someone for this?" hand-off. */
+function forwardMailto(o: Opportunity, siteUrl: string): string {
+  const url = opportunityUrl(o, siteUrl, "digest");
+  const body = [
+    "I thought this might be up your alley.",
+    "",
+    o.title,
+    fmtDate(o.deadline),
+    "",
+    url,
+    "",
+    "via Patronage",
+  ].join("\n");
+  return `mailto:?subject=${encodeURIComponent(o.title)}&body=${encodeURIComponent(body)}`;
 }
 
-// ── Opportunity row ───────────────────────────────────────────────────────────
+// ── Opportunity card ─────────────────────────────────────────────────────────
 
-function isUrgent(deadline: string | null): boolean {
-  if (!deadline) return false;
-  const today = new Date().toISOString().split("T")[0];
-  const weekAhead = new Date(Date.now() + 7 * 864e5).toISOString().split("T")[0];
-  return deadline >= today && deadline <= weekAhead;
+function metaLine(o: Opportunity): string {
+  const parts = [fmtLocation(o), o.type, fmtFunding(o)].filter(Boolean) as string[];
+  return parts.map(esc).join(" &middot; ");
 }
 
-function oppRow(o: Opportunity, siteUrl: string): string {
-  const funding = fmtFunding(o);
-  const link = `${siteUrl}/opportunities/${o.id}`;
-  const urgent = isUrgent(o.deadline);
-  const deadlineLabel = urgent
-    ? `${fmtDate(o.deadline)} ⚠ Closing soon`
-    : fmtDate(o.deadline);
+function oppCard(o: Opportunity, siteUrl: string): string {
+  const img = absoluteImage(o.featured_image_url);
+  const view = opportunityUrl(o, siteUrl, "digest");
+  const copy = `${view}&action=copy`;
+  const days = daysToDeadline(o);
+  const closing = days > 0 && days <= 7;
+
+  const deadlineHtml = o.deadline
+    ? `<span style="color:${closing ? URGENT : MUTED};font-weight:${closing ? 600 : 400};">Closes ${esc(fmtDate(o.deadline))}${closing ? ` &middot; ${days}d left` : ""}</span>`
+    : `<span style="color:${MUTED};">Rolling deadline</span>`;
+
+  // Hairline above every card. Without it a listing with no image runs into the
+  // one above and the set reads as fewer items than it holds.
   return `
     <tr>
-      <td style="padding:14px 0;border-bottom:1px solid #e5e5e5;">
-        <strong style="font-size:15px;">${esc(o.title)}</strong><br>
-        <span style="color:#888;font-size:13px;">${esc(o.organiser)} &middot; ${esc(o.type)} &middot; ${esc(o.country)}</span><br>
-        <span style="color:#888;font-size:13px;">Deadline: ${deadlineLabel}</span>
-        ${funding ? `<br><span style="color:#888;font-size:13px;">Funding: ${esc(funding)}</span>` : ""}
-        <br>
-        <a href="${link}" style="color:#000;font-size:13px;text-decoration:underline;">View opportunity &rarr;</a>
+      <td style="padding:26px 0 32px;border-top:1px solid ${RULE};">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+          ${img ? `
+          <tr>
+            <td style="padding:0 0 14px;">
+              <a href="${view}" style="text-decoration:none;display:block;">
+                <img src="${esc(img)}" alt="" width="552" height="200" style="display:block;width:100%;max-width:552px;height:200px;object-fit:contain;border:0;outline:none;background:#f5f5f4;" />
+              </a>
+            </td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:0 0 6px;">
+              <p style="margin:0;font-family:${MONO};font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:${SUBTLE};">
+                ${esc(o.organiser)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 8px;">
+              <a href="${view}" style="color:${INK};text-decoration:none;">
+                <span style="font-family:${SANS};font-size:20px;line-height:1.3;font-weight:600;color:${INK};">${esc(o.title)}</span>
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 4px;">
+              <p style="margin:0;font-family:${SANS};font-size:13px;line-height:1.5;color:${MUTED};">${metaLine(o)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 14px;">
+              <p style="margin:0;font-family:${SANS};font-size:13px;line-height:1.5;">${deadlineHtml}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 12px;">
+              <a href="${view}" style="font-family:${SANS};font-size:13px;font-weight:600;color:${BRAND};text-decoration:none;border-bottom:1px solid ${BRAND};padding-bottom:1px;">View opportunity &rarr;</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:${BRAND_SUB};padding:10px 12px;">
+              <p style="margin:0;font-family:${SANS};font-size:12px;line-height:1.6;color:${MUTED};">
+                Know someone for this?
+                &nbsp;<a href="${forwardMailto(o, siteUrl)}" style="color:${BRAND};text-decoration:underline;font-weight:600;">Email</a>
+                &nbsp;&middot;&nbsp;<a href="${copy}" style="color:${BRAND};text-decoration:underline;font-weight:600;">Copy link</a>
+              </p>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>`;
 }
 
-function sectionHeader(label: string): string {
-  return `
-    <tr>
-      <td style="padding:28px 0 8px;">
-        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0;border-top:2px solid #000;padding-top:12px;">${label}</p>
-      </td>
-    </tr>`;
-}
+// ── Main builder ─────────────────────────────────────────────────────────────
 
-// ── Main builder ──────────────────────────────────────────────────────────────
-
-export function buildDigestHtml(data: DigestData, siteUrl: string, unsubscribeToken?: string): string {
-  const { newOpps, closingSoon } = data;
+export function buildDigestHtml(
+  data: DigestData,
+  siteUrl: string,
+  unsubscribeToken?: string
+): string {
+  const { opportunities } = data;
 
   const unsubscribeUrl = unsubscribeToken
     ? `${siteUrl}/unsubscribe?token=${unsubscribeToken}`
     : `${siteUrl}/unsubscribe`;
 
-  // ── Section computation ────────────────────────────────────────────────────
-
-  // Sort newOpps: NZ first, then AUS, then funding desc, then deadline asc
-  const prioritised = [...newOpps].sort((a, b) => {
-    const cp = countryPriority(a.country) - countryPriority(b.country);
-    if (cp !== 0) return cp;
-    const fa = a.funding_amount ?? 0;
-    const fb = b.funding_amount ?? 0;
-    if (fa !== fb) return fb - fa;
-    return sortByDeadline(a, b);
+  const issueDate = new Date(data.generatedAt).toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 
-  // Featured: top 3 from prioritised list
-  const featured = prioritised.slice(0, 3);
-  const usedIds = new Set(featured.map((o) => o.id));
-
-  // NZ & AUS: remaining, NZ or AUS only, sorted by deadline, up to 8
-  const nzAus = prioritised
-    .filter((o) => !usedIds.has(o.id) && (o.country === "NZ" || o.country === "AUS"))
-    .sort(sortByDeadline)
-    .slice(0, 8);
-  nzAus.forEach((o) => usedIds.add(o.id));
-
-  // Global: remaining non-NZ/AUS, sorted by deadline, up to 6
-  const global = prioritised
-    .filter((o) => !usedIds.has(o.id) && o.country !== "NZ" && o.country !== "AUS")
-    .sort(sortByDeadline)
-    .slice(0, 6);
-  global.forEach((o) => usedIds.add(o.id));
-
-  // Closing this week: closingSoon, up to 8
-  const closing = closingSoon.slice(0, 8);
-
-  // Are there opportunities not shown?
-  const allShownIds = new Set([...featured, ...nzAus, ...global].map((o) => o.id));
-  const hasMore = newOpps.some((o) => !allShownIds.has(o.id));
-
-  // ── Editorial summary ──────────────────────────────────────────────────────
-
-  const totalNew = newOpps.length;
-  const countries = newOpps.map((o) => o.country);
-  const countryList = formatCountryList(countries);
-  const highlightTitles = featured.slice(0, 3).map((o) => o.title);
-
-  let summary = `This week on Patronage: ${totalNew} new ${totalNew === 1 ? "opportunity" : "opportunities"}`;
-  if (countryList) summary += ` across ${countryList}`;
-  summary += ".";
-  if (highlightTitles.length > 0) {
-    summary += ` Highlights include ${formatHighlights(highlightTitles)}.`;
-  }
-  if (closing.length > 0) {
-    summary += ` ${closing.length} ${closing.length === 1 ? "opportunity closes" : "opportunities close"} this week.`;
-  }
-
-  // ── HTML ───────────────────────────────────────────────────────────────────
-
-  const rows = (opps: Opportunity[]) =>
-    opps.map((o) => oppRow(o, siteUrl)).join("");
-
-  const section = (label: string, opps: Opportunity[]) =>
-    opps.length === 0 ? "" : `
-      ${sectionHeader(label)}
-      ${rows(opps)}`;
+  const cards = opportunities.map((o) => oppCard(o, siteUrl)).join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
-    <tr><td>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>${esc(digestSubject(opportunities.length))}</title>
+</head>
+<body style="margin:0;padding:0;background:${PAPER};color:${INK};-webkit-font-smoothing:antialiased;">
+  <!-- Preheader -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    ${esc(opportunities.map((o) => o.title).slice(0, 3).join(" · "))}
+  </div>
 
-      <!-- Header -->
-      <h1 style="font-size:20px;font-weight:600;margin:0 0 2px;">Patronage</h1>
-      <p style="color:#888;font-size:13px;margin:0 0 28px;">Weekly opportunities digest</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:${PAPER};">
+    <tr>
+      <td align="center" style="padding:40px 24px;">
+        <table width="552" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:552px;width:100%;">
 
-      <!-- Editorial summary -->
-      <p style="font-size:14px;line-height:1.6;color:#444;margin:0 0 32px;padding:16px;background:#f9f9f9;border-left:3px solid #000;">
-        ${esc(summary)}
-      </p>
+          <!-- Masthead -->
+          <tr>
+            <td style="padding:0 0 6px;">
+              <a href="${siteUrl}?ref=digest" style="text-decoration:none;">
+                <span style="font-family:${SANS};font-size:17px;font-weight:600;letter-spacing:-.01em;color:${INK};">Patronage</span>
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 20px;border-bottom:1px solid ${INK};">
+              <p style="margin:0;font-family:${MONO};font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:${SUBTLE};">
+                Weekly digest &nbsp;&middot;&nbsp; ${esc(issueDate)}
+              </p>
+            </td>
+          </tr>
 
-      <!-- Sections -->
-      <table width="100%" cellpadding="0" cellspacing="0">
-        ${section("Featured this week", featured)}
-        ${section("New in New Zealand &amp; Australia", nzAus)}
-        ${section("Global opportunities", global)}
-        ${section("Closing this week", closing)}
-      </table>
+          <!-- Standfirst -->
+          <tr>
+            <td style="padding:26px 0 8px;">
+              <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${MUTED};">
+                ${opportunities.length === 1
+                  ? "one opportunity worth a look this week."
+                  : `${opportunities.length} opportunities worth a look this week. picked for what is closing, what pays, and where they are.`}
+              </p>
+            </td>
+          </tr>
 
-      <!-- View all -->
-      ${hasMore ? `
-      <p style="margin:24px 0 0;font-size:13px;">
-        <a href="${siteUrl}/opportunities" style="color:#000;text-decoration:underline;">View all opportunities &rarr;</a>
-      </p>` : ""}
+          <!-- Cards -->
+          <tr>
+            <td>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                ${cards}
+              </table>
+            </td>
+          </tr>
 
-      <!-- Footer -->
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:40px;border-top:1px solid #e5e5e5;padding-top:20px;">
-        <tr>
-          <td>
-            <p style="margin:0 0 8px;font-size:13px;">
-              <a href="${siteUrl}/partners" style="color:#000;text-decoration:underline;">Submit an opportunity &rarr;</a>
-            </p>
-            <p style="color:#888;font-size:12px;margin:0;">
-              You&apos;re receiving this because you subscribed at
-              <a href="${siteUrl}" style="color:#888;">${siteUrl}</a>.
-              &nbsp;&middot;&nbsp;
-              <a href="${unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
-            </p>
-          </td>
-        </tr>
-      </table>
+          <!-- Browse all -->
+          <tr>
+            <td style="padding:2px 0 0;border-top:1px solid ${RULE};">
+              <p style="margin:18px 0 0;font-family:${SANS};font-size:13px;line-height:1.6;">
+                <a href="${siteUrl}/opportunities?ref=digest" style="color:${INK};text-decoration:underline;">Browse every open opportunity &rarr;</a>
+              </p>
+            </td>
+          </tr>
 
-    </td></tr>
+          <!-- Forward prompt -->
+          <tr>
+            <td style="padding:32px 0 0;">
+              <p style="margin:0;font-family:${SANS};font-size:14px;line-height:1.7;color:${MUTED};">
+                Know someone who should see these?<br>
+                <strong style="color:${INK};font-weight:600;">Forward the weekly digest</strong> to them.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:30px 0 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-top:1px solid ${RULE};">
+                <tr>
+                  <td style="padding:18px 0 0;">
+                    <p style="margin:0 0 10px;font-family:${SANS};font-size:13px;">
+                      <a href="${siteUrl}/list-an-opportunity?ref=digest" style="color:${INK};text-decoration:underline;">List an opportunity &rarr;</a>
+                    </p>
+                    <p style="margin:0;font-family:${SANS};font-size:12px;line-height:1.6;color:${SUBTLE};">
+                      You are receiving this because you subscribed at
+                      <a href="${siteUrl}" style="color:${SUBTLE};">patronage.nz</a>.
+                      &nbsp;&middot;&nbsp;
+                      <a href="${unsubscribeUrl}" style="color:${SUBTLE};">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;

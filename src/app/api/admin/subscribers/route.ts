@@ -1,30 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
+import { getDigestRecipients } from "@/lib/digest-send";
 import { NextResponse } from "next/server";
 
+/**
+ * CSV of everyone the digest goes to.
+ *
+ * Reads the same function the send does, so the export cannot describe a
+ * different list from the one that actually receives mail.
+ */
 export async function GET() {
   if (!(await isAdmin())) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("subscribers")
-    .select("email, created_at")
-    .order("created_at", { ascending: false });
+  const recipients = await getDigestRecipients();
 
-  if (error) return new NextResponse(error.message, { status: 500 });
-
-  const rows = data ?? [];
   const csv = [
-    "email,subscribed_at",
-    ...rows.map((r) => `${r.email},${r.created_at}`),
+    "email,has_account",
+    ...recipients.map((r) => `${r.email},${r.profileId ? "yes" : "no"}`),
   ].join("\n");
 
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="patronage-subscribers-${new Date().toISOString().split("T")[0]}.csv"`,
+      "Content-Disposition": `attachment; filename="patronage-digest-recipients-${new Date().toISOString().split("T")[0]}.csv"`,
     },
   });
 }

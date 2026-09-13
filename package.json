@@ -9,7 +9,8 @@
     "lint": "eslint",
     "migrate:webp": "tsx scripts/migrate-images-to-webp.ts",
     "migrate:webp:dry": "tsx scripts/migrate-images-to-webp.ts --dry-run",
-    "migrate:webp:rollback": "tsx scripts/rollback-webp-migration.ts"
+    "migrate:webp:rollback": "tsx scripts/rollback-webp-migration.ts",
+    "posthog:dashboard": "tsx scripts/posthog-growth-dashboard.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

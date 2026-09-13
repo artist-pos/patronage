@@ -1,3 +1,5 @@
+import type { OrgCategory } from "@/lib/org-categories";
+
 export type CountryEnum = "NZ" | "AUS" | "Global" | "UK" | "US" | "EU";
 
 export type DisciplineEnum =
@@ -346,6 +348,7 @@ export interface OpportunityFilters {
 
 export type CareerStageEnum = "Emerging" | "Mid-Career" | "Established" | "Open";
 
+
 export type OrganisationType = "charity" | "gallery" | "business";
 
 export interface Profile {
@@ -381,12 +384,20 @@ export interface Profile {
   show_supporting: boolean;
   // Phase 6 — partner differentiation (migration 109)
   organisation_type: OrganisationType | null;
+  /** What the organisation does (migration 184). Orthogonal to
+   *  organisation_type, which records legal status. See lib/org-categories. */
+  org_category: OrgCategory | null;
   charitable_registration: string | null;
   donation_enabled: boolean;
   donation_url: string | null;
   received_grants: string[];
   marketing_subscription: boolean | null;
   weekly_digest: boolean | null;
+  /** Secret in the digest footer link, so a signed-out account holder can
+   *  unsubscribe (migration 185). Since 185 weekly_digest above is the only
+   *  record of the subscription; the subscribers table holds addresses with
+   *  no account and nothing else. */
+  digest_unsubscribe_token?: string;
   support_enabled: boolean;
   // Migration 167: commission availability status + blurb
   open_for_commissions: boolean;
@@ -405,6 +416,19 @@ export interface Profile {
   provenance_signature_url: string | null;
   provenance_template_theme: 'minimal' | 'editorial' | 'gallery';
   account_status: 'active' | 'shadow';
+  // Region taxonomy (migration 182). `city` above stays the freeform text the
+  // artist typed; these are the structured reading of it.
+  region_id: string | null;
+  /** Regional arts organisation this artist names as theirs (189). Private to
+   *  that organisation; never rendered on a public profile. */
+  arts_org_id?: string | null;
+  city_id: string | null;
+  location_needs_review: boolean;
+  // Signup attribution (migration 181) — which public surface produced the
+  // account, so growth loops can be measured rather than guessed at.
+  signup_source: string | null;
+  signup_source_opportunity_id: string | null;
+  signup_source_ref: string | null;
   // Migration 052: embed display configuration for patron collection embeds
   patron_embed_config: Record<string, unknown> | null;
   created_at: string;
@@ -474,6 +498,13 @@ export interface Collective {
   description: string | null;
   created_by: string;
   created_at: string;
+  // Gallery representation (migration 184). Null org_profile_id means an
+  // artist-run collective, which stays private to its members.
+  org_profile_id: string | null;
+  /** member = artist-run; represented/shows_with = gallery; participant =
+   *  residency alumni (migration 186). */
+  relationship: "member" | "represented" | "shows_with" | "participant";
+  is_public: boolean;
 }
 
 export interface CollectiveMember {
@@ -483,6 +514,12 @@ export interface CollectiveMember {
   role: "admin" | "member";
   status: "pending" | "accepted";
   joined_at: string;
+  /** When the artist was there (migration 186). Set on participant rosters,
+   *  where the year is the substance of the claim. A null end_year means they
+   *  are still there, which is how a current resident reads differently from
+   *  an alumnus. */
+  start_year: number | null;
+  end_year: number | null;
   collective?: Collective;
 }
 
@@ -1296,4 +1333,32 @@ export interface ClaimToken {
   outreach_contact_id: string | null;
   notes: string | null;
   created_at: string;
+}
+
+// ─── Region taxonomy (migration 182) ──────────────────────────────────────────
+
+export interface Region {
+  id: string;
+  slug: string;
+  name: string;
+  name_maori: string | null;
+  island: "north" | "south";
+  sort_order: number;
+  created_at: string;
+}
+
+export interface City {
+  id: string;
+  region_id: string;
+  slug: string;
+  name: string;
+  name_maori: string | null;
+  aliases: string[];
+  is_major: boolean;
+  created_at: string;
+}
+
+/** A city joined to its region — what the location picker works with. */
+export interface CityWithRegion extends City {
+  region: Pick<Region, "id" | "slug" | "name" | "name_maori">;
 }

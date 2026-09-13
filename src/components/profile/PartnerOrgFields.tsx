@@ -3,17 +3,27 @@
 import { useState, useTransition } from "react";
 import { updatePartnerOrgFields } from "@/app/onboarding/partner-actions";
 import type { OrganisationType, Profile } from "@/types/database";
+import { ORG_CATEGORIES, type OrgCategory } from "@/lib/org-categories";
 
 interface Props {
   profile: Pick<
     Profile,
     | "organisation_type"
+    | "org_category"
     | "charitable_registration"
     | "donation_url"
     | "donation_enabled"
   >;
 }
 
+/**
+ * The legal axis only. "Gallery" used to live here, which is why a gallery that
+ * is also a registered charity had to pick one and be wrong about the other.
+ * What an organisation does is now a separate question below.
+ *
+ * The old value is still accepted by the column, so existing rows are fine; it
+ * is simply no longer offered.
+ */
 const ORG_OPTIONS: { value: OrganisationType; label: string; hint: string }[] = [
   {
     value: "charity",
@@ -21,14 +31,9 @@ const ORG_OPTIONS: { value: OrganisationType; label: string; hint: string }[] = 
     hint: "Registered charities and arts foundations. Unlocks an admin-gated donation CTA on your profile.",
   },
   {
-    value: "gallery",
-    label: "Gallery / Institution",
-    hint: "Galleries, museums, artist-run spaces.",
-  },
-  {
     value: "business",
-    label: "Business / Corporate",
-    hint: "Corporates, developers, and ESG-led organisations engaging with the arts.",
+    label: "Business / Company",
+    hint: "Anything not registered as a charity.",
   },
 ];
 
@@ -39,6 +44,7 @@ const ORG_OPTIONS: { value: OrganisationType; label: string; hint: string }[] = 
  */
 export function PartnerOrgFields({ profile }: Props) {
   const [orgType, setOrgType] = useState<OrganisationType | "">(profile.organisation_type ?? "");
+  const [orgCategory, setOrgCategory] = useState<OrgCategory | "">(profile.org_category ?? "");
   const [registration, setRegistration] = useState(profile.charitable_registration ?? "");
   const [donationUrl, setDonationUrl] = useState(profile.donation_url ?? "");
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -53,6 +59,7 @@ export function PartnerOrgFields({ profile }: Props) {
     startTransition(async () => {
       const result = await updatePartnerOrgFields({
         organisationType: (orgType || null) as OrganisationType | null,
+        orgCategory: (orgCategory || null) as OrgCategory | null,
         charitableRegistration: registration,
         donationUrl,
       });
@@ -81,7 +88,33 @@ export function PartnerOrgFields({ profile }: Props) {
       </div>
 
       <fieldset className="space-y-3">
-        <legend className="text-xs text-muted-foreground">Organisation type</legend>
+        <legend className="text-xs text-muted-foreground">
+          What does your organisation do?
+        </legend>
+        {ORG_CATEGORIES.map((cat) => (
+          <label key={cat.value} className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="orgCategory"
+              value={cat.value}
+              checked={orgCategory === cat.value}
+              onChange={() => setOrgCategory(cat.value)}
+              className="mt-1"
+            />
+            <span className="text-sm">
+              <span className="font-medium">{cat.label}</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                {cat.hint}
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset className="space-y-3">
+        <legend className="text-xs text-muted-foreground">
+          How is it registered?
+        </legend>
         {ORG_OPTIONS.map((opt) => (
           <label key={opt.value} className="flex items-start gap-3 cursor-pointer">
             <input

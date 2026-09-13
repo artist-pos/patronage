@@ -6,6 +6,7 @@ import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ReferralTracker, REFERRAL_SESSION_KEY } from "@/components/analytics/ReferralTracker";
 
 // Routes whose URLs carry record ids or private context. We DO send pageviews
 // for these — suppressing them entirely made the logged-in product invisible to
@@ -123,6 +124,29 @@ function PostHogSignupCompleted() {
       // Private mode / blocked storage — capturing twice beats not at all.
     }
     ph.capture("signup_completed");
+
+    // If a ?ref= link brought this person in earlier in the session, the
+    // account they just made belongs to it. Read-then-clear so a second
+    // account in the same browser session is not credited to the same link.
+    try {
+      const ref = sessionStorage.getItem(REFERRAL_SESSION_KEY);
+      if (ref) {
+        const oppId = sessionStorage.getItem("patronage_ref_opportunity");
+        // PostHogIdentify has already aliased distinct_id to the Supabase user
+        // id by this point, so it doubles as user_id.
+        ph.capture("referral_signup", {
+          ref_source: ref,
+          landing_page: window.location.pathname,
+          user_id: ph.get_distinct_id(),
+          ...(oppId && { opportunity_id: oppId }),
+        });
+        sessionStorage.removeItem(REFERRAL_SESSION_KEY);
+        sessionStorage.removeItem("patronage_ref_opportunity");
+      }
+    } catch {
+      // Blocked storage — signup_completed still landed, which is the figure
+      // the funnel actually depends on.
+    }
   }, [searchParams, ph]);
 
   return null;
@@ -160,6 +184,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       </Suspense>
       <Suspense fallback={null}>
         <PostHogSignupCompleted />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ReferralTracker />
       </Suspense>
       <PostHogIdentify />
       {children}

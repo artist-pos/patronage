@@ -228,12 +228,23 @@ export default async function PartnerDashboardPage() {
             <p className="text-sm text-stone-500">Admin view — all partner pipelines across the platform.</p>
           )}
         </div>
-        <Link
-          href="/partners"
-          className="shrink-0 bg-black text-white text-sm px-5 py-2.5 hover:bg-black/80 transition-colors font-medium"
-        >
-          + New listing
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          {/* Entry point for the roster and the bulk invite tool. They live in
+              their own space rather than settings, but nobody would look for
+              them there without a door on the dashboard. */}
+          <Link
+            href="/partner/roster"
+            className="border border-border px-5 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-black hover:text-black"
+          >
+            Artists
+          </Link>
+          <Link
+            href="/partners"
+            className="bg-black text-white text-sm px-5 py-2.5 hover:bg-black/80 transition-colors font-medium"
+          >
+            + New listing
+          </Link>
+        </div>
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────────────────────── */}

@@ -69,6 +69,9 @@ export interface SharePayload {
   shareUrl: string
   editionCount?: number | null
   imageOptions?: ShareImageOption[]
+  /** Artist display name. Set for studio updates, where the card leads with the
+   *  person rather than with Patronage. */
+  artistName?: string
   /** Present only when type === 'opportunity'. */
   opportunity?: OpportunityShareData
 }

@@ -1,9 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
-import { getDigestData, buildDigestHtml } from "@/lib/digest";
-import { Resend } from "resend";
+import { sendWeeklyDigest } from "@/lib/digest-send";
 
 export async function sendDigestAction(): Promise<{
   ok: boolean;
@@ -12,11 +10,7 @@ export async function sendDigestAction(): Promise<{
 }> {
   if (!(await isAdmin())) return { ok: false, sent: 0, message: "Not authorised." };
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
-
-  if (!apiKey || !from) {
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM) {
     return {
       ok: false,
       sent: 0,
@@ -24,38 +18,25 @@ export async function sendDigestAction(): Promise<{
     };
   }
 
-  const supabase = await createClient();
-  const { data: subs, error } = await supabase
-    .from("subscribers")
-    .select("email, unsubscribe_token");
+  const { sent, skipped, errors } = await sendWeeklyDigest("manual");
 
-  if (error) return { ok: false, sent: 0, message: error.message };
-  if (!subs || subs.length === 0)
-    return { ok: false, sent: 0, message: "No subscribers." };
-
-  const digestData = await getDigestData();
-
-  if (digestData.newOpps.length === 0 && digestData.closingSoon.length === 0) {
-    return { ok: false, sent: 0, message: "Nothing to send — digest is empty." };
+  if (sent === 0) {
+    // Skipped is not a failure. It means everyone on the list has already been
+    // shown all but a couple of the live listings, which is the suppression
+    // rule working rather than something to retry.
+    if (skipped > 0) {
+      return {
+        ok: false,
+        sent: 0,
+        message: `Nothing sent. ${skipped} recipient${skipped !== 1 ? "s" : ""} had fewer than three listings they had not already seen.`,
+      };
+    }
+    return { ok: false, sent: 0, message: "Nothing to send." };
   }
 
-  const subject = `Patronage — opportunities digest ${new Date().toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}`;
-  const resend = new Resend(apiKey);
+  const parts = [`Sent to ${sent} recipient${sent !== 1 ? "s" : ""}.`];
+  if (skipped > 0) parts.push(`${skipped} skipped as too thin.`);
+  if (errors > 0) parts.push(`${errors} failed.`);
 
-  const emails = (subs as Array<{ email: string; unsubscribe_token?: string }>).map((s) => ({
-    from,
-    to: s.email,
-    subject,
-    html: buildDigestHtml(digestData, siteUrl, s.unsubscribe_token),
-  }));
-
-  let sent = 0;
-  for (let i = 0; i < emails.length; i += 100) {
-    const batch = emails.slice(i, i + 100);
-    const { data, error: batchError } = await resend.batch.send(batch);
-    if (!batchError && data) sent += batch.length;
-  }
-
-  if (sent === 0) return { ok: false, sent: 0, message: "Failed to send." };
-  return { ok: true, sent, message: `Sent to ${sent} subscriber${sent !== 1 ? "s" : ""}.` };
+  return { ok: true, sent, message: parts.join(" ") };
 }

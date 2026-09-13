@@ -93,6 +93,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     handle: `@${u.artist_username}`,
     imageUrl: u.content_type === "image" ? u.image_url : null,
     shareUrl: `${SITE_URL}${href}`,
+    artistName: name,
   };
 
   /* `onDark` = rendered on the image-pin hover bar rather than a light surface. */

@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function updateWorkPrivacy(
   workId: string,
@@ -80,18 +79,8 @@ export async function updateDigestSubscription(
 
   if (error) return { error: error.message };
 
-  const admin = createAdminClient();
-  const { data: authUser } = await admin.auth.admin.getUserById(user.id);
-  const email = authUser?.user?.email?.toLowerCase().trim();
-  if (!email) return {};
-
-  if (subscribed) {
-    await admin
-      .from("subscribers")
-      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
-  } else {
-    await admin.from("subscribers").delete().eq("email", email);
-  }
-
+  // Since 185 the flag is the whole subscription. The subscribers table holds
+  // only addresses with no account, so an account holder has nothing to add to
+  // or remove from it, and the two can no longer disagree.
   return {};
 }

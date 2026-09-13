@@ -31,11 +31,11 @@ const ROLES = [
 ];
 
 interface Props {
-  searchParams: Promise<{ next?: string; role?: string }>;
+  searchParams: Promise<{ next?: string; role?: string; invited_by?: string; email?: string }>;
 }
 
 export default async function SignupPage({ searchParams }: Props) {
-  const { next, role: roleParam } = await searchParams;
+  const { next, role: roleParam, invited_by: invitedBy, email: invitedEmail } = await searchParams;
   const role = VALID_ROLES.includes(roleParam as Role) ? (roleParam as Role) : null;
 
   // Where to land after auth if no role is set. When a role IS set, the callback
@@ -92,6 +92,14 @@ export default async function SignupPage({ searchParams }: Props) {
           >
             ← Back
           </Link>
+          {/* The invitation's whole value is that a trusted organisation made
+              the ask. Saying so again here keeps the warmth of the email
+              instead of dropping the reader into a generic signup form. */}
+          {invitedBy && (
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+              Invited by {invitedBy}
+            </p>
+          )}
           <h1 className="text-2xl font-semibold tracking-tight">
             Join as a {ROLE_LABELS[role]}
           </h1>
@@ -105,7 +113,7 @@ export default async function SignupPage({ searchParams }: Props) {
             </Link>
           </p>
         </div>
-        <AuthForm mode="signup" next={resolvedNext} role={role} />
+        <AuthForm mode="signup" next={resolvedNext} role={role} initialEmail={invitedEmail} />
         <p className="text-xs text-muted-foreground">
           You&rsquo;ll receive a confirmation email. After verifying, you can
           complete your profile.

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SubscribeState =
   | { status: "idle" }
@@ -15,6 +16,29 @@ export async function subscribeAction(
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { status: "error", message: "Please enter a valid email address." };
+  }
+
+  // Someone with an account may well type their own address into the home page
+  // form. Since 185 their profile flag is the subscription, so turning it on is
+  // both the correct outcome and what stops a duplicate row reappearing in a
+  // table that is meant to hold only addresses belonging to nobody.
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existing) {
+    const { error: flagError } = await admin
+      .from("profiles")
+      .update({ weekly_digest: true })
+      .eq("id", (existing as { id: string }).id);
+
+    if (flagError) {
+      return { status: "error", message: "Something went wrong. Please try again." };
+    }
+    return { status: "success" };
   }
 
   const supabase = await createClient();

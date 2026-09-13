@@ -20,6 +20,7 @@ import {
   type PastOpportunityRow,
   type CollectedWorkTile,
 } from "@/components/profile/OrgPatronProfiles";
+import { getArtistAffiliations, getOrgRoster, type OrgRoster } from "@/lib/affiliations";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
@@ -111,6 +112,8 @@ export async function generateMetadata({ params }: Props) {
       description,
       url: profileUrl,
       type: "profile",
+      siteName: "Patronage",
+      locale: "en_NZ",
       ...(ogImage && { images: [ogImage] }),
       ...(profile.full_name && {
         firstName: profile.full_name.split(" ")[0],
@@ -342,6 +345,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     profileCampaigns,
     viewerRoleResult,
     sharePortfolioImages,
+    affiliations,
   ] = await Promise.all([
     // Available works: always needed for "X works available" badge
     availableWorksPromise,
@@ -429,6 +433,11 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .limit(3)
           .then(({ data }) => (data ?? []) as { id: string; url: string }[])
       : Promise.resolve([] as { id: string; url: string }[]),
+    // Gallery representation and residency participation (186). Joins this wave
+    // because representation renders in the header, above the tabs.
+    isArtistProfile
+      ? getArtistAffiliations(profile.id)
+      : Promise.resolve({ representation: [], participation: [] }),
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
@@ -441,10 +450,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   let partnerPastOpps: PastOpportunityRow[] = [];
   let partnerArtists: ArtistTileData[] = [];
   let partnerSelectedTotal = 0;
+  // Galleries and residency programmes only. Every other category keeps no
+  // roster (186), so this comes back empty and the section does not render.
+  let partnerRoster: OrgRoster = { relationship: null, artists: [] };
+  let partnerRegionLink: { slug: string; name: string } | null = null;
   if (!isArtistProfile && profile.role === "partner") {
+    partnerRoster = await getOrgRoster(profile.id);
     const adminDb = createAdminClient();
     const todayStr = new Date().toISOString().split("T")[0];
-    const [listedRes, pastRes, appsRes] = await Promise.all([
+    const [listedRes, pastRes, appsRes, rosterRes, regionRes] = await Promise.all([
       supabase
         .from("opportunities")
         .select("id", { count: "exact", head: true })
@@ -463,7 +477,20 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         .select("artist_id, opportunity_id, opportunities!inner(profile_id)")
         .eq("opportunities.profile_id", profile.id)
         .in("status", ["selected", "approved_pending_assets", "production_ready"]),
+      getOrgRoster(profile.id),
+      // Only an arts body links out to its region. No other category has any
+      // relationship to the artists who work there.
+      (profile as Profile & { org_category?: string | null }).org_category ===
+        "regional_arts_org" && profile.region_id
+        ? supabase
+            .from("regions")
+            .select("slug, name")
+            .eq("id", profile.region_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
+    partnerRoster = rosterRes;
+    partnerRegionLink = (regionRes.data as { slug: string; name: string } | null) ?? null;
     partnerListedCount = listedRes.count ?? 0;
     const apps = (appsRes.data ?? []) as unknown as Array<{ artist_id: string; opportunity_id: string }>;
     const selectedByOpp = new Map<string, number>();
@@ -756,6 +783,27 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                         </>
                       )}
                     </div>
+
+                    {/* Gallery representation. Current and commercial, so it
+                        reads immediately rather than sitting on the CV. Each
+                        gallery links back to its own page, which is where a
+                        visitor finds the rest of its artists. */}
+                    {affiliations.representation.length > 0 && (
+                      <p className="mt-2.5 text-[13px] text-white/70">
+                        Represented by{" "}
+                        {affiliations.representation.map((org, i) => (
+                          <span key={org.username}>
+                            {i > 0 && (i === affiliations.representation.length - 1 ? " and " : ", ")}
+                            <Link
+                              href={`/${org.username}`}
+                              className="text-white underline decoration-white/30 underline-offset-[3px] transition-colors hover:decoration-white"
+                            >
+                              {org.name}
+                            </Link>
+                          </span>
+                        ))}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -974,6 +1022,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           commissionedArtists={partnerArtists}
           listedCount={partnerListedCount}
           selectedTotal={partnerSelectedTotal}
+          roster={partnerRoster}
+          regionLink={partnerRegionLink}
         />
       ) : (
         <PatronProfileView
@@ -1033,6 +1083,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   username={profile.username}
                   displayName={displayName}
                   isOwner={isOwner}
+                  participation={affiliations.participation}
                 />
                 {profile.open_for_commissions && (
                   <aside className="mb-8 space-y-3 bg-[color:var(--tint)] p-5 lg:mt-14">

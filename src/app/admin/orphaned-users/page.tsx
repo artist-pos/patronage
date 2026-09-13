@@ -40,11 +40,8 @@ async function assignRole(formData: FormData) {
     { onConflict: "id", ignoreDuplicates: false }
   );
 
-  if (isArtist && email) {
-    await admin
-      .from("subscribers")
-      .upsert({ email: email.toLowerCase().trim() }, { onConflict: "email", ignoreDuplicates: true });
-  }
+  // The profile upsert above already set weekly_digest for artists, which is
+  // the whole subscription since 185.
 
   sendWelcomeDm(userId, role).catch(console.error);
 

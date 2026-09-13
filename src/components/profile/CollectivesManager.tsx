@@ -96,12 +96,19 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
       role: "admin",
       status: "accepted",
       joined_at: new Date().toISOString(),
+      // Years belong to residency alumni lists (186), not artist-run collectives.
+      start_year: null,
+      end_year: null,
       collective: {
         id: result.id!,
         name: name.trim(),
         description: description.trim() || null,
         created_by: userId,
         created_at: new Date().toISOString(),
+        // Artist-run collective: no owning organisation, private to members.
+        org_profile_id: null,
+        relationship: "member",
+        is_public: false,
       },
     };
     setMemberships(prev => [...prev, newMembership]);

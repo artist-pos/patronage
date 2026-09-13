@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile, Opportunity } from "@/types/database";
 import { getOpportunityById } from "@/lib/opportunities";
 import { getAgeBracket } from "@/lib/constants/demographics";
+import { getDigestRecipientCount } from "@/lib/digest-send";
 
 export async function isAdmin(): Promise<boolean> {
   const supabase = await createClient();
@@ -397,8 +398,10 @@ export async function getGrowthMetrics(): Promise<GrowthMetrics> {
   const weekAgo = new Date(now - 7 * 864e5).toISOString();
   const monthAgo = new Date(now - 30 * 864e5).toISOString();
 
-  const [{ count: subscriberCount }, { data: recentProfiles }] = await Promise.all([
-    admin.from("subscribers").select("*", { count: "exact", head: true }),
+  // Everyone the digest reaches: account holders with the flag on, plus the
+  // handful of captured addresses with no account.
+  const [subscriberCount, { data: recentProfiles }] = await Promise.all([
+    getDigestRecipientCount(),
     admin
       .from("profiles")
       .select("role, created_at")
@@ -424,7 +427,7 @@ export async function getGrowthMetrics(): Promise<GrowthMetrics> {
   }
 
   return {
-    subscriberCount: subscriberCount ?? 0,
+    subscriberCount,
     signupsThisWeekByRole,
     signupsThisMonthByRole,
   };

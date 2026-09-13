@@ -1,5 +1,8 @@
 "use client";
 
+import { stashSignupContext } from "@/lib/signup-context.client";
+import { PARTNER_PAGE_TYPE_TO_CATEGORY } from "@/lib/org-categories";
+
 import { useState } from "react";
 import Link from "next/link";
 
@@ -83,7 +86,19 @@ export function PartnerTypeTiers() {
               <button
                 key={t.key}
                 type="button"
-                onClick={() => setSelected(selected === t.key ? null : t.key)}
+                onClick={() => {
+                  const next = selected === t.key ? null : t.key;
+                  setSelected(next);
+                  // Remember what they told us. This selector used to only
+                  // pick a pricing tier to display and then throw the answer
+                  // away, so a council arrived at signup as an unknown.
+                  if (next) {
+                    stashSignupContext({
+                      source: "partners_page",
+                      orgCategory: PARTNER_PAGE_TYPE_TO_CATEGORY[next],
+                    });
+                  }
+                }}
                 className={`px-5 pb-[22px] pt-5 text-left transition-colors ${
                   selected === t.key
                     ? "border border-brand bg-[color:var(--tint)]"

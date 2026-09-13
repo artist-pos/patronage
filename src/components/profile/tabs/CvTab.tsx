@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import type { ExhibitionEntry, BibliographyEntry, ProfileAchievement } from "@/types/database";
+import { affiliationYears, type Affiliation } from "@/lib/affiliations";
 
 interface Props {
   exhibitions: ExhibitionEntry[];
@@ -12,12 +13,19 @@ interface Props {
   username: string;
   displayName: string;
   isOwner?: boolean;
+  /** Residencies and studio programmes the artist has been through, newest
+   *  first (186). A dated credit, which is why it belongs here beside the
+   *  exhibitions rather than in the header where representation goes. */
+  participation?: Affiliation[];
 }
 
-export function CvTab({ exhibitions, bibliography, receivedGrants, achievements, cvUrl, profileId, username, isOwner }: Props) {
+export function CvTab({ exhibitions, bibliography, receivedGrants, achievements, cvUrl, profileId, username, isOwner, participation = [] }: Props) {
   const sortedExhibitions = [...exhibitions].sort((a, b) => b.year - a.year);
 
   const hasContent =
+    // A residency is CV content on its own. Without this, an artist whose only
+    // credit is one would be told they have added nothing.
+    participation.length > 0 ||
     exhibitions.length > 0 ||
     bibliography.length > 0 ||
     receivedGrants.length > 0 ||
@@ -56,6 +64,27 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
             Download CV →
           </TrackedLink>
         </div>
+      )}
+
+      {participation.length > 0 && (
+        <section className="space-y-3">
+          <h3 className="t-section-label">Residencies &amp; Programmes</h3>
+          <div className="border-t border-border">
+            {participation.map((org) => (
+              <div key={org.username} className="flex gap-4 border-b border-border py-2.5 text-sm">
+                <span className="w-28 shrink-0 whitespace-nowrap font-mono text-muted-foreground">
+                  {affiliationYears(org) ?? "—"}
+                </span>
+                <Link
+                  href={`/${org.username}`}
+                  className="font-semibold underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
+                >
+                  {org.name}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {sortedExhibitions.length > 0 && (

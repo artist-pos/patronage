@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { OrganisationType } from "@/types/database";
+import { isOrgCategory, type OrgCategory } from "@/lib/org-categories";
 
+// "gallery" stays accepted so existing rows can be re-saved unchanged, even
+// though the UI no longer offers it on this axis — it is a function, not a
+// legal status, and now lives on org_category instead.
 const VALID_ORG_TYPES: OrganisationType[] = ["charity", "gallery", "business"];
 
 interface PartnerOrgInput {
   organisationType: OrganisationType | null;
+  orgCategory?: OrgCategory | null;
   charitableRegistration?: string | null;
   donationUrl?: string | null;
 }
@@ -43,6 +48,10 @@ export async function updatePartnerOrgFields(
     return { error: "Invalid organisation type." };
   }
 
+  if (input.orgCategory && !isOrgCategory(input.orgCategory)) {
+    return { error: "Invalid organisation category." };
+  }
+
   // If org-type changes away from charity, the donation CTA disappears too.
   // The actual approval flag stays admin-controlled; we only clear it when
   // the partner self-changes their type.
@@ -51,6 +60,11 @@ export async function updatePartnerOrgFields(
     charitable_registration: input.charitableRegistration?.trim() || null,
     donation_url: input.donationUrl?.trim() || null,
   };
+  // Only written when the caller sent the field, so older callers that predate
+  // the functional axis cannot blank an organisation's category.
+  if (input.orgCategory !== undefined) {
+    patch.org_category = input.orgCategory ?? null;
+  }
   if (input.organisationType !== "charity" && profile.donation_enabled) {
     patch.donation_enabled = false;
   }

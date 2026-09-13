@@ -7,6 +7,7 @@ import { TrackedLink } from "@/components/profile/TrackedLink";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { getBannerGradient } from "@/lib/defaults";
 import type { Profile, Opportunity } from "@/types/database";
+import { affiliationYears, rosterHeading, type OrgRoster } from "@/lib/affiliations";
 
 // ── v2 partner + patron profiles (brief: design_handoff_partner_patron_profiles)
 // Partner = credibility page: cover w/ logo, trust stats, active + past rounds,
@@ -151,11 +152,20 @@ interface PartnerProps {
   commissionedArtists: ArtistTileData[];
   listedCount: number;
   selectedTotal: number;
+  /** The consented roster (186). Galleries show represented artists; residency
+   *  programmes show who has been through, with years. Empty for every other
+   *  category, which keeps no roster at all. */
+  roster: OrgRoster;
+  /** Set only for a regional arts body with a region. The artists of that
+   *  region are not this organisation's to list, so the page points at the
+   *  region rather than reproducing it. */
+  regionLink: { slug: string; name: string } | null;
 }
 
 export function PartnerProfileView({
   profile, displayName, isOwner, canMessage, verified,
-  activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal,
+  activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
+  regionLink,
 }: PartnerProps) {
   const cover = profile.featured_image_url
     ? profile.featured_image_url
@@ -249,6 +259,16 @@ export function PartnerProfileView({
               {verified && <span className={BADGE_GREEN}>Verified partner</span>}
               {profile.organisation_type === "charity" && (
                 <span className={BADGE_NEUTRAL}>Registered charity</span>
+              )}
+              {/* An arts body does not represent the artists in its region, so
+                  they are not listed here. This is the way through to them. */}
+              {regionLink && (
+                <Link
+                  href={`/artists/${regionLink.slug}`}
+                  className="font-mono text-xs text-[color:var(--brand)] underline underline-offset-[3px] transition-opacity hover:opacity-70"
+                >
+                  Artists in {regionLink.name} &rarr;
+                </Link>
               )}
             </div>
           </div>
@@ -346,6 +366,35 @@ export function PartnerProfileView({
                   {opp.selectedCount > 0 && (
                     <p className="shrink-0 font-mono text-xs text-[color:var(--fg-muted)]">
                       {opp.selectedCount} artist{opp.selectedCount !== 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── The roster ──
+          The organisation's primary content, so it sits above the commissioned
+          list: those are people who won an open call, which is a different and
+          weaker claim than representation. Everyone here has accepted. */}
+      {roster.artists.length > 0 && (
+        <div className="border-b border-border bg-feed-bg">
+          <div className={`${INNER} py-9`}>
+            <div className="mb-[18px] flex items-baseline justify-between">
+              <h2 className={SECTION_LABEL}>{rosterHeading(roster.relationship)}</h2>
+              <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                {roster.artists.length} artist{roster.artists.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-[2px] sm:grid-cols-3 lg:grid-cols-6">
+              {roster.artists.map((a) => (
+                <div key={a.id}>
+                  <ArtistTile a={a} />
+                  {roster.relationship === "participant" && affiliationYears(a) && (
+                    <p className="bg-card px-3 pb-3 font-mono text-[10px] text-[color:var(--fg-subtle)]">
+                      {affiliationYears(a)}
                     </p>
                   )}
                 </div>

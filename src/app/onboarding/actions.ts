@@ -57,6 +57,14 @@ export async function upsertProfileAction(
   const full_name = (formData.get("full_name") as string)?.trim() || null;
   const bio = (formData.get("bio") as string)?.trim() || null;
   const city = (formData.get("city") as string)?.trim() || null;
+  // Structured location from the picker. Empty means the artist chose "somewhere
+  // else" or is outside the taxonomy — their typed `city` above still stands,
+  // and the columns go null rather than holding a stale earlier match.
+  const city_id = (formData.get("city_id") as string)?.trim() || null;
+  const region_id = (formData.get("region_id") as string)?.trim() || null;
+  // Which arts body the artist names as theirs (189). Private, and unrelated to
+  // region_id above: it changes nobody's regional page.
+  const arts_org_id = (formData.get("arts_org_id") as string)?.trim() || null;
   const country = (formData.get("country") as string) || null;
   const career_stage = (formData.get("career_stage") as string) || null;
   const mediumRaw = (formData.get("medium") as string) ?? "";
@@ -119,6 +127,11 @@ export async function upsertProfileAction(
     full_name,
     bio,
     city,
+    city_id,
+    region_id,
+    arts_org_id,
+    // A hand-picked location is settled, so it drops off the admin review list.
+    location_needs_review: false,
     country: country || null,
     career_stage: career_stage || null,
     medium: medium.length > 0 ? medium : null,
@@ -161,15 +174,11 @@ export async function upsertProfileAction(
     disciplines
   );
 
-  // Ensure artist/owner is in the subscriber list (safety net for flows that
-  // bypass the role selection page, e.g. Google OAuth without a pre-selected role)
+  // Subscribe artists to the digest (safety net for flows that bypass the role
+  // selection page, e.g. Google OAuth without a pre-selected role). Since 185
+  // the flag on the profile is the whole subscription.
   const isArtistRole = savedProfile?.role === "artist" || savedProfile?.role === "owner";
   if (isArtistRole && user.email) {
-    const email = user.email.toLowerCase().trim();
-    await supabase
-      .from("subscribers")
-      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
-    // Also ensure digest flags are on if they were never set
     await supabase
       .from("profiles")
       .update({ marketing_subscription: true, weekly_digest: true })

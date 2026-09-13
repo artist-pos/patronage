@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
+import { getCitiesWithRegions, getArtsOrganisations } from "@/lib/regions";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { PartnerOrgFields } from "@/components/profile/PartnerOrgFields";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
@@ -48,7 +49,12 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const { supabase, user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
-  const profile = await getProfileById(user.id);
+  // The location taxonomy does not depend on the profile, so it loads beside it.
+  const [profile, cities, artsOrgs] = await Promise.all([
+    getProfileById(user.id),
+    getCitiesWithRegions(),
+    getArtsOrganisations(),
+  ]);
   if (!profile?.role) redirect("/onboarding/role");
 
   const role = profile.role;
@@ -168,11 +174,12 @@ export default async function SettingsPage({ searchParams }: PageProps) {
 
                 <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
                   <h2 className="text-base font-semibold">Profile details</h2>
-                  <ProfileForm profile={profile} role={role} />
+                  <ProfileForm profile={profile} role={role} cities={cities} artsOrgs={artsOrgs} />
                   {isPartner && (
                     <PartnerOrgFields
                       profile={{
                         organisation_type: profile.organisation_type,
+                        org_category: profile.org_category,
                         charitable_registration: profile.charitable_registration,
                         donation_url: profile.donation_url,
                         donation_enabled: profile.donation_enabled,

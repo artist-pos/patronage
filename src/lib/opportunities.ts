@@ -259,3 +259,94 @@ export async function insertOpportunities(rows: OpportunityInsert[]) {
     .select("id, title");
   return { data, error };
 }
+
+// ─── Closed-opportunity recovery ──────────────────────────────────────────────
+
+/** The subset a recovery suggestion card needs. */
+export type SimilarOpportunity = Pick<
+  Opportunity,
+  | "id" | "slug" | "title" | "organiser" | "type" | "country" | "city"
+  | "deadline" | "featured_image_url" | "funding_range" | "funding_amount"
+  | "sub_categories"
+>;
+
+const SIMILAR_FIELDS =
+  "id, slug, title, organiser, type, country, city, deadline, featured_image_url, funding_range, funding_amount, sub_categories";
+
+/** Best available numeric read of an opportunity's value, for band comparison. */
+function valueBand(o: { funding_amount: number | null; funding_range: string | null }): number {
+  if (o.funding_amount != null) return o.funding_amount;
+  const figures = (o.funding_range ?? "").match(/\d[\d,]*/g);
+  if (!figures) return 0;
+  return Math.max(...figures.map((f) => Number(f.replace(/,/g, "")) || 0));
+}
+
+/**
+ * Live opportunities to offer someone who landed on a closed listing.
+ *
+ * Ranked by how much they resemble the dead one: shared discipline first,
+ * then region, then a comparable value band. Recency is the tiebreak and the
+ * fallback, so a listing with no useful metadata still gets a useful shelf
+ * rather than an empty one.
+ */
+export async function getSimilarOpenOpportunities(
+  opp: Opportunity,
+  limit = 6
+): Promise<SimilarOpportunity[]> {
+  const supabase = createPublicClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data } = await supabase
+    .from("opportunities")
+    .select(SIMILAR_FIELDS)
+    .eq("is_active", true)
+    .eq("status", "published")
+    .neq("id", opp.id)
+    .or(`deadline.gte.${today},deadline.is.null`)
+    .order("deadline", { ascending: true, nullsFirst: false })
+    .limit(120);
+
+  const pool = (data ?? []) as SimilarOpportunity[];
+  if (pool.length === 0) return [];
+
+  const targetDisciplines = new Set(
+    (opp.sub_categories ?? []).map((d) => d.trim().toLowerCase()).filter(Boolean)
+  );
+  const targetValue = valueBand(opp);
+  const targetCity = opp.city?.trim().toLowerCase() ?? null;
+
+  const scored = pool.map((c) => {
+    let score = 0;
+
+    const overlap = (c.sub_categories ?? []).filter((d) =>
+      targetDisciplines.has(d.trim().toLowerCase())
+    ).length;
+    if (overlap > 0) score += 4 + Math.min(overlap, 3);
+
+    if (c.country === opp.country) score += 3;
+    if (targetCity && c.city?.trim().toLowerCase() === targetCity) score += 2;
+    if (c.type === opp.type) score += 2;
+
+    // Comparable money: within roughly the same order of magnitude. Only
+    // meaningful when both sides actually name a figure.
+    const v = valueBand(c);
+    if (targetValue > 0 && v > 0) {
+      const ratio = v > targetValue ? v / targetValue : targetValue / v;
+      if (ratio <= 2) score += 2;
+      else if (ratio <= 5) score += 1;
+    }
+
+    return { c, score };
+  });
+
+  return scored
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // Recency fallback — soonest real deadline first, open-ended last.
+      if (!a.c.deadline) return 1;
+      if (!b.c.deadline) return -1;
+      return a.c.deadline.localeCompare(b.c.deadline);
+    })
+    .slice(0, limit)
+    .map((s) => s.c);
+}
