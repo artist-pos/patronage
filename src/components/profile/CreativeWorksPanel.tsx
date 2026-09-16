@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { CreativeWork, DisciplineEnum, ContentTypeEnum } from "@/types/database";
-import { DISCIPLINE_OPTIONS } from "@/components/profile/DisciplineInput";
+import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 

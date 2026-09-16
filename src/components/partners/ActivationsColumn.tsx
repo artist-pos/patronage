@@ -187,7 +187,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
 
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
           style={{ scrollSnapType: "x mandatory" }}
         >
           {visibleCards.map((card, idx) => (

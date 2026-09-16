@@ -7,8 +7,9 @@ import { ArtistCard } from "@/components/artists/ArtistCard";
 import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
 import { AdminSpotlightMenu } from "@/components/artists/AdminSpotlightMenu";
-import { computeBadges } from "@/lib/badges";
-import type { CountryEnum, CareerStageEnum, ProfileWithImage } from "@/types/database";
+import { computeBadges, type BadgeSet } from "@/lib/badges";
+import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
+import type { CountryEnum, CareerStageEnum, DisciplineEnum, ProfileWithImage } from "@/types/database";
 
 export const metadata = {
   title: "Artists | Patronage",
@@ -76,7 +77,7 @@ const getCachedDirectoryData = unstable_cache(
 );
 
 interface PageProps {
-  searchParams: Promise<{ country?: string; stage?: string; medium?: string; view?: string; commissions?: string }>;
+  searchParams: Promise<{ country?: string; stage?: string; discipline?: string; view?: string; commissions?: string }>;
 }
 
 // A single directory row + (for admins) the spotlight menu rail beside it.
@@ -85,27 +86,17 @@ function DirectoryRow({
   artist,
   isAdmin,
   spotlightProfileId,
-  worksCount,
-  collected,
+  badges,
 }: {
   artist: ProfileWithImage;
   isAdmin: boolean;
   spotlightProfileId: string | null;
-  worksCount: number;
-  collected: boolean;
+  badges: BadgeSet;
 }) {
   return (
     <div className="flex items-stretch">
       <div className="min-w-0 flex-1">
-        <ArtistCard
-          artist={artist}
-          view="list"
-          badges={computeBadges(
-            { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-            worksCount,
-            collected
-          )}
-        />
+        <ArtistCard artist={artist} view="list" badges={badges} />
       </div>
       {isAdmin && (
         <div className="flex items-center border-b border-border bg-card pr-1.5">
@@ -137,18 +128,58 @@ function HandleChips({ artists }: { artists: ProfileWithImage[] }) {
   );
 }
 
+// A presentable tier (Directory or International), rendered as rows or a
+// gallery grid depending on the active view — used by both so the
+// domestic/international/recently-joined split holds regardless of view.
+function ArtistTier({
+  artists,
+  cardView,
+  isAdmin,
+  spotlightProfileId,
+  badgesFor,
+}: {
+  artists: ProfileWithImage[];
+  cardView: "list" | "gallery";
+  isAdmin: boolean;
+  spotlightProfileId: string | null;
+  badgesFor: (artist: ProfileWithImage) => BadgeSet;
+}) {
+  if (cardView === "gallery") {
+    return (
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {artists.map((artist) => (
+          <ArtistCard key={artist.id} artist={artist} view="gallery" badges={badgesFor(artist)} />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="border-t border-border">
+      {artists.map((artist) => (
+        <DirectoryRow
+          key={artist.id}
+          artist={artist}
+          isAdmin={isAdmin}
+          spotlightProfileId={spotlightProfileId}
+          badges={badgesFor(artist)}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default async function ArtistsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const country = params.country as CountryEnum | undefined;
   const career_stage = params.stage as CareerStageEnum | undefined;
-  const medium = params.medium;
+  const discipline = params.discipline as DisciplineEnum | undefined;
   const openForCommissions = params.commissions === "1";
   const view = params.view === "list" ? "list" : params.view === "gallery" ? "gallery" : "spotlight";
 
   const today = new Date().toISOString().split("T")[0];
 
   const [artists, { collectedIds, worksCounts, spotlightProfileId }, { user }] = await Promise.all([
-    getProfiles({ country, career_stage, medium, openForCommissions }),
+    getProfiles({ country, career_stage, discipline, openForCommissions }),
     getCachedDirectoryData(today),
     getServerUser(),
   ]);
@@ -160,7 +191,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const collectedSet = new Set(collectedIds);
   const worksCountMap = new Map<string, number>(Object.entries(worksCounts));
 
-  const hasFilters = !!(country || career_stage || medium || openForCommissions);
+  const hasFilters = !!(country || career_stage || discipline || openForCommissions);
   const spotlightArtist =
     view === "spotlight" && !hasFilters && spotlightProfileId
       ? (artists.find((a) => a.id === spotlightProfileId) ?? null)
@@ -201,10 +232,22 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const internationalDirectory = internationalArtists.filter(isPresentable).sort(byCompleteness);
   const internationalHandles = internationalArtists.filter((a) => !isPresentable(a));
 
+  const badgesFor = (artist: ProfileWithImage) =>
+    computeBadges(
+      { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
+      worksCountMap.get(artist.id) ?? 0,
+      collectedSet.has(artist.id)
+    );
+
+  // Gallery and list are just different card renderings of the same tiered
+  // directory (Directory / Recently joined / International) that spotlight
+  // view uses — only spotlight additionally gets the hero banner up top.
+  const cardView = view === "gallery" ? "gallery" : "list";
+
   const activeFilters = [
     country,
     career_stage,
-    medium ? `Medium: ${medium}` : null,
+    discipline ? `Discipline: ${DISCIPLINE_OPTIONS.find((d) => d.value === discipline)?.label ?? discipline}` : null,
   ].filter(Boolean);
 
   return (
@@ -251,54 +294,19 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
             <p className="py-12 text-center text-sm text-muted-foreground">
               No artists match those filters.
             </p>
-          ) : view === "list" ? (
-            <div className="border-t border-border">
-              {gridArtists.map((artist) => (
-                <ArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  view="list"
-                  badges={computeBadges(
-                    { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-                    worksCountMap.get(artist.id) ?? 0,
-                    collectedSet.has(artist.id)
-                  )}
-                />
-              ))}
-            </div>
-          ) : view === "gallery" ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {gridArtists.map((artist) => (
-                <ArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  view="gallery"
-                  badges={computeBadges(
-                    { ...artist, received_grants: (artist as { received_grants?: string[] }).received_grants ?? [] },
-                    worksCountMap.get(artist.id) ?? 0,
-                    collectedSet.has(artist.id)
-                  )}
-                />
-              ))}
-            </div>
           ) : (
             <>
-              {/* Directory — everyone presentable, as rows */}
+              {/* Directory — everyone presentable */}
               {directoryArtists.length > 0 && (
                 <div className="space-y-3">
                   <p className="t-section-label">Directory</p>
-                  <div>
-                    {directoryArtists.map((artist) => (
-                      <DirectoryRow
-                        key={artist.id}
-                        artist={artist}
-                        isAdmin={isAdmin}
-                        spotlightProfileId={spotlightProfileId}
-                        worksCount={worksCountMap.get(artist.id) ?? 0}
-                        collected={collectedSet.has(artist.id)}
-                      />
-                    ))}
-                  </div>
+                  <ArtistTier
+                    artists={directoryArtists}
+                    cardView={cardView}
+                    isAdmin={isAdmin}
+                    spotlightProfileId={spotlightProfileId}
+                    badgesFor={badgesFor}
+                  />
                 </div>
               )}
 
@@ -315,18 +323,13 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
                 <div className="space-y-3 pt-2">
                   <p className="t-section-label">International</p>
                   {internationalDirectory.length > 0 && (
-                    <div>
-                      {internationalDirectory.map((artist) => (
-                        <DirectoryRow
-                          key={artist.id}
-                          artist={artist}
-                          isAdmin={isAdmin}
-                          spotlightProfileId={spotlightProfileId}
-                          worksCount={worksCountMap.get(artist.id) ?? 0}
-                          collected={collectedSet.has(artist.id)}
-                        />
-                      ))}
-                    </div>
+                    <ArtistTier
+                      artists={internationalDirectory}
+                      cardView={cardView}
+                      isAdmin={isAdmin}
+                      spotlightProfileId={spotlightProfileId}
+                      badgesFor={badgesFor}
+                    />
                   )}
                   {internationalHandles.length > 0 && (
                     <HandleChips artists={internationalHandles} />

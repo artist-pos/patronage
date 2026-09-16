@@ -11,16 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CountryEnum, CareerStageEnum } from "@/types/database";
+import type { CountryEnum, CareerStageEnum, DisciplineEnum } from "@/types/database";
+import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 const STAGES: CareerStageEnum[] = ["Emerging", "Mid-Career", "Established", "Open"];
-const MEDIUMS = [
-  "Painting", "Sculpture", "Photography", "Ceramics", "Digital",
-  "Printmaking", "Drawing", "Textile", "Film & Video", "Performance",
-  "Installation", "Sound", "Mixed Media", "Poetry", "Writing",
-  "Film", "Music", "Public Art",
-];
 
 function SpotlightIcon() {
   return (
@@ -60,7 +55,7 @@ export function ArtistFilters() {
 
   const currentCountry = searchParams.get("country") as CountryEnum | null;
   const currentStage = searchParams.get("stage") as CareerStageEnum | null;
-  const currentMedium = searchParams.get("medium");
+  const currentDiscipline = searchParams.get("discipline") as DisciplineEnum | null;
   const currentView = searchParams.get("view") ?? "spotlight";
   const commissionsOnly = searchParams.get("commissions") === "1";
 
@@ -77,12 +72,12 @@ export function ArtistFilters() {
     [router, pathname, searchParams]
   );
 
-  function toggleMedium(medium: string) {
-    if (currentMedium !== medium) {
-      track("filter_medium", { medium });
-      trackEvent("medium_filter", { medium });
+  function toggleDiscipline(discipline: DisciplineEnum) {
+    if (currentDiscipline !== discipline) {
+      track("filter_discipline", { discipline });
+      trackEvent("discipline_filter", { discipline });
     }
-    updateParam("medium", currentMedium === medium ? null : medium);
+    updateParam("discipline", currentDiscipline === discipline ? null : discipline);
   }
 
   // v2 discipline tab — mono 12px, black underline active (per Artists mockup)
@@ -96,13 +91,13 @@ export function ArtistFilters() {
   return (
     <div>
       {/* Discipline tab row */}
-      <div className="flex items-stretch overflow-x-auto border-b border-border scrollbar-none">
-        <button onClick={() => updateParam("medium", null)} className={tabCls(!currentMedium)}>
+      <div className="flex items-stretch overflow-x-auto border-b border-border scrollbar-hide">
+        <button onClick={() => updateParam("discipline", null)} className={tabCls(!currentDiscipline)}>
           All
         </button>
-        {MEDIUMS.map((m) => (
-          <button key={m} onClick={() => toggleMedium(m)} className={tabCls(currentMedium === m)}>
-            {m}
+        {DISCIPLINE_OPTIONS.map(({ value, label }) => (
+          <button key={value} onClick={() => toggleDiscipline(value)} className={tabCls(currentDiscipline === value)}>
+            {label}
           </button>
         ))}
       </div>

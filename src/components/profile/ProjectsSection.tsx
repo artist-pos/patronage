@@ -44,7 +44,7 @@ export function ProjectsSection({ projects, updates, isOwner }: Props) {
       <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
         Projects
       </h2>
-      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
         {projects.map((project) => {
           const projectUpdates = updatesByProject[project.id] ?? [];
           const thumbs = projectUpdates.slice(0, 3);

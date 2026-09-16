@@ -88,7 +88,7 @@ export function StudioCarousel({ updates, artistUsername, isOwner = false, proje
           ))}
         </div>
       ) : (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none items-start">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide items-start">
           {visible.slice(0, ROW_SIZE).map((u) => (
             <Tile
               key={u.id}

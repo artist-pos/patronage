@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+// Patron "taste" picker — deliberately separate from artists' DisciplineInput
+// taxonomy, this is what a patron likes, not a professional discipline.
 const MEDIUMS = [
   "Painting",
   "Sculpture",
