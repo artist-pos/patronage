@@ -7,7 +7,7 @@ export function ForYouTeaser() {
         See opportunities matched to your practice
       </p>
       <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
-        We score every open opportunity against your disciplines, location, and career stage, so the most relevant ones rise to the top.
+        We score every open opportunity against your disciplines and location, so the most relevant ones rise to the top.
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
         <Link
