@@ -1,13 +1,94 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import Link from "next/link";
-import { Play, ExternalLink } from "lucide-react";
+import { Play, Maximize2, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { AdminHideToggle } from "@/components/feed/AdminHideToggle";
 import { gridImageSrc } from "@/lib/image";
+
+/* Minimal video pin — native `controls` brings the full browser control bar
+   (scrubber, volume, PiP, cast, its own fullscreen button) which is both
+   visually noisy in a masonry tile and the source of a real bug: clicks on
+   the native controls' fullscreen button live in the browser's shadow DOM
+   and don't reliably respect this card's stopPropagation, so they were
+   bubbling up to the enclosing Link and navigating away mid-interaction.
+   A plain, ordinary DOM button for play/fullscreen sidesteps both — only
+   the two controls asked for, and every click is one we control. The
+   container is sized to the video's own aspect ratio once metadata loads
+   (rather than a fixed max-height) so there's no leftover box for the
+   browser to letterbox into — that's what the black bars were. */
+function InlineVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [ratio, setRatio] = useState<number | null>(null);
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const togglePlay = (e: React.SyntheticEvent) => {
+    stop(e);
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play();
+    else v.pause();
+  };
+
+  const goFullscreen = (e: React.SyntheticEvent) => {
+    stop(e);
+    videoRef.current?.requestFullscreen?.();
+  };
+
+  return (
+    <div
+      className="relative -mx-5 -mt-5 mb-3.5 bg-black"
+      style={ratio ? { aspectRatio: ratio } : undefined}
+      onClick={stop}
+    >
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={videoRef}
+        src={src}
+        playsInline
+        className="block h-full w-full"
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onClick={togglePlay}
+      />
+      {/* Paused: a big centre triangle doubles as the whole click target.
+          Playing: the target stays (click anywhere to pause) but shows
+          nothing, so it doesn't sit on top of the video like a watermark. */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        aria-label={playing ? "Pause" : "Play"}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        {!playing && (
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-white transition-transform hover:scale-105">
+            <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+          </span>
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={goFullscreen}
+        aria-label="Fullscreen"
+        className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center bg-black/60 text-white transition-colors hover:bg-black/80"
+      >
+        <Maximize2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -283,12 +364,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
         );
       }
       if (u.video_url) {
-        return (
-          <div className="-mx-5 -mt-1 mb-3.5 bg-black" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video className="max-h-[300px] w-full" src={u.video_url} controls />
-          </div>
-        );
+        return <InlineVideo src={u.video_url} />;
       }
       return (
         <div className="mb-3.5 flex min-h-[100px] items-center justify-center bg-foreground text-white">
@@ -330,10 +406,21 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     <div className="mb-2 break-inside-avoid">
       <div className="flex flex-col bg-card p-5">
         <Link href={href} scroll={false} prefetch={false} className="block">
-          <div className="mb-3">
-            <TypeKicker u={u} />
-          </div>
+          {/* Video already reads as a studio update once you see it play —
+              the "Video" kicker sitting above it as a headline was
+              redundant. It still shows, just demoted to below the video
+              alongside the rest of the caption block. */}
+          {u.content_type !== "video" && (
+            <div className="mb-3">
+              <TypeKicker u={u} />
+            </div>
+          )}
           {media}
+          {u.content_type === "video" && (
+            <div className="mb-2">
+              <TypeKicker u={u} />
+            </div>
+          )}
           {u.content_type !== "text" && (u.title || (u.content_type === "audio" && u.caption)) && (
             <div className="mb-1 text-[15px] font-medium leading-[1.35]">
               {u.title ?? u.caption}

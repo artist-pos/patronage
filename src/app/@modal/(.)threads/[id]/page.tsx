@@ -7,10 +7,12 @@ import { ModalShell } from "@/components/projects/ModalShell";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import { ArtistProfileLink } from "@/components/projects/ArtistProfileLink";
+import { ThreadScrollTo } from "@/components/projects/ThreadScrollTo";
 import type { CollaboratorProfile } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ scroll?: string }>;
 }
 
 function formatTimestamp(iso: string): string {
@@ -22,13 +24,19 @@ function formatTimestamp(iso: string): string {
   return `${hh}:${mm}, ${dd} ${mon}`;
 }
 
-export default async function ThreadModal({ params }: Props) {
+export default async function ThreadModal({ params, searchParams }: Props) {
   const { id } = await params;
-  const thread = await getThread(id);
-  if (!thread) notFound();
+  const { scroll } = await searchParams;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Thread content doesn't depend on who's viewing it — fetch it alongside
+  // auth instead of behind it.
+  const [thread, { data: { user } }] = await Promise.all([
+    getThread(id),
+    supabase.auth.getUser(),
+  ]);
+  if (!thread) notFound();
+
   const currentUserProfile = user ? await getProfileById(user.id) : null;
   const currentUserName = currentUserProfile?.full_name ?? currentUserProfile?.username;
   const currentUserUsername = currentUserProfile?.username;
@@ -73,6 +81,8 @@ export default async function ThreadModal({ params }: Props) {
           </div>
         </div>
 
+        {scroll && <ThreadScrollTo postId={scroll} />}
+
         {/* Timeline */}
         {posts.length === 0 ? (
           <p className="text-sm text-muted-foreground">No posts in this thread yet.</p>
@@ -116,7 +126,7 @@ function ModalThreadPost({
   currentUserAvatarUrl?: string | null;
 }) {
   return (
-    <div className="relative pl-10 pb-10">
+    <div id={`post-${post.id}`} className="relative scroll-mt-6 pl-10 pb-10">
       {/* Timeline dot */}
       <div
         className={`absolute left-0 top-1 w-7 h-7 border border-black flex items-center justify-center bg-background z-10 ${isFirst ? "bg-foreground" : ""}`}

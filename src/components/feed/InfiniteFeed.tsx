@@ -20,16 +20,34 @@ const EAGER_COUNT = 5;
 
 type FeedAudience = "everyone" | "following" | "subscribed";
 
+function colsForWidth(width: number): number {
+  if (width >= 1280) return 5;
+  if (width >= 1024) return 4;
+  if (width >= 640) return 3;
+  return 2;
+}
+
+/* Reads the real viewport in the state initializer (client-only, so this
+   never runs during SSR) instead of defaulting to 2 and correcting via
+   useEffect. The old default-then-correct approach hydrated matching the
+   server's 2-column markup, then re-rendered a beat later once the effect
+   measured the real width — every item whose column changed between the
+   2-col and final layout got unmounted and remounted, cancelling any
+   in-flight eager image fetch and restarting it. That's specifically why
+   the rightmost column(s) on wide screens always looked slowest to fill
+   in. Reading the width up front instead means the client's very first
+   render already targets the final column count, so hydration mismatches
+   once (server shipped 2 columns, since `window` doesn't exist there) and
+   React rebuilds straight into the correct shape — every card mounts once,
+   in its final column, with no cancelled fetch. */
 function useColumnCount(): number {
-  const [cols, setCols] = useState(2);
+  const [cols, setCols] = useState(() =>
+    typeof window !== "undefined" ? colsForWidth(window.innerWidth) : 2
+  );
   useEffect(() => {
     function update() {
-      if (window.innerWidth >= 1280) setCols(5);
-      else if (window.innerWidth >= 1024) setCols(4);
-      else if (window.innerWidth >= 640) setCols(3);
-      else setCols(2);
+      setCols(colsForWidth(window.innerWidth));
     }
-    update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);

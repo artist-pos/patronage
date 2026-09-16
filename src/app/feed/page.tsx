@@ -185,15 +185,12 @@ export default async function FeedPage({ searchParams }: PageProps) {
         : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
-  // Explore tab set — All/Updates render here; the rest are the canonical
-  // browse surfaces for each content type.
+  // Explore is just these two surfaces — updates and work for sale. Artists,
+  // Opportunities and Articles already have their own primary nav entries;
+  // listing them again here was what forced this row to scroll on mobile.
   const filterTabs: { label: string; href: string; active: boolean }[] = [
-    { label: "All", href: "/feed", active: activeTab === "feed" && filter === "all" },
-    { label: "Updates", href: "/feed?filter=updates", active: activeTab === "feed" && filter === "updates" },
+    { label: "Updates", href: "/feed", active: activeTab === "feed" },
     { label: "For sale", href: "/works", active: activeTab === "works" },
-    { label: "Artists", href: "/artists", active: false },
-    { label: "Opportunities", href: "/opportunities", active: false },
-    { label: "Articles", href: "/blog", active: false },
   ];
 
   return (
