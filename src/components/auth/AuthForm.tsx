@@ -17,6 +17,11 @@ interface Props {
   /** Prefilled address, used when an invitation already named it. Editable: the
    *  artist may prefer a different one to the one their organisation had. */
   initialEmail?: string;
+  /** Overrides the submit button's classes — e.g. a growth-surface embed that
+   *  wants its own accent colour instead of the default button style. */
+  submitClassName?: string;
+  /** Overrides the submit button's label (only while not loading). */
+  submitLabel?: string;
 }
 
 interface FieldErrors {
@@ -37,7 +42,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: Props) {
+export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, submitClassName, submitLabel }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
@@ -212,12 +217,10 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail }: P
           )}
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className={submitClassName ?? "w-full"} disabled={loading}>
           {loading
             ? "Please wait…"
-            : mode === "signup"
-            ? "Create account"
-            : "Sign in"}
+            : submitLabel ?? (mode === "signup" ? "Create account" : "Sign in")}
         </Button>
       </form>
     </div>

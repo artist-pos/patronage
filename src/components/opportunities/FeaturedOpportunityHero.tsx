@@ -52,7 +52,7 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
         </div>
 
         {/* Content — right */}
-        <div className="flex flex-1 flex-col gap-4 p-6 sm:p-8">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 p-6 sm:p-8">
           <div>
             <div className="t-kicker mb-2.5">{o.type}</div>
             <h2 className="text-2xl font-semibold leading-tight tracking-[-0.022em] sm:text-3xl">

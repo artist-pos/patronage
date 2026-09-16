@@ -256,8 +256,13 @@ export function SearchCommand() {
 
   return (
     <>
-      {/* ── Desktop: full inline search bar ── */}
-      <div ref={desktopContainerRef} className="relative hidden sm:flex items-center flex-1 max-w-sm">
+      {/* ── Desktop: full inline search bar. Was `sm:flex` (640px) — between
+          640 and ~1024px there wasn't actually room for a text input plus
+          the nav links plus sign-in/get-started, and nothing in that row
+          had real shrink room, so the input and the trailing auth links
+          overlapped instead of the input just staying icon-only for
+          longer. `lg` is where they now genuinely fit. ── */}
+      <div ref={desktopContainerRef} className="relative hidden lg:flex items-center flex-1 max-w-sm">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
         <input
           ref={inputRef}
@@ -282,7 +287,7 @@ export function SearchCommand() {
 
       {/* ── Mobile: icon-only trigger ── */}
       <button
-        className="sm:hidden p-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        className="lg:hidden p-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
         aria-label="Search"
         onClick={() => { setMobileSearchOpen(true); setOpen(true); setTimeout(() => mobileInputRef.current?.focus(), 50); }}
       >
@@ -291,7 +296,7 @@ export function SearchCommand() {
 
       {/* ── Mobile: full-screen search overlay ── */}
       {mobileSearchOpen && (
-        <div className="sm:hidden fixed inset-0 z-50 bg-white flex flex-col">
+        <div className="lg:hidden fixed inset-0 z-50 bg-white flex flex-col">
           {/* Header row */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />

@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArtistScoreMap } from "@/lib/opportunities";
+import { sortOpportunities, type OppSort, OPP_SORTS } from "@/lib/opportunity-sort";
 import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
+import { OpportunityViewToggle } from "@/components/opportunities/OpportunityViewToggle";
 import { FeaturedOpportunityHero } from "@/components/opportunities/FeaturedOpportunityHero";
 import { OpportunitiesTabSwitch } from "@/components/opportunities/OpportunitiesTabSwitch";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
@@ -49,6 +51,7 @@ interface PageProps {
     type?: string;
     country?: string;
     view?: string;
+    sort?: string;
     discipline?: string;
     freeEntry?: string;
     eligibility?: string;
@@ -71,6 +74,9 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const careerStage = params.careerStage;
   const search = params.search?.trim() || undefined;
   const view = params.view === "list" ? "list" : "gallery";
+  const sort: OppSort = (OPP_SORTS as readonly string[]).includes(params.sort ?? "")
+    ? (params.sort as OppSort)
+    : "deadline";
 
   // Request-deduped auth + profile — shares the Header's round-trips.
   const { user } = await getServerUser();
@@ -119,9 +125,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const matchMode: "scored" | "instant" = matchedOpps.length > 0 ? "scored" : "instant";
 
   // Merge scores onto all-tab results (score only, no reason — reason is For You only)
-  const allOpps = scoreMap.size > 0
+  const scoredAllOpps = scoreMap.size > 0
     ? rawAllOpps.map((o) => scoreMap.has(o.id) ? { ...o, match_score: scoreMap.get(o.id) } : o)
     : rawAllOpps;
+  // The sort control only shows in Browse — "deadline" already matches the
+  // query's own default order, so this only does real work for the other two.
+  const allOpps = tab === "all" ? sortOpportunities(scoredAllOpps, sort) : scoredAllOpps;
 
   const featuredOpp = (tab === "all" && !hasManualFilters)
     ? (allOpps.find((o) => o.is_featured) ?? null)
@@ -130,17 +139,23 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
   return (
     <div>
-      {/* ══ Page header — title, stats, tabs, filters ══ */}
+      {/* ══ Page header — title, quiet stat line, mode switch. Filters and
+          sort live in the sidebar below, not here — keeping this block to
+          just "what page is this / what's the headline number" leaves the
+          sidebar as the one place anyone looks for narrowing the list. ══ */}
       <div className="border-b border-border">
-        <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6">
-          {/* Page heading */}
-          <div className="mb-5 flex items-end justify-between gap-4">
+        <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6 pb-5">
+          <div className="mb-2 flex items-end justify-between gap-4">
             <h1 className="text-2xl font-semibold tracking-[-0.025em]">
               Art Grants &amp; Opportunities
             </h1>
+            {/* Matches the header CTA used on /feed and /partner/dashboard —
+                solid foreground, not the teal brand accent or the .btn-sm
+                variant (undocumented in the design system, and not what any
+                other page's header button actually uses). */}
             <Link
               href="/list-an-opportunity"
-              className="btn btn-brand btn-sm shrink-0"
+              className="shrink-0 bg-foreground px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85"
             >
               List opportunity
             </Link>
@@ -156,59 +171,61 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </p>
           )}
 
-          {/* Stats bar — borderless, mono labels, hairline dividers */}
-          <div className="mb-5 flex flex-wrap">
-            <div className="mb-2 mr-6 border-r border-border py-3 pr-6">
-              <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
+          {/* Stats — same stacked number-over-label pattern as the homepage
+              hero. A 2-col grid on mobile (not a single stacked column —
+              four full-width rows reads too tall) with its own gap for
+              spacing; a flex row with border-r dividers from sm up, where
+              they all fit on one line (a wrapped flex row would orphan the
+              border-r on whichever stat wraps last). */}
+          <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-5 sm:flex sm:flex-row sm:flex-wrap sm:gap-0">
+            <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
+              <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
                 {tab === "for-you"
                   ? forYouOpps.length
                   : (hasManualFilters && allOpps.length < stats.count ? allOpps.length : stats.count)}
               </p>
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+              <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">
                 {tab === "for-you"
                   ? (matchMode === "scored" ? "matched for you" : "open in your disciplines")
                   : (hasManualFilters && allOpps.length < stats.count ? "filtered results" : "active opportunities")}
               </p>
             </div>
-            <div className="mb-2 mr-6 border-r border-border py-3 pr-6">
-              <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-[color:var(--urgent)]">
-                {stats.closingThisWeek}
-              </p>
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">close this week</p>
-            </div>
-            <div className="mb-2 mr-6 border-r border-border py-3 pr-6">
-              <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
-                {stats.freeToEnter}
-              </p>
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">free to enter</p>
-            </div>
-            <div className="mb-2 py-3">
-              <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
-                {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "–"}
-              </p>
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">approx. funding tracked</p>
-            </div>
+            {tab === "all" && (
+              <>
+                <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
+                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-[color:var(--urgent)]">
+                    {stats.closingThisWeek}
+                  </p>
+                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">close this week</p>
+                </div>
+                <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
+                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
+                    {stats.freeToEnter}
+                  </p>
+                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">free to enter</p>
+                </div>
+                <div>
+                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
+                    {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "–"}
+                  </p>
+                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">approx. funding tracked</p>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Tab switch — always visible */}
+          {/* Mode switch — always visible */}
           <Suspense>
             <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={forYouOpps.length} />
           </Suspense>
-
-          {/* Filters — inside the header block, per v2 */}
-          {tab === "all" && (
-            <Suspense>
-              <OpportunityFilters />
-            </Suspense>
-          )}
         </div>
       </div>
 
-      {/* ══ Content — pins on the feed surface ══ */}
+      {/* ══ Content — sidebar (Browse only) + results, on the feed surface ══ */}
       <div className="min-h-screen bg-feed-bg">
-        <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6">
           {params.welcome === "1" && isArtist && (
-            <div className="border border-black bg-black px-6 py-4 text-white">
+            <div className="mb-6 border border-black bg-black px-6 py-4 text-white">
               <p className="text-sm font-semibold">Your profile is set up.</p>
               <p className="text-sm opacity-80">
                 {profile?.email_verified_at
@@ -218,7 +235,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          {/* For You tab content */}
+          {/* For You tab content — no sidebar, this is already a curated list */}
           {tab === "for-you" && (
             <>
               {/* Unauthenticated — CTA */}
@@ -259,19 +276,41 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </>
           )}
 
-          {/* All Opportunities tab content */}
+          {/* Browse tab content — sidebar + results */}
           {tab === "all" && (
-            <>
-              {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} />}
+            <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-8 lg:items-start">
+              {/* Sticky from lg up. Unscrolled, "Sort by" already lines up
+                  with "Featured" — both sit inside the same py-6 content
+                  wrapper, no extra offset needed there. But once stuck, the
+                  sticky offset IS the only thing standing in for that py-6
+                  gap — top-0 (or flush against the header) would yank the
+                  sidebar hard against the header with no breathing room the
+                  moment it caught up, unlike everything scrolling normally
+                  beneath it. header height (52px) + that same py-6 (24px)
+                  reproduces the gap it had before scrolling started. */}
+              <aside className="mb-6 lg:sticky lg:top-[76px] lg:mb-0">
+                <Suspense>
+                  <OpportunityFilters />
+                </Suspense>
+              </aside>
 
-              {gridOpps.length === 0 ? (
-                <p className="py-12 text-center text-sm text-muted-foreground">
-                  No opportunities match those filters. New listings are added regularly.
-                </p>
-              ) : (
-                <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
-              )}
-            </>
+              <div className="space-y-6">
+                {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} />}
+
+                {gridOpps.length === 0 ? (
+                  <p className="py-12 text-center text-sm text-muted-foreground">
+                    No opportunities match those filters. New listings are added regularly.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex justify-end">
+                      <OpportunityViewToggle />
+                    </div>
+                    <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

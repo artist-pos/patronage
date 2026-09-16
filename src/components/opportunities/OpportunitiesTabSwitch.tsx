@@ -37,7 +37,7 @@ export function OpportunitiesTabSwitch({ activeTab, matchCount }: Props) {
   return (
     <div className="inline-flex items-stretch self-start border border-border">
       <button type="button" onClick={() => switchTab("all")} className={segCls(activeTab === "all")}>
-        All Opportunities
+        Browse
       </button>
       <button
         type="button"
