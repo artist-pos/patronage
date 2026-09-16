@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { WhoIsPatronageFor } from "@/components/home/WhoIsPatronageFor";
+import { RotatingHeadline } from "@/components/home/RotatingHeadline";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -185,11 +186,11 @@ function OppRow({ opp, last = false }: { opp: Opportunity; last?: boolean }) {
   return (
     <Link
       href={`/opportunities/${opp.slug ?? opp.id}`}
-      className={`grid grid-cols-[52px_1fr_auto] items-center gap-2.5 px-3.5 py-2 transition-colors hover:bg-muted ${
+      className={`grid grid-cols-[44px_1fr_auto] items-center gap-2.5 px-3.5 py-2 transition-colors hover:bg-muted sm:grid-cols-[52px_1fr_auto] ${
         last ? "" : "border-b border-border"
       }`}
     >
-      <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden border border-border bg-white">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border border-border bg-white sm:h-[52px] sm:w-[52px]">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={img} alt="" className="h-full w-full object-contain" loading="lazy" />
@@ -220,9 +221,9 @@ function OppRow({ opp, last = false }: { opp: Opportunity; last?: boolean }) {
           )}
         </div>
       </div>
-      <div className="max-w-[140px] shrink-0 text-right">
+      <div className="max-w-[104px] shrink-0 text-right sm:max-w-[140px]">
         {money && (
-          <div className="mb-0.5 truncate font-mono text-[13px] font-semibold">{money}</div>
+          <div className="mb-0.5 line-clamp-2 font-mono text-[13px] font-semibold leading-tight">{money}</div>
         )}
         <div className={`whitespace-nowrap font-mono text-[10px] ${d.cls}`}>{d.label}</div>
       </div>
@@ -232,6 +233,12 @@ function OppRow({ opp, last = false }: { opp: Opportunity; last?: boolean }) {
 
 function artistImage(a: ProfileWithImage): string | null {
   return a.featured_image_url ?? a.avatar_url ?? null;
+}
+
+// A bare gradient tile with no image reads as a broken/loading image next
+// to real photos — a centred monogram makes it a deliberate placeholder.
+function artistInitial(a: ProfileWithImage): string {
+  return (a.full_name ?? a.username ?? "?").trim().charAt(0).toUpperCase();
 }
 
 function ArtistFeature({ a, spotlit = false }: { a: ProfileWithImage; spotlit?: boolean }) {
@@ -249,7 +256,12 @@ function ArtistFeature({ a, spotlit = false }: { a: ProfileWithImage; spotlit?: 
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0" style={{ background: getBannerGradient(a.username) }} />
+          <div
+            className="absolute inset-0 flex items-center justify-center font-mono text-6xl font-semibold text-white/70"
+            style={{ background: getBannerGradient(a.username) }}
+          >
+            {artistInitial(a)}
+          </div>
         )}
       </div>
       <div className="bg-card px-5 pb-5 pt-4">
@@ -302,7 +314,12 @@ function ArtistStripTile({ a }: { a: ProfileWithImage }) {
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0" style={{ background: getBannerGradient(a.username) }} />
+          <div
+            className="absolute inset-0 flex items-center justify-center font-mono text-xl font-semibold text-white/70"
+            style={{ background: getBannerGradient(a.username) }}
+          >
+            {artistInitial(a)}
+          </div>
         )}
       </div>
       <div className="truncate text-[11px] font-semibold leading-[1.3]">
@@ -333,7 +350,12 @@ function ArtistCompact({ a }: { a: ProfileWithImage }) {
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0" style={{ background: getBannerGradient(a.username) }} />
+          <div
+            className="absolute inset-0 flex items-center justify-center font-mono text-3xl font-semibold text-white/70"
+            style={{ background: getBannerGradient(a.username) }}
+          >
+            {artistInitial(a)}
+          </div>
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-between px-4 py-4">
@@ -411,18 +433,15 @@ export default async function Home() {
             <div className="flex flex-col px-6 pb-7 pt-11 sm:px-12 lg:pb-9">
               <div>
                 <p className="mb-3.5 font-mono text-[11px] tracking-[0.06em] text-[color:var(--fg-subtle)]">
-                  Aotearoa + Australia
+                  Aotearoa
                 </p>
                 <h1 className="mb-3 text-[44px] font-semibold leading-[0.98] tracking-[-0.038em] sm:text-[60px]">
-                  Career
+                  Find
                   <br />
-                  infrastructure
-                  <br />
-                  for artists.
+                  <RotatingHeadline />
                 </h1>
                 <p className="mb-4.5 max-w-[400px] text-base leading-[1.6] text-[color:var(--fg-muted)]">
-                  Grants, residencies, commissions, open calls. Free for artists,
-                  always.
+                  Grants, residencies, commissions, open calls.
                 </p>
 
                 {/* Primary CTA — card button */}
@@ -444,32 +463,34 @@ export default async function Home() {
                 </Link>
 
                 {/* Role chips */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex max-w-[420px] flex-col gap-2">
                   <Link
                     href="/auth/signup?role=artist"
-                    className="border border-border px-3 py-1.5 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+                    className="border border-border px-3 py-2 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-emerald-100 hover:bg-emerald-50 hover:text-emerald-700"
                   >
-                    I&apos;m an artist →
-                  </Link>
-                  <Link
-                    href="/auth/signup?role=patron"
-                    className="border border-border px-3 py-1.5 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
-                  >
-                    I support artists →
+                    I&apos;m an artist
                   </Link>
                   <Link
                     href="/auth/signup?role=partner"
-                    className="border border-border px-3 py-1.5 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+                    className="border border-border px-3 py-2 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-emerald-100 hover:bg-emerald-50 hover:text-emerald-700"
                   >
-                    I represent an organisation →
+                    I represent an organisation
+                  </Link>
+                  <Link
+                    href="/auth/signup?role=patron"
+                    className="border border-border px-3 py-2 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-emerald-100 hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    I support artists
                   </Link>
                 </div>
               </div>
 
-              {/* Stats — anchored to the bottom so their baseline lines up
-                  with the bottom edge of the opportunities panel opposite */}
-              <div className="mt-6 flex flex-wrap border-t border-border pt-5 lg:mt-auto">
-                <div className="mb-2 mr-7 border-r border-border pr-7 lg:mb-0">
+              {/* Stats — stacked on mobile (a wrapped flex row would orphan
+                  the border-r divider on whichever item wraps last), row
+                  with dividers from lg up, anchored to the bottom so their
+                  baseline lines up with the opportunities panel opposite */}
+              <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 lg:mt-auto lg:flex-row lg:flex-wrap lg:gap-0">
+                <div className="lg:mb-0 lg:mr-7 lg:border-r lg:border-border lg:pr-7">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
                     {oppCount}+
                   </div>
@@ -477,7 +498,7 @@ export default async function Home() {
                     opportunities active
                   </div>
                 </div>
-                <div className="mb-2 mr-7 border-r border-border pr-7 lg:mb-0">
+                <div className="lg:mb-0 lg:mr-7 lg:border-r lg:border-border lg:pr-7">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
                     {artistCount}
                   </div>
@@ -485,7 +506,7 @@ export default async function Home() {
                     artists
                   </div>
                 </div>
-                <div className="mb-2 lg:mb-0">
+                <div className="lg:mb-0">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
                     Free
                   </div>
@@ -669,13 +690,15 @@ export default async function Home() {
                 ))}
               </div>
               {/* Gradient IS the button (per the mobile mockup) — fades the
-                  masonry out and lands on the Explore link */}
+                  masonry out and lands on the Explore link. Ramps to opaque
+                  well before the label so a card's trailing text can't sit
+                  fully legible right next to the CTA. */}
               <Link
                 href="/feed"
-                className="absolute bottom-0 left-0 right-0 flex h-40 items-end justify-center pb-4"
+                className="absolute bottom-0 left-0 right-0 flex h-56 items-end justify-center pb-4"
                 style={{
                   background:
-                    "linear-gradient(to bottom, rgba(239,238,236,0) 0%, rgba(239,238,236,.85) 48%, var(--feed-bg) 100%)",
+                    "linear-gradient(to bottom, rgba(239,238,236,0) 0%, rgba(239,238,236,.6) 30%, rgba(239,238,236,.96) 55%, var(--feed-bg) 75%)",
                 }}
               >
                 <span className="flex items-center gap-1.5 font-mono text-xs text-foreground transition-opacity hover:opacity-70">

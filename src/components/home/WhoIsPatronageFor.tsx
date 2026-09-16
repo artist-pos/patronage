@@ -22,6 +22,18 @@ const CARDS: Card[] = [
     cta: { text: "Create a free artist account", href: "/auth/signup?role=artist" },
   },
   {
+    label: "Partner / Funder",
+    headline: "Reach the right artists.",
+    body: "Post opportunities and run applications through a built-in pipeline. No more Google Forms.",
+    features: [
+      "Post opportunities for free",
+      "Replace Google Forms with Patronage Pipeline",
+      "Review and shortlist applications online",
+      "Reach NZ artists",
+    ],
+    cta: { text: "Post an opportunity", href: "/partners" },
+  },
+  {
     label: "Patron",
     headline: "Support the artists you love.",
     body: "Back an artist monthly or one-off. Support goes directly to them.",
@@ -32,18 +44,6 @@ const CARDS: Card[] = [
       "Champion artists you believe in",
     ],
     cta: { text: "Become a patron", href: "/support" },
-  },
-  {
-    label: "Partner / Funder",
-    headline: "Reach the right artists.",
-    body: "Post opportunities and run applications through a built-in pipeline. No more Google Forms.",
-    features: [
-      "Post opportunities for free",
-      "Replace Google Forms with Patronage Pipeline",
-      "Review and shortlist applications online",
-      "Reach NZ & Australian artists",
-    ],
-    cta: { text: "Post an opportunity", href: "/partners" },
   },
 ];
 
