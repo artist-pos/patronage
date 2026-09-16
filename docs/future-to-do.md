@@ -171,3 +171,11 @@ Let partners who run their intake/relationship management in an external CRM (e.
 3. **Internal linking:** footer "Works for Sale" / "Buy Art" link → `/works` (Footer.tsx); every artist profile links to their works-for-sale; home feed preview already surfaces work-for-sale pins (WorkSalePin) — keep. Anchor text matters.
 
 **Note:** the Explore "For sale" filter tab and `WorksControls`/`SupportWorks` already point at `/works`, so the new dedicated page is the canonical for-sale surface (parallel to `/artists`, `/opportunities`). The feed's own `?tab=works` branch is now vestigial (still functional, shares the `getAvailableWorksForGrid` lib) — safe to remove later if desired.
+
+---
+
+## #26 · Digest: one bad recipient can silently kill the whole batch
+
+**Incident (Sept 2026):** three `@example.com` rows left in `subscribers` by ad-hoc RLS testing (`dbc42bd`) caused every weekly digest send to fail — cron and manual — from 9 Sep through 16 Sep with zero visibility, because `resend.batch.send()` rejects the *entire* batch when any single recipient's address is undeliverable, and `sendWeeklyDigest` (`src/lib/digest-send.ts`) discarded the Resend error instead of surfacing it. Fixed the silent-failure part in that incident (errors now flow through `DigestSendResult.queryError` to the admin UI) and deleted the bad rows, but the underlying fragility — one poisoned address blocks every real recipient — is still there.
+
+**Fix:** in `sendWeeklyDigest`'s send loop (~line 303 in `digest-send.ts`), either (a) filter obviously-undeliverable addresses (malformed, `@example.com`/`@test.com`/reserved domains) out of `getDigestRecipients()` before batching, and/or (b) on a batch error, fall back to sending that chunk one-by-one so only the actual bad address is dropped instead of the whole chunk. (b) is the real fix — (a) only catches known-bad patterns, not every way an address can be rejected. Note `#24` step 7 already flagged the related "current code marks a whole chunk failed" issue in its verification notes — worth doing both in the same pass if #24 is picked up first.
