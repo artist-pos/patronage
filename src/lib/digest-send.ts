@@ -49,6 +49,9 @@ export interface DigestSendResult {
   /** Had fewer than DIGEST_MIN listings left after suppression. */
   skipped: number;
   errors: number;
+  /** Set when a Supabase read failed outright — distinguishes "nothing to
+   *  send" from "couldn't find out what to send". */
+  queryError?: string;
 }
 
 // ── Recipients ───────────────────────────────────────────────────────────────
@@ -56,7 +59,10 @@ export interface DigestSendResult {
 export async function getDigestRecipients(): Promise<DigestRecipient[]> {
   const admin = createAdminClient();
 
-  const [{ data: profiles }, { data: subscribers }] = await Promise.all([
+  const [
+    { data: profiles, error: profilesError },
+    { data: subscribers, error: subscribersError },
+  ] = await Promise.all([
     admin
       .from("profiles")
       .select("id, email, digest_unsubscribe_token")
@@ -68,6 +74,9 @@ export async function getDigestRecipients(): Promise<DigestRecipient[]> {
       .not("email_verified_at", "is", null),
     admin.from("subscribers").select("email, unsubscribe_token"),
   ]);
+
+  if (profilesError) throw new Error(`digest: profiles query failed — ${profilesError.message}`);
+  if (subscribersError) throw new Error(`digest: subscribers query failed — ${subscribersError.message}`);
 
   const byEmail = new Map<string, DigestRecipient>();
 
@@ -116,7 +125,7 @@ export async function getDigestPool(): Promise<Opportunity[]> {
   const admin = createAdminClient();
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
@@ -124,6 +133,8 @@ export async function getDigestPool(): Promise<Opportunity[]> {
     .or(`deadline.is.null,deadline.gte.${todayStr}`)
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(200);
+
+  if (error) throw new Error(`digest: opportunities query failed — ${error.message}`);
 
   return (data ?? []) as Opportunity[];
 }
@@ -133,10 +144,12 @@ export async function getRecentlySent(): Promise<Map<string, Set<string>>> {
   const admin = createAdminClient();
   const cutoff = new Date(Date.now() - SUPPRESSION_DAYS * 864e5).toISOString();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from("digest_items")
     .select("email, opportunity_id")
     .gte("created_at", cutoff);
+
+  if (error) throw new Error(`digest: digest_items query failed — ${error.message}`);
 
   const map = new Map<string, Set<string>>();
   for (const row of (data ?? []) as Array<{ email: string; opportunity_id: string }>) {
@@ -235,11 +248,18 @@ export async function sendWeeklyDigest(
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return empty;
 
-  const [recipients, pool, alreadySent] = await Promise.all([
-    getDigestRecipients(),
-    getDigestPool(),
-    getRecentlySent(),
-  ]);
+  let recipients: DigestRecipient[], pool: Opportunity[], alreadySent: Map<string, Set<string>>;
+  try {
+    [recipients, pool, alreadySent] = await Promise.all([
+      getDigestRecipients(),
+      getDigestPool(),
+      getRecentlySent(),
+    ]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("digest: aborting send —", message);
+    return { ...empty, queryError: message };
+  }
 
   if (recipients.length === 0 || pool.length === 0) return empty;
 

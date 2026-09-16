@@ -18,7 +18,11 @@ export async function sendDigestAction(): Promise<{
     };
   }
 
-  const { sent, skipped, errors } = await sendWeeklyDigest("manual");
+  const { sent, skipped, errors, queryError } = await sendWeeklyDigest("manual");
+
+  if (queryError) {
+    return { ok: false, sent: 0, message: `Query failed: ${queryError}` };
+  }
 
   if (sent === 0) {
     // Skipped is not a failure. It means everyone on the list has already been
