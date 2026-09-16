@@ -8,6 +8,10 @@ import { signInAction, signUpAction } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+
+const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 interface Props {
   mode: "login" | "signup";
@@ -49,6 +53,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const supabase = createClient();
 
@@ -112,7 +117,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
     // On success the browser navigates to Google — no further action needed
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     if (!validate()) return;
@@ -122,8 +127,9 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
     // fetches fail behind content blockers and some in-app browsers.
     try {
       if (mode === "signup") {
+        const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
         const result = await withRetry(() =>
-          signUpAction({ email, password, role, next })
+          signUpAction({ email, password, role, next, turnstileToken, [HONEYPOT_FIELD]: honeypot })
         );
         if (result.error) {
           setError(result.error);
@@ -216,8 +222,14 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             <p id="password-error" className="text-xs text-destructive">{fieldErrors.password}</p>
           )}
         </div>
+        {mode === "signup" && <HoneypotField />}
+        {mode === "signup" && <TurnstileWidget onVerify={setTurnstileToken} />}
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button type="submit" className={submitClassName ?? "w-full"} disabled={loading}>
+        <Button
+          type="submit"
+          className={submitClassName ?? "w-full"}
+          disabled={loading || (mode === "signup" && CAPTCHA_CONFIGURED && !turnstileToken)}
+        >
           {loading
             ? "Please wait…"
             : submitLabel ?? (mode === "signup" ? "Create account" : "Sign in")}

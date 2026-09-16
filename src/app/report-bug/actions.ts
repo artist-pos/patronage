@@ -2,6 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { sendBugReport } from "@/lib/email";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
+import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { AREAS } from "./areas";
 
 export type ReportBugState =
@@ -13,10 +16,23 @@ export async function reportBugAction(
   _prev: ReportBugState,
   formData: FormData
 ): Promise<ReportBugState> {
+  // Bots that blindly fill every field trip the honeypot — pretend success
+  // so they don't retry with a cleaner payload.
+  if ((formData.get(HONEYPOT_FIELD) as string)?.trim()) return { status: "success" };
+
   const area = (formData.get("area") as string)?.trim();
   const message = (formData.get("message") as string)?.trim();
   const pageUrl = (formData.get("pageUrl") as string)?.trim() || undefined;
   let email = (formData.get("email") as string)?.trim().toLowerCase();
+
+  const ip = await getClientIp();
+  if (!(await checkRateLimit(`bug-report:${ip}`, 5, 3600))) {
+    return { status: "error", message: "Too many reports from this network. Please try again later." };
+  }
+  const turnstileToken = (formData.get("cf-turnstile-response") as string) || undefined;
+  if (!(await verifyTurnstile(turnstileToken, ip))) {
+    return { status: "error", message: "Verification failed. Please refresh and try again." };
+  }
 
   if (!message || message.length < 10) {
     return {

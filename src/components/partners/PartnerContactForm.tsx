@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { submitActivationEnquiry } from "@/app/partners/actions";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 const INTERESTS = ["Activations", "Art strategy", "Pipeline", "Listing", "Other"] as const;
 
@@ -18,17 +20,21 @@ export function PartnerContactForm() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSending(true);
     setError(null);
+    const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
     const result = await submitActivationEnquiry({
       name,
       organisation: org,
       email,
       interests: [interest],
       message,
+      turnstileToken,
+      [HONEYPOT_FIELD]: honeypot,
     });
     setSending(false);
     if (result.error) {
@@ -107,6 +113,8 @@ export function PartnerContactForm() {
           className={`${INPUT} resize-y`}
         />
       </div>
+      <HoneypotField />
+      <TurnstileWidget onVerify={setTurnstileToken} />
       {error && <p className="text-[12px] text-[color:var(--urgent)]">{error}</p>}
       <button
         type="submit"

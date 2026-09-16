@@ -7,6 +7,8 @@ import { uploadImage } from "@/lib/upload-image";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { updateActivationType } from "@/app/partners/actions";
 import type { ActivationType } from "@/app/partners/page";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 const HOW_IT_WORKS = [
   "You brief us on the surface, timeline, and budget",
@@ -43,6 +45,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   // Admin editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -66,12 +69,14 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
     el.scrollBy({ left: dir === "left" ? -260 : 260, behavior: "smooth" });
   }
 
-  async function handleEnquiry(e: React.FormEvent) {
+  async function handleEnquiry(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSending(true);
     setSendError(null);
+    const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
     const result = await submitActivationEnquiry({
       name, organisation: org, email, interests: [...interests], message,
+      turnstileToken, [HONEYPOT_FIELD]: honeypot,
     });
     setSending(false);
     if (result.error) { setSendError(result.error); return; }
@@ -438,6 +443,9 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                 className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none"
               />
             </div>
+
+            <HoneypotField />
+            <TurnstileWidget onVerify={setTurnstileToken} />
 
             {sendError && <p className="text-xs text-destructive">{sendError}</p>}
 

@@ -6,12 +6,17 @@ import { AREAS } from "./areas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { HoneypotField } from "@/components/HoneypotField";
+
+const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 const initial: ReportBugState = { status: "idle" };
 
 export function BugReportForm() {
   const [state, action, isPending] = useActionState(reportBugAction, initial);
   const [pageUrl, setPageUrl] = useState("");
+  const [turnstileVerified, setTurnstileVerified] = useState(false);
 
   // Capture where the reporter came from, to help us reproduce.
   useEffect(() => {
@@ -80,11 +85,18 @@ export function BugReportForm() {
         />
       </div>
 
+      <HoneypotField />
+      <TurnstileWidget onVerify={(token) => setTurnstileVerified(!!token)} />
+
       {state.status === "error" && (
         <p className="text-sm text-destructive">{state.message}</p>
       )}
 
-      <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+      <Button
+        type="submit"
+        disabled={isPending || (CAPTCHA_CONFIGURED && !turnstileVerified)}
+        className="w-full sm:w-auto"
+      >
         {isPending ? "Sending…" : "Send report"}
       </Button>
     </form>

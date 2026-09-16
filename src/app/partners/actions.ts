@@ -11,6 +11,9 @@ import {
 } from "@/lib/commerce-pricing";
 import { notifyOpportunitySubmission } from "@/lib/email";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
+import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { Resend } from "resend";
 
 // ── Admin: update an activation type row ─────────────────────────────────────
@@ -54,18 +57,35 @@ export async function submitActivationEnquiry(data: {
   email: string;
   interests: string[];
   message: string;
+  turnstileToken?: string;
+  [HONEYPOT_FIELD]?: string;
 }): Promise<{ error?: string }> {
+  // Bots that blindly fill every field trip the honeypot — pretend success
+  // so they don't retry with a cleaner payload.
+  if (data[HONEYPOT_FIELD]) return {};
+
   const name = data.name.trim();
   const email = data.email.trim();
   const message = data.message.trim();
   if (!name || !email || !message) return { error: "Name, email, and message are required." };
+
+  const ip = await getClientIp();
+  if (!(await checkRateLimit(`activation-enquiry:${ip}`, 3, 3600))) {
+    return { error: "Too many enquiries from this network. Please try again later." };
+  }
+  if (!(await verifyTurnstile(data.turnstileToken, ip))) {
+    return { error: "Verification failed. Please refresh and try again." };
+  }
 
   const key = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM ?? "Patronage <hello@patronage.nz>";
   if (!key) return { error: "Email not configured." };
 
   const resend = new Resend(key);
-  const interestList = data.interests.length > 0 ? data.interests.join(", ") : "Not specified";
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const organisation = data.organisation.trim();
+  const interestList = data.interests.length > 0 ? esc(data.interests.join(", ")) : "Not specified";
 
   const html = `
 <!DOCTYPE html>
@@ -73,13 +93,13 @@ export async function submitActivationEnquiry(data: {
 <body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;">
   <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;">New activation enquiry</h2>
   <table style="width:100%;border-collapse:collapse;">
-    <tr><td style="padding:6px 0;font-weight:600;width:140px;">Name</td><td>${name}</td></tr>
-    <tr><td style="padding:6px 0;font-weight:600;">Organisation</td><td>${data.organisation || "Not provided"}</td></tr>
-    <tr><td style="padding:6px 0;font-weight:600;">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;width:140px;">Name</td><td>${esc(name)}</td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Organisation</td><td>${organisation ? esc(organisation) : "Not provided"}</td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Email</td><td><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
     <tr><td style="padding:6px 0;font-weight:600;">Interests</td><td>${interestList}</td></tr>
   </table>
   <div style="margin-top:16px;padding:12px;background:#f9f9f9;border-left:3px solid #000;">
-    <p style="margin:0;font-size:14px;line-height:1.6;">${message.replace(/\n/g, "<br>")}</p>
+    <p style="margin:0;font-size:14px;line-height:1.6;">${esc(message).replace(/\n/g, "<br>")}</p>
   </div>
 </body>
 </html>`;
@@ -88,7 +108,7 @@ export async function submitActivationEnquiry(data: {
     from,
     to: "hello@patronage.nz",
     replyTo: email,
-    subject: `Activation enquiry from ${name}${data.organisation ? ` (${data.organisation})` : ""}`,
+    subject: `Activation enquiry from ${name}${organisation ? ` (${organisation})` : ""}`,
     html,
   });
 

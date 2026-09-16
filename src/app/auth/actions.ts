@@ -2,6 +2,9 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
+import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 // Email/password auth runs server-side so the browser only ever talks to our
 // own origin. Direct browser→supabase.co fetches fail for users behind content
@@ -47,7 +50,13 @@ export async function signUpAction(input: {
   password: string;
   role?: string;
   next?: string;
+  turnstileToken?: string;
+  [HONEYPOT_FIELD]?: string;
 }): Promise<AuthResult> {
+  // Bots that blindly fill every field trip the honeypot — pretend success
+  // so they don't retry with a cleaner payload.
+  if (input[HONEYPOT_FIELD]) return { needsEmailConfirmation: false };
+
   const email = input.email?.trim() ?? "";
   const password = input.password ?? "";
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -55,6 +64,14 @@ export async function signUpAction(input: {
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+
+  const ip = await getClientIp();
+  if (!(await checkRateLimit(`signup:${ip}`, 8, 3600))) {
+    return { error: "Too many signup attempts from this network. Please try again later." };
+  }
+  if (!(await verifyTurnstile(input.turnstileToken, ip))) {
+    return { error: "Verification failed. Please try again." };
   }
 
   // Carry the post-auth destination and chosen role through the confirmation
