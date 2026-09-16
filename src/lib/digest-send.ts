@@ -298,6 +298,7 @@ export async function sendWeeklyDigest(
   const resend = new Resend(apiKey);
   let sent = 0;
   let errors = 0;
+  let sendError: string | undefined;
   const recorded: SentRecord[] = [];
 
   for (let i = 0; i < planned.length; i += 100) {
@@ -318,7 +319,9 @@ export async function sendWeeklyDigest(
     const { error } = await resend.batch.send(batch);
 
     if (error) {
+      console.error("digest: resend.batch.send failed —", error);
       errors += chunk.length;
+      sendError ??= error.message ?? JSON.stringify(error);
       continue;
     }
 
@@ -334,7 +337,12 @@ export async function sendWeeklyDigest(
 
   await recordDigestSend(recorded, trigger);
 
-  return { sent, skipped, errors };
+  return {
+    sent,
+    skipped,
+    errors,
+    ...(sent === 0 && errors > 0 ? { queryError: `Resend rejected every batch — ${sendError}` } : {}),
+  };
 }
 
 /**
