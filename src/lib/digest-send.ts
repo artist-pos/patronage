@@ -246,7 +246,7 @@ export async function sendWeeklyDigest(
   const empty: DigestSendResult = { sent: 0, skipped: 0, errors: 0 };
 
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return empty;
+  if (!apiKey) return { ...empty, queryError: "RESEND_API_KEY not set at send time" };
 
   let recipients: DigestRecipient[], pool: Opportunity[], alreadySent: Map<string, Set<string>>;
   try {
@@ -261,7 +261,16 @@ export async function sendWeeklyDigest(
     return { ...empty, queryError: message };
   }
 
-  if (recipients.length === 0 || pool.length === 0) return empty;
+  console.log(
+    `digest[${trigger}]: recipients=${recipients.length} pool=${pool.length} suppressionRows=${alreadySent.size}`
+  );
+
+  if (recipients.length === 0 || pool.length === 0) {
+    return {
+      ...empty,
+      queryError: `recipients=${recipients.length} pool=${pool.length} — both queries succeeded but returned no rows`,
+    };
+  }
 
   const generatedAt = new Date().toISOString();
 
