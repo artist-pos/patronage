@@ -112,7 +112,7 @@ export function NotesSection({
         {canPost && (
           <button
             onClick={() => setOpen(true)}
-            className="text-xs border border-black rounded-full px-3 py-1 hover:bg-black hover:text-white transition-colors"
+            className="text-xs border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors"
           >
             + Add a note
           </button>

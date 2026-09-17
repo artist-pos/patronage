@@ -134,7 +134,7 @@ export default async function ThreadPage({ params, searchParams }: Props) {
         <CreateUpdateModal
           profileId={project.artist_id}
           label="+ Post an update to this thread"
-          className="w-full text-left border border-border rounded-xl px-4 py-3 text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+          className="w-full text-left border border-border px-4 py-3 text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
           defaultProjectId={project.id}
           defaultProjectTitle={project.title}
         />
