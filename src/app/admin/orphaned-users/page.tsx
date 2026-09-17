@@ -5,6 +5,25 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { sendWelcomeDm } from "@/lib/welcome-dm";
 
+function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+}
+
+// Re-sends Supabase's own confirmation email (same one issued at signup) so a
+// stuck "pending" account can pick up right where it left off — the link
+// still routes through /auth/confirm into /onboarding/role once clicked.
+async function resendPending(formData: FormData) {
+  "use server";
+  const email = (formData.get("email") as string)?.trim();
+  if (!email) return;
+
+  const admin = createAdminClient();
+  const emailRedirectTo = `${siteUrl()}/auth/confirm?next=${encodeURIComponent("/onboarding/role")}`;
+  await admin.auth.resend({ type: "signup", email, options: { emailRedirectTo } });
+
+  redirect(`/admin/orphaned-users?resent=${encodeURIComponent(email)}`);
+}
+
 export const metadata = { title: "Orphaned Users — Admin — Patronage" };
 
 const VALID_ROLES = ["artist", "patron", "partner"] as const;
@@ -48,9 +67,15 @@ async function assignRole(formData: FormData) {
   redirect("/admin/orphaned-users");
 }
 
-export default async function OrphanedUsersPage() {
+interface Props {
+  searchParams: Promise<{ resent?: string }>;
+}
+
+export default async function OrphanedUsersPage({ searchParams }: Props) {
   const admin_check = await isAdmin();
   if (!admin_check) redirect("/");
+
+  const { resent } = await searchParams;
 
   const admin = createAdminClient();
 
@@ -85,6 +110,12 @@ export default async function OrphanedUsersPage() {
           Auth users with no profile row — either unverified or verified but never completed role selection.
         </p>
       </div>
+
+      {resent && (
+        <p className="text-xs bg-stone-100 text-stone-600 px-3 py-2">
+          Confirmation email resent to {resent}.
+        </p>
+      )}
 
       <div className="space-y-2">
         <h2 className="text-sm font-medium">Verified — no profile</h2>
@@ -153,6 +184,7 @@ export default async function OrphanedUsersPage() {
                 <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Email</th>
                 <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Signed up</th>
                 <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Status</th>
+                <th className="text-left px-4 py-2 font-medium text-xs uppercase tracking-widest text-stone-400">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -164,6 +196,18 @@ export default async function OrphanedUsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-3 py-1">Awaiting email confirmation</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <form action={resendPending}>
+                      <input type="hidden" name="email" value={u.email ?? ""} />
+                      <button
+                        type="submit"
+                        disabled={!u.email}
+                        className="text-xs px-3 py-1 border border-black hover:bg-black hover:text-white transition-colors disabled:opacity-40"
+                      >
+                        Resend confirmation
+                      </button>
+                    </form>
                   </td>
                 </tr>
               ))}

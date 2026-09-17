@@ -116,15 +116,27 @@ export async function signInAction(input: {
     };
   }
 
-  // No profile row means onboarding was never completed — route there first.
+  // No profile row, or one that never finished onboarding, means the role/
+  // profile steps were never completed — route back there instead of past
+  // them. A profile *existing* isn't "done": an artist can have a role but
+  // no discipline/name yet (e.g. dropped off mid-flow, or force-created via
+  // the orphaned-users admin tool).
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id")
+      .select("role, disciplines, full_name")
       .eq("id", user.id)
       .maybeSingle();
     if (!profile) return { redirectTo: "/onboarding/role" };
+
+    const isArtist = profile.role === "artist" || profile.role === "owner";
+    const incomplete = !profile.role || (isArtist && (!profile.disciplines?.length || !profile.full_name?.trim()));
+    if (incomplete) return { redirectTo: "/onboarding/role" };
+
+    // A returning, fully onboarded artist gets more value from their matched
+    // opportunities than from the studio management screen.
+    if (isArtist) return { redirectTo: safeNext(input.next, "/opportunities?tab=for-you") };
   }
 
   return { redirectTo: safeNext(input.next, "/profile/edit") };
