@@ -28,11 +28,11 @@ async function applyRole(role: string, next?: string | null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const fallbackUsername = user.email
+  const baseUsername = user.email
     ?.split("@")[0]
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_")
-    .slice(0, 30) ?? user.id.slice(0, 8);
+    .slice(0, 30) || user.id.slice(0, 8);
 
   const isArtist = role === "artist" || role === "owner";
   const isOAuth = user.app_metadata?.provider === "google";
@@ -50,54 +50,75 @@ async function applyRole(role: string, next?: string | null) {
   // profile rather than a helpful default.
   const seededDisciplines = isArtist ? toDisciplineEnums(signupCtx?.disciplines) : [];
 
-  await supabase.from("profiles").upsert(
-    {
-      id: user.id,
-      username: fallbackUsername,
-      email: user.email?.toLowerCase().trim() ?? null,
-      role,
-      is_active: true,
-      // Google has already proved this address, so an OAuth signup is verified
-      // on arrival and never sees the banner. Password signups owe us a click.
-      ...(isOAuth && { email_verified_at: new Date().toISOString() }),
-      ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
-      ...(signupCtx && {
-        signup_source: signupCtx.source,
-        ...(signupCtx.opportunityId && {
-          signup_source_opportunity_id: signupCtx.opportunityId,
-        }),
-        ...(signupCtx.ref && { signup_source_ref: signupCtx.ref }),
+  const profileData = {
+    id: user.id,
+    username: baseUsername,
+    email: user.email?.toLowerCase().trim() ?? null,
+    role,
+    is_active: true,
+    // Google has already proved this address, so an OAuth signup is verified
+    // on arrival and never sees the banner. Password signups owe us a click.
+    ...(isOAuth && { email_verified_at: new Date().toISOString() }),
+    ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
+    ...(signupCtx && {
+      signup_source: signupCtx.source,
+      ...(signupCtx.opportunityId && {
+        signup_source_opportunity_id: signupCtx.opportunityId,
       }),
-      ...(isArtist && signupCtx?.disciplines?.length && {
-        // The listing's own wording, kept as the free-text medium…
-        medium: signupCtx.disciplines,
-      }),
-      // …and the constrained enum where a term mapped onto one.
-      ...(seededDisciplines.length > 0 && { disciplines: seededDisciplines }),
-      // Partners arriving from the partners page already said what they do,
-      // and from a regional CTA they already said where. Neither should be
-      // asked twice.
-      ...(role === "partner" && isOrgCategory(signupCtx?.orgCategory) && {
-        org_category: signupCtx.orgCategory,
-      }),
-      ...(signupCtx?.regionId && { region_id: signupCtx.regionId }),
-      // Which organisation's invitation produced this account (187). Attribution
-      // only: it gives them no claim on the artist and appears nowhere public.
-      ...(isArtist && signupCtx?.invitedByOrgId && {
-        invited_by_org_id: signupCtx.invitedByOrgId,
-      }),
-      // Their organisation had a name on file. Offered as the starting value
-      // because a blank profile is the main reason people abandon onboarding.
-      ...(isArtist && signupCtx?.fullName && { full_name: signupCtx.fullName }),
-      ...(isArtist && signupCtx?.city && { city: signupCtx.city }),
-      // "Global" and other listing-only country values are not places a person
-      // lives, so they never become a profile country.
-      ...(isArtist && isSelectableCountry(signupCtx?.country) && {
-        country: signupCtx.country,
-      }),
-    },
-    { onConflict: "id", ignoreDuplicates: false }
-  );
+      ...(signupCtx.ref && { signup_source_ref: signupCtx.ref }),
+    }),
+    ...(isArtist && signupCtx?.disciplines?.length && {
+      // The listing's own wording, kept as the free-text medium…
+      medium: signupCtx.disciplines,
+    }),
+    // …and the constrained enum where a term mapped onto one.
+    ...(seededDisciplines.length > 0 && { disciplines: seededDisciplines }),
+    // Partners arriving from the partners page already said what they do,
+    // and from a regional CTA they already said where. Neither should be
+    // asked twice.
+    ...(role === "partner" && isOrgCategory(signupCtx?.orgCategory) && {
+      org_category: signupCtx.orgCategory,
+    }),
+    ...(signupCtx?.regionId && { region_id: signupCtx.regionId }),
+    // Which organisation's invitation produced this account (187). Attribution
+    // only: it gives them no claim on the artist and appears nowhere public.
+    ...(isArtist && signupCtx?.invitedByOrgId && {
+      invited_by_org_id: signupCtx.invitedByOrgId,
+    }),
+    // Their organisation had a name on file. Offered as the starting value
+    // because a blank profile is the main reason people abandon onboarding.
+    ...(isArtist && signupCtx?.fullName && { full_name: signupCtx.fullName }),
+    ...(isArtist && signupCtx?.city && { city: signupCtx.city }),
+    // "Global" and other listing-only country values are not places a person
+    // lives, so they never become a profile country.
+    ...(isArtist && isSelectableCountry(signupCtx?.country) && {
+      country: signupCtx.country,
+    }),
+  };
+
+  let { error: upsertError } = await supabase
+    .from("profiles")
+    .upsert(profileData, { onConflict: "id", ignoreDuplicates: false });
+
+  // onConflict only watches `id` — a generated username that collides with
+  // someone else's fails the write on the column's own unique constraint
+  // instead. Retry once with a disambiguated handle before giving up.
+  if (upsertError?.code === "23505") {
+    ({ error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(
+        { ...profileData, username: `${baseUsername}_${user.id.replace(/-/g, "").slice(0, 6)}` },
+        { onConflict: "id", ignoreDuplicates: false }
+      ));
+  }
+
+  // Never redirect the user onward as if this succeeded when it didn't — that's
+  // exactly how an auth.users row ends up with no matching profile ("orphaned").
+  if (upsertError) {
+    const params = new URLSearchParams({ role, error: "1" });
+    if (next) params.set("next", next);
+    redirect(`/onboarding/role?${params.toString()}`);
+  }
 
   // Close the loop on the invitation so the inviting organisation can see that
   // this one converted. Not awaited for correctness of the signup: a failure
@@ -167,7 +188,7 @@ async function setRole(formData: FormData) {
 }
 
 interface Props {
-  searchParams: Promise<{ role?: string; next?: string }>;
+  searchParams: Promise<{ role?: string; next?: string; error?: string }>;
 }
 
 export default async function SelectRolePage({ searchParams }: Props) {
@@ -178,9 +199,11 @@ export default async function SelectRolePage({ searchParams }: Props) {
   const profile = await getProfileById(user.id);
   if (profile?.role) redirect("/settings");
 
-  // Pre-selected role from the homepage join buttons — skip the selection UI
-  const { role: roleParam, next } = await searchParams;
-  if (roleParam && VALID_ROLES.includes(roleParam as Role)) {
+  // Pre-selected role from the homepage join buttons — skip the selection UI.
+  // Not when `error` is set: that means applyRole already tried and failed for
+  // this role once, so retrying automatically would just loop.
+  const { role: roleParam, next, error } = await searchParams;
+  if (roleParam && VALID_ROLES.includes(roleParam as Role) && !error) {
     await applyRole(roleParam, next);
   }
 
@@ -210,6 +233,11 @@ export default async function SelectRolePage({ searchParams }: Props) {
           <p className="text-sm text-muted-foreground">
             Choose your role. This can&apos;t be changed later.
           </p>
+          {error === "1" && (
+            <p className="text-sm text-destructive">
+              Something went wrong saving that. Please try again.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">

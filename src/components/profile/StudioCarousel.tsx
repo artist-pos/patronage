@@ -305,7 +305,7 @@ function Tile({
 
         {isOwner && (
           <>
-            <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="absolute top-1 left-1 z-10">
               <AssignProjectButton
                 updateId={u.id}
                 currentProjectId={u.project_id}
@@ -316,7 +316,7 @@ function Tile({
             <button
               onClick={openEdit}
               aria-label="Edit update text"
-              className="absolute top-1 right-7 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white"
+              className="absolute top-1 right-7 w-5 h-5 bg-background/90 border border-black flex items-center justify-center z-10 hover:bg-black hover:text-white transition-colors"
             >
               <Pencil className="w-3 h-3" />
             </button>
@@ -324,7 +324,7 @@ function Tile({
               onClick={handleDelete}
               disabled={pending}
               aria-label="Delete update"
-              className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white disabled:opacity-40"
+              className="absolute top-1 right-1 w-5 h-5 bg-background/90 border border-black flex items-center justify-center z-10 hover:bg-black hover:text-white disabled:opacity-40 transition-colors"
             >
               <X className="w-3 h-3" />
             </button>

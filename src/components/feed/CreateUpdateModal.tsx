@@ -106,7 +106,6 @@ export function CreateUpdateModal({
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Shared
-  const [updateTitle, setUpdateTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -120,6 +119,8 @@ export function CreateUpdateModal({
   const [selectedProjectId, setSelectedProjectId] = useState(defaultProjectId ?? "");
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectLead, setNewProjectLead] = useState("");
+  // Project/credits are secondary decisions — collapsed unless already continuing a locked thread
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Collaborators
   const [collaborators, setCollaborators] = useState<CollaboratorEntry[]>([]);
@@ -134,7 +135,6 @@ export function CreateUpdateModal({
     setImageFile(null);
     setAudioFile(null);
     setVideoFile(null);
-    setUpdateTitle("");
     setCaption("");
     setEmbedUrl("");
     setTextContent("");
@@ -143,6 +143,7 @@ export function CreateUpdateModal({
     setSelectedProjectId(defaultProjectId ?? "");
     setNewProjectTitle("");
     setNewProjectLead("");
+    setDetailsOpen(false);
     setCollaborators([]);
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
@@ -279,7 +280,6 @@ export function CreateUpdateModal({
           embed_url,
           embed_provider,
           text_content,
-          title: updateTitle.trim() || null,
           caption: caption.trim() || null,
           project_id: projectId,
           orientation: imageOrientation,
@@ -486,15 +486,6 @@ export function CreateUpdateModal({
                 </div>
               )}
 
-              {/* Title — TL;DR shown in project thread */}
-              <input
-                type="text"
-                value={updateTitle}
-                onChange={(e) => setUpdateTitle(e.target.value)}
-                placeholder="Title / TL;DR (optional, shown in project thread)"
-                className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
-              />
-
               {/* Caption */}
               {contentType !== "text" && (
                 <textarea
@@ -506,18 +497,44 @@ export function CreateUpdateModal({
                 />
               )}
 
-              {/* Project — locked when defaultProjectId provided */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Project
-                </p>
-                {defaultProjectId ? (
-                  <div className="flex items-center gap-2 border border-black px-3 py-2 bg-muted/40">
-                    <span className="text-sm flex-1 truncate">{defaultProjectTitle ?? "Project"}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Locked</span>
+              {/* Project + Credits — always visible when continuing a locked thread; otherwise collapsed behind a disclosure so a quick post isn't blocked by them */}
+              {defaultProjectId ? (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Project
+                    </p>
+                    <div className="flex items-center gap-2 border border-black px-3 py-2 bg-muted/40">
+                      <span className="text-sm flex-1 truncate">{defaultProjectTitle ?? "Project"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Locked</span>
+                    </div>
                   </div>
-                ) : (
-                  <>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Credits
+                    </p>
+                    <CollaboratorPicker
+                      value={collaborators}
+                      onChange={setCollaborators}
+                      excludeIds={[profileId]}
+                      label="Tag other artists in this update"
+                    />
+                  </div>
+                </>
+              ) : detailsOpen ? (
+                <div className="space-y-4 pl-3 border-l-2 border-black">
+                  <button
+                    type="button"
+                    onClick={() => setDetailsOpen(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    − Hide project &amp; credits
+                  </button>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Project
+                    </p>
                     <select
                       value={selectValue}
                       onChange={(e) => handleProjectSelectChange(e.target.value)}
@@ -553,22 +570,29 @@ export function CreateUpdateModal({
                         />
                       </div>
                     )}
-                  </>
-                )}
-              </div>
+                  </div>
 
-              {/* Collaborators */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Credits
-                </p>
-                <CollaboratorPicker
-                  value={collaborators}
-                  onChange={setCollaborators}
-                  excludeIds={[profileId]}
-                  label="Tag other artists in this update"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Credits
+                    </p>
+                    <CollaboratorPicker
+                      value={collaborators}
+                      onChange={setCollaborators}
+                      excludeIds={[profileId]}
+                      label="Tag other artists in this update"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  + Add to a project or tag collaborators
+                </button>
+              )}
 
               {error && <p className="text-xs text-destructive">{error}</p>}
 

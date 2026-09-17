@@ -139,7 +139,11 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
-          router.push(result.needsEmailConfirmation ? "/auth/verify" : signupDestination());
+          router.push(
+            result.needsEmailConfirmation
+              ? `/auth/verify?email=${encodeURIComponent(email)}${role ? `&role=${encodeURIComponent(role)}` : ""}`
+              : signupDestination()
+          );
           router.refresh();
           return;
         }
