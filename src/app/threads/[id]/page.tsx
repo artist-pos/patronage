@@ -7,6 +7,7 @@ import { getThread, type ThreadPost } from "@/lib/projects";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { EditProjectHeader } from "@/components/projects/EditProjectHeader";
+import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getProfileById } from "@/lib/profiles";
@@ -128,6 +129,17 @@ export default async function ThreadPage({ params, searchParams }: Props) {
 
       {scroll && <ThreadScrollTo postId={scroll} />}
 
+      {/* Compose entry — post a follow-up without leaving the thread */}
+      {isOwner && (
+        <CreateUpdateModal
+          profileId={project.artist_id}
+          label="+ Post an update to this thread"
+          className="w-full text-left border border-border rounded-xl px-4 py-3 text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+          defaultProjectId={project.id}
+          defaultProjectTitle={project.title}
+        />
+      )}
+
       {/* Timeline */}
       {posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">No posts in this thread yet.</p>
@@ -235,6 +247,11 @@ function ThreadPostItem({
             />
           </div>
         </div>
+
+        {/* Title */}
+        {post.title && (
+          <h3 className="text-base font-semibold leading-snug">{post.title}</h3>
+        )}
 
         {/* Media */}
         {post.image_url && (

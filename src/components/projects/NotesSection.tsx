@@ -41,6 +41,8 @@ export function NotesSection({
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [posting, startPost] = useTransition();
+  // Collapsed by default so a long thread isn't a wall of open comment boxes
+  const [open, setOpen] = useState(false);
 
   function canDelete(note: NoteWithSender) {
     if (!currentUserId) return false;
@@ -94,8 +96,39 @@ export function NotesSection({
 
   if (notes.length === 0 && !canPost) return null;
 
+  if (!open) {
+    return (
+      <div className="flex items-center justify-between">
+        {notes.length > 0 ? (
+          <button
+            onClick={() => setOpen(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {notes.length} {notes.length === 1 ? "note" : "notes"}
+          </button>
+        ) : (
+          <span />
+        )}
+        {canPost && (
+          <button
+            onClick={() => setOpen(true)}
+            className="text-xs border border-black rounded-full px-3 py-1 hover:bg-black hover:text-white transition-colors"
+          >
+            + Add a note
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      <button
+        onClick={() => setOpen(false)}
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Hide notes
+      </button>
       {notes.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">

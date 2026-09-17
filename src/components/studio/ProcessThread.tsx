@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Music, Play, ExternalLink } from "lucide-react";
 
 interface Update {
   id: string;
@@ -11,6 +12,12 @@ interface Update {
   text_content: string | null;
   created_at: string;
 }
+
+const TYPE_ICON: Record<string, React.ReactNode> = {
+  audio: <Music className="w-4 h-4" />,
+  video: <Play className="w-4 h-4" />,
+  embed: <ExternalLink className="w-4 h-4" />,
+};
 
 interface Props {
   projectId: string;
@@ -32,7 +39,7 @@ export function ProcessThread({ projectId, projectTitle, updates }: Props) {
         <div className="border border-border divide-y divide-border">
           {updates.map((u) => (
             <div key={u.id} className="px-4 py-3 flex gap-3">
-              {u.image_url && (
+              {u.content_type === "image" && u.image_url ? (
                 <div className="w-12 h-12 shrink-0 relative overflow-hidden bg-muted">
                   <Image
                     src={u.image_url}
@@ -42,7 +49,11 @@ export function ProcessThread({ projectId, projectTitle, updates }: Props) {
                     className="object-cover"
                   />
                 </div>
-              )}
+              ) : TYPE_ICON[u.content_type] ? (
+                <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-muted text-muted-foreground">
+                  {TYPE_ICON[u.content_type]}
+                </div>
+              ) : null}
               <div className="flex-1 min-w-0 space-y-0.5">
                 {u.caption && (
                   <p className="text-sm line-clamp-2">{u.caption}</p>
