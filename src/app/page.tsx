@@ -510,10 +510,10 @@ export default async function Home() {
                 </div>
                 <div className="lg:mb-0">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
-                    Free
+                    Free access
                   </div>
                   <div className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">
-                    access
+                    no fees to use Patronage
                   </div>
                 </div>
               </div>
