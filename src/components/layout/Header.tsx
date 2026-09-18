@@ -45,7 +45,7 @@ export async function Header() {
                absolutely centred; the outer keeps its flex slot so the
                account column stays pinned right), in-flow below xl ── */}
         <div className="flex min-w-0 flex-1 items-center">
-          <div className="flex w-full items-center xl:absolute xl:left-1/2 xl:top-0 xl:h-full xl:max-w-sm xl:-translate-x-1/2">
+          <div className="flex w-full items-center xl:absolute xl:left-1/2 xl:top-0 xl:h-full xl:max-w-md xl:-translate-x-1/2">
             <SearchCommand />
           </div>
         </div>

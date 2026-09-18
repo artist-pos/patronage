@@ -12,47 +12,46 @@ const CARDS: Card[] = [
   {
     label: "Artist",
     headline: "One URL for your whole practice.",
-    body: "Profile, CV, studio feed, available works. Free to join.",
+    body: "Build a public presence, share your process, and get matched with real opportunities.",
     features: [
-      "Find grants and residencies",
-      "Build a public profile and CV",
+      "Find matched grants and residencies",
+      "Build your portfolio",
       "Share studio updates and works",
-      "Be discovered by patrons and partners",
+      "Get discovered by patrons and partners",
     ],
-    cta: { text: "Create a free artist account", href: "/auth/signup?role=artist" },
+    cta: { text: "Join as an artist", href: "/auth/signup?role=artist" },
   },
   {
-    label: "Partner / Funder",
-    headline: "Reach the right artists.",
-    body: "Post opportunities and run applications through a built-in pipeline. No more Google Forms.",
+    label: "Partner / Organisation",
+    headline: "Reach your artists.",
+    body: "List for free, get seen with analytics, and manage applications through Patronage Pipeline — every applicant arrives with their full profile attached.",
     features: [
-      "Post opportunities for free",
-      "Replace Google Forms with Patronage Pipeline",
-      "Review and shortlist applications online",
-      "Reach NZ artists",
+      "List opportunities for free",
+      "Get seen with built-in analytics",
+      "Manage applications with Patronage Pipeline",
+      "Applicants arrive with profile, works and history attached",
     ],
-    cta: { text: "Post an opportunity", href: "/partners" },
+    cta: { text: "List an opportunity", href: "/list-an-opportunity" },
   },
   {
     label: "Patron",
     headline: "Support the artists you love.",
-    body: "Back an artist monthly or one-off. Support goes directly to them.",
+    body: "Follow artists’ process, discover new work, and back the ones you believe in.",
     features: [
-      "Monthly or one-off support",
-      "Follow studio updates and posts",
-      "Discover available works",
-      "Champion artists you believe in",
+      "Discover artists you connect with",
+      "Follow their studio updates",
+      "Support monthly or one-off",
+      "Browse and collect available works",
     ],
     cta: { text: "Become a patron", href: "/support" },
   },
 ];
 
-/* v2 "Three roles" — feed-bg section, white containerless-adjacent cards
-   (actual UI components keep a surface), mono kickers, outline mono CTAs
-   that invert on hover. */
+/* v2 "Three roles" — same cream card language as the hero, white bordered
+   cards, solid brand-green CTAs that lighten to the hero chips' hover tint. */
 export function WhoIsPatronageFor() {
   return (
-    <section className="bg-feed-bg border-t border-b border-border px-6 py-16">
+    <section className="border-t border-b border-border bg-[#E3DFDA]/55 px-6 py-16">
       <div className="max-w-[1600px] mx-auto">
         <h2 className="text-[28px] md:text-4xl font-semibold tracking-[-0.028em] leading-[1.06] max-w-[480px] mb-12">
           One platform, three relationships.
@@ -60,7 +59,7 @@ export function WhoIsPatronageFor() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch">
           {CARDS.map((card) => (
-            <div key={card.label} className="flex flex-col bg-card p-7">
+            <div key={card.label} className="flex flex-col border border-border bg-white p-7">
               <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
                 {card.label}
               </p>
@@ -86,7 +85,7 @@ export function WhoIsPatronageFor() {
 
               <Link
                 href={card.cta.href}
-                className="mt-auto block w-full border border-foreground px-4 py-2.5 text-center font-mono text-xs text-foreground transition-colors hover:bg-foreground hover:text-white"
+                className="mt-auto block w-full bg-brand px-4 py-2.5 text-center font-mono text-xs font-semibold text-white transition-colors hover:bg-emerald-50 hover:text-emerald-700"
               >
                 {card.cta.text}
               </Link>
