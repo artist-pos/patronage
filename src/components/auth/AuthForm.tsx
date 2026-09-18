@@ -139,12 +139,20 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
+          // No router.refresh() here — push() already fetches fresh server
+          // data for the destination. /onboarding/role writes the profile's
+          // role as a side effect of rendering (so a pre-selected role can
+          // skip the picker UI), so an extra refresh() fired in the same
+          // tick can race it with a second request to that same URL: one
+          // request's read lands before the other's write, its own
+          // already-onboarded guard fires, and that response can win the
+          // render — landing on /settings instead of the onboarding step
+          // that just ran moments earlier.
           router.push(
             result.needsEmailConfirmation
               ? `/auth/verify?email=${encodeURIComponent(email)}${role ? `&role=${encodeURIComponent(role)}` : ""}`
               : signupDestination()
           );
-          router.refresh();
           return;
         }
       } else {
@@ -153,7 +161,6 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           setError(result.error);
         } else {
           router.push(result.redirectTo ?? next);
-          router.refresh();
           return;
         }
       }
