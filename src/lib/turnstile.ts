@@ -21,7 +21,14 @@ export async function verifyTurnstile(
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ secret, response: token, remoteip: ip }),
     });
-    const data = (await res.json()) as { success: boolean };
+    const data = (await res.json()) as { success: boolean; "error-codes"?: string[] };
+    // Surface *why* — e.g. "invalid-input-secret" (key mismatch) or
+    // "hostname-mismatch"/"invalid-domain" (Cloudflare's per-sitekey allow-list
+    // rejecting a preview/staging domain) look identical to the user but need
+    // different fixes, and both are otherwise invisible outside these logs.
+    if (!data.success) {
+      console.error("turnstile verify rejected:", data["error-codes"]);
+    }
     return data.success === true;
   } catch (err) {
     console.error("turnstile verify failed:", err);
