@@ -28,6 +28,11 @@ async function applyRole(role: string, next?: string | null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
+  // TEMP DIAGNOSTIC (remove once the /settings-instead-of-onboarding bug is
+  // root-caused) — every invocation of this function, so a reproduction
+  // shows whether it ran once, more than once, or with a stale `next`.
+  console.error("[applyRole] invoked", { userId: user.id, role, next, at: new Date().toISOString() });
+
   const baseUsername = user.email
     ?.split("@")[0]
     .toLowerCase()
@@ -179,6 +184,8 @@ async function applyRole(role: string, next?: string | null) {
   const destination = isArtist
     ? `/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
     : (safeNext ?? "/dashboard");
+  // TEMP DIAGNOSTIC — see note above.
+  console.error("[applyRole] redirecting", { userId: user.id, role, destination, at: new Date().toISOString() });
   redirect(`${destination}${destination.includes("?") ? "&" : "?"}signup=1`);
 }
 
@@ -197,13 +204,35 @@ export default async function SelectRolePage({ searchParams }: Props) {
   if (!user) redirect("/auth/login");
 
   const profile = await getProfileById(user.id);
-  if (profile?.role) redirect("/settings");
+  if (profile?.role) {
+    // TEMP DIAGNOSTIC (remove once the /settings-instead-of-onboarding bug is
+    // root-caused): this guard is the only way to land on /settings from
+    // here, and it should never fire for a genuinely first-ever hit for a
+    // freshly signed-up user — log what we saw so a reproduction shows up in
+    // Vercel's function logs instead of being a mystery.
+    console.error("[onboarding/role] already-has-role guard fired", {
+      userId: user.id,
+      role: profile.role,
+      disciplines: profile.disciplines,
+      fullName: profile.full_name,
+      searchParams: await searchParams,
+      at: new Date().toISOString(),
+    });
+    redirect("/settings");
+  }
 
   // Pre-selected role from the homepage join buttons — skip the selection UI.
   // Not when `error` is set: that means applyRole already tried and failed for
   // this role once, so retrying automatically would just loop.
   const { role: roleParam, next, error } = await searchParams;
   if (roleParam && VALID_ROLES.includes(roleParam as Role) && !error) {
+    // TEMP DIAGNOSTIC — see note above.
+    console.error("[onboarding/role] calling applyRole", {
+      userId: user.id,
+      roleParam,
+      next,
+      at: new Date().toISOString(),
+    });
     await applyRole(roleParam, next);
   }
 
