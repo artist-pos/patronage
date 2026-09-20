@@ -37,7 +37,10 @@ const CvTab = dynamic(() =>
 const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
-import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage, ProfileWithImage } from "@/types/database";
+import { getCitiesForRegion } from "@/lib/regions";
+import { byCompleteness, isPresentable } from "@/lib/artist-completeness";
+import { regionalTownLabel } from "@/lib/region-location";
 import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
 import { computeBadges } from "@/lib/badges";
 import { getBannerGradient } from "@/lib/defaults";
@@ -453,11 +456,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   // roster (186), so this comes back empty and the section does not render.
   let partnerRoster: OrgRoster = { relationship: null, artists: [] };
   let partnerRegionLink: { slug: string; name: string } | null = null;
+  let partnerRegionArtists: Array<{ artist: ProfileWithImage; location: string | null }> = [];
   if (!isArtistProfile && profile.role === "partner") {
     partnerRoster = await getOrgRoster(profile.id);
     const adminDb = createAdminClient();
     const todayStr = new Date().toISOString().split("T")[0];
-    const [listedRes, pastRes, appsRes, rosterRes, regionRes] = await Promise.all([
+    const isRegionalArtsBody =
+      (profile as Profile & { org_category?: string | null }).org_category === "regional_arts_org" &&
+      !!profile.region_id;
+    const [listedRes, pastRes, appsRes, rosterRes, regionRes, regionArtistsRes, regionCities] = await Promise.all([
       supabase
         .from("opportunities")
         .select("id", { count: "exact", head: true })
@@ -487,9 +494,33 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             .eq("id", profile.region_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      // The region's artists, for the strip. Fetched wide and ranked below,
+      // because "most complete" is not something the query can order by.
+      isRegionalArtsBody
+        ? supabase
+            .from("profiles")
+            .select(
+              "id, username, full_name, bio, avatar_url, featured_image_url, medium, city, city_id, country, is_patronage_supported, open_for_commissions"
+            )
+            .eq("region_id", profile.region_id!)
+            .eq("is_active", true)
+            .in("role", ["artist", "owner"])
+            .limit(60)
+        : Promise.resolve({ data: [] }),
+      isRegionalArtsBody ? getCitiesForRegion(profile.region_id!) : Promise.resolve([]),
     ]);
     partnerRoster = rosterRes;
     partnerRegionLink = (regionRes.data as { slug: string; name: string } | null) ?? null;
+    if (partnerRegionLink) {
+      const cityNameById = new Map(regionCities.map((c) => [c.id, c.name]));
+      const regionName = partnerRegionLink.name;
+      partnerRegionArtists = ((regionArtistsRes.data ?? []) as unknown as ProfileWithImage[])
+        .map((a) => ({ ...a, primary_image_url: (a as { featured_image_url?: string | null }).featured_image_url ?? null }))
+        .filter(isPresentable)
+        .sort(byCompleteness)
+        .slice(0, 6)
+        .map((artist) => ({ artist, location: regionalTownLabel(artist, regionName, cityNameById) }));
+    }
     partnerListedCount = listedRes.count ?? 0;
     const apps = (appsRes.data ?? []) as unknown as Array<{ artist_id: string; opportunity_id: string }>;
     const selectedByOpp = new Map<string, number>();
@@ -1024,6 +1055,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           selectedTotal={partnerSelectedTotal}
           roster={partnerRoster}
           regionLink={partnerRegionLink}
+          regionArtists={partnerRegionArtists}
         />
       ) : (
         <PatronProfileView

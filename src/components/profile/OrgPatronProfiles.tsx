@@ -6,7 +6,8 @@ import { FollowButton } from "@/components/profile/FollowButton";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { getBannerGradient } from "@/lib/defaults";
-import type { Profile, Opportunity } from "@/types/database";
+import { ArtistCard } from "@/components/artists/ArtistCard";
+import type { Profile, Opportunity, ProfileWithImage } from "@/types/database";
 import { affiliationYears, rosterHeading, type OrgRoster } from "@/lib/affiliations";
 
 // ── v2 partner + patron profiles (brief: design_handoff_partner_patron_profiles)
@@ -163,12 +164,15 @@ interface PartnerProps {
    *  region are not this organisation's to list, so the page points at the
    *  region rather than reproducing it. */
   regionLink: { slug: string; name: string } | null;
+  /** The region's most complete artist profiles, already capped, for a regional
+   *  arts body's page. They are in the region, not on this organisation's list. */
+  regionArtists?: Array<{ artist: ProfileWithImage; location: string | null }>;
 }
 
 export function PartnerProfileView({
   profile, displayName, isOwner, canMessage, verified, unclaimed = false,
   activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
-  regionLink,
+  regionLink, regionArtists = [],
 }: PartnerProps) {
   const cover = profile.featured_image_url
     ? profile.featured_image_url
@@ -293,6 +297,29 @@ export function PartnerProfileView({
           </div>
         </div>
       </div>
+
+      {/* ── Artists in the region — a regional arts body's page shows who
+          works there, and points to the full page for the rest ── */}
+      {regionLink && regionArtists.length > 0 && (
+        <div className="border-b border-border bg-feed-bg">
+          <div className={`${INNER} py-9`}>
+            <div className="mb-[18px] flex items-baseline justify-between gap-4">
+              <h2 className={SECTION_LABEL}>Artists in {regionLink.name}</h2>
+              <Link
+                href={`/artists/${regionLink.slug}`}
+                className="inline-flex h-9 items-center border border-border bg-background px-4 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+              >
+                View all in {regionLink.name} &rarr;
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {regionArtists.map(({ artist, location }) => (
+                <ArtistCard key={artist.id} artist={artist} view="gallery" locationText={location} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Trust stats — hairline dividers, no boxes ── */}
       {stats.length > 0 && (

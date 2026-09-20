@@ -5,6 +5,7 @@ import { RegionPageView, RegionTrackedArea, RegionTrackedLink } from "@/componen
 import { HandleChips } from "@/components/artists/HandleChips";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { byCompleteness, isPresentable } from "@/lib/artist-completeness";
+import { regionalTownLabel } from "@/lib/region-location";
 import { regionFullName } from "@/lib/regions";
 import type { City, Region } from "@/types/database";
 import type { RegionalPageData } from "@/lib/regions";
@@ -36,17 +37,8 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
   const shown = artists.filter(isPresentable).sort(byCompleteness);
   const recentlyJoined = artists.filter((a) => !isPresentable(a));
 
-  // The town from the taxonomy when we have it, else the first place the artist
-  // typed. Country is only worth saying when it is not the obvious one.
-  function townLabel(a: (typeof artists)[number]): string | null {
-    const typed = a.city?.split(/[\/,]/)[0]?.trim() || null;
-    // "Tāmaki Makaurau Auckland" is the region said twice; the region name is enough.
-    const town =
-      (a.city_id && cityNameById.get(a.city_id)) ||
-      (typed && typed.toLowerCase().includes(region.name.toLowerCase()) ? region.name : typed);
-    const country = a.country && a.country !== "NZ" ? a.country : null;
-    return [town, country].filter(Boolean).join(", ") || null;
-  }
+  const townLabel = (a: (typeof artists)[number]) =>
+    regionalTownLabel(a, region.name, cityNameById);
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-12">
@@ -124,9 +116,14 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
       {/* ── Artists ── */}
       {shown.length > 0 && (
         <section className="space-y-4">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
-            Artists
-          </h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+              Artists
+            </h2>
+            <Link href="/artists" className="font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
+              View all &rarr;
+            </Link>
+          </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {shown.map((artist) => (
               <RegionTrackedArea
@@ -167,9 +164,14 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
       {/* ── Live opportunities in the region ── */}
       {opportunities.length > 0 && (
         <section className="space-y-4">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
-            Open in {region.name}
-          </h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+              Opportunities in {region.name}
+            </h2>
+            <Link href="/opportunities" className="font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
+              View all &rarr;
+            </Link>
+          </div>
           <MasonryGrid opportunities={opportunities} view="gallery" />
         </section>
       )}
