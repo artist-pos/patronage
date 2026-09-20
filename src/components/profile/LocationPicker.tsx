@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchCities, cityFullName } from "@/lib/regions";
-import type { CityWithRegion } from "@/types/database";
+import type { CityWithRegion, LocalBoard } from "@/types/database";
 
 interface Props {
   cities: CityWithRegion[];
@@ -13,6 +13,10 @@ interface Props {
   /** The saved region. May differ from the saved city's region, because the
    *  artist is allowed to choose. */
   defaultRegionId?: string | null;
+  /** Sub-areas of regions (Auckland's local boards). A picker is offered only
+   *  when the chosen region has some. */
+  boards?: LocalBoard[];
+  defaultLocalBoardId?: string | null;
   required?: boolean;
   error?: string;
 }
@@ -42,6 +46,8 @@ export function LocationPicker({
   defaultCityId,
   defaultFreeform,
   defaultRegionId,
+  boards = [],
+  defaultLocalBoardId,
   required,
   error,
 }: Props) {
@@ -61,6 +67,7 @@ export function LocationPicker({
       ? defaultRegionId
       : null
   );
+  const [boardId, setBoardId] = useState<string>(defaultLocalBoardId ?? "");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -126,6 +133,11 @@ export function LocationPicker({
       setOpen(false);
     }
   }
+
+  const effectiveRegionId = regionOverride ?? selected?.region_id ?? null;
+  const regionBoards = boards.filter((b) => b.region_id === effectiveRegionId);
+  // A board chosen under one region must not survive a switch to another.
+  const effectiveBoardId = regionBoards.some((b) => b.id === boardId) ? boardId : "";
 
   return (
     <div className="space-y-2">
@@ -207,6 +219,9 @@ export function LocationPicker({
         value={regionOverride ?? selected?.region_id ?? ""}
       />
       <input type="hidden" name="city" value={selected ? selected.name : query} />
+      {boards.length > 0 && (
+        <input type="hidden" name="local_board_id" value={effectiveBoardId} />
+      )}
 
       {/* Region. Normally follows the town, always overridable. */}
       <div className="space-y-1.5">
@@ -256,6 +271,34 @@ export function LocationPicker({
           </p>
         );
       })()}
+
+      {regionBoards.length > 0 && (
+        <div className="space-y-1.5">
+          <label
+            htmlFor="local-board-choice"
+            className="block text-xs text-[color:var(--fg-muted)]"
+          >
+            Local board <span className="text-[color:var(--fg-subtle)]">(optional)</span>
+          </label>
+          <select
+            id="local-board-choice"
+            value={effectiveBoardId}
+            onChange={(e) => setBoardId(e.target.value)}
+            className="w-full border border-border bg-background px-3 py-2 text-base focus-visible:outline-none sm:text-sm"
+          >
+            <option value="">Not sure, or rather not say</option>
+            {regionBoards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Helps your local board&apos;s arts team see who works in their area. It is
+            not shown on your profile.
+          </p>
+        </div>
+      )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

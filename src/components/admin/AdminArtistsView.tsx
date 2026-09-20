@@ -10,7 +10,7 @@ import { createShadowProfile } from "@/app/admin/claim-tokens/actions";
 import type { MapPin } from "@/lib/artist-map";
 import type { CatalogOrgStatus, RegionCoverage } from "@/lib/region-coverage";
 import { REGIONAL_ARTS_ORGS } from "@/lib/regional-arts-orgs";
-import type { CityWithRegion, Profile } from "@/types/database";
+import type { CityWithRegion, LocalBoard, Profile } from "@/types/database";
 
 const ArtistMap = dynamic(() => import("@/components/admin/ArtistMap"), {
   ssr: false,
@@ -24,13 +24,14 @@ const ArtistMap = dynamic(() => import("@/components/admin/ArtistMap"), {
 interface Props {
   artists: Profile[];
   cities: CityWithRegion[];
+  boards: LocalBoard[];
   pins: MapPin[];
   unplacedArtists: number;
   coverage: RegionCoverage[];
   catalog: CatalogOrgStatus[];
 }
 
-export function AdminArtistsView({ artists, cities, pins, unplacedArtists, coverage, catalog }: Props) {
+export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtists, coverage, catalog }: Props) {
   const router = useRouter();
   const [focusRegion, setFocusRegion] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
@@ -111,6 +112,12 @@ export function AdminArtistsView({ artists, cities, pins, unplacedArtists, cover
                   </span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">{o.regionNames.join(" · ")}</p>
+                {o.boards.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    By local board:{" "}
+                    {o.boards.map((b) => `${b.name} ${b.count}`).join(" · ")}
+                  </p>
+                )}
 
                 {o.profile ? (
                   <p className="text-muted-foreground">
@@ -201,7 +208,7 @@ export function AdminArtistsView({ artists, cities, pins, unplacedArtists, cover
         </button>
         {listOpen && (
           <div className="pt-4">
-            <ArtistTable artists={artists} cities={cities} />
+            <ArtistTable artists={artists} cities={cities} boards={boards} />
           </div>
         )}
       </section>

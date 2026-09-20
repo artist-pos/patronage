@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { MediumInput } from "./MediumInput";
 import { DisciplineInput } from "./DisciplineInput";
 import { LocationPicker } from "./LocationPicker";
-import type { Profile, DisciplineEnum, CityWithRegion } from "@/types/database";
+import type { Profile, DisciplineEnum, CityWithRegion, LocalBoard } from "@/types/database";
 import type { ArtsOrganisation } from "@/lib/regions";
 import { IDENTITY_TAGS } from "@/lib/constants/demographics";
 import { SELECTABLE_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
@@ -20,11 +20,12 @@ interface Props {
   role: Profile["role"];
   /** NZ location taxonomy for the type-to-search field. */
   cities: CityWithRegion[];
+  boards: LocalBoard[];
   /** Regional arts bodies an artist may name as theirs (189). */
   artsOrgs: ArtsOrganisation[];
 }
 
-export function ProfileForm({ profile, role, cities, artsOrgs }: Props) {
+export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) {
   const isArtist = role === "artist" || role === "owner";
   const [state, action, isPending] = useActionState<ProfileFormState, FormData>(
     upsertProfileAction,
@@ -88,6 +89,8 @@ export function ProfileForm({ profile, role, cities, artsOrgs }: Props) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <LocationPicker
           cities={cities}
+          boards={boards}
+          defaultLocalBoardId={(profile as Profile & { local_board_id?: string | null })?.local_board_id ?? null}
           defaultCityId={(profile as Profile & { city_id?: string | null })?.city_id ?? null}
           defaultFreeform={(profile as Profile & { city?: string | null })?.city ?? null}
           defaultRegionId={(profile as Profile & { region_id?: string | null })?.region_id ?? null}

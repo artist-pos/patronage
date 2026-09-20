@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSelectableCountry } from "@/lib/constants/countries";
+import { validLocalBoardId } from "@/lib/local-boards";
 import type { DisciplineEnum } from "@/types/database";
 
 const VALID_DISCIPLINES: DisciplineEnum[] = [
@@ -36,6 +37,11 @@ export async function saveOnboardingProfile(
   const city = String(formData.get("city") ?? "").trim();
   const cityId = String(formData.get("city_id") ?? "").trim();
   const regionId = String(formData.get("region_id") ?? "").trim();
+  // Absent until migration 193 is live and the picker has boards to offer.
+  const boardSubmitted = formData.has("local_board_id");
+  const localBoardId = boardSubmitted
+    ? await validLocalBoardId(supabase, String(formData.get("local_board_id") ?? "").trim(), regionId)
+    : null;
   const disciplines = String(formData.get("disciplines") ?? "")
     .split(",")
     .map((d) => d.trim())
@@ -65,6 +71,7 @@ export async function saveOnboardingProfile(
       city,
       city_id: cityId || null,
       region_id: regionId || null,
+      ...(boardSubmitted ? { local_board_id: localBoardId } : {}),
       disciplines,
       medium: medium ? medium.split(",").map((m) => m.trim()).filter(Boolean) : null,
       weekly_digest: weeklyDigest,

@@ -1,5 +1,5 @@
 import { REGIONAL_ARTS_ORGS } from "@/lib/regional-arts-orgs";
-import type { Profile, Region } from "@/types/database";
+import type { LocalBoard, Profile, Region } from "@/types/database";
 
 export interface RegionCoverage {
   regionId: string;
@@ -14,7 +14,7 @@ export interface RegionCoverage {
 
 type CoverageProfile = Pick<
   Profile,
-  "id" | "username" | "full_name" | "role" | "is_active" | "region_id" | "org_category" | "account_status"
+  "id" | "username" | "full_name" | "role" | "is_active" | "region_id" | "org_category" | "account_status" | "local_board_id"
 >;
 
 /**
@@ -70,6 +70,9 @@ export interface CatalogOrgStatus {
   regionNames: string[];
   /** Active artists across every region it covers. */
   artistCount: number;
+  /** Artists per local board for the home region, non-empty boards only, with
+   *  anyone in the region who has not named one counted as "Not set". */
+  boards: Array<{ name: string; count: number }>;
   profile: { id: string; username: string; name: string; shadow: boolean } | null;
 }
 
@@ -90,7 +93,8 @@ const norm = (s: string | null | undefined) =>
  */
 export function computeCatalogStatus(
   coverage: RegionCoverage[],
-  profiles: CoverageProfile[]
+  profiles: CoverageProfile[],
+  boards: Array<Pick<LocalBoard, "id" | "region_id" | "name">> = []
 ): CatalogOrgStatus[] {
   const bySlug = new Map(coverage.map((c) => [c.slug, c]));
   const partners = profiles.filter((p) => p.role === "partner");
@@ -109,6 +113,25 @@ export function computeCatalogStatus(
       ) ??
       null;
 
+    const homeBoards = boards.filter((b) => b.region_id === home?.regionId);
+    const boardCounts = new Map<string, number>();
+    let noBoard = 0;
+    if (home && homeBoards.length > 0) {
+      for (const p of profiles) {
+        if (p.region_id !== home.regionId || !p.is_active || (p.role !== "artist" && p.role !== "owner")) continue;
+        if (p.local_board_id && homeBoards.some((b) => b.id === p.local_board_id)) {
+          boardCounts.set(p.local_board_id, (boardCounts.get(p.local_board_id) ?? 0) + 1);
+        } else {
+          noBoard++;
+        }
+      }
+    }
+    const boardRows = homeBoards
+      .filter((b) => boardCounts.has(b.id))
+      .map((b) => ({ name: b.name, count: boardCounts.get(b.id) ?? 0 }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    if (boardRows.length > 0 && noBoard > 0) boardRows.push({ name: "Not set", count: noBoard });
+
     return {
       key: def.key,
       name: def.name,
@@ -117,6 +140,7 @@ export function computeCatalogStatus(
       regionSlug: def.regionSlug,
       regionNames: covered.map((c) => c.name),
       artistCount: covered.reduce((n, c) => n + c.artistCount, 0),
+      boards: boardRows,
       profile: match
         ? {
             id: match.id,

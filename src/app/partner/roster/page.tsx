@@ -7,6 +7,7 @@ import { RosterManager, type RosterEntry } from "./RosterManager";
 import { InviteUpload } from "./InviteUpload";
 import { InviteCopyEditor } from "./InviteCopyEditor";
 import { defaultInviteCopy } from "@/lib/email";
+import { getLocalBoards } from "@/lib/regions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -65,7 +66,7 @@ export default async function PartnerRosterPage() {
   // The roster, if one has been opened, and the invitation funnel. Independent
   // reads, so they go together.
   const showRegion = profile.org_category === "regional_arts_org" && !!profile.region_id;
-  const [{ data: rosterRow }, { data: inviteRows }, { data: regionRows }] = await Promise.all([
+  const [{ data: rosterRow }, { data: inviteRows }, { data: regionRows }, allBoards] = await Promise.all([
     admin
       .from("collectives")
       .select("id, name, relationship, is_public")
@@ -81,20 +82,40 @@ export default async function PartnerRosterPage() {
     showRegion
       ? admin
           .from("profiles")
-          .select("id, username, full_name, city")
+          .select("id, username, full_name, city, local_board_id")
           .eq("region_id", profile.region_id)
           .eq("is_active", true)
           .in("role", ["artist", "owner"])
           .order("full_name", { ascending: true })
           .limit(300)
       : Promise.resolve({ data: [] }),
+    showRegion ? getLocalBoards() : Promise.resolve([]),
   ]);
   const regionArtists = (regionRows ?? []) as Array<{
     id: string;
     username: string;
     full_name: string | null;
     city: string | null;
+    local_board_id: string | null;
   }>;
+
+  // Sub-areas of the region (Auckland's local boards), when it has any and at
+  // least one artist has named theirs. Grouped so a board's arts broker can
+  // find their own people; anyone who has not chosen sits under "Not set".
+  const regionBoards = allBoards.filter((b) => b.region_id === profile.region_id);
+  const groups: Array<{ key: string; title: string | null; artists: typeof regionArtists }> = [];
+  if (regionBoards.length > 0 && regionArtists.some((a) => a.local_board_id)) {
+    for (const b of regionBoards) {
+      const inBoard = regionArtists.filter((a) => a.local_board_id === b.id);
+      if (inBoard.length > 0) groups.push({ key: b.id, title: b.name, artists: inBoard });
+    }
+    const unset = regionArtists.filter(
+      (a) => !a.local_board_id || !regionBoards.some((b) => b.id === a.local_board_id)
+    );
+    if (unset.length > 0) groups.push({ key: "none", title: "Local board not set", artists: unset });
+  } else {
+    groups.push({ key: "all", title: null, artists: regionArtists });
+  }
 
   // Artists who have named this organisation as theirs (189). Their choice, not
   // a claim this organisation gets to make, so it is shown only here and never
@@ -245,23 +266,32 @@ export default async function PartnerRosterPage() {
               region&apos;s page because of where they are, not because anyone listed them.
             </p>
           </div>
-          <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {regionArtists.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={`/${a.username}`}
-                  className="text-[14px] transition-colors hover:text-[color:var(--brand)]"
-                >
-                  {a.full_name ?? a.username}
-                </Link>
-                {a.city && (
-                  <span className="ml-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">
-                    {a.city}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {groups.map((g) => (
+            <div key={g.key} className="space-y-2">
+              {g.title && (
+                <h3 className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+                  {g.title} · {g.artists.length}
+                </h3>
+              )}
+              <ul className="flex flex-wrap gap-x-5 gap-y-2">
+                {g.artists.map((a) => (
+                  <li key={a.id}>
+                    <Link
+                      href={`/${a.username}`}
+                      className="text-[14px] transition-colors hover:text-[color:var(--brand)]"
+                    >
+                      {a.full_name ?? a.username}
+                    </Link>
+                    {a.city && (
+                      <span className="ml-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                        {a.city}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
       )}
 

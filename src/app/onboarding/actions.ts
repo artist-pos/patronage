@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isSelectableCountry } from "@/lib/constants/countries";
+import { validLocalBoardId } from "@/lib/local-boards";
 
 async function maybeSetVerifiedAt(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -62,6 +63,9 @@ export async function upsertProfileAction(
   // and the columns go null rather than holding a stale earlier match.
   const city_id = (formData.get("city_id") as string)?.trim() || null;
   const region_id = (formData.get("region_id") as string)?.trim() || null;
+  // Absent until migration 193 is live and the picker has boards to offer.
+  const boardSubmitted = formData.has("local_board_id");
+  const boardRaw = (formData.get("local_board_id") as string)?.trim() || null;
   // Which arts body the artist names as theirs (189). Private, and unrelated to
   // region_id above: it changes nobody's regional page.
   const arts_org_id = (formData.get("arts_org_id") as string)?.trim() || null;
@@ -129,6 +133,9 @@ export async function upsertProfileAction(
     city,
     city_id,
     region_id,
+    ...(boardSubmitted
+      ? { local_board_id: await validLocalBoardId(supabase, boardRaw, region_id) }
+      : {}),
     arts_org_id,
     // A hand-picked location is settled, so it drops off the admin review list.
     location_needs_review: false,

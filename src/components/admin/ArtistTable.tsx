@@ -9,6 +9,7 @@ import {
   deleteArtist,
   setArtistCountry,
   setArtistLocation,
+  setArtistLocalBoard,
 } from "@/app/admin/artists/actions";
 import { Button } from "@/components/ui/button";
 import { AdminLocationSearch } from "@/components/admin/AdminLocationSearch";
@@ -20,16 +21,18 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ALL_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
-import type { CityWithRegion, Profile } from "@/types/database";
+import type { CityWithRegion, LocalBoard, Profile } from "@/types/database";
 
 const UNSET = "__unset";
 
 export function ArtistTable({
   artists,
   cities,
+  boards,
 }: {
   artists: Profile[];
   cities: CityWithRegion[];
+  boards: LocalBoard[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,6 +52,37 @@ export function ArtistTable({
 
   // Optimistic location values, encoded as "city:<id>", "region:<id>" or UNSET.
   const [locationEdits, setLocationEdits] = useState<Record<string, string>>({});
+
+  // Optimistic local board values ("" = none).
+  const [boardEdits, setBoardEdits] = useState<Record<string, string>>({});
+  const boardOf = (a: Profile) =>
+    a.id in boardEdits ? boardEdits[a.id] : (a.local_board_id ?? "");
+
+  // Region an artist resolves to right now, so the board list only offers
+  // boards that can actually apply.
+  const regionIdOf = (a: Profile) => {
+    const v = a.id in locationEdits ? locationEdits[a.id] : null;
+    if (v === UNSET) return null;
+    if (v?.startsWith("city:")) return cities.find((c) => c.id === v.slice(5))?.region_id ?? null;
+    if (v?.startsWith("region:")) return v.slice(7);
+    return a.region_id;
+  };
+
+  function changeBoard(id: string, value: string) {
+    setBoardEdits((prev) => ({ ...prev, [id]: value }));
+    startTransition(async () => {
+      const result = await setArtistLocalBoard(id, value || null);
+      if (result?.error) {
+        setBoardEdits((prev) => {
+          const copy = { ...prev };
+          delete copy[id];
+          return copy;
+        });
+        window.alert(result.error);
+      }
+      router.refresh();
+    });
+  }
 
   const locationOf = (a: Profile) =>
     a.id in locationEdits
@@ -226,6 +260,25 @@ export function ArtistTable({
                     onChange={(v) => changeLocation(a.id, v === "" ? UNSET : v)}
                     ariaLabel={`Location for ${a.username}`}
                   />
+                  {(() => {
+                    const options = boards.filter((b) => b.region_id === regionIdOf(a));
+                    if (options.length === 0) return null;
+                    const current = options.some((b) => b.id === boardOf(a)) ? boardOf(a) : "";
+                    return (
+                      <select
+                        value={current}
+                        disabled={isPending}
+                        onChange={(e) => changeBoard(a.id, e.target.value)}
+                        aria-label={`Local board for ${a.username}`}
+                        className="mt-1 w-44 border border-border bg-background px-1.5 py-1 text-xs focus:border-black focus:outline-none disabled:opacity-50"
+                      >
+                        <option value="">Local board: not set</option>
+                        {options.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </td>
                 <td className="py-3 pr-4 text-muted-foreground">{a.career_stage ?? "—"}</td>
                 <td className="py-3 pr-4">

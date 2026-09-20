@@ -5,10 +5,12 @@ import { LocationPicker } from "@/components/profile/LocationPicker";
 import { DisciplineInput } from "@/components/profile/DisciplineInput";
 import { SELECTABLE_COUNTRIES } from "@/lib/constants/countries";
 import { saveOnboardingProfile, type ProfileStepState } from "./actions";
-import type { CityWithRegion, DisciplineEnum } from "@/types/database";
+import type { CityWithRegion, DisciplineEnum, LocalBoard } from "@/types/database";
 
 interface Props {
   cities: CityWithRegion[];
+  boards: LocalBoard[];
+  defaultLocalBoardId: string | null;
   /** Seeded from the listing or invitation they arrived through, so for most
    *  people this screen is a glance and a Continue rather than typing. */
   defaultName: string;
@@ -22,6 +24,8 @@ interface Props {
 
 export function ProfileStepForm({
   cities,
+  boards,
+  defaultLocalBoardId,
   defaultName,
   defaultCountry,
   defaultCity,
@@ -76,6 +80,8 @@ export function ProfileStepForm({
         defaultCityId={defaultCityId}
         defaultFreeform={defaultCity}
         defaultRegionId={defaultRegionId}
+        boards={boards}
+        defaultLocalBoardId={defaultLocalBoardId}
         required
       />
 

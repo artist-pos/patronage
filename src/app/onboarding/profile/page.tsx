@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
-import { getCitiesWithRegions } from "@/lib/regions";
+import { getCitiesWithRegions, getLocalBoards } from "@/lib/regions";
 import { ProfileStepForm } from "./ProfileStepForm";
 import type { DisciplineEnum, Profile } from "@/types/database";
 
@@ -30,9 +30,10 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
   const { user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
-  const [profile, cities] = await Promise.all([
+  const [profile, cities, boards] = await Promise.all([
     getProfileById(user.id),
     getCitiesWithRegions(),
+    getLocalBoards(),
   ]);
 
   if (!profile?.role) redirect("/onboarding/role");
@@ -44,7 +45,7 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
     redirect(resume ?? "/opportunities?tab=for-you");
   }
 
-  const seeded = profile as Profile & { city_id?: string | null; region_id?: string | null };
+  const seeded = profile as Profile & { city_id?: string | null; region_id?: string | null; local_board_id?: string | null };
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-6 py-12">
@@ -63,6 +64,8 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
 
         <ProfileStepForm
           cities={cities}
+          boards={boards}
+          defaultLocalBoardId={seeded.local_board_id ?? null}
           defaultName={profile.full_name ?? ""}
           defaultCountry={profile.country ?? ""}
           defaultCity={profile.city ?? ""}

@@ -434,6 +434,9 @@ export interface Profile {
    *  that organisation; never rendered on a public profile. */
   arts_org_id?: string | null;
   city_id: string | null;
+  /** Auckland local board (migration 193). Optional, private, and only valid
+   *  when it belongs to region_id. */
+  local_board_id?: string | null;
   location_needs_review: boolean;
   // Signup attribution (migration 181) — which public surface produced the
   // account, so growth loops can be measured rather than guessed at.
@@ -1367,6 +1370,14 @@ export interface City {
   aliases: string[];
   is_major: boolean;
   created_at: string;
+}
+
+export interface LocalBoard {
+  id: string;
+  region_id: string;
+  slug: string;
+  name: string;
+  name_maori: string | null;
 }
 
 /** A city joined to its region — what the location picker works with. */

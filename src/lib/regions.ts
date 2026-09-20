@@ -3,6 +3,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import type {
   City,
   CityWithRegion,
+  LocalBoard,
   Opportunity,
   Profile,
   ProjectUpdateWithArtist,
@@ -59,6 +60,21 @@ export const getCitiesWithRegions = unstable_cache(
     return (data ?? []) as unknown as CityWithRegion[];
   },
   ["cities-with-regions"],
+  { revalidate: TAXONOMY_TTL, tags: ["regions"] }
+);
+
+/** Sub-areas of a region (Auckland's local boards). A handful of rows that
+ *  change only by migration, so cached like the rest of the taxonomy. */
+export const getLocalBoards = unstable_cache(
+  async (): Promise<LocalBoard[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("local_boards")
+      .select("id, region_id, slug, name, name_maori")
+      .order("name", { ascending: true });
+    return (data ?? []) as LocalBoard[];
+  },
+  ["local-boards"],
   { revalidate: TAXONOMY_TTL, tags: ["regions"] }
 );
 

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { ALL_COUNTRIES } from "@/lib/constants/countries";
+import { validLocalBoardId } from "@/lib/local-boards";
 import type { CountryEnum } from "@/types/database";
 
 async function guard() {
@@ -39,7 +40,13 @@ export async function setArtistLocation(id: string, target: ArtistLocationTarget
   await guard();
   const supabase = await createClient();
 
-  let patch: { city_id: string | null; region_id: string | null; city?: string; location_needs_review: boolean };
+  let patch: {
+    city_id: string | null;
+    region_id: string | null;
+    city?: string;
+    location_needs_review: boolean;
+    local_board_id?: string | null;
+  };
   if (!target) {
     patch = { city_id: null, region_id: null, location_needs_review: false };
   } else if (target.type === "city") {
@@ -60,12 +67,42 @@ export async function setArtistLocation(id: string, target: ArtistLocationTarget
     patch = { city_id: null, region_id: region.id, location_needs_review: false };
   }
 
+  // Keep the board only if it still belongs to the region they are moving to.
+  const { data: current } = await supabase
+    .from("profiles")
+    .select("local_board_id")
+    .eq("id", id)
+    .maybeSingle();
+  // Only touched when a board is set, which also keeps this working before
+  // migration 193 has added the column.
+  if (current?.local_board_id) {
+    patch.local_board_id = await validLocalBoardId(supabase, current.local_board_id, patch.region_id);
+  }
+
   const { error } = await supabase.from("profiles").update(patch).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/artists");
   revalidatePath("/artists");
   revalidatePath("/artists/[slug]", "page");
   revalidatePath("/[username]", "page");
+  return {};
+}
+
+// Auckland local board (migration 193). Validated against the artist's region,
+// so it can only ever be one of the boards under where they are.
+export async function setArtistLocalBoard(id: string, boardId: string | null) {
+  await guard();
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("region_id")
+    .eq("id", id)
+    .maybeSingle();
+  const valid = await validLocalBoardId(supabase, boardId, profile?.region_id);
+  if (boardId && !valid) return { error: "That board is not in this artist's region." };
+  const { error } = await supabase.from("profiles").update({ local_board_id: valid }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/artists");
   return {};
 }
 

@@ -13,7 +13,7 @@ import { SupportTiersManager } from "@/components/profile/SupportTiersManager";
 import { CampaignDeleteButton } from "@/components/campaigns/CampaignDeleteButton";
 import { CreateCampaignFromSelectionButton } from "@/components/campaigns/CreateCampaignFromSelectionButton";
 import { ProfileForm } from "@/components/profile/ProfileForm";
-import { getCitiesWithRegions, getArtsOrganisations } from "@/lib/regions";
+import { getCitiesWithRegions, getArtsOrganisations, getLocalBoards } from "@/lib/regions";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
@@ -64,10 +64,11 @@ export default async function StudioPage({ searchParams }: PageProps) {
   const { supabase, user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: profileRow }, completionProfile, cities, artsOrgs] = await Promise.all([
+  const [{ data: profileRow }, completionProfile, cities, boards, artsOrgs] = await Promise.all([
     supabase.from("profiles").select("role, username, full_name, gst_registered, gst_number, stripe_connect_status, stripe_account_id").eq("id", user.id).single(),
     fetchCompletionProfile(user.id),
     getCitiesWithRegions(),
+    getLocalBoards(),
     getArtsOrganisations(),
   ]);
 
@@ -383,7 +384,7 @@ export default async function StudioPage({ searchParams }: PageProps) {
               </section>
               <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
                 <h2 className="text-base font-semibold">Profile details</h2>
-                <ProfileForm profile={fullProfile} role={fullProfile.role} cities={cities} artsOrgs={artsOrgs} />
+                <ProfileForm profile={fullProfile} role={fullProfile.role} cities={cities} boards={boards} artsOrgs={artsOrgs} />
               </section>
             </div>
 
