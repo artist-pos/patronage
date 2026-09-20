@@ -64,7 +64,8 @@ export default async function PartnerRosterPage() {
 
   // The roster, if one has been opened, and the invitation funnel. Independent
   // reads, so they go together.
-  const [{ data: rosterRow }, { data: inviteRows }] = await Promise.all([
+  const showRegion = profile.org_category === "regional_arts_org" && !!profile.region_id;
+  const [{ data: rosterRow }, { data: inviteRows }, { data: regionRows }] = await Promise.all([
     admin
       .from("collectives")
       .select("id, name, relationship, is_public")
@@ -75,7 +76,25 @@ export default async function PartnerRosterPage() {
       .from("artist_invitations")
       .select("status")
       .eq("org_profile_id", profile.id),
+    // Everyone working in the region. Already public on the region's page, so
+    // this is a convenience view, not a disclosure.
+    showRegion
+      ? admin
+          .from("profiles")
+          .select("id, username, full_name, city")
+          .eq("region_id", profile.region_id)
+          .eq("is_active", true)
+          .in("role", ["artist", "owner"])
+          .order("full_name", { ascending: true })
+          .limit(300)
+      : Promise.resolve({ data: [] }),
   ]);
+  const regionArtists = (regionRows ?? []) as Array<{
+    id: string;
+    username: string;
+    full_name: string | null;
+    city: string | null;
+  }>;
 
   // Artists who have named this organisation as theirs (189). Their choice, not
   // a claim this organisation gets to make, so it is shown only here and never
@@ -213,6 +232,38 @@ export default async function PartnerRosterPage() {
           </div>
         )}
       </section>
+
+      {showRegion && regionArtists.length > 0 && (
+        <section className="space-y-4 border-t border-border pt-10">
+          <div className="space-y-2">
+            <h2 className="text-[17px] font-semibold leading-[1.3]">
+              {regionArtists.length} artist{regionArtists.length === 1 ? "" : "s"} already in{" "}
+              {profile.regions?.name ?? "your region"}
+            </h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Everyone on Patronage who works in your region. They appear on your
+              region&apos;s page because of where they are, not because anyone listed them.
+            </p>
+          </div>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            {regionArtists.map((a) => (
+              <li key={a.id}>
+                <Link
+                  href={`/${a.username}`}
+                  className="text-[14px] transition-colors hover:text-[color:var(--brand)]"
+                >
+                  {a.full_name ?? a.username}
+                </Link>
+                {a.city && (
+                  <span className="ml-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                    {a.city}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {namedBy.length > 0 && (
         <section className="space-y-4 border-t border-border pt-10">

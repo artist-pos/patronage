@@ -1,8 +1,22 @@
 import { getClaimTokens } from "./actions";
 import { ClaimTokensClient } from "./ClaimTokensClient";
+import { createClient } from "@/lib/supabase/server";
+import { getRegions } from "@/lib/regions";
+import { computeRegionCoverage, computeCatalogStatus } from "@/lib/region-coverage";
 
 export default async function ClaimTokensPage() {
-  const tokens = await getClaimTokens();
+  const supabase = await createClient();
+  const [tokens, regions, { data: profileRows }] = await Promise.all([
+    getClaimTokens(),
+    getRegions(),
+    supabase
+      .from("profiles")
+      .select("id, username, full_name, role, is_active, region_id, org_category, account_status")
+      .limit(5000),
+  ]);
+  const rows = (profileRows ?? []) as Parameters<typeof computeRegionCoverage>[1];
+  const coverage = computeRegionCoverage(regions, rows);
+  const catalog = computeCatalogStatus(coverage, rows);
 
   const counts = tokens.reduce<Record<string, number>>((acc, t) => {
     acc[t.status] = (acc[t.status] ?? 0) + 1;
@@ -29,7 +43,7 @@ export default async function ClaimTokensPage() {
         </div>
       )}
 
-      <ClaimTokensClient initialTokens={tokens} />
+      <ClaimTokensClient initialTokens={tokens} coverage={coverage} catalog={catalog} />
     </div>
   );
 }

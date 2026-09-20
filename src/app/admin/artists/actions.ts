@@ -26,6 +26,49 @@ export async function setArtistCountry(id: string, country: string | null) {
   return {};
 }
 
+export type ArtistLocationTarget =
+  | { type: "city"; cityId: string }
+  | { type: "region"; regionId: string }
+  | null;
+
+// Sets the structured location (migration 182) by hand. A town carries its own
+// region; a region alone places someone who lives somewhere the taxonomy does
+// not list. The freeform text the artist typed is left alone unless a town is
+// chosen, in which case it follows the town like the artist-facing picker does.
+export async function setArtistLocation(id: string, target: ArtistLocationTarget) {
+  await guard();
+  const supabase = await createClient();
+
+  let patch: { city_id: string | null; region_id: string | null; city?: string; location_needs_review: boolean };
+  if (!target) {
+    patch = { city_id: null, region_id: null, location_needs_review: false };
+  } else if (target.type === "city") {
+    const { data: city } = await supabase
+      .from("cities")
+      .select("id, name, region_id")
+      .eq("id", target.cityId)
+      .maybeSingle();
+    if (!city) return { error: "Town not found." };
+    patch = { city_id: city.id, region_id: city.region_id, city: city.name, location_needs_review: false };
+  } else {
+    const { data: region } = await supabase
+      .from("regions")
+      .select("id")
+      .eq("id", target.regionId)
+      .maybeSingle();
+    if (!region) return { error: "Region not found." };
+    patch = { city_id: null, region_id: region.id, location_needs_review: false };
+  }
+
+  const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/artists");
+  revalidatePath("/artists");
+  revalidatePath("/artists/[slug]", "page");
+  revalidatePath("/[username]", "page");
+  return {};
+}
+
 export async function toggleArtistActive(id: string, current: boolean) {
   await guard();
   const supabase = await createClient();

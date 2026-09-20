@@ -1,11 +1,22 @@
 export const dynamic = "force-dynamic";
 import { getAllProfiles } from "@/lib/admin";
-import { ArtistTable } from "@/components/admin/ArtistTable";
+import { getRegions, getCitiesWithRegions } from "@/lib/regions";
+import { buildMapPins } from "@/lib/artist-map";
+import { computeRegionCoverage, computeCatalogStatus } from "@/lib/region-coverage";
+import { AdminArtistsView } from "@/components/admin/AdminArtistsView";
 
 export const metadata = { title: "Artists — Admin — Patronage" };
 
 export default async function AdminArtistsPage() {
-  const artists = await getAllProfiles();
+  const [artists, regions, cities] = await Promise.all([
+    getAllProfiles(),
+    getRegions(),
+    getCitiesWithRegions(),
+  ]);
+
+  const { pins, unplaced } = buildMapPins(artists, regions, cities);
+  const coverage = computeRegionCoverage(regions, artists);
+  const catalog = computeCatalogStatus(coverage, artists);
 
   return (
     <div className="space-y-6">
@@ -18,7 +29,14 @@ export default async function AdminArtistsPage() {
           portfolio.
         </p>
       </div>
-      <ArtistTable artists={artists} />
+      <AdminArtistsView
+        artists={artists}
+        cities={cities}
+        pins={pins}
+        unplacedArtists={unplaced.artists}
+        coverage={coverage}
+        catalog={catalog}
+      />
     </div>
   );
 }

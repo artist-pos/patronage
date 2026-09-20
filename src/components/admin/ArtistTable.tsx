@@ -8,8 +8,10 @@ import {
   togglePatronageSupported,
   deleteArtist,
   setArtistCountry,
+  setArtistLocation,
 } from "@/app/admin/artists/actions";
 import { Button } from "@/components/ui/button";
+import { AdminLocationSearch } from "@/components/admin/AdminLocationSearch";
 import {
   Dialog,
   DialogContent,
@@ -18,11 +20,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ALL_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
-import type { Profile } from "@/types/database";
+import type { CityWithRegion, Profile } from "@/types/database";
 
 const UNSET = "__unset";
 
-export function ArtistTable({ artists }: { artists: Profile[] }) {
+export function ArtistTable({
+  artists,
+  cities,
+}: {
+  artists: Profile[];
+  cities: CityWithRegion[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
@@ -35,6 +43,40 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
   function act(fn: () => Promise<void>) {
     startTransition(async () => {
       await fn();
+      router.refresh();
+    });
+  }
+
+  // Optimistic location values, encoded as "city:<id>", "region:<id>" or UNSET.
+  const [locationEdits, setLocationEdits] = useState<Record<string, string>>({});
+
+  const locationOf = (a: Profile) =>
+    a.id in locationEdits
+      ? locationEdits[a.id]
+      : a.city_id
+        ? `city:${a.city_id}`
+        : a.region_id
+          ? `region:${a.region_id}`
+          : UNSET;
+
+  function changeLocation(id: string, value: string) {
+    setLocationEdits((prev) => ({ ...prev, [id]: value }));
+    const target =
+      value === UNSET
+        ? null
+        : value.startsWith("city:")
+          ? ({ type: "city", cityId: value.slice(5) } as const)
+          : ({ type: "region", regionId: value.slice(7) } as const);
+    startTransition(async () => {
+      const result = await setArtistLocation(id, target);
+      if (result?.error) {
+        setLocationEdits((prev) => {
+          const copy = { ...prev };
+          delete copy[id];
+          return copy;
+        });
+        window.alert(result.error);
+      }
       router.refresh();
     });
   }
@@ -72,7 +114,12 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
   const q = search.trim().toLowerCase();
   const filtered = artists.filter((a) => {
     if (countryFilter !== "all" && (countryOf(a) ?? UNSET) !== countryFilter) return false;
-    if (q && !a.username?.toLowerCase().includes(q) && !a.full_name?.toLowerCase().includes(q))
+    if (
+      q &&
+      !a.username?.toLowerCase().includes(q) &&
+      !a.full_name?.toLowerCase().includes(q) &&
+      !a.email?.toLowerCase().includes(q)
+    )
       return false;
     return true;
   });
@@ -85,10 +132,10 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
           <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
-            placeholder="Search username or name…"
+            placeholder="Search username, name or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-52 border border-border bg-background py-1.5 pl-6 pr-2 text-xs focus:border-black focus:outline-none"
+            className="w-64 border border-border bg-background py-1.5 pl-6 pr-2 text-xs focus:border-black focus:outline-none"
           />
         </div>
 
@@ -119,7 +166,9 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
             <tr className="border-b border-border text-left">
               <th className="py-3 pr-4 font-medium text-muted-foreground w-40">Username</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Name</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Email</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Country</th>
+              <th className="py-3 pr-4 font-medium text-muted-foreground">Location</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Stage</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Active</th>
               <th className="py-3 pr-4 font-medium text-muted-foreground">Supported</th>
@@ -141,6 +190,15 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
                 </td>
                 <td className="py-3 pr-4 text-muted-foreground">{a.full_name ?? "—"}</td>
                 <td className="py-3 pr-4">
+                  {a.email ? (
+                    <a href={`mailto:${a.email}`} className="underline underline-offset-2">
+                      {a.email}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="py-3 pr-4">
                   <select
                     value={countryOf(a) ?? UNSET}
                     disabled={isPending}
@@ -158,6 +216,16 @@ export function ArtistTable({ artists }: { artists: Profile[] }) {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                </td>
+                <td className="py-3 pr-4">
+                  <AdminLocationSearch
+                    cities={cities}
+                    value={locationOf(a) === UNSET ? "" : locationOf(a)}
+                    freeform={a.city}
+                    disabled={isPending}
+                    onChange={(v) => changeLocation(a.id, v === "" ? UNSET : v)}
+                    ariaLabel={`Location for ${a.username}`}
+                  />
                 </td>
                 <td className="py-3 pr-4 text-muted-foreground">{a.career_stage ?? "—"}</td>
                 <td className="py-3 pr-4">

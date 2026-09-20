@@ -3,6 +3,8 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import { X, Plus, Copy, Check, Search } from "lucide-react";
 import type { ClaimEntityType } from "@/types/database";
+import { ORG_CATEGORIES } from "@/lib/org-categories";
+import type { CatalogOrgStatus, RegionCoverage } from "@/lib/region-coverage";
 import { generateClaimToken, createShadowProfile, searchProfiles } from "./actions";
 
 const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https://patronage.nz";
@@ -10,9 +12,11 @@ const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https
 interface Props {
   onClose: () => void;
   onGenerated: () => void;
+  coverage: RegionCoverage[];
+  catalog: CatalogOrgStatus[];
 }
 
-export function GenerateTokenModal({ onClose, onGenerated }: Props) {
+export function GenerateTokenModal({ onClose, onGenerated, coverage, catalog }: Props) {
   const [isPending, startTransition] = useTransition();
   const [entityType, setEntityType] = useState<ClaimEntityType>("partner");
   const [mode, setMode] = useState<"search" | "create">("search");
@@ -26,6 +30,11 @@ export function GenerateTokenModal({ onClose, onGenerated }: Props) {
 
   // Create shadow profile
   const [shadowName, setShadowName] = useState("");
+  const [orgCategory, setOrgCategory] = useState<string>("regional_arts_org");
+  const [regionId, setRegionId] = useState<string>("");
+  const [shadowBio, setShadowBio] = useState<string>("");
+
+  const selectedRegion = coverage.find((r) => r.regionId === regionId) ?? null;
 
   // Token details
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -67,7 +76,13 @@ export function GenerateTokenModal({ onClose, onGenerated }: Props) {
 
       if (mode === "create") {
         if (!shadowName.trim()) { setError("Name is required."); return; }
-        const res = await createShadowProfile({ name: shadowName, entityType });
+        const res = await createShadowProfile({
+          name: shadowName,
+          entityType,
+          orgCategory: entityType === "partner" ? orgCategory || null : null,
+          regionId: entityType === "partner" ? regionId || null : null,
+          bio: entityType === "partner" ? shadowBio || null : null,
+        });
         if (res.error || !res.profileId) { setError(res.error ?? "Failed to create profile."); return; }
         entityId = res.profileId;
         if (!recipientName) setRecipientName(shadowName);
@@ -124,7 +139,7 @@ export function GenerateTokenModal({ onClose, onGenerated }: Props) {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setGeneratedUrl(null); setSelectedProfileId(null); setSelectedProfileName(""); setSearchQuery(""); setShadowName(""); setRecipientEmail(""); setRecipientName(""); setNotes(""); }}
+                  onClick={() => { setGeneratedUrl(null); setSelectedProfileId(null); setSelectedProfileName(""); setSearchQuery(""); setShadowName(""); setShadowBio(""); setRegionId(""); setRecipientEmail(""); setRecipientName(""); setNotes(""); }}
                   className="flex-1 text-xs font-medium py-2 border border-border hover:bg-stone-50 transition-colors"
                 >
                   Generate another
@@ -231,6 +246,61 @@ export function GenerateTokenModal({ onClose, onGenerated }: Props) {
                       placeholder={entityType === "partner" ? "Organisation name" : "Artist name"}
                       className={inputCls}
                     />
+                    {entityType === "partner" && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const o = catalog.find((c) => c.key === e.target.value);
+                          if (!o) return;
+                          setShadowName(o.name);
+                          if (!recipientName) setRecipientName(o.name);
+                          setShadowBio(o.bio);
+                          setOrgCategory("regional_arts_org");
+                          setRegionId(o.regionId ?? "");
+                        }}
+                        className={inputCls}
+                      >
+                        <option value="">Fill from a known regional arts organisation…</option>
+                        {catalog.map((c) => (
+                          <option key={c.key} value={c.key} disabled={!!c.profile}>
+                            {c.name}{c.profile ? " (already exists)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {entityType === "partner" && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div className="space-y-1">
+                          <label className={labelCls}>Type</label>
+                          <select value={orgCategory} onChange={(e) => setOrgCategory(e.target.value)} className={inputCls}>
+                            <option value="">Not set</option>
+                            {ORG_CATEGORIES.map((c) => (
+                              <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className={labelCls}>Region</label>
+                          <select value={regionId} onChange={(e) => setRegionId(e.target.value)} className={inputCls}>
+                            <option value="">Not set</option>
+                            {coverage.map((r) => (
+                              <option key={r.regionId} value={r.regionId}>
+                                {r.name} ({r.artistCount})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    {entityType === "partner" && orgCategory === "regional_arts_org" && selectedRegion && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {selectedRegion.artistCount} artist{selectedRegion.artistCount === 1 ? " is" : "s are"} already in {selectedRegion.name} and will
+                        show on this organisation&apos;s region page.
+                        {selectedRegion.org && (
+                          <> {selectedRegion.org.name} already anchors this region — a second organisation will not replace it.</>
+                        )}
+                      </p>
+                    )}
                     <p className="text-[10px] text-muted-foreground">A shadow profile will be created and activated when claimed.</p>
                   </div>
                 )}

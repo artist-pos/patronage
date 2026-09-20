@@ -4,8 +4,8 @@ import { randomBytes } from "crypto";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
+import { isOrgCategory } from "@/lib/org-categories";
 import type { ClaimToken, ClaimEntityType } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -127,8 +127,14 @@ export async function generateClaimToken(input: {
 export async function createShadowProfile(input: {
   name: string;
   entityType: ClaimEntityType;
+  /** Partners only. A regional arts org with a region anchors that region's
+   *  page, so the artists already there are attached to it from day one. */
+  orgCategory?: string | null;
+  regionId?: string | null;
+  bio?: string | null;
 }): Promise<{ profileId?: string; username?: string; error?: string }> {
   if (!(await isAdmin())) return { error: "Not authorised." };
+  if (!input.name.trim()) return { error: "Name is required." };
 
   const admin = createAdminClient();
   const baseUsername = input.name
@@ -146,18 +152,26 @@ export async function createShadowProfile(input: {
     username = `${baseUsername}-${suffix++}`;
   }
 
+  const isPartner = input.entityType === "partner";
+  const orgCategory = isPartner && isOrgCategory(input.orgCategory) ? input.orgCategory : null;
+
   const { data, error } = await admin
     .from("profiles")
     .insert({
       username,
       full_name: input.name.trim(),
-      role: input.entityType === "partner" ? "partner" : "artist",
+      role: isPartner ? "partner" : "artist",
       account_status: "shadow",
+      ...(isPartner && orgCategory ? { org_category: orgCategory } : {}),
+      ...(isPartner && input.regionId ? { region_id: input.regionId } : {}),
+      ...(isPartner && input.bio?.trim() ? { bio: input.bio.trim() } : {}),
     })
     .select("id, username")
     .single();
 
   if (error) return { error: error.message };
+  revalidatePath("/admin/artists");
+  revalidatePath("/admin/claim-tokens");
   return { profileId: data.id, username: data.username };
 }
 

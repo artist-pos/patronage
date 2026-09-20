@@ -4,13 +4,16 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { ClaimTokensTable } from "./ClaimTokensTable";
 import { GenerateTokenModal } from "./GenerateTokenModal";
+import type { CatalogOrgStatus, RegionCoverage } from "@/lib/region-coverage";
 import type { EnrichedClaimToken } from "./actions";
 
 interface Props {
   initialTokens: EnrichedClaimToken[];
+  coverage: RegionCoverage[];
+  catalog: CatalogOrgStatus[];
 }
 
-export function ClaimTokensClient({ initialTokens }: Props) {
+export function ClaimTokensClient({ initialTokens, coverage, catalog }: Props) {
   const [showModal, setShowModal] = useState(false);
 
   return (
@@ -29,6 +32,8 @@ export function ClaimTokensClient({ initialTokens }: Props) {
 
       {showModal && (
         <GenerateTokenModal
+          coverage={coverage}
+          catalog={catalog}
           onClose={() => setShowModal(false)}
           onGenerated={() => { setShowModal(false); window.location.reload(); }}
         />

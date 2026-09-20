@@ -51,7 +51,7 @@ export default async function ClaimPage({ params }: Props) {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("id, full_name, username, role, account_status")
+      .select("id, full_name, username, role, account_status, org_category, region_id, regions(name)")
       .eq("id", entityToken.entity_id)
       .single();
 
@@ -62,6 +62,25 @@ export default async function ClaimPage({ params }: Props) {
         .select("*", { count: "exact", head: true })
         .eq("profile_id", profile.id);
       opportunityCount = count ?? 0;
+    }
+
+    // A regional arts org anchors its region's page, so the artists already
+    // working there are attached to it before it is claimed. Show that.
+    let regionArtistCount = 0;
+    const regionRel = profile?.regions as { name: string } | { name: string }[] | null | undefined;
+    const regionName = Array.isArray(regionRel) ? regionRel[0]?.name : regionRel?.name;
+    if (
+      entityToken.entity_type === "partner" &&
+      profile?.org_category === "regional_arts_org" &&
+      profile.region_id
+    ) {
+      const { count } = await admin
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("region_id", profile.region_id)
+        .eq("is_active", true)
+        .in("role", ["artist", "owner"]);
+      regionArtistCount = count ?? 0;
     }
 
     const entityLabel = profile?.full_name ?? entityToken.recipient_name ?? "your organisation";
@@ -118,6 +137,11 @@ export default async function ClaimPage({ params }: Props) {
           {entityToken.entity_type === "partner" && opportunityCount > 0 && (
             <p className="text-sm text-white/70">
               {opportunityCount} opportunity listing{opportunityCount !== 1 ? "s" : ""} already attached to your profile.
+            </p>
+          )}
+          {regionArtistCount > 0 && regionName && (
+            <p className="text-sm text-white/70">
+              {regionArtistCount} artist{regionArtistCount !== 1 ? "s" : ""} in {regionName} {regionArtistCount !== 1 ? "are" : "is"} already on Patronage and appear on your region&apos;s page.
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-2">
