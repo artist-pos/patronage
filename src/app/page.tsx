@@ -485,12 +485,12 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Stats — stacked on mobile (a wrapped flex row would orphan
-                  the border-r divider on whichever item wraps last), row
-                  with dividers from lg up, anchored to the bottom so their
-                  baseline lines up with the opportunities panel opposite */}
-              <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 lg:mt-auto lg:flex-row lg:flex-wrap lg:gap-0">
-                <div className="lg:mb-0 lg:mr-7 lg:border-r lg:border-border lg:pr-7">
+              {/* Stats — three equal columns on mobile (a grid never wraps, so the
+                  dividers can't be orphaned), a flex row from lg up, anchored to
+                  the bottom so their baseline lines up with the opportunities
+                  panel opposite */}
+              <div className="mt-6 grid grid-cols-3 gap-3 border-t border-border pt-5 lg:mt-auto lg:flex lg:flex-row lg:flex-wrap lg:gap-0">
+                <div className="border-r border-border pr-3 lg:mb-0 lg:mr-7 lg:pr-7">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
                     {oppCount}+
                   </div>
@@ -498,7 +498,7 @@ export default async function Home() {
                     opportunities active
                   </div>
                 </div>
-                <div className="lg:mb-0 lg:mr-7 lg:border-r lg:border-border lg:pr-7">
+                <div className="border-r border-border pr-3 lg:mb-0 lg:mr-7 lg:pr-7">
                   <div className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]">
                     {artistCount}
                   </div>
@@ -511,7 +511,7 @@ export default async function Home() {
                     Free
                   </div>
                   <div className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">
-                    for artists, always
+                    to access
                   </div>
                 </div>
               </div>
