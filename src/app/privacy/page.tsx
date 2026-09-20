@@ -104,6 +104,22 @@ export default function PrivacyPage() {
               Resend Privacy Policy
             </a>
           </Item>
+          <Item label="Anthropic">
+            If an organisation uses our smart file parser to prepare artist
+            invitations, the contents of the file it uploads are sent to Anthropic,
+            PBC (USA), which runs the language model that extracts the contact
+            details, under its commercial terms. This
+            happens only when the organisation chooses it, and we do not keep the
+            file.{" "}
+            <a
+              href="https://www.anthropic.com/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              Anthropic Privacy Policy
+            </a>
+          </Item>
           <Item label="Google">
             If you sign in with Google, Google authenticates your identity and shares
             your email address with us. We do not receive your Google password.{" "}

@@ -10,6 +10,10 @@ import { defaultInviteCopy } from "@/lib/email";
 import { getLocalBoards } from "@/lib/regions";
 import type { Metadata } from "next";
 
+// The invitation upload can call a language model for messy files, which takes longer
+// than a page render.
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Artists — Patronage",
   robots: { index: false, follow: false },

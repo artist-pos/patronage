@@ -11,6 +11,8 @@ import {
   type PreviewRow,
 } from "@/lib/artist-invites";
 import { captureServerEvent } from "@/lib/posthog-server";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { extractInviteContactsWithAI } from "@/lib/artist-invite-ai";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -103,6 +105,29 @@ export async function previewArtistInvites(csvText: string): Promise<InvitePrevi
   }
 
   return buildPreview(org.id, csvText);
+}
+
+/**
+ * Rewrites a file the ordinary parser could not read into plain
+ * Email/Name/Discipline/City CSV, using Claude. Sends nothing to anyone: the
+ * result goes back through the normal preview, so the organisation still sees
+ * every row before any invitation leaves.
+ *
+ * Only reached when the organisation has chosen it, because the file's
+ * contents leave our servers for Anthropic's API.
+ */
+export async function readInviteFileWithAI(
+  fileText: string
+): Promise<{ csv?: string; found?: number; dropped?: number; error?: string }> {
+  const { org, error } = await requireOrg();
+  if (!org) return { error: error ?? "Not authorised." };
+
+  // Each call is paid for and sends personal data offshore, so it is metered.
+  if (!(await checkRateLimit(`invite-ai:${org.id}`, 10, 3600))) {
+    return { error: "That is a lot of files in a short time. Try again in a little while." };
+  }
+
+  return extractInviteContactsWithAI(fileText);
 }
 
 async function buildPreview(orgId: string, csvText: string): Promise<InvitePreview> {

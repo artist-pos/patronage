@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { previewArtistInvites, sendArtistInvites } from "./invite-actions";
+import { previewArtistInvites, readInviteFileWithAI, sendArtistInvites } from "./invite-actions";
 import type { InvitePreview, InviteOutcome } from "@/lib/artist-invites";
 import { trackEvent } from "@/lib/analytics";
 
@@ -38,6 +38,9 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [aiOffered, setAiOffered] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +50,38 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
     setPreview(null);
     setShowAll(false);
     setError(null);
+    setAiOffered(false);
+    setAiNote(null);
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  // Asked for by the organisation, never automatic: the file's contents go to
+  // Anthropic's API for this. The result is a plain CSV, which goes through the
+  // same preview as any other file.
+  async function readWithAi() {
+    if (!csvText) return;
+    setError(null);
+    setAiBusy(true);
+    const r = await readInviteFileWithAI(csvText);
+    if (r.error || !r.csv) {
+      setAiBusy(false);
+      setError(r.error ?? "We could not read that file with the smart parser.");
+      return;
+    }
+    const p = await previewArtistInvites(r.csv);
+    setCsvText(r.csv);
+    setPreview(p);
+    setAiOffered(false);
+    setAiNote(
+      `Smart parser: found ${r.found} email address${r.found !== 1 ? "es" : ""}${
+        r.dropped ? `, and left out ${r.dropped} that were not in your file` : ""
+      }. Check the names and emails below before sending.`
+    );
+    setAiBusy(false);
+    trackEvent("org_invite_csv_ai_read", {
+      found: String(r.found ?? 0),
+      dropped: String(r.dropped ?? 0),
+    });
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -56,6 +90,8 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
 
     setError(null);
     setResult(null);
+    setAiOffered(false);
+    setAiNote(null);
 
     const reader = new FileReader();
     reader.onerror = () => setError("That file could not be read.");
@@ -66,6 +102,8 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
       start(async () => {
         const p = await previewArtistInvites(text);
         setPreview(p);
+        // Nothing usable came out of it, so offer the smart parser. Still their choice.
+        if (p.total === 0 && p.error) setAiOffered(true);
         trackEvent("org_invite_csv_previewed", {
           rows: String(p.total),
           to_invite: String(p.counts.invite),
@@ -120,6 +158,11 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
           One row per artist. An email column is required. Name, discipline and
           city are used to pre-fill their profile if you have them.
         </p>
+        <p className="text-xs text-[color:var(--fg-muted)]">
+          Your file is read only to prepare these invitations. We keep the
+          invitation list, not the file. By uploading, you confirm you are
+          entitled to share these contacts so they can be invited.
+        </p>
       </div>
 
       {pending && !preview && (
@@ -128,6 +171,47 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
 
       {preview?.error && (
         <p className="text-sm text-destructive">{preview.error}</p>
+      )}
+
+      {aiOffered && (
+        <div className="max-w-xl space-y-3 border border-border bg-card p-5">
+          <p className="text-[15px] font-medium">We could not read this file automatically.</p>
+          <p className="text-[13.5px] leading-[1.6] text-[color:var(--fg-muted)]">
+            We can use a smart parser to pick out names and email addresses. If you
+            continue, the contents of your file, including artists&apos; names, emails
+            and any other columns, are sent to Anthropic (in the USA), the service
+            that powers the parser, only to read the file. Anthropic doesn&apos;t use this data to
+            train its models, and we don&apos;t keep your file once your invitations
+            are prepared. You&apos;ll still see every row before anything is sent.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={readWithAi}
+              disabled={aiBusy}
+              className="bg-brand px-[22px] py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-50"
+            >
+              Use the smart parser
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="text-xs text-muted-foreground underline underline-offset-2"
+            >
+              Cancel, I&apos;ll fix the file
+            </button>
+          </div>
+        </div>
+      )}
+
+      {aiBusy && (
+        <p aria-live="polite" className="text-sm text-muted-foreground">
+          Reading your file with the smart parser. This can take a moment for a long list…
+        </p>
+      )}
+
+      {aiNote && (
+        <p className="text-sm text-[color:var(--fg-muted)]">{aiNote}</p>
       )}
 
       {preview && preview.total > 0 && (
