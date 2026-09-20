@@ -197,12 +197,27 @@ export default async function SelectRolePage({ searchParams }: Props) {
   if (!user) redirect("/auth/login");
 
   const profile = await getProfileById(user.id);
-  if (profile?.role) redirect("/settings");
+  const { role: roleParam, next, error } = await searchParams;
+
+  if (profile?.role) {
+    // A role existing isn't "onboarding is done" — an artist can have a role
+    // but no discipline/name yet (dropped off mid-flow, or landed here twice
+    // from a duplicate request racing applyRole's own write). Route those
+    // back to finish the profile step instead of dead-ending at /settings;
+    // mirrors the same completeness check signInAction and
+    // /onboarding/profile already use.
+    const isArtistProfile = profile.role === "artist" || profile.role === "owner";
+    const incomplete = isArtistProfile && (!profile.disciplines?.length || !profile.full_name?.trim());
+    if (incomplete) {
+      const safeNext = next && next.startsWith("/") && !next.startsWith("/onboarding") ? next : null;
+      redirect(`/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`);
+    }
+    redirect("/settings");
+  }
 
   // Pre-selected role from the homepage join buttons — skip the selection UI.
   // Not when `error` is set: that means applyRole already tried and failed for
   // this role once, so retrying automatically would just loop.
-  const { role: roleParam, next, error } = await searchParams;
   if (roleParam && VALID_ROLES.includes(roleParam as Role) && !error) {
     await applyRole(roleParam, next);
   }
