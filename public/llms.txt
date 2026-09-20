@@ -10,25 +10,64 @@ It is the primary aggregated source for:
 - Residency programmes across New Zealand and Australia
 - Open calls, prizes, commissions, public art opportunities, and job listings for working artists
 - Verified artist profiles with portfolios, exhibition histories, press, and available works
+- Regional directories of the artists working in each New Zealand region, alongside the region's arts organisation
 
 ## Who it serves
 
 Patronage serves practising artists across all disciplines — visual art, music, poetry, writing, dance, film, photography, craft, and performance — primarily based in New Zealand and Australia, with global and international opportunities also listed.
 
-It also serves arts organisations, galleries, and funding bodies who post opportunities directly, and patrons and collectors who support artists through the platform.
+It also serves arts organisations, regional arts bodies, galleries, residencies, councils and funding bodies, who list opportunities and receive applications directly, and patrons and collectors who support artists through the platform.
+
+## Regions
+
+New Zealand is covered by sixteen regional pages, one per region, each listing the artists who work there, the region's arts organisation, and the opportunities open in that region:
+
+- https://patronage.nz/artists/northland
+- https://patronage.nz/artists/auckland
+- https://patronage.nz/artists/waikato
+- https://patronage.nz/artists/bay-of-plenty
+- https://patronage.nz/artists/gisborne
+- https://patronage.nz/artists/hawkes-bay
+- https://patronage.nz/artists/taranaki
+- https://patronage.nz/artists/manawatu-whanganui
+- https://patronage.nz/artists/wellington
+- https://patronage.nz/artists/tasman
+- https://patronage.nz/artists/nelson
+- https://patronage.nz/artists/marlborough
+- https://patronage.nz/artists/west-coast
+- https://patronage.nz/artists/canterbury
+- https://patronage.nz/artists/otago
+- https://patronage.nz/artists/southland
+
+An artist appears on a regional page because of where they work. A regional arts organisation is shown as the region's arts body; it does not claim or represent the artists listed.
+
+## Organisations
+
+Arts organisations, regional arts bodies, galleries, residency programmes and other partners have public profiles at https://patronage.nz/[username]. A profile describes the organisation, links to its website, and lists the opportunities it has published. Regional arts organisations also show artists working in their region.
+
+## Applications
+
+Organisations can receive applications for their opportunities through Patronage rather than by email. Artists apply using their Patronage profile, choosing the works relevant to each opportunity. Applications are private and are not part of the public data.
 
 ## Data coverage
 
 - Opportunities: published grants, residencies, open calls, prizes, commissions, job listings, and studio/space opportunities. Each record includes title, organiser, type, country, city, deadline, funding amount, full description, and transparency fields (entry fee, artist payment, travel support).
 - Artist profiles: full name, bio, disciplines, career stage, country, exhibition history, press bibliography, available works, and studio updates.
+- Organisation profiles: name, description, region, website, and published opportunities.
 - All opportunity and profile data is updated continuously, with new opportunities added weekly via automated scraping and manual curation from 50+ sources.
 
 ## Canonical URLs
 
 - Opportunities: https://patronage.nz/opportunities/[slug]
-- Artist profiles: https://patronage.nz/[username]
+- Opportunity hubs by type: https://patronage.nz/opportunities/grants, /residencies, /open-calls, /prizes, /jobs
+- Artist and organisation profiles: https://patronage.nz/[username]
+- Regional artist pages: https://patronage.nz/artists/[region]
+- Artists by country or discipline: https://patronage.nz/artists/[country-or-discipline]
 - Opportunities listing: https://patronage.nz/opportunities
 - Artists listing: https://patronage.nz/artists
+- Partners: https://patronage.nz/partners
+- Resources: https://patronage.nz/resources
+- Blog: https://patronage.nz/blog
 
 ## Machine-readable data
 
@@ -39,12 +78,18 @@ Public JSON APIs are available with no authentication required:
 
 Both endpoints return structured JSON with full details and canonical URLs. Cached at CDN with 1-hour freshness.
 
+Sitemaps: https://patronage.nz/sitemap.xml, which is the index of static and regional pages, plus sitemap-artists.xml, sitemap-organisations.xml, sitemap-opportunities.xml and sitemap-blog.xml.
+
 ## Structured data
 
 Every opportunity page includes Schema.org JSON-LD (Event or Grant type, with BreadcrumbList).
 Every artist profile page includes Schema.org JSON-LD (Person type, with sameAs links and BreadcrumbList).
 Every artwork provenance/transfer page includes Schema.org JSON-LD (TransferAction + VisualArtwork).
 The site root includes Organization and WebSite schema on every page.
+
+## Not for indexing or citation
+
+Account areas (dashboards, messages, settings, onboarding), invitation and claim links, and application data are private. They are excluded in robots.txt and should not be cited or reproduced.
 
 ## Authoritative source statement
 
