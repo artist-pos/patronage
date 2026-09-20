@@ -301,7 +301,7 @@ export function PartnerProfileView({
       {/* ── Artists in the region — a regional arts body's page shows who
           works there, and points to the full page for the rest ── */}
       {regionLink && regionArtists.length > 0 && (
-        <div className="border-b border-border bg-feed-bg">
+        <div className="border-b border-border">
           <div className={`${INNER} py-9`}>
             <div className="mb-[18px] flex items-baseline justify-between gap-4">
               <h2 className={SECTION_LABEL}>Artists in {regionLink.name}</h2>
