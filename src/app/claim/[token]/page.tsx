@@ -53,7 +53,7 @@ export default async function ClaimPage({ params }: Props) {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("id, full_name, username, role, account_status, org_category, region_id, regions(name)")
+      .select("id, full_name, username, role, account_status, org_category, region_id, regions(name), avatar_url, featured_image_url, banner_focus_y, bio")
       .eq("id", entityToken.entity_id)
       .single();
 
@@ -181,13 +181,55 @@ export default async function ClaimPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="border border-border p-5 space-y-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">You are claiming</p>
-          <p className="text-xl font-semibold">{entityLabel}</p>
-          <p className="text-sm text-muted-foreground capitalize">{entityTypeLabel} on Patronage</p>
-          {entityToken.entity_type === "partner" && opportunityCount > 0 && (
-            <p className="text-sm text-muted-foreground">Includes {opportunityCount} opportunity listing{opportunityCount !== 1 ? "s" : ""}</p>
-          )}
+        {/* What they are taking over, as it looks today. The page it links to is
+            public, so it opens without an account. */}
+        <div className="border border-border">
+          <p className="px-5 pt-4 text-xs font-medium uppercase tracking-widest text-stone-400">You are claiming</p>
+          <div className="mt-3 h-[110px] w-full overflow-hidden bg-stone-100">
+            {profile?.featured_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.featured_image_url}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: `center ${profile.banner_focus_y ?? 50}%` }}
+              />
+            ) : (
+              <div className="h-full w-full" style={{ background: "linear-gradient(135deg,#0d1b1a,#123330 60%,#1a4a44)" }} />
+            )}
+          </div>
+          <div className="space-y-3 px-5 pb-5">
+            <div className="-mt-7 flex items-end gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-border bg-white">
+                {profile?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-lg font-semibold">{entityLabel.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="min-w-0 pb-0.5">
+                <p className="truncate text-xl font-semibold leading-tight">{entityLabel}</p>
+                <p className="text-sm text-muted-foreground capitalize">{entityTypeLabel} on Patronage</p>
+              </div>
+            </div>
+            {profile?.bio && (
+              <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{profile.bio}</p>
+            )}
+            {entityToken.entity_type === "partner" && opportunityCount > 0 && (
+              <p className="text-sm text-muted-foreground">Includes {opportunityCount} opportunity listing{opportunityCount !== 1 ? "s" : ""}</p>
+            )}
+            {profile?.username && (
+              <Link
+                href={`/${profile.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-sm font-medium underline underline-offset-2"
+              >
+                View the full profile →
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">
