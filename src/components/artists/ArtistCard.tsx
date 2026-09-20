@@ -14,6 +14,9 @@ interface Props {
   view?: "gallery" | "list" | "portrait";
   compact?: boolean; // fixed 200px height for landing page
   badges?: BadgeSet;
+  /** Replaces the default "city, country" line, e.g. with the taxonomy town on
+   *  a regional page where the freeform text an artist typed can be long. */
+  locationText?: string | null;
 }
 
 /* v2 achievement badges — mono 9px/600, tinted bg, square */
@@ -52,8 +55,9 @@ function CommissionsDot() {
   );
 }
 
-export function ArtistCard({ artist, view = "gallery", compact = false, badges }: Props) {
+export function ArtistCard({ artist, view = "gallery", compact = false, badges, locationText }: Props) {
   const displayName = artist.full_name ?? artist.username;
+  const location = locationText !== undefined ? locationText : locationLabel(artist);
 
   /* ── Portrait card — the Artists canvas format: tall work image, then a
      white info strip. Only used for image-complete (featured) profiles. ── */
@@ -86,11 +90,11 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
             {badges?.verified && <span className="badge badge-verified">Verified</span>}
             {badges?.grantRecipient && <span className="badge badge-grant">Grant</span>}
           </div>
-          {(locationLabel(artist) || artist.open_for_commissions) && (
+          {(location || artist.open_for_commissions) && (
             <div className="mt-1 flex items-center gap-2.5">
-              {locationLabel(artist) && (
+              {location && (
                 <span className="truncate font-mono text-[11px] text-muted-foreground">
-                  {locationLabel(artist)}
+                  {location}
                 </span>
               )}
               {artist.open_for_commissions && <CommissionsDot />}
@@ -162,9 +166,9 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
         </div>
 
         {/* Location */}
-        {locationLabel(artist) && (
+        {location && (
           <span className="hidden shrink-0 whitespace-nowrap font-mono text-[11px] text-muted-foreground md:block">
-            {locationLabel(artist)}
+            {location}
           </span>
         )}
       </Link>
@@ -215,8 +219,8 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
                 </span>
               )}
               {badges && <SecondaryBadges badges={badges} />}
-              {locationLabel(artist) && (
-                <span className="font-mono text-[11px] text-muted-foreground">{locationLabel(artist)}</span>
+              {location && (
+                <span className="font-mono text-[11px] text-muted-foreground">{location}</span>
               )}
             </div>
           </div>
@@ -300,8 +304,8 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges }
               </span>
             )}
             {badges && <SecondaryBadges badges={badges} />}
-            {locationLabel(artist) && (
-              <span className="truncate font-mono text-[11px] text-muted-foreground">{locationLabel(artist)}</span>
+            {location && (
+              <span className="truncate font-mono text-[11px] text-muted-foreground">{location}</span>
             )}
           </div>
         </div>

@@ -57,7 +57,7 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { username } = await params;
   const profile = await getProfile(username);
-  if (!profile) return { title: "Artist not found | Patronage" };
+  if (!profile) return { title: "Artist not found" };
 
   const displayName = profile.full_name ?? profile.username;
 
@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: Props) {
   if (!metaIsArtist && profile.role !== "partner" && profile.private_supporter) {
     const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
     return {
-      title: "Private supporter | Patronage",
+      title: "Private supporter",
       description: "This patron supports artists on Patronage privately.",
       alternates: { canonical: `${base}/${username}` },
       robots: { index: false },
@@ -79,9 +79,8 @@ export async function generateMetadata({ params }: Props) {
     : (profile.medium ?? []);
   const disciplineStr = disciplineLabels.join(", ");
 
-  const title = disciplineStr
-    ? `${displayName}, ${disciplineStr} | Patronage`
-    : `${displayName} | Patronage`;
+  const pageTitle = disciplineStr ? `${displayName}, ${disciplineStr}` : displayName;
+  const title = `${pageTitle} | Patronage`;
 
   // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from available data
   const description = profile.bio
@@ -104,7 +103,7 @@ export async function generateMetadata({ params }: Props) {
   const profileUrl = `${BASE_URL}/${username}`;
 
   return {
-    title,
+    title: pageTitle,
     description,
     alternates: { canonical: profileUrl },
     openGraph: {
@@ -1016,7 +1015,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           displayName={displayName}
           isOwner={isOwner}
           canMessage={canMessage}
-          verified={!!(profile.bio && profile.avatar_url)}
+          verified={!!(profile.bio && profile.avatar_url) && profile.account_status !== "shadow"}
+          unclaimed={profile.account_status === "shadow"}
           activeOpps={profileOpportunities}
           pastOpps={partnerPastOpps}
           commissionedArtists={partnerArtists}

@@ -1,12 +1,12 @@
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
+import { CARD_FIELDS } from "@/lib/opportunity-card-fields";
 import type {
   City,
   CityWithRegion,
   LocalBoard,
   Opportunity,
   Profile,
-  ProjectUpdateWithArtist,
   Region,
 } from "@/types/database";
 
@@ -171,14 +171,7 @@ export interface RegionalPageData {
   artists: Array<Profile & { primary_image_url: string | null }>;
   /** Discipline / medium labels present in this region, most common first. */
   disciplines: string[];
-  opportunities: Array<
-    Pick<
-      Opportunity,
-      "id" | "slug" | "title" | "organiser" | "type" | "city" | "country" |
-      "deadline" | "featured_image_url" | "funding_range" | "funding_amount"
-    >
-  >;
-  updates: ProjectUpdateWithArtist[];
+  opportunities: Opportunity[];
 }
 
 /**
@@ -234,9 +227,7 @@ export async function getRegionalPageData(
     cityNames.length > 0
       ? supabase
           .from("opportunities")
-          .select(
-            "id, slug, title, organiser, type, city, country, deadline, featured_image_url, funding_range, funding_amount"
-          )
+          .select(CARD_FIELDS)
           .eq("is_active", true)
           .eq("status", "published")
           .in("city", cityNames)
@@ -256,20 +247,6 @@ export async function getRegionalPageData(
     ...p,
     primary_image_url: p.featured_image_url ?? null,
   }));
-
-  // Studio updates depend on knowing who the region's artists are, so this one
-  // genuinely cannot start earlier.
-  const artistIds = artists.map((a) => a.id);
-  const updatesRes = artistIds.length
-    ? await supabase
-        .from("project_updates")
-        .select(
-          "*, profiles!project_updates_artist_id_fkey (username, full_name, avatar_url)"
-        )
-        .in("artist_id", artistIds)
-        .order("created_at", { ascending: false })
-        .limit(8)
-    : { data: [] };
 
   // Discipline breakdown, commonest first. `medium` is free text and
   // `disciplines` is the enum; both are counted so a region reads the way its
@@ -292,8 +269,7 @@ export async function getRegionalPageData(
     anchorOrg,
     artists,
     disciplines,
-    opportunities: (oppsRes.data ?? []) as RegionalPageData["opportunities"],
-    updates: (updatesRes.data ?? []) as unknown as ProjectUpdateWithArtist[],
+    opportunities: (oppsRes.data ?? []) as unknown as Opportunity[],
   };
 }
 

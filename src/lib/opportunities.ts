@@ -1,18 +1,10 @@
+import { CARD_FIELDS } from "@/lib/opportunity-card-fields";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { parseFundingText } from "./parse-funding";
 import type { Opportunity, OpportunityFilters, OpportunityInsert, OpportunityWithMatch } from "@/types/database";
 
-const CARD_FIELDS = [
-  "id", "slug", "title", "organiser", "caption", "description",
-  "type", "country", "city", "deadline", "opens_at", "created_at",
-  "featured_image_url", "is_featured",
-  "sub_categories",
-  "funding_range", "funding_amount", "entry_fee",
-  "grant_type", "recipients_count",
-  "is_recurring", "recurrence_pattern",
-].join(", ");
 
 export async function getOpportunities(
   filters: OpportunityFilters = {},

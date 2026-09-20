@@ -53,3 +53,26 @@ export function RegionTrackedLink({
     </Link>
   );
 }
+
+/**
+ * Attributes clicks inside a card that already renders its own link. Wrapping
+ * such a card in RegionTrackedLink nests one anchor in another, which gives
+ * keyboard users two tab stops per card.
+ */
+export function RegionTrackedArea({
+  event,
+  regionSlug,
+  properties,
+  children,
+}: {
+  event: "regional_page_artist_click";
+  regionSlug: string;
+  properties?: Record<string, string>;
+  children: React.ReactNode;
+}) {
+  return (
+    <div onClickCapture={() => trackEvent(event, { region: regionSlug, ...properties })}>
+      {children}
+    </div>
+  );
+}

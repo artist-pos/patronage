@@ -87,7 +87,7 @@ export async function generateMetadata({
     // Region page. Artist count is part of the description because it is the
     // thing a searcher is actually weighing up before they click.
     const region = await getRegionBySlug(slug);
-    if (!region) return { title: "Artists | Patronage" };
+    if (!region) return { title: "Artists" };
 
     const cities = await getCitiesForRegion(region.id);
     const { artists } = await getRegionalPageData(region, cities);
@@ -95,11 +95,11 @@ export async function generateMetadata({
     const h1 = `Artists in ${region.name}`;
     const description =
       artists.length > 0
-        ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} based in ${fullName}. Browse portfolios, available works, studio updates, and open opportunities in the region.`
+        ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} based in ${fullName}. Browse portfolios, available works, and open opportunities in the region.`
         : `Artists based in ${fullName} on Patronage. Browse portfolios, available works, and open opportunities in the region.`;
 
     return {
-      title: `${h1} | Patronage`,
+      title: h1,
       description,
       alternates: { canonical: `/artists/${slug}` },
       openGraph: {
@@ -135,7 +135,7 @@ export async function generateMetadata({
     : `Discover ${meta.prose} on Patronage: browse portfolios, available works, and exhibition history.`;
 
   return {
-    title: `${h1} | Patronage`,
+    title: h1,
     description,
     alternates: { canonical: `/artists/${slug}` },
     openGraph: {
@@ -209,6 +209,7 @@ export default async function ArtistCategoryPage({
         data={regionData}
         worksCountMap={regionWorksCount}
         collectedSet={regionCollected}
+        cities={cities}
       />
     );
   }

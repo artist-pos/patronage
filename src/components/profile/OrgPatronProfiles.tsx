@@ -147,6 +147,9 @@ interface PartnerProps {
   isOwner: boolean;
   canMessage: boolean;
   verified: boolean;
+  /** An admin-made profile nobody has claimed yet. It has not partnered with
+   *  Patronage, so anything that says it has is left off. */
+  unclaimed?: boolean;
   activeOpps: Opportunity[];
   pastOpps: PastOpportunityRow[];
   commissionedArtists: ArtistTileData[];
@@ -163,7 +166,7 @@ interface PartnerProps {
 }
 
 export function PartnerProfileView({
-  profile, displayName, isOwner, canMessage, verified,
+  profile, displayName, isOwner, canMessage, verified, unclaimed = false,
   activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
   regionLink,
 }: PartnerProps) {
@@ -180,7 +183,7 @@ export function PartnerProfileView({
   if (listedCount > 0) stats.push([String(listedCount), `opportunit${listedCount !== 1 ? "ies" : "y"} listed`]);
   if (activeOpps.length > 0) stats.push([String(activeOpps.length), "active now"]);
   if (selectedTotal > 0) stats.push([String(selectedTotal), "artists selected"]);
-  if (sinceYear) stats.push([String(sinceYear), "partner since"]);
+  if (sinceYear && !unclaimed) stats.push([String(sinceYear), "partner since"]);
 
   return (
     <div>
@@ -209,10 +212,10 @@ export function PartnerProfileView({
         <div className="absolute inset-x-0 bottom-0 px-5 pb-8 sm:px-12">
           <div className="mx-auto max-w-[1280px]">
             <Link
-              href="/partners"
-              className="mb-3.5 inline-block font-mono text-[10px] tracking-[0.12em] text-white/50 transition-colors hover:text-white/85"
+              href={regionLink ? `/artists/${regionLink.slug}` : "/partners"}
+              className="mb-3.5 inline-block font-mono text-[10px] tracking-[0.12em] text-white/70 transition-colors hover:text-white"
             >
-              ← Partners
+              {regionLink ? `← Artists in ${regionLink.name}` : "← Partners"}
             </Link>
             <div className="flex items-end gap-5">
               <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center overflow-hidden bg-white">
@@ -260,16 +263,6 @@ export function PartnerProfileView({
               {profile.organisation_type === "charity" && (
                 <span className={BADGE_NEUTRAL}>Registered charity</span>
               )}
-              {/* An arts body does not represent the artists in its region, so
-                  they are not listed here. This is the way through to them. */}
-              {regionLink && (
-                <Link
-                  href={`/artists/${regionLink.slug}`}
-                  className="font-mono text-xs text-[color:var(--brand)] underline underline-offset-[3px] transition-opacity hover:opacity-70"
-                >
-                  Artists in {regionLink.name} &rarr;
-                </Link>
-              )}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -281,7 +274,7 @@ export function PartnerProfileView({
                 Edit Profile
               </Link>
             )}
-            {canMessage && (
+            {canMessage && !regionLink && (
               <MessageButton otherUserId={profile.id} label="Enquire about a programme" variant="solid" />
             )}
             {profile.organisation_type === "charity"
@@ -422,31 +415,6 @@ export function PartnerProfileView({
           </div>
         </div>
       )}
-
-      {/* ── Contact ── */}
-      <div className="border-b border-border bg-feed-bg">
-        <div className={`${INNER} grid grid-cols-1 items-start gap-8 py-9 lg:grid-cols-[2fr_1fr] lg:gap-16`}>
-          <div>
-            <h2 className={`${SECTION_LABEL} mb-3.5`}>About the programme</h2>
-            <p className="text-[15.5px] leading-[1.72] text-[color:var(--fg-muted)]">
-              {displayName} lists opportunities for artists through Patronage
-              {sinceYear ? `, a partner since ${sinceYear}.` : "."}
-            </p>
-          </div>
-          <div>
-            <h2 className={`${SECTION_LABEL} mb-3.5`}>Contact</h2>
-            <p className="mb-4 text-sm leading-[1.6] text-[color:var(--fg-muted)]">
-              For activation and strategy enquiries, reach the Patronage partnerships team.
-            </p>
-            <Link
-              href="/partners#contact"
-              className="block w-full bg-foreground px-5 py-[9px] text-center text-[13px] font-medium text-background transition-opacity hover:opacity-85"
-            >
-              Get in touch
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { unstable_cache } from "next/cache";
 import { getProfiles, getProfileById } from "@/lib/profiles";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createPublicClient } from "@/lib/supabase/public";
+import { HandleChips } from "@/components/artists/HandleChips";
+import { byCompleteness, isPresentable } from "@/lib/artist-completeness";
 import { ArtistCard } from "@/components/artists/ArtistCard";
 import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
@@ -111,23 +113,6 @@ function DirectoryRow({
   );
 }
 
-// Bare signups — mono handles, never fake directory entries.
-function HandleChips({ artists }: { artists: ProfileWithImage[] }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {artists.map((artist) => (
-        <a
-          key={artist.id}
-          href={`/${artist.username}`}
-          className="border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-        >
-          @{artist.username}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 // A presentable tier (Directory or International), rendered as rows or a
 // gallery grid depending on the active view — used by both so the
 // domestic/international/recently-joined split holds regardless of view.
@@ -207,23 +192,9 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   // Recently joined: bare signups as mono handles — never fake directory entries.
   // International: anyone based outside NZ/AUS, kept out of the two above so
   // the domestic directory reads as the local scene.
-  const completeness = (a: (typeof artists)[number]) => {
-    const hasImage = !!(a.primary_image_url || a.avatar_url);
-    const hasName = !!a.full_name;
-    const hasBio = !!a.bio;
-    return { hasImage, hasName, hasBio, score: (hasImage ? 2 : 0) + (hasName ? 2 : 0) + (hasBio ? 1 : 0) };
-  };
-
   // Untagged (null country) stays domestic — most bare signups never set one.
   const isInternational = (a: (typeof artists)[number]) =>
     !!a.country && a.country !== "NZ" && a.country !== "AUS";
-  const isPresentable = (a: (typeof artists)[number]) => {
-    const c = completeness(a);
-    return c.hasName || c.hasImage;
-  };
-  const byCompleteness = (a: (typeof artists)[number], b: (typeof artists)[number]) =>
-    completeness(b).score - completeness(a).score;
-
   const domesticArtists = gridArtists.filter((a) => !isInternational(a));
   const internationalArtists = gridArtists.filter(isInternational);
 
