@@ -4,6 +4,8 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimEntity } from "./actions";
+import { ShadowClaimForm } from "./ShadowClaimForm";
+import { isShadowEmail } from "@/lib/shadow";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -55,6 +57,14 @@ export default async function ClaimPage({ params }: Props) {
       .eq("id", entityToken.entity_id)
       .single();
 
+    // Profiles made by admin are owned by a placeholder login. Those are
+    // claimed by choosing an email and password, not by signing up separately.
+    const { data: shadowAuth } =
+      profile?.account_status === "shadow"
+        ? await admin.auth.admin.getUserById(entityToken.entity_id)
+        : { data: null };
+    const isPlaceholder = isShadowEmail(shadowAuth?.user?.email);
+
     let opportunityCount = 0;
     if (entityToken.entity_type === "partner" && profile) {
       const { count } = await admin
@@ -87,6 +97,20 @@ export default async function ClaimPage({ params }: Props) {
     const entityTypeLabel = entityToken.entity_type === "partner" ? "organisation" : "artist profile";
 
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (user && isPlaceholder) {
+      return (
+        <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
+          <p className="text-sm font-semibold">Sign out to claim this profile</p>
+          <p className="text-sm text-muted-foreground">
+            {entityLabel} is claimed by choosing the email and password it will sign in with, so this link
+            needs to be opened while signed out. If you would rather attach it to your existing account,
+            email{" "}
+            <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">hello@patronage.nz</a>.
+          </p>
+        </div>
+      );
+    }
 
     if (user) {
       const { data: userProfile } = await supabase
@@ -144,7 +168,10 @@ export default async function ClaimPage({ params }: Props) {
               {regionArtistCount} artist{regionArtistCount !== 1 ? "s" : ""} in {regionName} {regionArtistCount !== 1 ? "are" : "is"} already on Patronage and appear on your region&apos;s page.
             </p>
           )}
-          <div className="flex flex-col sm:flex-row gap-2">
+          {isPlaceholder && (
+            <p className="text-sm text-white/70">Set up your login below to take it over.</p>
+          )}
+          <div className={isPlaceholder ? "hidden" : "flex flex-col sm:flex-row gap-2"}>
             <Link href={signupHref} className="inline-block bg-white text-black text-sm font-semibold px-5 py-2.5 text-center hover:bg-stone-100 transition-colors">
               Claim {entityTypeLabel} →
             </Link>
@@ -183,7 +210,14 @@ export default async function ClaimPage({ params }: Props) {
         </div>
 
         <div className="border-t border-border pt-6 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
+          {isPlaceholder && (
+            <ShadowClaimForm
+              token={token}
+              defaultEmail={entityToken.recipient_email ?? ""}
+              label={entityLabel}
+            />
+          )}
+          <div className={isPlaceholder ? "hidden" : "flex flex-col sm:flex-row gap-2"}>
             <Link href={signupHref} className="inline-block bg-black text-white text-sm font-semibold px-5 py-2.5 text-center hover:bg-black/80 transition-colors">
               Claim {entityTypeLabel} →
             </Link>

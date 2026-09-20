@@ -305,7 +305,13 @@ export function ArtistTable({
                     {a.is_patronage_supported ? "Supported ✓" : "Mark supported"}
                   </Button>
                 </td>
-                <td className="py-3">
+                <td className="flex items-center gap-1.5 py-3">
+                  <a
+                    href={`/admin/profiles/${a.id}`}
+                    className="inline-flex h-7 items-center border border-border px-2 text-xs hover:bg-stone-50"
+                  >
+                    Edit
+                  </a>
                   <Button
                     size="sm"
                     variant="outline"

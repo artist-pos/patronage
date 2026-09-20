@@ -1,11 +1,12 @@
 "use server";
 
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { isOrgCategory } from "@/lib/org-categories";
+import { SHADOW_EMAIL_DOMAIN } from "@/lib/shadow";
 import type { ClaimToken, ClaimEntityType } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -155,9 +156,21 @@ export async function createShadowProfile(input: {
   const isPartner = input.entityType === "partner";
   const orgCategory = isPartner && isOrgCategory(input.orgCategory) ? input.orgCategory : null;
 
+  // profiles.id is the primary key of an auth user, so a profile cannot exist
+  // without one. Make a placeholder login the same way the provenance shadow
+  // accounts do: unusable (no password, unroutable address) and there only to
+  // own the row until someone claims it.
+  const { data: authUser, error: authError } = await admin.auth.admin.createUser({
+    email: `shadow-${randomUUID()}@${SHADOW_EMAIL_DOMAIN}`,
+    email_confirm: true,
+    user_metadata: { full_name: input.name.trim(), shadow: true },
+  });
+  if (authError || !authUser.user) return { error: authError?.message ?? "Could not create the account." };
+
   const { data, error } = await admin
     .from("profiles")
     .insert({
+      id: authUser.user.id,
       username,
       full_name: input.name.trim(),
       role: isPartner ? "partner" : "artist",
@@ -169,7 +182,10 @@ export async function createShadowProfile(input: {
     .select("id, username")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    await admin.auth.admin.deleteUser(authUser.user.id);
+    return { error: error.message };
+  }
   revalidatePath("/admin/artists");
   revalidatePath("/admin/claim-tokens");
   return { profileId: data.id, username: data.username };

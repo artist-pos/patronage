@@ -121,8 +121,12 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
 
                 {o.profile ? (
                   <p className="text-muted-foreground">
+                    <Link href={`/admin/profiles/${o.profile.id}`} className="underline underline-offset-2">
+                      Edit profile
+                    </Link>{" "}
+                    ·{" "}
                     <Link href={`/${o.profile.username}`} target="_blank" className="underline underline-offset-2">
-                      Profile
+                      View
                     </Link>{" "}
                     · {o.profile.shadow ? "shadow, unclaimed" : "claimed"}
                   </p>
