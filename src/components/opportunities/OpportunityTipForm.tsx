@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { submitOpportunityTip } from "@/app/opportunities/tip-action";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+
+const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 const FIELD =
   "w-full border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:border-foreground focus:outline-none placeholder:text-[color:var(--fg-subtle)]";
@@ -20,13 +24,24 @@ export function OpportunityTipForm() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    const result = await submitOpportunityTip(name, sourceLink, email);
+    const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
+    const result = await submitOpportunityTip({
+      name,
+      sourceLink,
+      email,
+      turnstileToken,
+      [HONEYPOT_FIELD]: honeypot,
+    });
     setSubmitting(false);
+    // Tokens are single-use, so a fresh challenge is needed after any attempt.
+    setTurnstileToken("");
+    (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
     if (result.error) {
       setError(result.error);
       return;
@@ -106,9 +121,17 @@ export function OpportunityTipForm() {
         />
       </div>
 
+      <HoneypotField />
+      <TurnstileWidget onVerify={setTurnstileToken} />
+
       <button
         type="submit"
-        disabled={!name.trim() || !sourceLink.trim() || submitting}
+        disabled={
+          !name.trim() ||
+          !sourceLink.trim() ||
+          submitting ||
+          (CAPTCHA_CONFIGURED && !turnstileToken)
+        }
         className="btn btn-brand disabled:opacity-40"
       >
         {submitting ? "Sending…" : "Send the tip →"}
