@@ -28,7 +28,7 @@ interface Props {
  * works here, what they make, and what is open nearby.
  */
 export function RegionView({ region, data, worksCountMap, collectedSet, cities }: Props) {
-  const { anchorOrg, artists, disciplines, opportunities } = data;
+  const { anchorOrg, artists, opportunities } = data;
   const fullName = regionFullName(region);
 
   // Same split as the /artists directory: profiles with a name or image lead as
@@ -68,12 +68,6 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
             ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} working in ${fullName}. Browse portfolios and available works.`
             : `No one has listed ${fullName} as their base yet. If you work here, you could be the first.`}
         </p>
-
-        {disciplines.length > 0 && (
-          <p className="text-sm text-[color:var(--fg-muted)]">
-            {disciplines.join(" · ")}
-          </p>
-        )}
       </header>
 
       {/* ── Anchor organisation ──
