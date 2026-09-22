@@ -6,19 +6,7 @@
   "crons": [
     {
       "path": "/api/admin/send-digest",
-      "schedule": "0 22 * * 2"
-    },
-    {
-      "path": "/api/cron/send-followups",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/send-outreach",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/send-update-reminders",
-      "schedule": "0 20 * * *"
+      "schedule": "30 20 * * 2"
     }
   ]
 }
