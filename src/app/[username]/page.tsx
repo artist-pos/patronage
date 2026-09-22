@@ -81,20 +81,25 @@ export async function generateMetadata({ params }: Props) {
     ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
     : (profile.medium ?? []);
   const disciplineStr = disciplineLabels.join(", ");
+  const isOrgMeta = profile.role === "partner";
 
   const pageTitle = disciplineStr ? `${displayName}, ${disciplineStr}` : displayName;
   const title = `${pageTitle} | Patronage`;
 
-  // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from available data
+  // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from
+  // available data. An organisation gets its own fallback — "portfolio... CV"
+  // describes an artist, not a funding body or gallery.
   const description = profile.bio
     ? profile.bio.length > 155
       ? profile.bio.slice(0, 152) + "…"
       : profile.bio
-    : disciplineStr && profile.country
-      ? `${displayName} is a ${disciplineStr} based in ${profile.country}. View portfolio, studio updates, and CV on Patronage.`
-      : disciplineStr
-        ? `${displayName} is a ${disciplineStr}. View portfolio, studio updates, and CV on Patronage.`
-        : `View ${displayName}'s portfolio, studio updates, and CV on Patronage.`;
+    : isOrgMeta
+      ? `${displayName} on Patronage — arts organisation${profile.country ? ` in ${profile.country}` : ""}. Browse the artists and opportunities connected to them.`
+      : disciplineStr && profile.country
+        ? `${displayName} is a ${disciplineStr} based in ${profile.country}. View portfolio, studio updates, and CV on Patronage.`
+        : disciplineStr
+          ? `${displayName} is a ${disciplineStr}. View portfolio, studio updates, and CV on Patronage.`
+          : `View ${displayName}'s portfolio, studio updates, and CV on Patronage.`;
 
   // OG image: featured banner first, avatar fallback
   const ogImageUrl = profile.featured_image_url ?? profile.avatar_url ?? null;
@@ -109,6 +114,10 @@ export async function generateMetadata({ params }: Props) {
     title: pageTitle,
     description,
     alternates: { canonical: profileUrl },
+    // An unclaimed shadow profile (e.g. a local board org created ahead of
+    // being claimed) has no real content yet — index it once someone has
+    // actually filled it in, not while it's a placeholder.
+    ...(profile.account_status === "shadow" && { robots: { index: false } }),
     openGraph: {
       title,
       description,
@@ -677,17 +686,23 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     ...(profile.website_url ? [profile.website_url] : []),
     ...(profile.instagram_handle ? [`https://instagram.com/${profile.instagram_handle}`] : []),
   ];
+  const isOrgProfile = profile.role === "partner";
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "Person",
+        // A partner (gallery, council, regional or local-board arts body) is
+        // an organisation, not a person — Person here was misdescribing every
+        // org profile's structured data.
+        "@type": isOrgProfile ? "Organization" : "Person",
         "@id": profileUrl,
         name: publicDisplayName,
         url: profileUrl,
-        ...(!maskPatron && profile.avatar_url && { image: profile.avatar_url }),
+        ...(!maskPatron && profile.avatar_url && {
+          [isOrgProfile ? "logo" : "image"]: profile.avatar_url,
+        }),
         ...(!maskPatron && profile.bio && { description: profile.bio }),
-        ...(!maskPatron && jsonLdDisciplines.length > 0 && {
+        ...(!maskPatron && !isOrgProfile && jsonLdDisciplines.length > 0 && {
           jobTitle: jsonLdDisciplines.join(", "),
           knowsAbout: jsonLdDisciplines,
         }),

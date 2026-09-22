@@ -203,14 +203,55 @@ export default async function ArtistCategoryPage({
       regionWorksCount.set(r.profile_id, (regionWorksCount.get(r.profile_id) ?? 0) + 1);
     }
 
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+    const pageUrl = `${base}/artists/${slug}`;
+    // Capped rather than every artist in the region: it's a representative
+    // sample for crawlers, not a duplicate of the page's own listing.
+    const listedArtists = regionData.artists.slice(0, 24);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Artists", item: `${base}/artists` },
+            { "@type": "ListItem", position: 2, name: region.name, item: pageUrl },
+          ],
+        },
+        {
+          "@type": "CollectionPage",
+          "@id": pageUrl,
+          url: pageUrl,
+          name: `Artists in ${region.name}`,
+          about: { "@type": "Place", name: regionFullName(region) },
+          mainEntity: {
+            "@type": "ItemList",
+            numberOfItems: regionData.artists.length,
+            itemListElement: listedArtists.map((a, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              url: `${base}/${a.username}`,
+              name: a.full_name ?? a.username,
+            })),
+          },
+        },
+      ],
+    };
+
     return (
-      <RegionView
-        region={region}
-        data={regionData}
-        worksCountMap={regionWorksCount}
-        collectedSet={regionCollected}
-        cities={cities}
-      />
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <RegionView
+          region={region}
+          data={regionData}
+          worksCountMap={regionWorksCount}
+          collectedSet={regionCollected}
+          cities={cities}
+        />
+      </>
     );
   }
 
@@ -254,8 +295,44 @@ export default async function ArtistCategoryPage({
     ? `Discover ${meta.adjective} artists on Patronage: browse portfolios, available works, studio updates, and exhibition history from active ${meta.adjective} artists in our community.`
     : `Discover ${meta.prose} on Patronage: browse portfolios, available works, studio updates, and exhibition history from active ${meta.singular}s in our community.`;
 
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const pageUrl = `${base}/artists/${slug}`;
+  const listedArtists = artists.slice(0, 24);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Artists", item: `${base}/artists` },
+          { "@type": "ListItem", position: 2, name: h1, item: pageUrl },
+        ],
+      },
+      {
+        "@type": "CollectionPage",
+        "@id": pageUrl,
+        url: pageUrl,
+        name: h1,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: artists.length,
+          itemListElement: listedArtists.map((a, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: `${base}/${a.username}`,
+            name: a.full_name ?? a.username,
+          })),
+        },
+      },
+    ],
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-12 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="space-y-3">
         <nav className="text-xs text-muted-foreground">
           <Link href="/artists" className="hover:text-foreground transition-colors">Artists</Link>
