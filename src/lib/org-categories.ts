@@ -12,6 +12,7 @@
  */
 export type OrgCategory =
   | "regional_arts_org"
+  | "local_board_arts_org"
   | "gallery"
   | "residency"
   | "council"
@@ -60,6 +61,16 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     hint: "Regional arts bodies such as Creative Waikato or Creative Northland. Anchors your region's page.",
     relationship: "geographic",
     anchorsRegion: true,
+    representsArtists: false,
+    hasAlumni: false,
+    rosterNoun: null,
+  },
+  {
+    value: "local_board_arts_org",
+    label: "Local board arts broker",
+    hint: "A local board's own arts adviser or broker, e.g. an Auckland local board. Does not anchor the wider region — Te Taumata already does that for Auckland.",
+    relationship: "geographic",
+    anchorsRegion: false,
     representsArtists: false,
     hasAlumni: false,
     rosterNoun: null,

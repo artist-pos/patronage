@@ -113,10 +113,40 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
                 </div>
                 <p className="text-[11px] text-muted-foreground">{o.regionNames.join(" · ")}</p>
                 {o.boards.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    By local board:{" "}
-                    {o.boards.map((b) => `${b.name} ${b.count}`).join(" · ")}
-                  </p>
+                  <ul className="space-y-1 border-l border-border pl-2">
+                    {o.boards.map((b) => (
+                      <li key={b.boardId ?? "unset"} className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="text-muted-foreground">
+                          {b.name} <span>· {b.count}</span>
+                        </span>
+                        {!b.boardId ? null : b.org ? (
+                          <Link
+                            href={`/admin/profiles/${b.org.id}`}
+                            className="shrink-0 text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                          >
+                            {b.org.shadow ? "shadow" : "claimed"}
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isPending || !o.regionId}
+                            onClick={() =>
+                              create(`${o.key}:${b.boardId}`, {
+                                name: `${b.name} Local Board`,
+                                entityType: "partner",
+                                orgCategory: "local_board_arts_org",
+                                regionId: o.regionId,
+                                localBoardId: b.boardId,
+                              })
+                            }
+                            className={`${linkCls} shrink-0 disabled:opacity-50`}
+                          >
+                            {creatingKey === `${o.key}:${b.boardId}` ? "Creating…" : "+ Create shadow profile"}
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
 
                 {o.profile ? (

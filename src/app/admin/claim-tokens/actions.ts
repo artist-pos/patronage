@@ -132,6 +132,9 @@ export async function createShadowProfile(input: {
    *  page, so the artists already there are attached to it from day one. */
   orgCategory?: string | null;
   regionId?: string | null;
+  /** Partners only, local_board_arts_org. Must belong to regionId — the
+   *  caller always derives this from a real board row, never free text. */
+  localBoardId?: string | null;
   bio?: string | null;
 }): Promise<{ profileId?: string; username?: string; error?: string }> {
   if (!(await isAdmin())) return { error: "Not authorised." };
@@ -177,6 +180,7 @@ export async function createShadowProfile(input: {
       account_status: "shadow",
       ...(isPartner && orgCategory ? { org_category: orgCategory } : {}),
       ...(isPartner && input.regionId ? { region_id: input.regionId } : {}),
+      ...(isPartner && input.localBoardId ? { local_board_id: input.localBoardId } : {}),
       ...(isPartner && input.bio?.trim() ? { bio: input.bio.trim() } : {}),
     })
     .select("id, username")

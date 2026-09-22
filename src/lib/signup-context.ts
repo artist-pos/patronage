@@ -38,6 +38,9 @@ export interface SignupContext {
   /** Region the signup came from, so a regional CTA seeds the new profile's
    *  region rather than asking again. */
   regionId?: string;
+  /** Local board the invite came from (an Auckland board broker's own
+   *  invite), re-validated against regionId before being written. */
+  localBoardId?: string;
   /** Organisation whose invitation brought them here (migration 187). Recorded
    *  as attribution on the new profile. It grants the organisation nothing. */
   invitedByOrgId?: string;

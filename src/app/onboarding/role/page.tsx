@@ -9,6 +9,7 @@ import { issueEmailVerification } from "@/lib/email-verification";
 import { sendWelcomeDm } from "@/lib/welcome-dm";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { isOrgCategory } from "@/lib/org-categories";
+import { validLocalBoardId } from "@/lib/local-boards";
 import {
   SIGNUP_CONTEXT_COOKIE,
   decodeSignupContext,
@@ -50,6 +51,14 @@ async function applyRole(role: string, next?: string | null) {
   // profile rather than a helpful default.
   const seededDisciplines = isArtist ? toDisciplineEnums(signupCtx?.disciplines) : [];
 
+  // Re-checked against regionId rather than trusted from the cookie pair
+  // directly — the same guard ProfileForm's own save path applies, so a
+  // board can never land on a profile in the wrong region.
+  const seededLocalBoardId =
+    isArtist && signupCtx?.localBoardId && signupCtx?.regionId
+      ? await validLocalBoardId(supabase, signupCtx.localBoardId, signupCtx.regionId)
+      : null;
+
   const profileData = {
     id: user.id,
     username: baseUsername,
@@ -80,6 +89,7 @@ async function applyRole(role: string, next?: string | null) {
       org_category: signupCtx.orgCategory,
     }),
     ...(signupCtx?.regionId && { region_id: signupCtx.regionId }),
+    ...(seededLocalBoardId && { local_board_id: seededLocalBoardId }),
     // Which organisation's invitation produced this account (187). Attribution
     // only: it gives them no claim on the artist and appears nowhere public.
     ...(isArtist && signupCtx?.invitedByOrgId && {

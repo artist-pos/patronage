@@ -31,6 +31,10 @@ interface Org {
   name: string;
   regionName: string | null;
   regionId: string | null;
+  /** Set for a local_board_arts_org broker. Carried onto every invite it
+   *  sends the same way regionId is, so an accepted invite lands the new
+   *  artist on that board, not just the wider region. */
+  localBoardId: string | null;
   /** Whatever this organisation has rewritten. Nulls fall back to our copy. */
   copy: OrgInviteCopy;
 }
@@ -49,7 +53,7 @@ async function requireOrg(): Promise<{ org?: Org; error?: string }> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("profiles")
-    .select(`id, full_name, username, role, org_category, region_id, regions(name),
+    .select(`id, full_name, username, role, org_category, region_id, local_board_id, regions(name),
             org_invite_subject, org_invite_headline, org_invite_subhead,
             org_invite_message, org_invite_reply_to`)
     .eq("id", user.id)
@@ -62,6 +66,7 @@ async function requireOrg(): Promise<{ org?: Org; error?: string }> {
     role: string;
     org_category: string | null;
     region_id: string | null;
+    local_board_id: string | null;
     regions: { name: string } | null;
     org_invite_subject: string | null;
     org_invite_headline: string | null;
@@ -80,6 +85,7 @@ async function requireOrg(): Promise<{ org?: Org; error?: string }> {
       name: p.full_name ?? p.username,
       regionName: p.regions?.name ?? null,
       regionId: p.region_id,
+      localBoardId: p.local_board_id,
       copy: {
         subject: p.org_invite_subject,
         headline: p.org_invite_headline,
@@ -251,6 +257,7 @@ export async function sendArtistInvites(
         disciplines: r.disciplines,
         city: r.city,
         region_id: org.regionId,
+        local_board_id: org.localBoardId,
         status: "existing",
       })),
       { onConflict: "org_profile_id,email", ignoreDuplicates: true }
@@ -268,6 +275,7 @@ export async function sendArtistInvites(
         disciplines: r.disciplines,
         city: r.city,
         region_id: org.regionId,
+        local_board_id: org.localBoardId,
         status: "pending",
       }))
     )

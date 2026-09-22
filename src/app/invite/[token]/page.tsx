@@ -43,7 +43,7 @@ export default async function InvitePage({ params }: Props) {
   const { data } = await admin
     .from("artist_invitations")
     .select(
-      "id, email, full_name, disciplines, city, region_id, status, org_profile_id, org:profiles!artist_invitations_org_profile_id_fkey(full_name, username)"
+      "id, email, full_name, disciplines, city, region_id, local_board_id, status, org_profile_id, org:profiles!artist_invitations_org_profile_id_fkey(full_name, username)"
     )
     .eq("token", token)
     .maybeSingle();
@@ -55,6 +55,7 @@ export default async function InvitePage({ params }: Props) {
     disciplines: string[] | null;
     city: string | null;
     region_id: string | null;
+    local_board_id: string | null;
     status: string;
     org_profile_id: string;
     org: { full_name: string | null; username: string } | null;
@@ -89,6 +90,7 @@ export default async function InvitePage({ params }: Props) {
     ...(invite.disciplines?.length && { disciplines: invite.disciplines }),
     ...(invite.city && { city: invite.city }),
     ...(invite.region_id && { regionId: invite.region_id }),
+    ...(invite.local_board_id && { localBoardId: invite.local_board_id }),
   };
 
   const store = await cookies();

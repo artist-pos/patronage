@@ -72,7 +72,13 @@ export interface CatalogOrgStatus {
   artistCount: number;
   /** Artists per local board for the home region, non-empty boards only, with
    *  anyone in the region who has not named one counted as "Not set". */
-  boards: Array<{ name: string; count: number }>;
+  boards: Array<{
+    boardId: string | null;
+    name: string;
+    count: number;
+    /** The local_board_arts_org broker for this board, if one has a profile. */
+    org: { id: string; username: string; name: string; shadow: boolean } | null;
+  }>;
   profile: { id: string; username: string; name: string; shadow: boolean } | null;
 }
 
@@ -115,10 +121,26 @@ export function computeCatalogStatus(
 
     const homeBoards = boards.filter((b) => b.region_id === home?.regionId);
     const boardCounts = new Map<string, number>();
+    const boardOrgs = new Map<string, CatalogOrgStatus["boards"][number]["org"]>();
     let noBoard = 0;
     if (home && homeBoards.length > 0) {
       for (const p of profiles) {
-        if (p.region_id !== home.regionId || !p.is_active || (p.role !== "artist" && p.role !== "owner")) continue;
+        if (p.region_id !== home.regionId) continue;
+        if (p.role === "partner" && p.org_category === "local_board_arts_org" && p.local_board_id) {
+          const shadow = p.account_status === "shadow";
+          const existing = boardOrgs.get(p.local_board_id);
+          // A claimed broker outranks a shadow one for the same board.
+          if (!existing || (existing.shadow && !shadow)) {
+            boardOrgs.set(p.local_board_id, {
+              id: p.id,
+              username: p.username,
+              name: p.full_name ?? p.username,
+              shadow,
+            });
+          }
+          continue;
+        }
+        if (!p.is_active || (p.role !== "artist" && p.role !== "owner")) continue;
         if (p.local_board_id && homeBoards.some((b) => b.id === p.local_board_id)) {
           boardCounts.set(p.local_board_id, (boardCounts.get(p.local_board_id) ?? 0) + 1);
         } else {
@@ -126,11 +148,19 @@ export function computeCatalogStatus(
         }
       }
     }
-    const boardRows = homeBoards
-      .filter((b) => boardCounts.has(b.id))
-      .map((b) => ({ name: b.name, count: boardCounts.get(b.id) ?? 0 }))
+    // Every board in the region is shown, not just ones with artists already —
+    // a broker can be set up ahead of anyone naming that board.
+    const boardRows: CatalogOrgStatus["boards"] = homeBoards
+      .map((b) => ({
+        boardId: b.id,
+        name: b.name,
+        count: boardCounts.get(b.id) ?? 0,
+        org: boardOrgs.get(b.id) ?? null,
+      }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-    if (boardRows.length > 0 && noBoard > 0) boardRows.push({ name: "Not set", count: noBoard });
+    if (boardRows.length > 0 && noBoard > 0) {
+      boardRows.push({ boardId: null, name: "Not set", count: noBoard, org: null });
+    }
 
     return {
       key: def.key,
