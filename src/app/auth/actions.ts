@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { isSubmittedTooFast } from "@/lib/form-timing";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 // Email/password auth runs server-side so the browser only ever talks to our
@@ -51,11 +52,15 @@ export async function signUpAction(input: {
   role?: string;
   next?: string;
   turnstileToken?: string;
+  loadedAt?: number;
   [HONEYPOT_FIELD]?: string;
 }): Promise<AuthResult> {
   // Bots that blindly fill every field trip the honeypot — pretend success
-  // so they don't retry with a cleaner payload.
-  if (input[HONEYPOT_FIELD]) return { needsEmailConfirmation: false };
+  // so they don't retry with a cleaner payload. Same treatment for a
+  // submission that arrived faster than a human could fill the form.
+  if (input[HONEYPOT_FIELD] || isSubmittedTooFast(input.loadedAt)) {
+    return { needsEmailConfirmation: false };
+  }
 
   const email = input.email?.trim() ?? "";
   const password = input.password ?? "";

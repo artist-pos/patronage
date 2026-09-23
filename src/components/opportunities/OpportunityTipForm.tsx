@@ -4,6 +4,7 @@ import { useState } from "react";
 import { submitOpportunityTip } from "@/app/opportunities/tip-action";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
 const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -25,6 +26,7 @@ export function OpportunityTipForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const loadedAt = useFormLoadedAt();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +38,7 @@ export function OpportunityTipForm() {
       sourceLink,
       email,
       turnstileToken,
+      loadedAt,
       [HONEYPOT_FIELD]: honeypot,
     });
     setSubmitting(false);

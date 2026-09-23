@@ -13,6 +13,7 @@ import { notifyOpportunitySubmission } from "@/lib/email";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { isSubmittedTooFast } from "@/lib/form-timing";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { Resend } from "resend";
 
@@ -58,11 +59,13 @@ export async function submitActivationEnquiry(data: {
   interests: string[];
   message: string;
   turnstileToken?: string;
+  loadedAt?: number;
   [HONEYPOT_FIELD]?: string;
 }): Promise<{ error?: string }> {
   // Bots that blindly fill every field trip the honeypot — pretend success
-  // so they don't retry with a cleaner payload.
-  if (data[HONEYPOT_FIELD]) return {};
+  // so they don't retry with a cleaner payload. Same treatment for a
+  // submission that arrived faster than a human could fill the form.
+  if (data[HONEYPOT_FIELD] || isSubmittedTooFast(data.loadedAt)) return {};
 
   const name = data.name.trim();
   const email = data.email.trim();

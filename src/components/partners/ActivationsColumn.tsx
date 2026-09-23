@@ -9,6 +9,7 @@ import { updateActivationType } from "@/app/partners/actions";
 import type { ActivationType } from "@/app/partners/page";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
 const HOW_IT_WORKS = [
   "You brief us on the surface, timeline, and budget",
@@ -46,6 +47,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
   const [sendError, setSendError] = useState<string | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const loadedAt = useFormLoadedAt();
 
   // Admin editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
     const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
     const result = await submitActivationEnquiry({
       name, organisation: org, email, interests: [...interests], message,
-      turnstileToken, [HONEYPOT_FIELD]: honeypot,
+      turnstileToken, loadedAt, [HONEYPOT_FIELD]: honeypot,
     });
     setSending(false);
     if (result.error) { setSendError(result.error); return; }

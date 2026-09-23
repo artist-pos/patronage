@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
 const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -54,6 +55,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const loadedAt = useFormLoadedAt();
 
   const supabase = createClient();
 
@@ -129,7 +131,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
       if (mode === "signup") {
         const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
         const result = await withRetry(() =>
-          signUpAction({ email, password, role, next, turnstileToken, [HONEYPOT_FIELD]: honeypot })
+          signUpAction({ email, password, role, next, turnstileToken, loadedAt, [HONEYPOT_FIELD]: honeypot })
         );
         if (result.error) {
           setError(result.error);

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sendBugReport } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { isSubmittedTooFast } from "@/lib/form-timing";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { AREAS } from "./areas";
 
@@ -17,8 +18,14 @@ export async function reportBugAction(
   formData: FormData
 ): Promise<ReportBugState> {
   // Bots that blindly fill every field trip the honeypot — pretend success
-  // so they don't retry with a cleaner payload.
-  if ((formData.get(HONEYPOT_FIELD) as string)?.trim()) return { status: "success" };
+  // so they don't retry with a cleaner payload. Same treatment for a
+  // submission that arrived faster than a human could fill the form.
+  if (
+    (formData.get(HONEYPOT_FIELD) as string)?.trim() ||
+    isSubmittedTooFast(formData.get("loadedAt"))
+  ) {
+    return { status: "success" };
+  }
 
   const area = (formData.get("area") as string)?.trim();
   const message = (formData.get("message") as string)?.trim();

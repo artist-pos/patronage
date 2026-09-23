@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField } from "@/components/HoneypotField";
+import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
 const CAPTCHA_CONFIGURED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -17,6 +18,7 @@ export function BugReportForm() {
   const [state, action, isPending] = useActionState(reportBugAction, initial);
   const [pageUrl, setPageUrl] = useState("");
   const [turnstileVerified, setTurnstileVerified] = useState(false);
+  const loadedAt = useFormLoadedAt();
 
   // Capture where the reporter came from, to help us reproduce.
   useEffect(() => {
@@ -37,6 +39,7 @@ export function BugReportForm() {
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="pageUrl" value={pageUrl} />
+      <input type="hidden" name="loadedAt" value={loadedAt} />
 
       <div className="space-y-1.5">
         <Label htmlFor="area">Where did it happen?</Label>

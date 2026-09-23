@@ -4,6 +4,7 @@ import { useState } from "react";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
+import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
 const INTERESTS = ["Activations", "Art strategy", "Pipeline", "Listing", "Other"] as const;
 
@@ -21,6 +22,7 @@ export function PartnerContactForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const loadedAt = useFormLoadedAt();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,6 +36,7 @@ export function PartnerContactForm() {
       interests: [interest],
       message,
       turnstileToken,
+      loadedAt,
       [HONEYPOT_FIELD]: honeypot,
     });
     setSending(false);
