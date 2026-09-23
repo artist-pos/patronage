@@ -1,7 +1,12 @@
 /**
- * Creates the "Growth Loops" dashboard in PostHog.
+ * Creates the PostHog dashboards:
  *
- * Run once, after the growth-sprint events have started arriving:
+ *   "Growth Loops"                       — shares, referrals, regional pages, digest
+ *   "Signup, prompts & bot protection"   — the signup funnel, the two signup
+ *                                          prompts (opportunities grid + "before
+ *                                          you go") and what the bot guards block
+ *
+ * Run once, after the events have started arriving:
  *
  *   POSTHOG_PERSONAL_API_KEY=phx_... POSTHOG_PROJECT_ID=12345 \
  *     npm run posthog:dashboard
@@ -19,7 +24,9 @@ const HOST = process.env.POSTHOG_HOST ?? "https://us.posthog.com";
 const API_KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 const PROJECT_ID = process.env.POSTHOG_PROJECT_ID;
 
-const DASHBOARD_NAME = "Growth Loops";
+// Logged-in routes were not captured before this date, so earlier funnel and
+// retention numbers are artefacts rather than a baseline.
+const BASELINE = "2026-09-10";
 
 interface InsightSpec {
   name: string;
@@ -27,32 +34,79 @@ interface InsightSpec {
   query: Record<string, unknown>;
 }
 
-/** A weekly trend of one or more events, optionally broken down by a property. */
-function weeklyTrend(
-  events: Array<{ id: string; name?: string }>,
-  breakdown?: string
+interface DashboardSpec {
+  name: string;
+  description: string;
+  insights: InsightSpec[];
+}
+
+interface EventSeries {
+  id: string;
+  name?: string;
+  /** Event-property equality filters, e.g. { source: "opportunities_grid_modal" }. */
+  where?: Record<string, string>;
+}
+
+function eventNode(e: EventSeries, withMath: boolean): Record<string, unknown> {
+  return {
+    kind: "EventsNode",
+    event: e.id,
+    name: e.name ?? e.id,
+    ...(withMath && { math: "total" }),
+    ...(e.where && {
+      properties: Object.entries(e.where).map(([key, value]) => ({
+        key,
+        value,
+        operator: "exact",
+        type: "event",
+      })),
+    }),
+  };
+}
+
+/** A trend of one or more events, optionally broken down by a property. */
+function trend(
+  events: EventSeries[],
+  opts: { breakdown?: string; interval?: "day" | "week"; dateFrom?: string } = {}
 ): Record<string, unknown> {
   return {
     kind: "InsightVizNode",
     source: {
       kind: "TrendsQuery",
-      dateRange: { date_from: "-90d" },
-      interval: "week",
-      series: events.map((e) => ({
-        kind: "EventsNode",
-        event: e.id,
-        name: e.name ?? e.id,
-        math: "total",
-      })),
+      dateRange: { date_from: opts.dateFrom ?? "-90d" },
+      interval: opts.interval ?? "week",
+      series: events.map((e) => eventNode(e, true)),
       trendsFilter: { display: "ActionsLineGraph" },
-      ...(breakdown && {
-        breakdownFilter: { breakdown_type: "event", breakdown },
+      ...(opts.breakdown && {
+        breakdownFilter: { breakdown_type: "event", breakdown: opts.breakdown },
       }),
     },
   };
 }
 
-const INSIGHTS: InsightSpec[] = [
+function weeklyTrend(events: EventSeries[], breakdown?: string): Record<string, unknown> {
+  return trend(events, { breakdown, interval: "week" });
+}
+
+/** An ordered funnel: each step must follow the previous within a day. */
+function funnel(steps: EventSeries[]): Record<string, unknown> {
+  return {
+    kind: "InsightVizNode",
+    source: {
+      kind: "FunnelsQuery",
+      dateRange: { date_from: BASELINE },
+      series: steps.map((s) => eventNode(s, false)),
+      funnelsFilter: {
+        funnelVizType: "steps",
+        funnelOrderType: "ordered",
+        funnelWindowInterval: 1,
+        funnelWindowIntervalUnit: "day",
+      },
+    },
+  };
+}
+
+const GROWTH_INSIGHTS: InsightSpec[] = [
   {
     name: "Opportunity shares per week — email vs copy link",
     description:
@@ -117,6 +171,122 @@ const INSIGHTS: InsightSpec[] = [
   },
 ];
 
+const GRID_MODAL = "opportunities_grid_modal";
+const BEFORE_YOU_GO = "before_you_go_external_apply";
+
+// signup_account_created and signup_onboarding_completed are written to
+// Supabase only (server-side), so the PostHog funnels end at signup_completed,
+// which the browser fires once the role step has written the profile.
+const SIGNUP_INSIGHTS: InsightSpec[] = [
+  {
+    name: "Signup funnel — page to completed account",
+    description:
+      "Everyone who reached the signup page, who submitted it, and whose account finished being set up. Any signup source.",
+    query: funnel([
+      { id: "$pageview", name: "Signup page viewed", where: { $pathname: "/auth/signup" } },
+      { id: "signup_form_submitted", name: "Form submitted" },
+      { id: "signup_completed", name: "Account set up" },
+    ]),
+  },
+  {
+    name: "Signups per week by source",
+    description:
+      "Which surface each signup came from: the grid modal, the before-you-go prompt, or the signup page itself.",
+    query: weeklyTrend([{ id: "signup_form_submitted" }], "source"),
+  },
+  {
+    name: "Card-15 signup modal — funnel",
+    description:
+      "Shown after the 15th listing to signed-out visitors. Seen → picked a discipline → submitted the form → account set up.",
+    query: funnel([
+      { id: "opportunities_signup_modal_view", name: "Modal seen" },
+      { id: "opportunities_signup_modal_first_pick", name: "Picked a discipline" },
+      { id: "signup_form_submitted", name: "Submitted", where: { source: GRID_MODAL } },
+      { id: "signup_completed", name: "Account set up" },
+    ]),
+  },
+  {
+    name: "Card-15 signup modal — seen, picked, dismissed, suppressed",
+    description:
+      "Suppressed = would have shown but the visitor dismissed it within the last 7 days. A high dismissed count with few picks means the ask lands too early.",
+    query: trend(
+      [
+        { id: "opportunities_signup_modal_view", name: "Seen" },
+        { id: "opportunities_signup_modal_first_pick", name: "Picked a discipline" },
+        { id: "opportunities_signup_modal_dismissed", name: "Dismissed" },
+        { id: "opportunities_signup_modal_suppressed", name: "Suppressed (recently dismissed)" },
+      ],
+      { interval: "week" }
+    ),
+  },
+  {
+    name: "Before-you-go prompt — funnel",
+    description:
+      "Shown on the Patronage tab left behind after a signed-out visitor clicks an external Apply link. Shown → submitted the form → account set up.",
+    query: funnel([
+      { id: "before_you_go_modal_shown", name: "Prompt shown" },
+      { id: "signup_form_submitted", name: "Submitted", where: { source: BEFORE_YOU_GO } },
+      { id: "signup_completed", name: "Account set up" },
+    ]),
+  },
+  {
+    name: "Before-you-go prompt — shown, dismissed, suppressed",
+    description:
+      "Dismissals split by had_picked show whether people engaged with the discipline chips before closing it.",
+    query: trend(
+      [
+        { id: "before_you_go_modal_shown", name: "Shown" },
+        { id: "before_you_go_modal_dismissed", name: "Dismissed" },
+        { id: "before_you_go_modal_suppressed", name: "Suppressed (recently dismissed)" },
+      ],
+      { interval: "week" }
+    ),
+  },
+  {
+    name: "Before-you-go dismissals — picked a discipline first?",
+    description: "had_picked = true means they engaged with the prompt before closing it.",
+    query: trend([{ id: "before_you_go_modal_dismissed" }], {
+      breakdown: "had_picked",
+      interval: "week",
+    }),
+  },
+  {
+    name: "Signups blocked by reason",
+    description:
+      "Server-side rejections. tor, gibberish_name and dot_trick_email are bots being caught. If turnstile_failed or too_fast climb while signups fall, a rule may be catching real people.",
+    query: trend([{ id: "signup_blocked" }], {
+      breakdown: "reason",
+      interval: "day",
+      dateFrom: "-30d",
+    }),
+  },
+  {
+    name: "Other forms blocked (Tor)",
+    description:
+      "Partner enquiry, bug report and opportunity tip submissions rejected for arriving from a Tor exit.",
+    query: trend([{ id: "form_blocked" }], {
+      breakdown: "form",
+      interval: "day",
+      dateFrom: "-30d",
+    }),
+  },
+];
+
+const DASHBOARDS: DashboardSpec[] = [
+  {
+    name: "Growth Loops",
+    description:
+      "Which public objects acquire users: shares, referrals, signup prompts, regional pages, and the weekly digest.",
+    insights: GROWTH_INSIGHTS,
+  },
+  {
+    name: "Signup, prompts & bot protection",
+    description:
+      "The signup funnel, the card-15 and before-you-go prompts, and what the bot guards are blocking. Baseline: 10 Sep 2026.",
+    insights: SIGNUP_INSIGHTS,
+  },
+];
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${HOST}/api/projects/${PROJECT_ID}${path}`, {
     ...init,
@@ -137,6 +307,44 @@ interface Listed {
   results: Array<{ id: number; name: string }>;
 }
 
+async function ensureDashboard(spec: DashboardSpec): Promise<void> {
+  // Reuse an existing dashboard of the same name so re-running does not litter.
+  const existing = await api<Listed>(`/dashboards/?search=${encodeURIComponent(spec.name)}`);
+  let dashboard = existing.results.find((d) => d.name === spec.name);
+
+  if (dashboard) {
+    console.log(`Reusing dashboard #${dashboard.id} "${spec.name}".`);
+  } else {
+    dashboard = await api<{ id: number; name: string }>("/dashboards/", {
+      method: "POST",
+      body: JSON.stringify({ name: spec.name, description: spec.description }),
+    });
+    console.log(`Created dashboard #${dashboard.id} "${spec.name}".`);
+  }
+
+  const onDashboard = await api<Listed>(`/insights/?dashboard=${dashboard.id}&limit=100`);
+
+  for (const insight of spec.insights) {
+    if (onDashboard.results.some((i) => i.name === insight.name)) {
+      console.log(`  skip   ${insight.name} (already present)`);
+      continue;
+    }
+
+    await api("/insights/", {
+      method: "POST",
+      body: JSON.stringify({
+        name: insight.name,
+        description: insight.description,
+        query: insight.query,
+        dashboards: [dashboard.id],
+      }),
+    });
+    console.log(`  added  ${insight.name}`);
+  }
+
+  console.log(`  → ${HOST}/project/${PROJECT_ID}/dashboard/${dashboard.id}\n`);
+}
+
 async function main() {
   if (!API_KEY || !PROJECT_ID) {
     console.error(
@@ -145,45 +353,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Reuse an existing dashboard of the same name so re-running does not litter.
-  const existing = await api<Listed>(`/dashboards/?search=${encodeURIComponent(DASHBOARD_NAME)}`);
-  let dashboard = existing.results.find((d) => d.name === DASHBOARD_NAME);
-
-  if (dashboard) {
-    console.log(`Reusing dashboard #${dashboard.id} "${DASHBOARD_NAME}".`);
-  } else {
-    dashboard = await api<{ id: number; name: string }>("/dashboards/", {
-      method: "POST",
-      body: JSON.stringify({
-        name: DASHBOARD_NAME,
-        description:
-          "Which public objects acquire users: shares, referrals, signup prompts, regional pages, and the weekly digest.",
-      }),
-    });
-    console.log(`Created dashboard #${dashboard.id} "${DASHBOARD_NAME}".`);
+  for (const dashboard of DASHBOARDS) {
+    await ensureDashboard(dashboard);
   }
-
-  const onDashboard = await api<Listed>(`/insights/?dashboard=${dashboard.id}&limit=100`);
-
-  for (const spec of INSIGHTS) {
-    if (onDashboard.results.some((i) => i.name === spec.name)) {
-      console.log(`  skip   ${spec.name} (already present)`);
-      continue;
-    }
-
-    await api("/insights/", {
-      method: "POST",
-      body: JSON.stringify({
-        name: spec.name,
-        description: spec.description,
-        query: spec.query,
-        dashboards: [dashboard.id],
-      }),
-    });
-    console.log(`  added  ${spec.name}`);
-  }
-
-  console.log(`\nDone: ${HOST}/project/${PROJECT_ID}/dashboard/${dashboard.id}`);
 }
 
 main().catch((err) => {

@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
-import { gmailVariantExists, hasDotTrickPattern, isTorExit, looksLikeGibberishName } from "@/lib/bot-guard";
+import {
+  gmailVariantExists,
+  hasDotTrickPattern,
+  isTorExit,
+  looksLikeGibberishName,
+  recordBlocked,
+} from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 // Email/password auth runs server-side so the browser only ever talks to our
@@ -61,7 +67,12 @@ export async function signUpAction(input: {
   // Bots that blindly fill every field trip the honeypot — pretend success
   // so they don't retry with a cleaner payload. Same treatment for a
   // submission that arrived faster than a human could fill the form.
-  if (input[HONEYPOT_FIELD] || isSubmittedTooFast(input.loadedAt, { required: true })) {
+  if (input[HONEYPOT_FIELD]) {
+    await recordBlocked("signup_blocked", { reason: "honeypot" });
+    return { needsEmailConfirmation: false };
+  }
+  if (isSubmittedTooFast(input.loadedAt, { required: true })) {
+    await recordBlocked("signup_blocked", { reason: "too_fast" });
     return { needsEmailConfirmation: false };
   }
 
@@ -83,21 +94,30 @@ export async function signUpAction(input: {
 
   // Patterns only scripts produce (random-string names, Gmail dot-trick
   // addresses). Pretend success so they don't retry with cleaner values.
-  if (looksLikeGibberishName(name) || hasDotTrickPattern(email)) {
+  if (looksLikeGibberishName(name)) {
+    await recordBlocked("signup_blocked", { reason: "gibberish_name" });
+    return { needsEmailConfirmation: false };
+  }
+  if (hasDotTrickPattern(email)) {
+    await recordBlocked("signup_blocked", { reason: "dot_trick_email" });
     return { needsEmailConfirmation: false };
   }
 
   const ip = await getClientIp();
   if (await isTorExit(ip)) {
+    await recordBlocked("signup_blocked", { reason: "tor" });
     return { error: "Sign-ups from anonymising networks are blocked. Please try again without a VPN or Tor." };
   }
   if (!(await checkRateLimit(`signup:${ip}`, 8, 3600))) {
+    await recordBlocked("signup_blocked", { reason: "rate_limited" });
     return { error: "Too many signup attempts from this network. Please try again later." };
   }
   if (!(await verifyTurnstile(input.turnstileToken, ip))) {
+    await recordBlocked("signup_blocked", { reason: "turnstile_failed" });
     return { error: "Verification failed. Please try again." };
   }
   if (await gmailVariantExists(email)) {
+    await recordBlocked("signup_blocked", { reason: "gmail_variant" });
     return { error: "An account with that email already exists. Try signing in instead." };
   }
 

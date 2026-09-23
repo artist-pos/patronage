@@ -1,4 +1,18 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { captureServerEvent } from "@/lib/posthog-server";
+
+/**
+ * Counts a rejected submission in PostHog so the guards can be judged: a spike
+ * in one reason is a bot wave being caught, a reason that suddenly climbs while
+ * signups fall is a rule catching real people. No person profile and no IP,
+ * email or name are sent.
+ */
+export async function recordBlocked(
+  event: "signup_blocked" | "form_blocked",
+  props: { reason: string; form?: string }
+): Promise<void> {
+  await captureServerEvent(event, "server-bot-guard", { ...props, $process_person_profile: false });
+}
 
 // Public exit list published by the Tor Project. Every bot signup seen so far
 // arrived from a Tor exit and never reused an address, so per-IP rate limits
