@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
 import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
+import { OrganiserField } from "@/components/opportunities/OrganiserField";
 import type { ApplicationLink, Opportunity, OppTypeEnum } from "@/types/database";
 import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
 
@@ -192,6 +193,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
 export interface Patch {
   title?: string;
   organiser?: string;
+  organiser_profile_id?: string | null;
   type?: OppTypeEnum;
   country?: string;
   city?: string | null;
@@ -347,11 +349,18 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Organiser */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Organising body <span className="text-stone-400">*</span></label>
-          <input
-            type="text"
+          <OrganiserField
+            allowLink={canUploadImage}
             value={opp.organiser ?? ""}
-            onChange={(e) => onChange({ organiser: e.target.value })}
-            placeholder="e.g. Creative New Zealand"
+            linkedProfileId={opp.organiser_profile_id ?? null}
+            onChange={(organiser, organiserProfileId) =>
+              onChange({
+                organiser,
+                ...(organiserProfileId !== (opp.organiser_profile_id ?? null)
+                  ? { organiser_profile_id: organiserProfileId }
+                  : {}),
+              })
+            }
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
           />
         </div>

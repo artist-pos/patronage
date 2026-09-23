@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
 import { validPartnerProfileId } from "@/lib/organiser-link";
+import { isAdmin } from "@/lib/admin";
 import type { ApplicationLink } from "@/types/database";
 
 async function getOpportunityForPartner(id: string) {
@@ -68,11 +69,13 @@ export async function updateOpportunityPartner(
   // Resolve entry fee currency conversion if needed
   const updateData = { ...data };
 
-  // A partner can only attribute their own listing to their own account,
-  // never to another organisation.
+  // A partner can only attribute their own listing to their own account;
+  // admins (listing on behalf of an organisation, including shadow accounts)
+  // can link any partner account.
   if ("organiser_profile_id" in updateData) {
-    updateData.organiser_profile_id =
-      updateData.organiser_profile_id === user.id ? await validPartnerProfileId(user.id) : null;
+    const wanted = updateData.organiser_profile_id;
+    const allowed = !!wanted && (wanted === user.id || (await isAdmin()));
+    updateData.organiser_profile_id = allowed ? await validPartnerProfileId(wanted) : null;
   }
 
   // Drop blank link rows the editor keeps around for in-progress typing.

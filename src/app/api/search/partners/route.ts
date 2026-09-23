@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
+import { isAdmin } from "@/lib/admin";
 
 // Partner-account picker for the listing form's "@" organiser field. Signed-in
 // only: it exists to link a listing you are editing, not to enumerate orgs.
@@ -19,6 +20,9 @@ export async function GET(req: NextRequest) {
     .eq("is_active", true)
     .order("full_name", { ascending: true, nullsFirst: false })
     .limit(8);
+  // Admins list on behalf of any organisation; a partner can only attribute
+  // a listing to themselves (the save action enforces the same rule).
+  if (!(await isAdmin())) query = query.eq("id", user.id);
   if (q.length > 0) query = query.or(`full_name.ilike.%${q}%,username.ilike.%${q}%`);
 
   const { data } = await query;
