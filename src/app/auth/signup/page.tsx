@@ -96,14 +96,8 @@ export default async function SignupPage({ searchParams }: Props) {
   // Role selected — show signup form
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="space-y-1">
-          <Link
-            href="/auth/signup"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 inline-block"
-          >
-            ← Back
-          </Link>
+      <div className="w-full max-w-sm space-y-8 py-12">
+        <div className="space-y-1.5 text-center">
           {/* The invitation's whole value is that a trusted organisation made
               the ask. Saying so again here keeps the warmth of the email
               instead of dropping the reader into a generic signup form. */}
@@ -112,24 +106,24 @@ export default async function SignupPage({ searchParams }: Props) {
               Invited by {invitedBy}
             </p>
           )}
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Join as a {ROLE_LABELS[role]}
-          </h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Create your account</h1>
           <p className="text-sm text-muted-foreground">
-            Already have one?{" "}
-            <Link
-              href={next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
-              className="underline underline-offset-2"
-            >
-              Sign in
+            Enter your details below to create your account
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Joining as a {ROLE_LABELS[role]} ·{" "}
+            <Link href="/auth/signup" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Change
             </Link>
           </p>
         </div>
-        <AuthForm mode="signup" next={resolvedNext} role={role} initialEmail={invitedEmail} />
-        <p className="text-xs text-muted-foreground">
-          You&rsquo;ll receive a confirmation email. After verifying, you can
-          complete your profile.
-        </p>
+        <AuthForm
+          mode="signup"
+          next={resolvedNext}
+          role={role}
+          initialEmail={invitedEmail}
+          loginHref={next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
+        />
       </div>
     </div>
   );

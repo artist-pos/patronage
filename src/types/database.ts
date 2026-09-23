@@ -409,6 +409,10 @@ export interface Profile {
    *  in the email. Never exposed to the client. */
   email_verify_hash?: string | null;
   email_verify_sent_at?: string | null;
+  /** Migration 057: set once, first time, when bio + avatar + disciplines +
+   *  ≥3 works are all present (`src/app/onboarding/actions.ts`). Never
+   *  cleared afterward — an internal-analytics timestamp, not a live gate. */
+  verified_at?: string | null;
   support_enabled: boolean;
   // Migration 167: commission availability status + blurb
   open_for_commissions: boolean;

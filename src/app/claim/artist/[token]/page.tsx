@@ -67,13 +67,13 @@ export default async function ArtistClaimPage({ params }: Props) {
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
-                href={`/auth/login?redirect=/claim/artist/${token}`}
+                href={`/auth/login?next=/claim/artist/${token}`}
                 className="text-sm bg-foreground text-background rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
               >
                 Sign in
               </Link>
               <Link
-                href={`/auth/signup?redirect=/claim/artist/${token}`}
+                href={`/auth/signup?next=/claim/artist/${token}`}
                 className="text-sm border border-stone-200 rounded-lg px-4 py-2 hover:bg-stone-50 transition-colors"
               >
                 Create account

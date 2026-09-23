@@ -2,14 +2,23 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { X, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { X, ChevronDown, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { submitApplication, saveDraft } from "@/app/opportunities/[id]/actions";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { AutoGrowTextarea } from "@/components/ui/AutoGrowTextarea";
+import { uploadImage } from "@/lib/upload-image";
+import { resendVerificationEmail } from "@/actions/verification";
 import type { OpportunityApplicationDraft } from "@/types/database";
 import type { OpportunityForApply, AvailableWork } from "./ApplyButton";
 import type { BadgeSet } from "@/lib/badges";
+
+interface MissingField {
+  key: string;
+  label: string;
+  href: string;
+}
 
 function fmtDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -128,6 +137,12 @@ export interface ApplyModalProps {
   isJobOpportunity?: boolean;
   professionalCvUrl?: string | null;
   draft?: OpportunityApplicationDraft | null;
+  /** Whatever's missing from a "Verified" profile — shown as inline prompts
+   *  in the form itself rather than a wall in front of it. Applying never
+   *  waits on these being filled in. */
+  missingFields?: MissingField[];
+  /** Proved-email nudge, same reasoning — a banner, not a blocker. */
+  needsEmailVerification?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -158,7 +173,7 @@ function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
   }));
 }
 
-export function ApplyModal({ opportunity, artistProfile, artistWorks, availableWorks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, onClose, onSuccess }: Props) {
+export function ApplyModal({ opportunity, artistProfile, artistWorks, availableWorks, badges, isJobOpportunity = false, professionalCvUrl = null, draft = null, missingFields = [], needsEmailVerification = false, onClose, onSuccess }: Props) {
   const artistDocs = (opportunity.pipeline_config?.artist_documents ?? []) as string[];
   const showPortfolioPicker = artistDocs.includes("portfolio");
   const showAvailableWorksPicker = artistDocs.includes("available_works");
@@ -198,6 +213,104 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
   const displayName = artistProfile.full_name ?? artistProfile.username;
   const exhibitionCount = (artistProfile.exhibition_history ?? []).length;
   const fields = normaliseFields(opportunity);
+
+  // ── Inline profile completion — collected here instead of gating the form.
+  // Each field persists to the profile immediately on save/upload, same as
+  // Settings would, so it's still there for the artist's next application. ──
+  const missingKeys = new Set(missingFields.map((f) => f.key));
+  const [localAvatarUrl, setLocalAvatarUrl] = useState(artistProfile.avatar_url);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [localBio, setLocalBio] = useState(artistProfile.bio ?? "");
+  const [bioSaving, setBioSaving] = useState(false);
+  const [bioSaved, setBioSaved] = useState(false);
+  const [cvParsing, setCvParsing] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [parsedExhibitionCount, setParsedExhibitionCount] = useState<number | null>(null);
+  const [newWorksCount, setNewWorksCount] = useState(0);
+  const [worksUploading, setWorksUploading] = useState(false);
+  const cvInputRef = useRef<HTMLInputElement | null>(null);
+  const worksInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [verifyStatus, setVerifyStatus] = useState<"idle" | "sending" | "sent" | "wait" | "error">("idle");
+
+  async function handleAvatarUpload(file: File) {
+    setAvatarUploading(true);
+    try {
+      const path = `${artistProfile.id}/__avatar.webp`;
+      const { url } = await uploadImage(file, { bucket: "portfolio", path, maxWidth: 400, quality: 85, upsert: true });
+      await supabase.from("profiles").update({ avatar_url: url }).eq("id", artistProfile.id);
+      setLocalAvatarUrl(url);
+    } catch {
+      // Best-effort nudge — a failed upload here shouldn't block applying.
+    }
+    setAvatarUploading(false);
+  }
+
+  async function saveBio(text: string) {
+    setBioSaving(true);
+    await supabase.from("profiles").update({ bio: text }).eq("id", artistProfile.id);
+    setBioSaving(false);
+    setBioSaved(true);
+    setTimeout(() => setBioSaved(false), 2000);
+  }
+
+  async function handleCvParse(file: File) {
+    setCvParsing(true);
+    setCvError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/parse-cv", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setCvError(data.error ?? "Couldn't read that CV.");
+      } else {
+        const updates: { bio?: string; exhibition_history?: typeof data.exhibition_history } = {};
+        if (data.bio && !localBio.trim()) {
+          setLocalBio(data.bio);
+          updates.bio = data.bio;
+        }
+        if (data.exhibition_history?.length > 0) {
+          updates.exhibition_history = data.exhibition_history;
+          setParsedExhibitionCount(data.exhibition_history.length);
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("profiles").update(updates).eq("id", artistProfile.id);
+        }
+      }
+    } catch {
+      setCvError("Couldn't reach the server — try again.");
+    }
+    setCvParsing(false);
+  }
+
+  async function handleWorksUpload(files: FileList) {
+    setWorksUploading(true);
+    const toUpload = Array.from(files).slice(0, 3 - Math.min(newWorksCount, 3));
+    for (const file of toUpload) {
+      try {
+        const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+        const path = `${artistProfile.id}/works/${Date.now()}-${safeName}.webp`;
+        const { url, thumbUrl } = await uploadImage(file, {
+          bucket: "portfolio", path, maxWidth: 1600, quality: 85, thumb: true, thumbWidth: 480,
+        });
+        await supabase.from("artworks").insert({
+          profile_id: artistProfile.id,
+          creator_id: artistProfile.id,
+          current_owner_id: artistProfile.id,
+          url,
+          thumb_url: thumbUrl ?? null,
+          is_available: false,
+          hide_from_archive: false,
+          content_type: "image",
+        });
+        setNewWorksCount((n) => n + 1);
+      } catch {
+        // Skip a failed file — the rest still upload.
+      }
+    }
+    setWorksUploading(false);
+  }
 
   function toggleWorkSelection(workId: string) {
     if (selectedWorkIds.includes(workId)) {
@@ -467,24 +580,79 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
             </details>
 
             <div className="px-6 py-6 space-y-7">
-          {/* Artist profile summary */}
-          <div className="space-y-3">
-            <p className="t-section-label">Your profile</p>
+          {needsEmailVerification && (
+            <div className="flex flex-wrap items-center gap-2 border border-dashed border-stone-300 px-4 py-3 text-sm text-muted-foreground">
+              <Lock className="w-4 h-4 shrink-0" />
+              <span className="flex-1 min-w-[200px]">
+                Your email isn&apos;t confirmed yet — you can still apply, but {opportunity.organiser} will see that.
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  setVerifyStatus("sending");
+                  const { status } = await resendVerificationEmail();
+                  setVerifyStatus(status === "sent" ? "sent" : status === "rate_limited" ? "wait" : "error");
+                }}
+                disabled={verifyStatus === "sending" || verifyStatus === "sent"}
+                className="text-xs underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
+              >
+                {verifyStatus === "sent"
+                  ? "Sent — check your inbox"
+                  : verifyStatus === "wait"
+                    ? "One was just sent"
+                    : verifyStatus === "error"
+                      ? "Couldn't send — try again"
+                      : verifyStatus === "sending"
+                        ? "Sending…"
+                        : "Resend confirmation email"}
+              </button>
+            </div>
+          )}
+
+          {/* Your profile — one flat section, no nested cards. Each field
+              saves itself the moment it changes, same as Settings would;
+              nothing here blocks submitting. Missing works gets real
+              visual weight below — it's the one gap that actually matters
+              to a reviewer, so it doesn't read as just another row. */}
+          <div className="space-y-5">
+            <div>
+              <p className="t-section-label">Your profile</p>
+              <p className="t-mono-sm text-[color:var(--fg-subtle)] mt-0.5">
+                What {opportunity.organiser} sees alongside your application.
+              </p>
+            </div>
+
+            {/* Photo + identity */}
             <div className="flex items-start gap-4">
-              {artistProfile.avatar_url && (
-                <div className="relative w-16 h-16 shrink-0 border border-border overflow-hidden">
-                  <Image
-                    src={artistProfile.avatar_url}
-                    alt={displayName}
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
-                </div>
-              )}
-              <div className="space-y-1.5 min-w-0">
+              <div className="relative w-16 h-16 shrink-0 border border-border overflow-hidden bg-muted">
+                {localAvatarUrl ? (
+                  <Image src={localAvatarUrl} alt={displayName} fill className="object-cover" sizes="64px" />
+                ) : missingKeys.has("avatar") ? (
+                  <label className="absolute inset-0 flex items-center justify-center cursor-pointer px-1 text-center text-[10px] leading-tight text-muted-foreground hover:text-foreground transition-colors">
+                    {avatarUploading ? "…" : "Add photo"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }}
+                    />
+                  </label>
+                ) : null}
+              </div>
+              <div className="space-y-1.5 min-w-0 flex-1">
                 <p className="text-sm font-medium">{displayName}</p>
                 <p className="t-mono-sm text-[color:var(--fg-subtle)]">@{artistProfile.username}</p>
+                {missingKeys.has("avatar") && localAvatarUrl && (
+                  <label className="inline-block text-xs underline underline-offset-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                    {avatarUploading ? "Uploading…" : "Change photo"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }}
+                    />
+                  </label>
+                )}
                 {(artistProfile.medium ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {(artistProfile.medium ?? []).slice(0, 3).map((m) => (
@@ -498,7 +666,6 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
               </div>
             </div>
 
-            {/* Badges */}
             {opportunity.show_badges_in_submission && badges && (
               <div className="flex flex-wrap gap-1.5">
                 {badges.withPatronage && <span className="badge badge-verified">With Patronage</span>}
@@ -509,8 +676,86 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
               </div>
             )}
 
-            {artistProfile.bio && (
-              <p className="t-body-sm line-clamp-3">{artistProfile.bio}</p>
+            {/* Bio */}
+            <div className="space-y-1.5 border-t border-border pt-5">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-xs font-medium">Bio</label>
+                {missingKeys.has("bio") && (
+                  <button
+                    type="button"
+                    onClick={() => cvInputRef.current?.click()}
+                    disabled={cvParsing}
+                    className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {cvParsing ? "Reading CV…" : "Fill in from a CV (PDF)"}
+                  </button>
+                )}
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files?.[0]) handleCvParse(e.target.files[0]); }}
+                />
+              </div>
+              {artistProfile.bio && !missingKeys.has("bio") ? (
+                <p className="t-body-sm line-clamp-3">{artistProfile.bio}</p>
+              ) : (
+                <>
+                  <AutoGrowTextarea
+                    value={localBio}
+                    onChange={(e) => setLocalBio(e.target.value)}
+                    onBlur={() => localBio.trim() && saveBio(localBio)}
+                    placeholder="A couple of sentences about your practice…"
+                    className="w-full border border-border bg-background px-3 py-2.5 text-sm transition-colors focus:outline-none focus:border-foreground"
+                  />
+                  <p className="t-mono-sm text-[color:var(--fg-subtle)]">
+                    {cvError ?? (bioSaving ? "Saving…" : bioSaved ? "Saved ✓" : parsedExhibitionCount != null ? `Also added ${parsedExhibitionCount} exhibition${parsedExhibitionCount !== 1 ? "s" : ""} from your CV.` : "Saves when you click away.")}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Works — the gap that actually changes how an application reads,
+                so it gets real size, not another small row like everything else. */}
+            {missingKeys.has("works") && (
+              <div className="border-t border-border pt-5 space-y-2">
+                <p className="text-base font-semibold">Your portfolio is empty</p>
+                <p className="t-body-sm text-[color:var(--fg-muted)]">
+                  {opportunity.organiser} will read this application next to your work — add at least a few images before you submit.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => worksInputRef.current?.click()}
+                  disabled={worksUploading || newWorksCount >= 3}
+                  className="btn btn-outline btn-sm disabled:opacity-50"
+                >
+                  {worksUploading ? "Uploading…" : "Upload work images"}
+                </button>
+                <input
+                  ref={worksInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files?.length) handleWorksUpload(e.target.files); e.target.value = ""; }}
+                />
+                {newWorksCount > 0 && (
+                  <p className="t-mono-sm text-[color:var(--fg-subtle)]">{newWorksCount} added this session.</p>
+                )}
+              </div>
+            )}
+
+            {missingFields.some((f) => !["avatar", "bio", "works"].includes(f.key)) && (
+              <p className="t-mono-sm text-[color:var(--fg-subtle)] border-t border-border pt-5">
+                Also missing:{" "}
+                {missingFields.filter((f) => !["avatar", "bio", "works"].includes(f.key)).map((f, i) => (
+                  <span key={f.key}>
+                    {i > 0 && ", "}
+                    <Link href={f.href} target="_blank" className="underline underline-offset-2 hover:text-foreground transition-colors">{f.label}</Link>
+                  </span>
+                ))}
+              </p>
             )}
           </div>
 

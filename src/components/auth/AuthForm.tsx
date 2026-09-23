@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import { signInAction, signUpAction } from "@/app/auth/actions";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,11 +29,19 @@ interface Props {
   submitClassName?: string;
   /** Overrides the submit button's label (only while not loading). */
   submitLabel?: string;
+  /** Which surface rendered this form (e.g. "opportunities_grid_modal") —
+   *  when set, tags a `signup_form_submitted` event so that surface's
+   *  own funnel can be queried without joining through PostHog. */
+  analyticsSource?: string;
+  /** Signup only — when set, an "Already have an account? Sign in" line links here. */
+  loginHref?: string;
 }
 
 interface FieldErrors {
+  name?: string;
   email?: string;
   password?: string;
+  terms?: string;
 }
 
 const NETWORK_ERROR_MSG =
@@ -47,8 +57,10 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, submitClassName, submitLabel }: Props) {
+export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, submitClassName, submitLabel, analyticsSource, loginHref }: Props) {
   const router = useRouter();
+  const [name, setName] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +97,10 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
 
   function validate(): boolean {
     const errs: FieldErrors = {};
+    if (mode === "signup") {
+      if (!name.trim()) errs.name = "Enter your name.";
+      if (!agreed) errs.terms = "Agree to the terms and privacy policy to continue.";
+    }
     if (!email.trim()) {
       errs.email = "Enter your email address.";
     } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
@@ -108,6 +124,9 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
         redirectTo: buildAuthUrl("/auth/callback"),
       },
     });
+    if (!error && mode === "signup" && analyticsSource) {
+      trackEvent("signup_form_submitted", { source: analyticsSource, method: "google" });
+    }
     if (error) {
       // "Load failed" / "Failed to fetch" are the browser's raw network
       // errors — translate them for humans.
@@ -131,7 +150,11 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
       if (mode === "signup") {
         const honeypot = new FormData(e.currentTarget).get(HONEYPOT_FIELD) as string;
         const result = await withRetry(() =>
-          signUpAction({ email, password, role, next, turnstileToken, loadedAt, [HONEYPOT_FIELD]: honeypot })
+          signUpAction({
+            email, password, role, next, turnstileToken, loadedAt,
+            name: name.trim(), acceptedTerms: agreed,
+            [HONEYPOT_FIELD]: honeypot,
+          })
         );
         if (result.error) {
           setError(result.error);
@@ -141,6 +164,9 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
+          if (analyticsSource) {
+            trackEvent("signup_form_submitted", { source: analyticsSource, method: "password" });
+          }
           // No router.refresh() here — push() already fetches fresh server
           // data for the destination. /onboarding/role writes the profile's
           // role as a side effect of rendering (so a pre-selected role can
@@ -173,28 +199,58 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
     setLoading(false);
   }
 
+  const googleBlock = (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full"
+      onClick={handleGoogleSignIn}
+      disabled={loading}
+    >
+      Continue with Google
+    </Button>
+  );
+
+  const dividerBlock = (
+    <div className="relative flex items-center gap-3">
+      <div className="flex-1 border-t border-border" />
+      <span className="text-xs text-muted-foreground uppercase tracking-widest">or</span>
+      <div className="flex-1 border-t border-border" />
+    </div>
+  );
+
+  const nameFieldCls = (err?: string) => (err ? "border-destructive focus-visible:border-destructive" : undefined);
+
   return (
     <div className="space-y-5">
-      {/* Google */}
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={handleGoogleSignIn}
-        disabled={loading}
-      >
-        Continue with Google
-      </Button>
-
-      {/* Divider */}
-      <div className="relative flex items-center gap-3">
-        <div className="flex-1 border-t border-border" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest">or</span>
-        <div className="flex-1 border-t border-border" />
-      </div>
+      {/* Login leads with Google; signup leads with the form and puts Google after. */}
+      {mode === "login" && (
+        <>
+          {googleBlock}
+          {dividerBlock}
+        </>
+      )}
 
       {/* Email / password */}
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        {mode === "signup" && (
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: undefined }));
+              }}
+              placeholder="The name on your profile"
+              aria-invalid={!!fieldErrors.name}
+              className={nameFieldCls(fieldErrors.name)}
+            />
+            {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -226,15 +282,42 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
               setPassword(e.target.value);
               if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: undefined }));
             }}
-            placeholder={mode === "signup" ? "Min. 8 characters" : "••••••••"}
+            placeholder={mode === "signup" ? "" : "••••••••"}
             aria-invalid={!!fieldErrors.password}
             aria-describedby={fieldErrors.password ? "password-error" : undefined}
             className={fieldErrors.password ? "border-destructive focus-visible:border-destructive" : undefined}
           />
-          {fieldErrors.password && (
+          {fieldErrors.password ? (
             <p id="password-error" className="text-xs text-destructive">{fieldErrors.password}</p>
-          )}
+          ) : mode === "signup" ? (
+            <p className="text-xs text-muted-foreground">Must be at least 8 characters long.</p>
+          ) : null}
         </div>
+        {mode === "signup" && (
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked);
+                  if (fieldErrors.terms) setFieldErrors((f) => ({ ...f, terms: undefined }));
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+              />
+              <span className="text-sm">
+                I agree to the{" "}
+                <Link href="/terms" target="_blank" className="underline underline-offset-2">terms of service</Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
+                <span className="block text-xs text-muted-foreground mt-1">
+                  We&rsquo;ll also email you occasionally about new opportunities and Patronage itself. Every email has an unsubscribe link.
+                </span>
+              </span>
+            </label>
+            {fieldErrors.terms && <p className="text-xs text-destructive">{fieldErrors.terms}</p>}
+          </div>
+        )}
         {mode === "signup" && <HoneypotField />}
         {mode === "signup" && <TurnstileWidget onVerify={setTurnstileToken} />}
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -248,6 +331,25 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             : submitLabel ?? (mode === "signup" ? "Create account" : "Sign in")}
         </Button>
       </form>
+
+      {mode === "signup" && (
+        <>
+          {loginHref && (
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href={loginHref} className="underline underline-offset-2 text-foreground">Sign in</Link>
+            </p>
+          )}
+          {dividerBlock}
+          {googleBlock}
+          <p className="text-center text-xs text-muted-foreground">
+            By continuing with Google you agree to the{" "}
+            <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
+            <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
+            We&rsquo;ll email you occasionally about Patronage; you can stop that at any time.
+          </p>
+        </>
+      )}
     </div>
   );
 }

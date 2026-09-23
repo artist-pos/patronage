@@ -53,6 +53,8 @@ export async function signUpAction(input: {
   next?: string;
   turnstileToken?: string;
   loadedAt?: number;
+  name?: string;
+  acceptedTerms?: boolean;
   [HONEYPOT_FIELD]?: string;
 }): Promise<AuthResult> {
   // Bots that blindly fill every field trip the honeypot — pretend success
@@ -69,6 +71,13 @@ export async function signUpAction(input: {
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+  const name = (input.name ?? "").trim().slice(0, 120);
+  if (!name) {
+    return { error: "Enter your name." };
+  }
+  if (input.acceptedTerms !== true) {
+    return { error: "Agree to the terms and privacy policy to continue." };
   }
 
   const ip = await getClientIp();
@@ -91,7 +100,12 @@ export async function signUpAction(input: {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo },
+    options: {
+      emailRedirectTo,
+      // Read back by /onboarding/role to seed profiles.full_name, so the
+      // profile step never has to ask for it again.
+      data: { full_name: name },
+    },
   });
   if (error) return { error: friendlyAuthError(error.message) };
   return { needsEmailConfirmation: !data.session };

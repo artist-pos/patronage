@@ -665,6 +665,7 @@ function buildCertificateEmailHtml({
   ledgerId,
   verificationUrl,
   isNewAccount,
+  claimUrl,
 }: {
   workTitle: string;
   artistName: string;
@@ -672,12 +673,15 @@ function buildCertificateEmailHtml({
   ledgerId: string;
   verificationUrl: string;
   isNewAccount?: boolean;
+  /** A one-time Supabase link that signs the recipient in on click — without
+   *  it, /claim-account has no session to set a password on and fails. */
+  claimUrl?: string | null;
 }): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   const claimCta = isNewAccount
-    ? `<a href="${SITE_URL}/claim-account" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;margin-top:8px;">
+    ? `<a href="${claimUrl ?? `${SITE_URL}/claim-account`}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;margin-top:8px;">
         Claim your Patronage collection →
       </a>`
     : `<a href="${SITE_URL}/dashboard" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;margin-top:8px;">
@@ -930,9 +934,23 @@ export async function sendTransferCertificate(data: TransferCertificateData): Pr
     content: pdfBuffer,
   };
 
+  // A brand-new recipient has no session, so /claim-account's own
+  // "set a password" form has nothing to act on without this — a magic
+  // link signs them in via the existing /auth/callback code-exchange route
+  // (the same one Google OAuth already uses) the moment they click it.
+  let claimUrl: string | null = null;
+  if (isNewAccount && buyerUser?.email) {
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: buyerUser.email,
+      options: { redirectTo: `${SITE_URL}/auth/callback?next=/claim-account` },
+    });
+    if (!linkError) claimUrl = linkData.properties?.action_link ?? null;
+  }
+
   const verificationUrl = `${SITE_URL}/provenance/${ledgerId}`;
   const html = buildCertificateEmailHtml({
-    workTitle, artistName, patronName, ledgerId, verificationUrl, isNewAccount,
+    workTitle, artistName, patronName, ledgerId, verificationUrl, isNewAccount, claimUrl,
   });
   const subject = `Provenance Certificate — ${workTitle}`;
   const resend = new Resend(process.env.RESEND_API_KEY!);

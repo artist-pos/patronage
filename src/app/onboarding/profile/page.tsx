@@ -58,7 +58,7 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
             Tell us what you make
           </h1>
           <p className="text-sm text-muted-foreground">
-            Four answers, and we&rsquo;ll show you what&rsquo;s open right now.
+            Where you&rsquo;re based and what you make, and we&rsquo;ll show you what&rsquo;s open right now.
           </p>
         </div>
 
@@ -67,6 +67,7 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
           boards={boards}
           defaultLocalBoardId={seeded.local_board_id ?? null}
           defaultName={profile.full_name ?? ""}
+          defaultUsername={profile.username ?? ""}
           defaultCountry={profile.country ?? ""}
           defaultCity={profile.city ?? ""}
           defaultCityId={seeded.city_id ?? null}

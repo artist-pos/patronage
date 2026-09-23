@@ -17,33 +17,53 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 
 interface Props {
   pdfUrl: string;
+  /** Locks the page area to A4-portrait proportions regardless of each
+   *  page's own orientation, so paging through a mixed-orientation document
+   *  doesn't resize the viewer under the reader. A landscape page just
+   *  renders smaller, centred in the same fixed frame, instead of the
+   *  whole viewer growing wider/shorter per page. */
+  fixedA4Portrait?: boolean;
 }
 
-export function PartnerPdfViewer({ pdfUrl }: Props) {
+const A4_RATIO = 297 / 210; // height / width
+
+export function PartnerPdfViewer({ pdfUrl, fixedA4Portrait = false }: Props) {
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
   const [overlayWidth, setOverlayWidth] = useState(0);
+  const [overlayHeight, setOverlayHeight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const overlayInnerRef = useRef<HTMLDivElement>(null);
 
-  // Measure normal container width
+  // Measure normal container size. Height is only consumed in fullscreen,
+  // where the container is a fixed flex-1 area — outside fullscreen it's sized
+  // by the page itself, so it must never drive the page size.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((e) => setContainerWidth(e[0].contentRect.width));
+    const ro = new ResizeObserver((e) => {
+      setContainerWidth(e[0].contentRect.width);
+      // Height only matters in native fullscreen — tracking it otherwise just
+      // feeds the page's own height back into re-renders.
+      if (document.fullscreenElement) setContainerHeight(e[0].contentRect.height);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  // Measure overlay container width when open
+  // Measure overlay container when open
   useEffect(() => {
     const el = overlayInnerRef.current;
     if (!el || !isMobileFullscreen) return;
-    const ro = new ResizeObserver((e) => setOverlayWidth(e[0].contentRect.width));
+    const ro = new ResizeObserver((e) => {
+      setOverlayWidth(e[0].contentRect.width);
+      setOverlayHeight(e[0].contentRect.height);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [isMobileFullscreen]);
@@ -100,9 +120,12 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
 
   const isFullscreen = isNativeFullscreen || isMobileFullscreen;
 
-  // Pages to keep mounted: current ± 1
-  function pageSet(width: number) {
-    if (width === 0 || numPages === 0) return null;
+  // Pages to keep mounted: current ± 1. In fullscreen the page is sized by
+  // the available HEIGHT so a whole page always fits the screen (sizing by
+  // width made portrait pages many screens tall); react-pdf ignores height
+  // when width is also given, so only one is passed.
+  function pageSet(width: number, fitHeight = 0) {
+    if ((fitHeight === 0 && width === 0) || numPages === 0) return null;
     const pages = [pageNumber - 1, pageNumber, pageNumber + 1].filter(
       (p) => p >= 1 && p <= numPages
     );
@@ -127,7 +150,7 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
         >
           <Page
             pageNumber={p}
-            width={width}
+            {...(fitHeight > 0 ? { height: fitHeight } : { width })}
             renderTextLayer={false}
             renderAnnotationLayer={false}
           />
@@ -200,29 +223,46 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
       {/* ── Normal viewer ──────────────────────────────────────────────── */}
       <div
         ref={fullscreenRef}
-        className="border border-border rounded-xl overflow-hidden bg-stone-100"
+        className={
+          isNativeFullscreen
+            ? "flex flex-col h-screen bg-stone-100"
+            : "border border-border rounded-xl overflow-hidden bg-stone-100"
+        }
       >
-        <div ref={containerRef} className="relative">
+        <div
+          ref={containerRef}
+          className={isNativeFullscreen ? "relative flex-1 min-h-0 overflow-hidden" : "relative"}
+        >
           {navButtons(
             () => setPageNumber((p) => Math.max(1, p - 1)),
             () => setPageNumber((p) => Math.min(numPages, p + 1))
           )}
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-            loading={
-              <div className="flex items-center justify-center h-80 text-sm text-muted-foreground">
-                Loading PDF…
-              </div>
-            }
-            error={
-              <div className="flex items-center justify-center h-80 text-sm text-muted-foreground">
-                Could not load PDF.
-              </div>
+          <div
+            style={
+              isNativeFullscreen
+                ? { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }
+                : fixedA4Portrait && containerWidth > 0
+                  ? { height: containerWidth * A4_RATIO, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }
+                  : undefined
             }
           >
-            {pageSet(containerWidth)}
-          </Document>
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+              loading={
+                <div className="flex items-center justify-center h-80 text-sm text-muted-foreground">
+                  Loading PDF…
+                </div>
+              }
+              error={
+                <div className="flex items-center justify-center h-80 text-sm text-muted-foreground">
+                  Could not load PDF.
+                </div>
+              }
+            >
+              {isNativeFullscreen ? pageSet(containerWidth, containerHeight) : pageSet(containerWidth)}
+            </Document>
+          </div>
         </div>
         {footerBar}
       </div>
@@ -247,7 +287,7 @@ export function PartnerPdfViewer({ pdfUrl }: Props) {
             )}
             <Document file={pdfUrl}>
               <div className="flex items-center justify-center h-full">
-                {pageSet(overlayWidth)}
+                {pageSet(overlayWidth, overlayHeight)}
               </div>
             </Document>
           </div>

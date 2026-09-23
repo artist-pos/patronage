@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { validLocalBoardId } from "@/lib/local-boards";
+import { trackEvent } from "@/actions/trackEvent";
 import type { DisciplineEnum } from "@/types/database";
 
 const VALID_DISCIPLINES: DisciplineEnum[] = [
@@ -33,6 +34,7 @@ export async function saveOnboardingProfile(
   if (!user) redirect("/auth/login");
 
   const fullName = String(formData.get("full_name") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const country = String(formData.get("country") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const cityId = String(formData.get("city_id") ?? "").trim();
@@ -56,17 +58,30 @@ export async function saveOnboardingProfile(
       ? nextRaw
       : null;
 
-  if (!fullName) return { error: "Add the name you want to show on your profile." };
+  // Only present when signup didn't already collect a name.
+  const nameSubmitted = formData.has("full_name");
+  if (nameSubmitted && !fullName) return { error: "Add the name you want to show on your profile." };
+  if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
+    return { error: "Your handle needs 3–30 characters: lowercase letters, numbers, hyphens and underscores." };
+  }
+  const { data: taken } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .neq("id", user.id)
+    .maybeSingle();
+  if (taken) return { error: "That handle is already taken. Try another." };
   if (!isSelectableCountry(country)) return { error: "Choose where you're based." };
   if (!city) return { error: "Add your city or town." };
   // Without a discipline the matching filter has nothing to run on and the
   // weekly scorer skips the account entirely, so this one cannot be optional.
   if (disciplines.length === 0) return { error: "Choose at least one discipline." };
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("profiles")
     .update({
-      full_name: fullName,
+      ...(nameSubmitted ? { full_name: fullName } : {}),
+      username,
       country,
       city,
       city_id: cityId || null,
@@ -76,9 +91,15 @@ export async function saveOnboardingProfile(
       medium: medium ? medium.split(",").map((m) => m.trim()).filter(Boolean) : null,
       weekly_digest: weeklyDigest,
     })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("signup_source")
+    .single();
 
   if (error) return { error: "Couldn't save that. Try again." };
+
+  // The artist's own "onboarding completed" moment — patrons/partners have
+  // no profile step, so theirs already fired in /onboarding/role.
+  await trackEvent("signup_onboarding_completed", { source: updated?.signup_source ?? "none", role: "artist" });
 
   revalidatePath("/opportunities");
   // Straight to the payoff. Not a bespoke summary screen: this is the real

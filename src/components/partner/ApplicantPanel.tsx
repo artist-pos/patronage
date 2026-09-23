@@ -11,6 +11,7 @@ import type { CustomField, PipelineConfig } from "@/types/database";
 import type { EnrichedApp, CreativeWorkLite } from "./ApplicationsManager";
 import { getStages, getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
 import { PartnerPdfViewerClient } from "@/components/partners/PartnerPdfViewerClient";
+import { APPLICATION_BIO_KEY } from "@/lib/application-bio";
 
 const isImageUrl = (url: string) => /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i.test(url);
 const isPdfUrl = (url: string) => /\.pdf($|\?)/i.test(url);
@@ -277,12 +278,17 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
           {/* ─ Application tab ─ */}
           {appTab === "application" && (
             <>
-              {questions.length === 0 && artist?.bio && (
+              {application.custom_answers?.[APPLICATION_BIO_KEY]?.trim() ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Bio for this application</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{application.custom_answers[APPLICATION_BIO_KEY]}</p>
+                </div>
+              ) : questions.length === 0 && artist?.bio ? (
                 <div className="space-y-1">
                   <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Practice</p>
                   <p className="text-sm leading-relaxed">{artist.bio}</p>
                 </div>
-              )}
+              ) : null}
               {questions.map((field) => {
                 const answer = application.custom_answers?.[field.id];
                 if (!answer) return null;

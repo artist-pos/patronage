@@ -11,7 +11,7 @@ import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton"
 import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
-import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
+import { ExternalApplyCTASection } from "@/components/opportunities/ExternalApplyCTASection";
 import { OpportunityHeroImage } from "@/components/opportunities/OpportunityHeroImage";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 import { createClient } from "@/lib/supabase/server";
@@ -337,27 +337,27 @@ async function UserCTA({
 
   const isJobOpportunity = opp.type === "Job / Employment";
 
+  // Just enough to decide which of four states to show — the actual apply
+  // page (/opportunities/[id]/apply) does its own full fetch server-side,
+  // so there's no need to duplicate the profile/works queries here too.
   const [appResult, profileResult] = await Promise.all([
     supabase
       .from("opportunity_applications")
-      .select("id, status")
+      .select("id")
       .eq("opportunity_id", opportunityId)
       .eq("artist_id", user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from("profiles")
-      .select("id, role, professional_cv_url, full_name, username, bio, avatar_url, medium, disciplines, city, exhibition_history, received_grants, is_patronage_supported, email_verified_at")
+      .select("role")
       .eq("id", user.id)
-      .single(),
+      .maybeSingle(),
   ]);
 
   const existingApplication = appResult.data ?? null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pd = profileResult.data as any;
-  const userRole = pd?.role ?? null;
+  const userRole = profileResult.data?.role ?? null;
   const isArtist = userRole === "artist" || userRole === "owner";
   const canApply = isArtist || (userRole === "patron" && isJobOpportunity);
-  const professionalCvUrl = pd?.professional_cv_url ?? null;
 
   if (existingApplication) {
     return (
@@ -373,61 +373,7 @@ async function UserCTA({
   }
 
   if (canApply) {
-    const serverProfile = pd
-      ? {
-          id: pd.id as string,
-          full_name: pd.full_name as string | null,
-          username: pd.username as string,
-          bio: pd.bio as string | null,
-          avatar_url: pd.avatar_url as string | null,
-          medium: pd.medium as string[] | null,
-          disciplines: (pd.disciplines ?? []) as string[] | null,
-          city: pd.city as string | null,
-          exhibition_history: (pd.exhibition_history ?? []) as Array<{
-            type: "Solo" | "Group";
-            title: string;
-            venue: string;
-            location: string;
-            year: number;
-          }>,
-          received_grants: (pd.received_grants ?? []) as string[],
-          is_patronage_supported: (pd.is_patronage_supported ?? false) as boolean,
-          email_verified_at: (pd.email_verified_at ?? null) as string | null,
-        }
-      : null;
-
-    return (
-      <ApplyButton
-        opportunity={{
-          id: opp.id,
-          title: opp.title,
-          organiser: opp.organiser,
-          type: opp.type,
-          routing_type: opp.routing_type,
-          show_badges_in_submission: opp.show_badges_in_submission,
-          pipeline_config: opp.pipeline_config,
-          custom_fields: opp.custom_fields,
-          country: opp.country,
-          city: opp.city,
-          caption: opp.caption,
-          full_description: opp.full_description,
-          funding_range: opp.funding_range,
-          funding_amount: opp.funding_amount,
-          deadline: opp.deadline,
-          opens_at: opp.opens_at,
-          entry_fee: opp.entry_fee,
-          entry_fee_currency: opp.entry_fee_currency,
-          artist_payment_type: opp.artist_payment_type,
-          travel_support: opp.travel_support,
-          travel_support_details: opp.travel_support_details,
-          sub_categories: opp.sub_categories,
-          featured_image_url: opp.featured_image_url,
-        }}
-        isJobOpportunity={isJobOpportunity}
-        professionalCvUrl={professionalCvUrl}
-        serverProfile={serverProfile}
-      />
-    );
+    return <ApplyButton opportunityId={opp.id} opportunitySlug={opp.slug} />;
   }
 
   return null;
@@ -581,6 +527,9 @@ export default async function OpportunityPage({ params }: Props) {
   });
 
   const isPipeline = opp.routing_type === "pipeline";
+  // Only needed for the external-apply retention prompt below — React.cache'd,
+  // so this dedupes with the other getServerUser() calls on this page.
+  const { user: viewerUser } = await getServerUser();
 
   // Labelled apply links → one button each. Falls back to the legacy single
   // `url` for scraped/older listings that have no application_links.
@@ -906,21 +855,13 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       ) : applyLinks.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3">
-          {applyLinks.map((link, i) => (
-            <OpportunityCTALink
-              key={`${link.url}-${i}`}
-              href={link.url}
-              opportunityId={opp.id}
-              title={opp.title}
-              organiser={opp.organiser}
-              label={`${link.label?.trim() || "Apply"} →`}
-              className={
-                i === 0
-                  ? "inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
-                  : "inline-flex items-center gap-2 border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
-              }
-            />
-          ))}
+          <ExternalApplyCTASection
+            applyLinks={applyLinks}
+            opportunityId={opp.id}
+            title={opp.title}
+            organiser={opp.organiser}
+            isAuthenticated={!!viewerUser}
+          />
           {opp.contact_email && (
             <a
               href={`mailto:${opp.contact_email}`}

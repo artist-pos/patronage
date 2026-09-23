@@ -14,6 +14,7 @@ interface Props {
   /** Seeded from the listing or invitation they arrived through, so for most
    *  people this screen is a glance and a Continue rather than typing. */
   defaultName: string;
+  defaultUsername: string;
   defaultCountry: string;
   defaultCity: string;
   defaultCityId: string | null;
@@ -27,6 +28,7 @@ export function ProfileStepForm({
   boards,
   defaultLocalBoardId,
   defaultName,
+  defaultUsername,
   defaultCountry,
   defaultCity,
   defaultCityId,
@@ -42,19 +44,49 @@ export function ProfileStepForm({
   return (
     <form action={formAction} className="space-y-8">
       {next && <input type="hidden" name="next" value={next} />}
+      {/* Signup already collects a name; this only appears for the accounts
+          that arrive without one (e.g. a Google profile with no name). */}
+      {!defaultName.trim() && (
+        <div className="space-y-2">
+          <label htmlFor="full_name" className="text-sm font-medium">
+            Your name
+          </label>
+          <input
+            id="full_name"
+            name="full_name"
+            defaultValue={defaultName}
+            required
+            autoComplete="name"
+            placeholder="The name you show on your profile"
+            className="w-full border border-black bg-background px-3 py-2 text-base focus-visible:outline-none sm:text-sm"
+          />
+        </div>
+      )}
+
       <div className="space-y-2">
-        <label htmlFor="full_name" className="text-sm font-medium">
-          Your name
+        <label htmlFor="username" className="text-sm font-medium">
+          Your handle
         </label>
-        <input
-          id="full_name"
-          name="full_name"
-          defaultValue={defaultName}
-          required
-          autoComplete="name"
-          placeholder="The name you show on your profile"
-          className="w-full border border-black bg-background px-3 py-2 text-base focus-visible:outline-none sm:text-sm"
-        />
+        <div className="flex items-center border border-black bg-background focus-within:ring-1 focus-within:ring-black">
+          <span className="select-none pl-3 text-base text-muted-foreground sm:text-sm">patronage.nz/</span>
+          <input
+            id="username"
+            name="username"
+            defaultValue={defaultUsername}
+            required
+            minLength={3}
+            maxLength={30}
+            pattern="[a-z0-9_\-]{3,30}"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            title="3–30 characters: lowercase letters, numbers, hyphens and underscores"
+            className="min-w-0 flex-1 bg-transparent py-2 pr-3 text-base focus-visible:outline-none sm:text-sm"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Your public profile link. You can change it later.
+        </p>
       </div>
 
       <div className="space-y-2">

@@ -217,7 +217,7 @@ function TriagePreview({
       {/* Application answers preview */}
       {Object.keys(app.custom_answers ?? {}).length > 0 && (
         <div className="space-y-3 border-t border-black/5 pt-4">
-          {Object.entries(app.custom_answers).slice(0, 2).map(([, answer]) => (
+          {Object.entries(app.custom_answers).filter(([key]) => key !== "__bio").slice(0, 2).map(([, answer]) => (
             <p key={answer} className="text-sm text-stone-600 line-clamp-4">{answer}</p>
           ))}
         </div>

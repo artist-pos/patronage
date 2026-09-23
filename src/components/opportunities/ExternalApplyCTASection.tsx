@@ -1,88 +1,67 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { stashSignupContext } from "@/lib/signup-context.client";
 import type { SignupContext } from "@/lib/signup-context";
 import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { OpportunityCTALink } from "@/components/opportunities/OpportunityCTALink";
 import type { DisciplineEnum } from "@/types/database";
 
-// "other" doesn't round-trip through toDisciplineEnums (no regex matches the
-// literal word "other", so it would silently drop) and isn't a meaningful
-// medium chip anyway — the profile editor keeps it as a catch-all, this
-// doesn't need one.
 const CHIP_DISCIPLINES = DISCIPLINE_OPTIONS.filter((d) => d.value !== "other");
 
-const DISMISSED_KEY = "patronage_opp_signup_modal_dismissed_at";
+const DISMISSED_KEY = "patronage_before_you_go_dismissed_at";
 const DISMISS_SUPPRESS_DAYS = 7;
-
-// Onboarding's own profile step already skips itself and lands here once
-// disciplines + a name are on the profile — passing it explicitly rather
-// than relying on that fallback because AuthForm's own default `next`
-// ("/profile/edit") would otherwise win first.
+const ANALYTICS_SOURCE = "before_you_go_external_apply";
 const POST_SIGNUP_DESTINATION = "/opportunities?tab=for-you";
 
+interface ApplyLink {
+  label: string | null;
+  url: string;
+}
+
+interface Props {
+  applyLinks: ApplyLink[];
+  opportunityId: string;
+  title: string;
+  organiser: string;
+  isAuthenticated: boolean;
+}
+
 /**
- * An invisible sentinel sits inline in the opportunities grid at a fixed
- * scroll depth (wherever the caller places this component — MasonryGrid
- * puts it after the 15th card, roughly the 5th row on desktop). Once it
- * scrolls into view for a signed-out visitor, a modal pops up leading with
- * the medium picker alone; only once they've picked something does the
- * signup form reveal — a small IKEA-effect nudge instead of a flat "sign up"
- * ask. Reuses AuthForm as-is (Google + email/password, same validation and
- * error handling as the real signup page) rather than re-implementing auth.
- * Fires once per page view, and stays quiet for a week after dismissal.
+ * The external "Apply" link already opens in a new tab (target="_blank" on
+ * OpportunityCTALink) — nothing is blocked or delayed. This just adds a
+ * prompt on the Patronage tab left behind, at the one moment intent is
+ * highest: they've just decided this opportunity is worth applying to.
+ * Signed-out visitors only; logged-in users already have a profile.
  */
-export function OpportunitySignupModalTrigger() {
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const shownRef = useRef(false);
+export function ExternalApplyCTASection({ applyLinks, opportunityId, title, organiser, isAuthenticated }: Props) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<DisciplineEnum[]>([]);
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
+  function maybeShow() {
+    if (isAuthenticated) return;
     try {
       const dismissedAt = localStorage.getItem(DISMISSED_KEY);
       if (dismissedAt && Date.now() - Number(dismissedAt) < DISMISS_SUPPRESS_DAYS * 86_400_000) {
-        trackEvent("opportunities_signup_modal_suppressed", {});
+        trackEvent("before_you_go_modal_suppressed", { opportunity_id: opportunityId });
         return;
       }
     } catch {
       // Blocked storage — falls through to showing it, same as a first visit.
     }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !shownRef.current) {
-          shownRef.current = true;
-          setOpen(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    trackEvent("opportunities_signup_modal_view", {});
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") dismiss();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setOpen(true);
+    trackEvent("before_you_go_modal_shown", { opportunity_id: opportunityId });
+  }
 
   function dismiss() {
     setOpen(false);
-    trackEvent("opportunities_signup_modal_dismissed", { had_picked: String(selected.length > 0) });
+    trackEvent("before_you_go_modal_dismissed", {
+      opportunity_id: opportunityId,
+      had_picked: String(selected.length > 0),
+    });
     try {
       localStorage.setItem(DISMISSED_KEY, String(Date.now()));
     } catch {
@@ -90,12 +69,10 @@ export function OpportunitySignupModalTrigger() {
     }
   }
 
-  // Kept current on every toggle rather than on a single "submit" moment —
-  // AuthForm owns its own submit now, so there's no one click to hang this
-  // off. /onboarding/role reads the cookie once auth actually succeeds.
   function stash(disciplines: DisciplineEnum[]) {
     const ctx: SignupContext = {
-      source: "opportunities_grid_modal",
+      source: ANALYTICS_SOURCE,
+      opportunityId,
       ...(disciplines.length > 0 && { disciplines }),
     };
     try {
@@ -110,9 +87,6 @@ export function OpportunitySignupModalTrigger() {
   function toggle(d: DisciplineEnum) {
     setSelected((prev) => {
       const next = prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d];
-      if (prev.length === 0 && next.length > 0) {
-        trackEvent("opportunities_signup_modal_first_pick", {});
-      }
       stash(next);
       return next;
     });
@@ -122,7 +96,22 @@ export function OpportunitySignupModalTrigger() {
 
   return (
     <>
-      <div ref={sentinelRef} className="col-span-full h-px" aria-hidden />
+      {applyLinks.map((link, i) => (
+        <OpportunityCTALink
+          key={`${link.url}-${i}`}
+          href={link.url}
+          opportunityId={opportunityId}
+          title={title}
+          organiser={organiser}
+          label={`${link.label?.trim() || "Apply"} →`}
+          onAfterClick={maybeShow}
+          className={
+            i === 0
+              ? "inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
+              : "inline-flex items-center gap-2 border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+          }
+        />
+      ))}
 
       {open && (
         <div
@@ -142,9 +131,9 @@ export function OpportunitySignupModalTrigger() {
               <X className="h-4 w-4" />
             </button>
 
-            <p className="text-lg font-semibold leading-snug">What do you make?</p>
+            <p className="text-lg font-semibold leading-snug">Heading to {organiser}?</p>
             <p className="mt-1.5 text-sm leading-[1.55] text-muted-foreground">
-              Pick a few — we&rsquo;ll match opportunities to your practice. Free, always.
+              We&rsquo;ll keep matching opportunities like this one to your practice. Free, always.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-1.5">
@@ -167,15 +156,13 @@ export function OpportunitySignupModalTrigger() {
               })}
             </div>
 
-            {/* Revealed only once something's picked — the ask lands after
-                a bit of investment instead of upfront. */}
             {hasPicked && (
               <div className="mt-6 animate-[pin-in_400ms_ease] border-t border-border pt-6">
                 <AuthForm
                   mode="signup"
                   role="artist"
                   next={POST_SIGNUP_DESTINATION}
-                  analyticsSource="opportunities_grid_modal"
+                  analyticsSource={ANALYTICS_SOURCE}
                   submitClassName="w-full bg-brand text-white hover:bg-brand/90"
                   submitLabel="Sign up free →"
                 />

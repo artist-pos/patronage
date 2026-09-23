@@ -173,10 +173,30 @@ export function WorkTab({
           </div>
 
           {selectedItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nothing selected yet. Mark works as featured in your studio to
-              curate this section. It&rsquo;s the first thing visitors see.
-            </p>
+            isOwner ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Nothing here yet — add a few works to bring your profile to life.
+                </p>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                  {[0, 1, 2].map((i) => (
+                    <Link
+                      key={i}
+                      href="/studio/works/new"
+                      aria-label="Add work"
+                      className="flex aspect-square items-center justify-center border border-dashed border-border bg-muted/30 text-2xl font-light text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                    >
+                      +
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nothing selected yet. Mark works as featured in your studio to
+                curate this section. It&rsquo;s the first thing visitors see.
+              </p>
+            )
           ) : (
             <div className="space-y-6">
               {hero && (

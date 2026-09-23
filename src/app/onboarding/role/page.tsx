@@ -15,6 +15,7 @@ import {
   decodeSignupContext,
   toDisciplineEnums,
 } from "@/lib/signup-context";
+import { trackEvent } from "@/actions/trackEvent";
 
 export const metadata = { title: "Get Started — Patronage" };
 
@@ -29,11 +30,26 @@ async function applyRole(role: string, next?: string | null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const baseUsername = user.email
+  const rawMetaName = user.user_metadata?.full_name ?? user.user_metadata?.name;
+  const metaName = typeof rawMetaName === "string" ? rawMetaName.trim().slice(0, 120) : "";
+
+  // A handle people would actually choose ("jordan-rangi"), not the email
+  // prefix. Falls back to the email when there's no name, and pads anything
+  // too short for the 3-character minimum. They can change it on the next step.
+  const nameHandle = metaName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+  const emailHandle = user.email
     ?.split("@")[0]
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_")
-    .slice(0, 30) || user.id.slice(0, 8);
+    .slice(0, 30);
+  const candidate = nameHandle.length >= 3 ? nameHandle : emailHandle || "";
+  const baseUsername = candidate.length >= 3 ? candidate : `${candidate}${user.id.replace(/-/g, "").slice(0, 6)}`;
 
   const isArtist = role === "artist" || role === "owner";
   const isOAuth = user.app_metadata?.provider === "google";
@@ -97,7 +113,13 @@ async function applyRole(role: string, next?: string | null) {
     }),
     // Their organisation had a name on file. Offered as the starting value
     // because a blank profile is the main reason people abandon onboarding.
-    ...(isArtist && signupCtx?.fullName && { full_name: signupCtx.fullName }),
+    // The name they typed at signup (or Google's) outranks the organisation's
+    // guess — it's the one they chose to give us.
+    ...(metaName
+      ? { full_name: metaName }
+      : isArtist && signupCtx?.fullName
+        ? { full_name: signupCtx.fullName }
+        : {}),
     ...(isArtist && signupCtx?.city && { city: signupCtx.city }),
     // "Global" and other listing-only country values are not places a person
     // lives, so they never become a profile country.
@@ -130,6 +152,16 @@ async function applyRole(role: string, next?: string | null) {
     redirect(`/onboarding/role?${params.toString()}`);
   }
 
+  // Supabase-only (not dual-written to PostHog) — kept deliberately queryable
+  // without a PostHog API key, since this is the one place every signup path
+  // converges with both the source and the account's existence confirmed.
+  await trackEvent("signup_account_created", { source: signupCtx?.source ?? "none", role });
+  // Patrons/partners have no further onboarding step — artists take one more
+  // (the profile step below), so their "onboarding completed" fires there.
+  if (!isArtist) {
+    await trackEvent("signup_onboarding_completed", { source: signupCtx?.source ?? "none", role });
+  }
+
   // Close the loop on the invitation so the inviting organisation can see that
   // this one converted. Not awaited for correctness of the signup: a failure
   // here costs a row in their funnel, not the artist's account.
@@ -146,8 +178,17 @@ async function applyRole(role: string, next?: string | null) {
   }
 
   // One signup, one attribution. Clearing it stops a second account made in
-  // the same browser inheriting the first one's source.
-  if (signupCtx) cookieStore.delete(SIGNUP_CONTEXT_COOKIE);
+  // the same browser inheriting the first one's source. Best-effort: when a
+  // pre-set role auto-applies during the page's own render (not a form
+  // submit), Next.js refuses cookie writes outside an actual Server Action —
+  // the cookie is just left to expire on its own 1-hour TTL instead.
+  if (signupCtx) {
+    try {
+      cookieStore.delete(SIGNUP_CONTEXT_COOKIE);
+    } catch {
+      // See above — not worth failing the signup over.
+    }
+  }
 
   // Everything below runs after the response. A bare floating promise would
   // not: this function ends in redirect(), which throws, and the serverless
