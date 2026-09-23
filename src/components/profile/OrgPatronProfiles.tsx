@@ -337,29 +337,46 @@ export function PartnerProfileView({
 
       {/* ── Active opportunities ── */}
       {activeOpps.length > 0 && (
-        <div className="border-b border-border bg-feed-bg">
+        <div className="border-b border-border">
           <div className={`${INNER} py-9`}>
             <h2 className={`${SECTION_LABEL} mb-[18px]`}>Active opportunities</h2>
-            {activeOpps.map((opp) => {
-              const d = deadlineLabel(opp.deadline);
-              return (
-                <Link
-                  key={opp.id}
-                  href={`/opportunities/${opp.slug ?? opp.id}`}
-                  className="mb-[2px] flex items-center justify-between gap-5 border-l-[3px] border-brand bg-card px-5 py-[18px] transition-colors hover:bg-[color:var(--tint)]"
-                >
-                  <div className="min-w-0">
-                    <p className="mb-1 truncate text-base font-medium">{opp.title}</p>
-                    <p className="font-mono text-[11px] text-[color:var(--fg-muted)]">
-                      {[opp.type, opp.city ?? opp.country].filter(Boolean).join(" · ")}
+            <div className="space-y-2">
+              {activeOpps.map((opp) => {
+                const d = deadlineLabel(opp.deadline);
+                return (
+                  <Link
+                    key={opp.id}
+                    href={`/opportunities/${opp.slug ?? opp.id}`}
+                    className="flex items-center gap-4 border border-l-[3px] border-border border-l-brand bg-card p-3 pr-5 transition-colors hover:bg-[color:var(--tint)]"
+                  >
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden bg-white">
+                      {opp.featured_image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={opp.featured_image_url}
+                          alt=""
+                          className="h-full w-full object-contain"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="px-1 text-center font-mono text-[8px] font-semibold uppercase text-[color:var(--fg-subtle)]">
+                          {opp.type}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-1 truncate text-base font-medium">{opp.title}</p>
+                      <p className="font-mono text-[11px] text-[color:var(--fg-muted)]">
+                        {[opp.type, opp.city ?? opp.country].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <p className={`shrink-0 text-right font-mono text-[11px] font-medium ${d.cls}`}>
+                      {d.label}
                     </p>
-                  </div>
-                  <p className={`shrink-0 text-right font-mono text-[11px] font-medium ${d.cls}`}>
-                    {d.label}
-                  </p>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

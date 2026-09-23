@@ -108,15 +108,23 @@ export async function initializeInquiryThread(
 
   if (error || !created) return { error: error?.message ?? "Failed to create conversation" };
 
-  // Insert pinned system disclaimer
-  await supabase.from("messages").insert({
-    conversation_id: created.id,
-    sender_id: user.id,
-    content: INQUIRY_DISCLAIMER,
-    is_system_message: true,
-    source_action: sourceAction,
-    message_type: "text",
-  });
+  // The purchase disclaimer only makes sense when the recipient sells works.
+  // Partners and patrons get a plain thread.
+  const { data: recipient } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", otherUserId)
+    .maybeSingle();
+  if (recipient?.role === "artist" || recipient?.role === "owner") {
+    await supabase.from("messages").insert({
+      conversation_id: created.id,
+      sender_id: user.id,
+      content: INQUIRY_DISCLAIMER,
+      is_system_message: true,
+      source_action: sourceAction,
+      message_type: "text",
+    });
+  }
 
   return { id: created.id };
 }
