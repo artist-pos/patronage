@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { validPartnerProfileId } from "@/lib/organiser-link";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -89,6 +90,7 @@ export async function updateQueueOpportunity(
   fields: {
     title: string;
     organiser: string;
+    organiser_profile_id?: string | null;
     caption: string | null;
     type: string;
     country: string;
@@ -126,6 +128,9 @@ export async function updateQueueOpportunity(
     .update({
       title: fields.title.trim(),
       organiser: fields.organiser.trim(),
+      ...("organiser_profile_id" in fields
+        ? { organiser_profile_id: await validPartnerProfileId(fields.organiser_profile_id) }
+        : {}),
       caption: fields.caption?.trim() || null,
       type: fields.type,
       country: fields.country,

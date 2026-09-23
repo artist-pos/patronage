@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { validPartnerProfileId } from "@/lib/organiser-link";
 import type { ApplicationLink } from "@/types/database";
 
 async function getOpportunityForPartner(id: string) {
@@ -30,6 +31,7 @@ export async function updateOpportunityPartner(
   data: {
     title?: string;
     organiser?: string;
+    organiser_profile_id?: string | null;
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
@@ -61,10 +63,17 @@ export async function updateOpportunityPartner(
     pipeline_config?: object | null;
   }
 ) {
-  const { supabase, opp } = await getOpportunityForPartner(id);
+  const { supabase, user, opp } = await getOpportunityForPartner(id);
 
   // Resolve entry fee currency conversion if needed
   const updateData = { ...data };
+
+  // A partner can only attribute their own listing to their own account,
+  // never to another organisation.
+  if ("organiser_profile_id" in updateData) {
+    updateData.organiser_profile_id =
+      updateData.organiser_profile_id === user.id ? await validPartnerProfileId(user.id) : null;
+  }
 
   // Drop blank link rows the editor keeps around for in-progress typing.
   if (Array.isArray(updateData.application_links)) {

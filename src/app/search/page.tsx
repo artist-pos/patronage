@@ -4,6 +4,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { OpportunityMiniCard } from "@/components/opportunities/OpportunityMiniCard";
 import { HUB_CONTENT, HUB_TYPE_LABEL } from "@/lib/hub-content";
+import { cleanSearchTerm, searchOpportunityRows, searchPartners } from "@/lib/search";
 import type { Opportunity } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -86,18 +87,17 @@ export default async function SearchPage({ searchParams }: PageProps) {
   }
 
   const supabase = await createClient();
-  const p = `%${q}%`;
-  const oppSelect = "id, slug, title, organiser, type, country, city, deadline, featured_image_url, caption, funding_range, sub_categories, status, is_active, opens_at, funding_amount, grant_type, recipients_count, is_recurring, recurrence_pattern, is_featured, entry_fee, routing_type, custom_fields, show_badges_in_submission, claim_token, claim_email, claim_token_expires_at, claim_invite_sent_at, claim_invite_email, claim_invite_scheduled_for, claim_invite_template, claim_link_opened_at, claim_link_open_count, view_count, description, full_description, source_url, profile_id, created_at, entry_fee_currency, entry_fee_local, artist_payment_type, travel_support, travel_support_details, tags, career_stage, recurrence_open_day, recurrence_close_day, recurrence_end_date, pipeline_config, is_patronage_supported, confidence, pipeline_paid_at, featured_until";
+  const term = cleanSearchTerm(q);
+  const p = `%${term}%`;
 
-  const [oppsRes, artistsRes] = await Promise.all([
-    supabase
-      .from("opportunities")
-      .select("id, slug, title, organiser, type, country, city, deadline, featured_image_url, caption, funding_range, sub_categories")
-      .eq("is_active", true)
-      .eq("status", "published")
-      .or(`title.ilike.${p},organiser.ilike.${p},description.ilike.${p},caption.ilike.${p}`)
-      .order("deadline", { ascending: true, nullsFirst: false })
-      .limit(12),
+  const [opps, partners, artistsRes] = await Promise.all([
+    searchOpportunityRows<Opportunity>(
+      supabase,
+      q,
+      12,
+      "id, slug, title, organiser, type, country, city, deadline, featured_image_url, caption, funding_range, sub_categories"
+    ),
+    searchPartners(supabase, q, 6),
     supabase
       .from("profiles")
       .select("id, username, full_name, avatar_url, medium, country")
@@ -107,10 +107,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
       .limit(6),
   ]);
 
-  const opps = (oppsRes.data ?? []) as unknown as Opportunity[];
   const artists = artistsRes.data ?? [];
   const hubs = matchHubs(q);
-  const hasResults = hubs.length > 0 || opps.length > 0 || artists.length > 0;
+  const hasResults = hubs.length > 0 || opps.length > 0 || artists.length > 0 || partners.length > 0;
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12 space-y-10">
@@ -176,6 +175,40 @@ export default async function SearchPage({ searchParams }: PageProps) {
           >
             All opportunities matching &ldquo;{q}&rdquo; →
           </Link>
+        </section>
+      )}
+
+      {/* Organisations */}
+      {partners.length > 0 && (
+        <section className="space-y-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Organisations · {partners.length}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {partners.map((partner) => (
+              <Link
+                key={partner.id}
+                href={`/${partner.username}`}
+                className="group flex items-center gap-3 border border-black p-3 hover:bg-muted/30 transition-colors"
+              >
+                {partner.avatar_url ? (
+                  <div className="relative w-10 h-10 shrink-0 border border-black overflow-hidden bg-white">
+                    <Image src={partner.avatar_url} alt={partner.name} fill className="object-contain" sizes="40px" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 shrink-0 border border-black bg-muted flex items-center justify-center text-sm font-medium">
+                    {partner.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate group-hover:underline underline-offset-2">{partner.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    @{partner.username}{partner.country ? ` · ${partner.country}` : ""}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 

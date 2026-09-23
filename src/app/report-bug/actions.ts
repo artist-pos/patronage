@@ -5,6 +5,7 @@ import { sendBugReport } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
+import { isTorExit } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { AREAS } from "./areas";
 
@@ -33,6 +34,7 @@ export async function reportBugAction(
   let email = (formData.get("email") as string)?.trim().toLowerCase();
 
   const ip = await getClientIp();
+  if (await isTorExit(ip)) return { status: "success" };
   if (!(await checkRateLimit(`bug-report:${ip}`, 5, 3600))) {
     return { status: "error", message: "Too many reports from this network. Please try again later." };
   }

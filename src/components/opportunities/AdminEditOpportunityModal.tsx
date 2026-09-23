@@ -60,6 +60,7 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
       await updateOpportunityAdmin(opp.id, {
         title: formData.title.trim() || opp.title,
         organiser: formData.organiser.trim() || opp.organiser,
+        ...(formData.organiserLinkTouched ? { organiser_profile_id: formData.organiserProfileId } : {}),
         caption: formData.caption.trim() || null,
         full_description: formData.fullDescription.trim() || null,
         url: appLinks.find((l) => l.url.trim())?.url.trim() || null,

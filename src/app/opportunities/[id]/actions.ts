@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendApplicationConfirmation } from "@/lib/email";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { validPartnerProfileId } from "@/lib/organiser-link";
 import type { ApplicationLink, OpportunityApplicationDraft, PipelineConfig } from "@/types/database";
 
 export async function updateOpportunityAdmin(
@@ -14,6 +15,7 @@ export async function updateOpportunityAdmin(
   data: {
     title?: string;
     organiser?: string;
+    organiser_profile_id?: string | null;
     caption?: string | null;
     full_description?: string | null;
     url?: string | null;
@@ -54,6 +56,10 @@ export async function updateOpportunityAdmin(
   const admin = createAdminClient();
 
   const updateData = { ...data };
+
+  if ("organiser_profile_id" in updateData) {
+    updateData.organiser_profile_id = await validPartnerProfileId(updateData.organiser_profile_id);
+  }
 
   // Drop blank link rows the editor keeps around for in-progress typing.
   if (Array.isArray(updateData.application_links)) {

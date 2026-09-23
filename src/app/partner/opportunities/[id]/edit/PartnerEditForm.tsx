@@ -120,6 +120,7 @@ export function PartnerEditForm({ opp }: Props) {
     return {
       title: d.title.trim() || opp.title,
       organiser: d.organiser.trim() || opp.organiser,
+      ...(d.organiserLinkTouched ? { organiser_profile_id: d.organiserProfileId } : {}),
       caption: d.caption.trim() || null,
       full_description: d.fullDescription.trim() || null,
       url: appLinks.find((l) => l.url.trim())?.url.trim() || null,
@@ -192,6 +193,7 @@ export function PartnerEditForm({ opp }: Props) {
         value={formData}
         onChange={update}
         mode="admin"
+        canLinkOrganiser={false}
         onImgUpload={handleImgUpload}
         onAutoSave={async (data) => {
           await updateOpportunityPartner(opp.id, buildUpdatePayload(data));

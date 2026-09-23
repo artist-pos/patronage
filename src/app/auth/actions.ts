@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
+import { gmailVariantExists, hasDotTrickPattern, isTorExit, looksLikeGibberishName } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 // Email/password auth runs server-side so the browser only ever talks to our
@@ -60,7 +61,7 @@ export async function signUpAction(input: {
   // Bots that blindly fill every field trip the honeypot — pretend success
   // so they don't retry with a cleaner payload. Same treatment for a
   // submission that arrived faster than a human could fill the form.
-  if (input[HONEYPOT_FIELD] || isSubmittedTooFast(input.loadedAt)) {
+  if (input[HONEYPOT_FIELD] || isSubmittedTooFast(input.loadedAt, { required: true })) {
     return { needsEmailConfirmation: false };
   }
 
@@ -80,12 +81,24 @@ export async function signUpAction(input: {
     return { error: "Agree to the terms and privacy policy to continue." };
   }
 
+  // Patterns only scripts produce (random-string names, Gmail dot-trick
+  // addresses). Pretend success so they don't retry with cleaner values.
+  if (looksLikeGibberishName(name) || hasDotTrickPattern(email)) {
+    return { needsEmailConfirmation: false };
+  }
+
   const ip = await getClientIp();
+  if (await isTorExit(ip)) {
+    return { error: "Sign-ups from anonymising networks are blocked. Please try again without a VPN or Tor." };
+  }
   if (!(await checkRateLimit(`signup:${ip}`, 8, 3600))) {
     return { error: "Too many signup attempts from this network. Please try again later." };
   }
   if (!(await verifyTurnstile(input.turnstileToken, ip))) {
     return { error: "Verification failed. Please try again." };
+  }
+  if (await gmailVariantExists(email)) {
+    return { error: "An account with that email already exists. Try signing in instead." };
   }
 
   // Carry the post-auth destination and chosen role through the confirmation

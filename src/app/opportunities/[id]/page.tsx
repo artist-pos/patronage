@@ -452,17 +452,14 @@ export default async function OpportunityPage({ params }: Props) {
   // Fetch related opportunities + claimed partner profile in parallel — admin client avoids cookies() so PPR stays intact.
   const adminDb = createAdminClient();
   const RELATED_SELECT = "id, slug, title, organiser, type, country, deadline, featured_image_url, caption, funding_range, sub_categories";
-  const [byTypeRes, byCountryRes, partnerProfileRes, similarOpen] = await Promise.all([
+  const [allOpenRes, partnerProfileRes, similarOpen] = await Promise.all([
     adminDb.from("opportunities").select(RELATED_SELECT)
       .eq("is_active", true).eq("status", "published")
-      .eq("type", opp.type).neq("id", opp.id)
-      .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
-    adminDb.from("opportunities").select(RELATED_SELECT)
-      .eq("is_active", true).eq("status", "published")
-      .eq("country", opp.country).neq("id", opp.id)
-      .order("deadline", { ascending: true, nullsFirst: false }).limit(15),
-    opp.profile_id
-      ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", opp.profile_id).single()
+      .neq("id", opp.id)
+      .order("deadline", { ascending: true, nullsFirst: false }).limit(300),
+    // The explicitly linked organiser wins; otherwise fall back to whoever posted it.
+    (opp.organiser_profile_id ?? opp.profile_id)
+      ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", (opp.organiser_profile_id ?? opp.profile_id)!).single()
       : Promise.resolve({ data: null }),
     isClosed ? getSimilarOpenOpportunities(opp, 6) : Promise.resolve([]),
   ]);
@@ -471,15 +468,14 @@ export default async function OpportunityPage({ params }: Props) {
   // not have their personal profile linked as the organiser.
   const rawPartner = partnerProfileRes.data as { username: string; full_name: string | null; avatar_url: string | null; role: string } | null;
   const partnerProfile = rawPartner && rawPartner.role === "partner" ? rawPartner : null;
-  const seen = new Set<string>();
-  const candidates: RelatedOpp[] = [];
-  for (const row of [...(byTypeRes.data ?? []), ...(byCountryRes.data ?? [])]) {
-    if (!seen.has(row.id)) { seen.add(row.id); candidates.push(row as RelatedOpp); }
-  }
-  const related = candidates
+  // Best matches from every other open listing. Ties keep soonest-deadline
+  // order (the query is sorted by deadline and Array.sort is stable).
+  const allOpen = (allOpenRes.data ?? []) as RelatedOpp[];
+  const totalOpen = allOpen.length + 1;
+  const related = allOpen
     .map((r) => ({ ...r, _score: scoreRelated(r, opp) }))
     .sort((a, b) => b._score - a._score)
-    .slice(0, 4);
+    .slice(0, 5);
 
   // Redirect UUID-based URLs to the canonical slug URL.
   // Prevents Google from indexing the same page at two different URLs.
@@ -554,7 +550,13 @@ export default async function OpportunityPage({ params }: Props) {
   const sharePayload = buildOpportunitySharePayload(opp, canonicalUrl);
   const schemaType = schemaTypeForOpp(opp.type);
   const oppDescription = opp.full_description ?? opp.caption ?? opp.description ?? null;
-  const orgNode = { "@type": "Organization", name: opp.organiser };
+  const orgNode = {
+    "@type": "Organization",
+    name: opp.organiser,
+    ...(partnerProfile && {
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/${partnerProfile.username}`,
+    }),
+  };
   const locationNode = (opp.city || opp.country) ? {
     "@type": "Place",
     name: opp.city ? `${opp.city}, ${opp.country}` : opp.country,
@@ -946,10 +948,10 @@ export default async function OpportunityPage({ params }: Props) {
             ))}
           </div>
           <Link
-            href={`/opportunities?type=${encodeURIComponent(opp.type)}`}
-            className="mt-3.5 block text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
+            href="/opportunities"
+            className="mt-3.5 block bg-foreground px-4 py-2.5 text-center text-[13px] font-medium text-white transition-opacity hover:opacity-85"
           >
-            More {opp.type.toLowerCase()} opportunities →
+            View all {totalOpen} open opportunities →
           </Link>
         </aside>
       )}

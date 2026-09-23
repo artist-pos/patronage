@@ -25,6 +25,7 @@ function buildUpdatePayload(d: OpportunityFormData) {
   return {
     title: d.title.trim(),
     organiser: d.organiser.trim(),
+    ...(d.organiserLinkTouched ? { organiser_profile_id: d.organiserProfileId } : {}),
     caption: d.caption.trim() || null,
     type: d.type,
     country: d.country,

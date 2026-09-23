@@ -17,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Label } from "@/components/ui/label";
 import { DescriptionToolbar } from "@/components/opportunities/DescriptionToolbar";
 import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLinksEditor";
+import { OrganiserField } from "@/components/opportunities/OrganiserField";
 import type { ApplicationLink, Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
 import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
 import {
@@ -40,6 +41,10 @@ import {
 export interface OpportunityFormData {
   title: string;
   organiser: string;
+  /** Partner account the organiser text links to (migration 195). */
+  organiserProfileId: string | null;
+  /** True once the link was changed in this session, so saves that never touch it don't write the column. */
+  organiserLinkTouched: boolean;
   caption: string;
   fullDescription: string;
   url: string;
@@ -92,6 +97,8 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
   return {
     title: "",
     organiser: partialOrganiser,
+    organiserProfileId: null,
+    organiserLinkTouched: false,
     caption: "",
     fullDescription: "",
     url: "",
@@ -158,6 +165,8 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
   return {
     title: opp.title ?? "",
     organiser: opp.organiser ?? "",
+    organiserProfileId: opp.organiser_profile_id ?? null,
+    organiserLinkTouched: false,
     caption: opp.caption ?? "",
     fullDescription: opp.full_description ?? "",
     url: opp.url ?? "",
@@ -895,6 +904,8 @@ interface OpportunityFormProps {
   onTermsUpload?: (file: File) => Promise<string | null>;
   /** Auto-save callback — if provided, debounces saves 10s after last change */
   onAutoSave?: (data: OpportunityFormData) => Promise<void>;
+  /** Show the "@" partner picker on the organiser field. Defaults to admin mode only. */
+  canLinkOrganiser?: boolean;
 }
 
 export function OpportunityForm({
@@ -905,6 +916,7 @@ export function OpportunityForm({
   onImgUpload,
   onTermsUpload,
   onAutoSave,
+  canLinkOrganiser = mode === "admin",
 }: OpportunityFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const secondaryFileInputRef = useRef<HTMLInputElement>(null);
@@ -1103,12 +1115,18 @@ export function OpportunityForm({
         </Field>
 
         <Field label="Organisation / Funder *">
-          <input
-            type="text"
+          <OrganiserField
+            allowLink={canLinkOrganiser}
             value={value.organiser}
-            onChange={(e) => set({ organiser: e.target.value })}
-            placeholder="e.g. Creative New Zealand"
-            required
+            linkedProfileId={value.organiserProfileId}
+            onChange={(organiser, organiserProfileId) =>
+              set({
+                organiser,
+                organiserProfileId,
+                organiserLinkTouched:
+                  value.organiserLinkTouched || organiserProfileId !== value.organiserProfileId,
+              })
+            }
             className={FIELD}
           />
         </Field>

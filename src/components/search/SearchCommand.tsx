@@ -27,15 +27,24 @@ interface Artist {
   country: string | null;
 }
 
+interface Partner {
+  id: string;
+  username: string;
+  name: string;
+  avatar_url: string | null;
+  country: string | null;
+}
+
 interface Results {
   opportunities: Opportunity[];
   artists: Artist[];
+  partners: Partner[];
 }
 
 export function SearchCommand() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Results>({ opportunities: [], artists: [] });
+  const [results, setResults] = useState<Results>({ opportunities: [], artists: [], partners: [] });
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -102,7 +111,7 @@ export function SearchCommand() {
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (query.length < 2) {
-      setResults({ opportunities: [], artists: [] });
+      setResults({ opportunities: [], artists: [], partners: [] });
       setLoading(false);
       return;
     }
@@ -118,11 +127,12 @@ export function SearchCommand() {
     }, 280);
   }, [query]);
 
-  const hasResults = results.opportunities.length > 0 || results.artists.length > 0;
+  const hasResults =
+    results.opportunities.length > 0 || results.artists.length > 0 || results.partners.length > 0;
 
   function clear() {
     setQuery("");
-    setResults({ opportunities: [], artists: [] });
+    setResults({ opportunities: [], artists: [], partners: [] });
     inputRef.current?.focus();
   }
 
@@ -130,14 +140,14 @@ export function SearchCommand() {
     setOpen(false);
     setMobileSearchOpen(false);
     setQuery("");
-    setResults({ opportunities: [], artists: [] });
+    setResults({ opportunities: [], artists: [], partners: [] });
   }
 
   function closeMobile() {
     setMobileSearchOpen(false);
     setOpen(false);
     setQuery("");
-    setResults({ opportunities: [], artists: [] });
+    setResults({ opportunities: [], artists: [], partners: [] });
   }
 
   const resultsPanel = (
@@ -189,6 +199,38 @@ export function SearchCommand() {
                   </div>
                   {opp.deadline && (
                     <span className="text-xs font-mono text-muted-foreground shrink-0">{opp.deadline}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+          {results.partners.length > 0 && (
+            <div>
+              <p className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground bg-muted/40 border-b border-border">
+                Organisations
+              </p>
+              {results.partners.map((partner) => (
+                <Link
+                  key={partner.id}
+                  href={`/${partner.username}`}
+                  onClick={closeAndNavigate}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-b border-border last:border-0"
+                >
+                  {partner.avatar_url ? (
+                    <div className="relative w-8 h-8 shrink-0 border border-border overflow-hidden bg-white">
+                      <Image src={partner.avatar_url} alt={partner.name} fill className="object-contain" sizes="32px" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 shrink-0 border border-border bg-muted flex items-center justify-center text-xs font-medium">
+                      {partner.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{partner.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{partner.username}</p>
+                  </div>
+                  {partner.country && (
+                    <span className="text-xs text-muted-foreground shrink-0">{partner.country}</span>
                   )}
                 </Link>
               ))}
@@ -338,6 +380,26 @@ export function SearchCommand() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{opp.title}</p>
                         <p className="text-xs text-muted-foreground truncate">{opp.organiser}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.partners.length > 0 && (
+                <div>
+                  <p className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground bg-muted/40 border-b border-border">
+                    Organisations
+                  </p>
+                  {results.partners.map((partner) => (
+                    <Link
+                      key={partner.id}
+                      href={`/${partner.username}`}
+                      onClick={closeAndNavigate}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors border-b border-border last:border-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{partner.name}</p>
+                        <p className="text-xs text-muted-foreground">@{partner.username}</p>
                       </div>
                     </Link>
                   ))}

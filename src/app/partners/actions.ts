@@ -14,6 +14,7 @@ import { getOpportunitySource } from "@/lib/opportunity-sources";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
+import { isTorExit } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { Resend } from "resend";
 
@@ -73,6 +74,7 @@ export async function submitActivationEnquiry(data: {
   if (!name || !email || !message) return { error: "Name, email, and message are required." };
 
   const ip = await getClientIp();
+  if (await isTorExit(ip)) return {};
   if (!(await checkRateLimit(`activation-enquiry:${ip}`, 3, 3600))) {
     return { error: "Too many enquiries from this network. Please try again later." };
   }

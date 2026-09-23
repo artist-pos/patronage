@@ -412,7 +412,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       ? supabase
           .from("opportunities")
           .select("*")
-          .eq("profile_id", profile.id)
+          .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`)
           .eq("is_active", true)
           .order("created_at", { ascending: false })
           .then(({ data }) => (data ?? []) as Opportunity[])
@@ -477,12 +477,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       supabase
         .from("opportunities")
         .select("id", { count: "exact", head: true })
-        .eq("profile_id", profile.id)
+        .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`)
         .eq("status", "published"),
       supabase
         .from("opportunities")
         .select("id, slug, title, type, deadline")
-        .eq("profile_id", profile.id)
+        .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`)
         .eq("status", "published")
         .lt("deadline", todayStr)
         .order("deadline", { ascending: false })

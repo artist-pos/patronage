@@ -5,6 +5,7 @@ import { sourceKeyForUrl } from "@/lib/opportunity-sources";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
+import { isTorExit } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 
 const MAX_NAME = 200;
@@ -50,6 +51,7 @@ export async function submitOpportunityTip(data: {
   }
 
   const ip = await getClientIp();
+  if (await isTorExit(ip)) return {};
   if (!(await checkRateLimit(`opportunity-tip:${ip}`, 5, 3600))) {
     return { error: "Too many tips from this network. Please try again later." };
   }

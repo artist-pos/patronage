@@ -12,8 +12,11 @@ const MIN_FORM_FILL_MS = 2000;
  * defense-in-depth signal, not the primary gate, so a client that doesn't
  * send it shouldn't be the reason a real submission gets blocked.
  */
-export function isSubmittedTooFast(loadedAt: unknown): boolean {
+export function isSubmittedTooFast(loadedAt: unknown, opts: { required?: boolean } = {}): boolean {
   const t = typeof loadedAt === "string" ? parseInt(loadedAt, 10) : typeof loadedAt === "number" ? loadedAt : NaN;
-  if (!Number.isFinite(t)) return false;
+  // `required` is for forms whose own client always sends it (signup): a
+  // request that omits it never rendered the form, i.e. a script posting
+  // straight to the action.
+  if (!Number.isFinite(t)) return opts.required === true;
   return Date.now() - t < MIN_FORM_FILL_MS;
 }

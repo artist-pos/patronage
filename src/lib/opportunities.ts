@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { parseFundingText } from "./parse-funding";
+import { cleanSearchTerm } from "./search";
 import type { Opportunity, OpportunityFilters, OpportunityInsert, OpportunityWithMatch } from "@/types/database";
 
 
@@ -47,17 +48,35 @@ export async function getOpportunities(
       `sub_categories.cs.{"${filters.careerStage}"},career_stage.cs.{"${filters.careerStage}"}`
     );
   }
+  // Ranked search (migration 195) when available: narrow to the matching ids,
+  // then return them best-match-first. Falls back to substring matching until
+  // that migration has run.
+  let rankedIds: string[] | null = null;
   if (filters.search) {
-    const s = filters.search.replace(/[%_]/g, "\\$&");
-    query = query.or(
-      `title.ilike.%${s}%,organiser.ilike.%${s}%,city.ilike.%${s}%,caption.ilike.%${s}%,full_description.ilike.%${s}%`
-    );
+    const term = cleanSearchTerm(filters.search);
+    const ranked = term.length >= 2
+      ? await supabase.rpc("search_opportunities", { q: term, lim: 100 })
+      : null;
+    if (ranked && !ranked.error && Array.isArray(ranked.data)) {
+      rankedIds = (ranked.data as { id: string }[]).map((r) => r.id);
+      query = query.in("id", rankedIds.length > 0 ? rankedIds : ["00000000-0000-0000-0000-000000000000"]);
+    } else {
+      const s = filters.search.replace(/[%_]/g, "\\$&");
+      query = query.or(
+        `title.ilike.%${s}%,organiser.ilike.%${s}%,city.ilike.%${s}%,caption.ilike.%${s}%,full_description.ilike.%${s}%`
+      );
+    }
   }
 
   const { data, error } = await query.limit(limit);
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Opportunity[];
+  const rows = (data ?? []) as unknown as Opportunity[];
+  if (rankedIds) {
+    const order = new Map(rankedIds.map((id, i) => [id, i]));
+    rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  }
+  return rows;
 }
 
 export async function getClosingSoonOpportunities(

@@ -151,6 +151,8 @@ export interface Opportunity {
   source_url: string | null;       // page the scraper found this on
   source: string | null;           // attribution key for a third-party board (migration 179) — see lib/opportunity-sources
   profile_id: string | null;
+  /** Partner account the listing's `organiser` text points at (migration 195). */
+  organiser_profile_id?: string | null;
   created_at: string;
   // Transparency fields (migration 035)
   entry_fee: number | null;          // always NZD equivalent
