@@ -30,9 +30,17 @@ export function OpportunityCTALink({ href, opportunityId, title, organiser, labe
     // before it ever renders. Forcing it via window.open keeps this tab put
     // regardless of the embedding browser; a location.href fallback only
     // fires if that's somehow blocked, so the click never dead-ends.
+    //
+    // Don't pass "noopener" in the features string: per spec window.open then
+    // returns null even on success, so the `!opened` check below would always
+    // trip and navigate this tab too. Sever the opener by hand instead.
     e.preventDefault();
-    const opened = window.open(outbound, "_blank", "noopener,noreferrer");
-    if (!opened) window.location.href = outbound;
+    const opened = window.open(outbound, "_blank");
+    if (opened) {
+      opened.opener = null;
+    } else {
+      window.location.href = outbound;
+    }
 
     onAfterClick?.();
   }
