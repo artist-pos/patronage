@@ -144,7 +144,7 @@ export function OpportunitySignupModalTrigger() {
 
             <p className="text-lg font-semibold leading-snug">What do you make?</p>
             <p className="mt-1.5 text-sm leading-[1.55] text-muted-foreground">
-              Pick a few — we&rsquo;ll match opportunities to your practice. Free, always.
+              Pick a few. We&rsquo;ll find the grants, residencies, commissions and open calls that fit your practice and send you the best ones each week.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-1.5">

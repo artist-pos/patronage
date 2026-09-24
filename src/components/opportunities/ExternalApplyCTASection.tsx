@@ -131,9 +131,9 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
               <X className="h-4 w-4" />
             </button>
 
-            <p className="text-lg font-semibold leading-snug">Heading to {organiser}?</p>
+            <p className="text-lg font-semibold leading-snug">Don&rsquo;t miss the next one.</p>
             <p className="mt-1.5 text-sm leading-[1.55] text-muted-foreground">
-              We&rsquo;ll keep matching opportunities like this one to your practice. Free, always.
+              Pick a few. We&rsquo;ll find the grants, residencies, commissions and open calls that fit your practice and send you the best ones each week.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-1.5">
