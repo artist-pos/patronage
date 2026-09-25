@@ -1,5 +1,6 @@
 "use client";
 
+import { SIGNUP_SOURCE_SESSION_KEY } from "@/lib/signup-source";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,6 +55,16 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch {
     return await fn();
+  }
+}
+
+function rememberSignupSource(source: string | undefined, role: string | undefined) {
+  if (!source) return;
+  try {
+    // sessionStorage survives the Google round-trip in the same tab.
+    sessionStorage.setItem(SIGNUP_SOURCE_SESSION_KEY, JSON.stringify({ source, role: role ?? "" }));
+  } catch {
+    // Blocked storage — signup_completed simply lands without a source.
   }
 }
 
@@ -118,6 +129,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
   async function handleGoogleSignIn() {
     setError(null);
     setLoading(true);
+    if (mode === "signup") rememberSignupSource(analyticsSource, role);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -164,6 +176,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
           posthog.capture("signup_submitted", { role: role ?? "" });
+          rememberSignupSource(analyticsSource, role);
           if (analyticsSource) {
             trackEvent("signup_form_submitted", { source: analyticsSource, method: "password" });
           }

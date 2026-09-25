@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ReferralTracker, REFERRAL_SESSION_KEY } from "@/components/analytics/ReferralTracker";
+import { SIGNUP_SOURCE_SESSION_KEY } from "@/lib/signup-source";
 
 // Routes whose URLs carry record ids or private context. We DO send pageviews
 // for these — suppressing them entirely made the logged-in product invisible to
@@ -123,7 +124,19 @@ function PostHogSignupCompleted() {
     } catch {
       // Private mode / blocked storage — capturing twice beats not at all.
     }
-    ph.capture("signup_completed");
+    // Which surface and role started it, when a form recorded one (AuthForm).
+    let origin: { source?: string; role?: string } = {};
+    try {
+      const raw = sessionStorage.getItem(SIGNUP_SOURCE_SESSION_KEY);
+      if (raw) origin = JSON.parse(raw);
+      sessionStorage.removeItem(SIGNUP_SOURCE_SESSION_KEY);
+    } catch {
+      // Blocked storage or a mangled value — capture without a source.
+    }
+    ph.capture("signup_completed", {
+      ...(origin.source && { signup_source: origin.source }),
+      ...(origin.role && { role: origin.role }),
+    });
 
     // If a ?ref= link brought this person in earlier in the session, the
     // account they just made belongs to it. Read-then-clear so a second

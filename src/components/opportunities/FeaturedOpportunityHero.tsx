@@ -19,9 +19,15 @@ function deadlineBits(deadline: string | null): { label: string; cls: string } {
 
 interface Props {
   opportunity: Opportunity;
+  /** Below sm: a short row (small image beside title, funding and deadline;
+   *  no blurb, tags or footer link) so the regular list starts on screen one.
+   *  sm and up are unchanged. */
+  compact?: boolean;
 }
 
-export function FeaturedOpportunityHero({ opportunity: o }: Props) {
+export function FeaturedOpportunityHero({ opportunity: o, compact = false }: Props) {
+  // Mobile-only overrides; every one is reset from sm up.
+  const c = (full: string, small: string) => (compact ? small : full);
   const d = deadlineBits(o.deadline);
   const funding = o.funding_amount ? formatFunding(o.funding_amount) : o.funding_range ?? null;
   const displayedTags = (o.sub_categories ?? []).slice(0, 4);
@@ -31,9 +37,9 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
     <section className="space-y-3">
       <p className="t-section-label">Featured</p>
 
-      <Link href={href} className="pin group flex flex-col bg-card sm:flex-row">
+      <Link href={href} className={`pin group flex bg-card sm:flex-row ${c("flex-col", "flex-row")}`}>
         {/* Image — left, stretches to match content panel height on desktop */}
-        <div className="relative h-56 shrink-0 overflow-hidden bg-stone-100 sm:h-auto sm:min-h-72 sm:w-[45%]">
+        <div className={`relative shrink-0 overflow-hidden bg-stone-100 sm:h-auto sm:min-h-72 sm:w-[45%] ${c("h-56", "w-28 self-stretch")}`}>
           {o.featured_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -52,10 +58,10 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
         </div>
 
         {/* Content — right */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 p-6 sm:p-8">
+        <div className={`flex min-w-0 flex-1 flex-col sm:gap-4 sm:p-8 ${c("gap-4 p-6", "gap-2.5 p-4")}`}>
           <div>
-            <div className="t-kicker mb-2.5">{o.type}</div>
-            <h2 className="text-2xl font-semibold leading-tight tracking-[-0.022em] sm:text-3xl">
+            <div className={`t-kicker sm:mb-2.5 ${c("mb-2.5", "mb-1.5")}`}>{o.type}</div>
+            <h2 className={`font-semibold leading-tight tracking-[-0.022em] sm:text-3xl ${c("text-2xl", "text-[17px]")}`}>
               {o.title}
             </h2>
             <p className="mt-1.5 font-mono text-xs text-muted-foreground">
@@ -73,13 +79,13 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
 
           {/* Blurb */}
           {(o.caption || o.description) && (
-            <p className="line-clamp-3 text-sm leading-[1.65] text-muted-foreground">
+            <p className={`line-clamp-3 text-sm leading-[1.65] text-muted-foreground ${c("", "max-sm:hidden")}`}>
               {o.caption ?? o.description}
             </p>
           )}
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-1">
+          <div className={`flex flex-wrap gap-1 ${c("", "max-sm:hidden")}`}>
             {o.country && <span className={TAG_CLS}>{o.country}</span>}
             {o.entry_fee === 0 && <span className={TAG_CLS}>free</span>}
             {displayedTags.map((t) => (
@@ -88,7 +94,7 @@ export function FeaturedOpportunityHero({ opportunity: o }: Props) {
           </div>
 
           {/* CTA */}
-          <div className="mt-auto border-t border-border pt-4 font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+          <div className={`mt-auto border-t border-border pt-4 ${c("", "max-sm:hidden")} font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground`}>
             View opportunity →
           </div>
         </div>

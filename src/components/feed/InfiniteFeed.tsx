@@ -70,6 +70,11 @@ interface Props {
   currentUserId?: string;
   /** admins/owners can edit any post */
   isAdmin?: boolean;
+  /** Page the audience filter navigates on. Default "/feed". */
+  basePath?: string;
+  /** "v2": sentence-case sans filter tabs ("All · Following · Supporting"),
+   *  matching the underline tabs on the v2 browse pages. */
+  variant?: "default" | "v2";
 }
 
 export function InfiniteFeed({
@@ -83,6 +88,8 @@ export function InfiniteFeed({
   rightSlot,
   currentUserId,
   isAdmin = false,
+  basePath = "/feed",
+  variant = "default",
 }: Props) {
   const [updates, setUpdates] = useState<ProjectUpdateWithArtist[]>(initialUpdates);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -138,7 +145,7 @@ export function InfiniteFeed({
     const next = new URLSearchParams(params.toString());
     next.set("tab", "feed");
     if (value) next.set(key, value); else next.delete(key);
-    router.push(`/feed?${next.toString()}`, { scroll: false });
+    router.push(`${basePath}?${next.toString()}`, { scroll: false });
   }
 
   const isEmpty = updates.length === 0 && extraPins.length === 0;
@@ -197,20 +204,32 @@ export function InfiniteFeed({
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Audience filter — logged-in only (a lone "all" button is noise) */}
         <div className={`flex items-stretch ${isLoggedIn ? "" : "hidden"}`}>
-          {([
-            ["everyone", "all"],
-            ...(isLoggedIn
-              ? ([["following", "following"], ["subscribed", "subscribed"]] as const)
-              : []),
-          ] as [FeedAudience, string][]).map(([value, label]) => (
+          {(variant === "v2"
+            ? ([
+                ["everyone", "All"],
+                ...(isLoggedIn ? ([["following", "Following"], ["subscribed", "Supporting"]] as const) : []),
+              ] as [FeedAudience, string][])
+            : ([
+                ["everyone", "all"],
+                ...(isLoggedIn ? ([["following", "following"], ["subscribed", "subscribed"]] as const) : []),
+              ] as [FeedAudience, string][])
+          ).map(([value, label]) => (
             <button
               key={value}
               onClick={() => updateParam("audience", value)}
-              className={`h-9 border-b-2 px-3.5 font-mono text-xs lowercase transition-colors ${
-                audience === value
-                  ? "border-brand text-brand"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+              className={
+                variant === "v2"
+                  ? `mr-5 h-9 border-b-2 text-[14px] font-medium transition-colors ${
+                      audience === value
+                        ? "border-foreground text-foreground"
+                        : "border-transparent text-[color:var(--fg-muted)] hover:text-foreground"
+                    }`
+                  : `h-9 border-b-2 px-3.5 font-mono text-xs lowercase transition-colors ${
+                      audience === value
+                        ? "border-brand text-brand"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`
+              }
             >
               {label}
             </button>

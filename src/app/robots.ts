@@ -39,6 +39,12 @@ const PRIVATE_PATHS = [
   // Development pages.
   "/dev/",
   "/design-system",
+  "/home-v2",
+  "/artists-v2",
+  "/partners-v2",
+  "/opportunities-v2",
+  "/feed-v2",
+  "/about",
 ];
 
 const PUBLIC_API = ["/api/public/opportunities", "/api/public/artists"];

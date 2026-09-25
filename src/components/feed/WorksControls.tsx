@@ -9,22 +9,25 @@ interface Props {
   currentSort: string;
   currentMedium: string | undefined;
   currentLayout: WorksGridLayout;
+  /** Stay on this page (keeping ?tab) instead of navigating to /works. */
+  basePath?: string;
 }
 
-export function WorksControls({ mediumOptions, currentSort, currentMedium, currentLayout }: Props) {
+export function WorksControls({ mediumOptions, currentSort, currentMedium, currentLayout, basePath }: Props) {
   const router = useRouter();
   const params = useSearchParams();
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
-    next.delete("tab");
+    if (!basePath) next.delete("tab");
     if (value) {
       next.set(key, value);
     } else {
       next.delete(key);
     }
     const qs = next.toString();
-    router.push(qs ? `/works?${qs}` : "/works", { scroll: false });
+    const path = basePath ?? "/works";
+    router.push(qs ? `${path}?${qs}` : path, { scroll: false });
   }
 
   const selectCls =
