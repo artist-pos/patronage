@@ -46,6 +46,7 @@ export default async function AdminProfileEditPage({ params }: Props) {
           full_name: profile.full_name ?? "",
           bio: profile.bio ?? "",
           website_url: profile.website_url ?? "",
+          username: profile.username,
         }}
       />
     </div>

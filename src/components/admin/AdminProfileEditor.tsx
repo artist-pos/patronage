@@ -7,11 +7,12 @@ import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploade
 
 interface Props {
   profileId: string;
-  defaults: { full_name: string; bio: string; website_url: string };
+  defaults: { full_name: string; bio: string; website_url: string; username: string };
 }
 
 export function AdminProfileEditor({ profileId, defaults }: Props) {
   const [fullName, setFullName] = useState(defaults.full_name);
+  const [username, setUsername] = useState(defaults.username);
   const [bio, setBio] = useState(defaults.bio);
   const [website, setWebsite] = useState(defaults.website_url);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
@@ -25,7 +26,9 @@ export function AdminProfileEditor({ profileId, defaults }: Props) {
         full_name: fullName,
         bio,
         website_url: website,
+        username,
       });
+      if (res.username) setUsername(res.username);
       setMessage(res.error ? { text: res.error, ok: false } : { text: "Saved.", ok: true });
     });
   }
@@ -40,6 +43,25 @@ export function AdminProfileEditor({ profileId, defaults }: Props) {
         <div className="space-y-1.5">
           <label htmlFor="pe-name" className={labelCls}>Name</label>
           <input id="pe-name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="pe-username" className={labelCls}>Page URL</label>
+          <div className="flex items-center border border-black bg-background text-sm">
+            <span className="pl-3 text-stone-400">patronage.nz/</span>
+            <input
+              id="pe-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoCapitalize="none"
+              spellCheck={false}
+              className="w-full bg-transparent py-2 pr-3 focus-visible:outline-none"
+            />
+          </div>
+          {username !== defaults.username && (
+            <p className="text-xs text-muted-foreground">
+              Links already shared to the old URL will stop working.
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <label htmlFor="pe-bio" className={labelCls}>Bio</label>

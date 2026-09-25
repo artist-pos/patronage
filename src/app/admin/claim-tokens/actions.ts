@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { isOrgCategory } from "@/lib/org-categories";
 import { SHADOW_EMAIL_DOMAIN } from "@/lib/shadow";
+import { slugify } from "@/lib/slugify";
 import type { ClaimToken, ClaimEntityType } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -141,11 +142,9 @@ export async function createShadowProfile(input: {
   if (!input.name.trim()) return { error: "Name is required." };
 
   const admin = createAdminClient();
-  const baseUsername = input.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 30) || "profile";
+  // slugify folds macrons and other diacritics ("Ōrākei" -> "orakei") rather
+  // than dropping the letters, which is what a bare [^a-z0-9] strip does.
+  const baseUsername = slugify(input.name).slice(0, 30).replace(/-+$/, "") || "profile";
 
   // Find unique username
   let username = baseUsername;
