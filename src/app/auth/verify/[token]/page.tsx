@@ -2,7 +2,7 @@ import Link from "next/link";
 import { verifyEmailToken } from "@/lib/email-verification";
 import { sendWelcomeDigest } from "@/lib/digest-send";
 
-export const metadata = { title: "Email Confirmed — Patronage" };
+export const metadata = { title: "Email Confirmed" };
 
 interface Props {
   params: Promise<{ token: string }>;

@@ -4,7 +4,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { SeriesEditorClient } from "./SeriesEditorClient";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Edit Series — Studio — Patronage" };
+export const metadata: Metadata = { title: "Edit Series — Studio" };
 
 interface PageProps {
   params: Promise<{ id: string }>;

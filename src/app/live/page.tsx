@@ -3,7 +3,7 @@ import { CampaignFilters } from "@/components/live/CampaignFilters";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Live Campaigns — Patronage",
+  title: "Live Campaigns",
   description: "Public art activations, art fairs, grant-funded projects and residencies happening across Aotearoa right now.",
 };
 

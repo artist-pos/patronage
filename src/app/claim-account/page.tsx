@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ClaimAccountForm } from "./ClaimAccountForm";
 
 export const metadata: Metadata = {
-  title: "Claim your collection — Patronage",
+  title: "Claim your collection",
 };
 
 export default function ClaimAccountPage() {

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { CsvUploader } from "@/components/admin/CsvUploader";
 
 export const metadata = {
-  title: "Upload Opportunities — Admin — Patronage",
+  title: "Upload Opportunities — Admin",
 };
 
 export default function AdminUploadPage() {

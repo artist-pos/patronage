@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { FollowupForm } from "./FollowupForm";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Share Your Update — Patronage" };
+export const metadata: Metadata = { title: "Share Your Update" };
 
 interface Props {
   params: Promise<{ followupId: string }>;

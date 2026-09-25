@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { QueueControls } from "./QueueControls";
 import type { Opportunity } from "@/types/database";
 
-export const metadata = { title: "Scraper Queue — Admin — Patronage" };
+export const metadata = { title: "Scraper Queue — Admin" };
 
 async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
   const admin = createAdminClient();

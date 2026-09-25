@@ -6,7 +6,7 @@ import { StudioPageShell } from "../StudioPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Provenance Settings — Studio — Patronage",
+  title: "Provenance Settings — Studio",
 };
 
 export default async function ProvenanceSettingsPage() {

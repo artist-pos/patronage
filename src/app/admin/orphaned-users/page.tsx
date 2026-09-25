@@ -24,7 +24,7 @@ async function resendPending(formData: FormData) {
   redirect(`/admin/orphaned-users?resent=${encodeURIComponent(email)}`);
 }
 
-export const metadata = { title: "Orphaned Users — Admin — Patronage" };
+export const metadata = { title: "Orphaned Users — Admin" };
 
 const VALID_ROLES = ["artist", "patron", "partner"] as const;
 type Role = (typeof VALID_ROLES)[number];

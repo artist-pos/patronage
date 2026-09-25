@@ -14,7 +14,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
   const profile = await getProfile(username);
-  if (!profile) return { title: "Collection | Patronage" };
+  if (!profile) return { title: "Collection" };
   const displayName = profile.full_name ?? profile.username;
   return {
     title: `${displayName} | Collection`,

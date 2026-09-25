@@ -3,7 +3,7 @@ import { getDigestData, digestSubject, DIGEST_SIZE } from "@/lib/digest";
 import { getDigestRecipientCount, getLastDigestSend } from "@/lib/digest-send";
 import { DigestControls } from "./DigestControls";
 
-export const metadata = { title: "Digest — Admin — Patronage" };
+export const metadata = { title: "Digest — Admin" };
 
 function fmt(d: string | null) {
   if (!d) return "Open deadline";

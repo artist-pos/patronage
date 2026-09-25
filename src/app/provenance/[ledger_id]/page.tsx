@@ -17,7 +17,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { ledger_id } = await params;
   const data = await getLedgerByLedgerId(ledger_id);
-  if (!data) return { title: "Provenance | Patronage" };
+  if (!data) return { title: "Provenance" };
   const title = data.artwork.title ?? data.artwork.caption ?? "Untitled";
   const artist = data.artist.full_name ?? data.artist.username;
   return {

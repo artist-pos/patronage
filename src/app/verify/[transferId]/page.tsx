@@ -66,10 +66,10 @@ async function getTransferRecord(transferId: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { transferId } = await params;
   const record = await getTransferRecord(transferId);
-  if (!record) return { title: "Transfer Not Found | Patronage" };
+  if (!record) return { title: "Transfer Not Found" };
 
   return {
-    title: `Provenance: ${record.artwork.title} | Patronage`,
+    title: `Provenance: ${record.artwork.title}`,
     description: `Verified transfer of "${record.artwork.title}" by ${record.artist.name} to ${record.patron.name}.`,
   };
 }

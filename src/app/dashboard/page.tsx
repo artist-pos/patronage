@@ -12,7 +12,7 @@ import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Patronage",
+  title: "Dashboard",
 };
 
 interface PageProps {

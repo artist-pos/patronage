@@ -17,7 +17,7 @@ interface Props {
 }
 
 export const metadata: Metadata = {
-  title: "Collection — Patronage",
+  title: "Collection",
   robots: { index: false, follow: false },
 };
 

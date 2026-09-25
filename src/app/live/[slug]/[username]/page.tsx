@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const name = profile?.full_name ?? profile?.username ?? username;
   const title = campaign?.title ?? "Storefront";
   return {
-    title: `${title} — ${name} — Patronage`,
+    title: `${title} — ${name}`,
     description: `View ${name}'s campaign on Patronage.`,
   };
 }

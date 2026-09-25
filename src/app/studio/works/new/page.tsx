@@ -5,7 +5,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { NewWorkClient } from "./NewWorkClient";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Add Work — Studio — Patronage" };
+export const metadata: Metadata = { title: "Add Work — Studio" };
 
 interface PageProps {
   searchParams: Promise<{ mode?: string }>;

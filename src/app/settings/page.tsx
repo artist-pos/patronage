@@ -19,7 +19,7 @@ import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal"
 import type { Metadata } from "next";
 import type { ExhibitionEntry, BibliographyEntry, CollectiveMember } from "@/types/database";
 
-export const metadata: Metadata = { title: "Settings — Patronage" };
+export const metadata: Metadata = { title: "Settings" };
 
 interface PageProps {
   searchParams: Promise<{ tab?: string; welcome?: string }>;

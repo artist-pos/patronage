@@ -3,7 +3,7 @@ import { WizardShell } from "@/components/partner/wizard/WizardShell";
 import { PipelineListingHandoff } from "@/components/partner/wizard/PipelineListingHandoff";
 import type { Opportunity } from "@/types/database";
 
-export const metadata = { title: "List a pipeline opportunity — Patronage" };
+export const metadata = { title: "List a pipeline opportunity" };
 
 // A minimal Opportunity shell for the anonymous wizard. The wizard only reads a
 // handful of these fields; everything is editable client-side and held in

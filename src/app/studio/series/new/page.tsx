@@ -4,7 +4,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { SeriesCreatorClient } from "./SeriesCreatorClient";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Create Series — Studio — Patronage" };
+export const metadata: Metadata = { title: "Create Series — Studio" };
 
 export default async function NewSeriesPage() {
   const { supabase, user } = await getServerUser();

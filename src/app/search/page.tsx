@@ -8,7 +8,7 @@ import { cleanSearchTerm, searchOpportunityRows, searchPartners } from "@/lib/se
 import type { Opportunity } from "@/types/database";
 
 export const metadata: Metadata = {
-  title: "Search | Patronage",
+  title: "Search",
   robots: { index: false },
 };
 

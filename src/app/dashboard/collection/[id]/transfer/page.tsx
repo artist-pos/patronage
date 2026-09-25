@@ -6,7 +6,7 @@ import { TransferForm } from "@/components/collection/TransferForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Transfer this work — Patronage",
+  title: "Transfer this work",
 };
 
 interface Props {

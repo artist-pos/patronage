@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { ExpiredLinkNotice } from "@/components/auth/ExpiredLinkNotice";
 
-export const metadata = { title: "Sign In — Patronage" };
+export const metadata = { title: "Sign In" };
 
 interface Props {
   searchParams: Promise<{ next?: string; error?: string; message?: string; role?: string }>;

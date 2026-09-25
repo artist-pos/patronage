@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { getOutreachHistory } from "./actions";
 import { OutreachCompose, SentHistory, ScheduledHistory } from "./OutreachCompose";
 
-export const metadata = { title: "Outreach — Admin — Patronage" };
+export const metadata = { title: "Outreach — Admin" };
 
 export default async function OutreachPage() {
   const history = await getOutreachHistory();

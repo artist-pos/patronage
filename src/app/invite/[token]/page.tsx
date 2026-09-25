@@ -12,7 +12,7 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "You have been invited — Patronage",
+  title: "You have been invited",
   // An invitation link is private to one artist. It must never be indexed.
   robots: { index: false, follow: false },
 };

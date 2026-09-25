@@ -26,7 +26,7 @@ interface Submission {
   created_at: string;
 }
 
-export const metadata = { title: "Submissions — Admin — Patronage" };
+export const metadata = { title: "Submissions — Admin" };
 
 export default async function AdminSubmissionsPage() {
   if (!(await isAdmin())) redirect("/admin");

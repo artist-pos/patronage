@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const metadata: Metadata = {
-  title: "Claim your artist record — Patronage",
+  title: "Claim your artist record",
 };
 
 export default async function ArtistClaimPage({ params }: Props) {

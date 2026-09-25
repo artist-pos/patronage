@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getConversations } from "@/lib/messages";
 
-export const metadata = { title: "Messages — Patronage" };
+export const metadata = { title: "Messages" };
 
 function timeAgo(iso: string): string {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);

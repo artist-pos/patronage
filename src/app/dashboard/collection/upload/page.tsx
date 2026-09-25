@@ -5,7 +5,7 @@ import { UploadForm } from "@/components/collection/UploadForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Add to collection — Patronage",
+  title: "Add to collection",
 };
 
 export default async function UploadPage() {

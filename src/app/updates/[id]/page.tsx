@@ -13,12 +13,13 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const update = await getUpdateById(id);
-  if (!update) return { title: "Update not found — Patronage" };
+  if (!update) return { title: "Update not found" };
   const name = update.artist_full_name ?? update.artist_username;
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
   const url = `${base}/updates/${id}`;
 
-  const title = `${name} — Studio Update | Patronage`;
+  const title = `${name} — Studio Update`;
+  const shareTitle = `${title} | Patronage`;
   const rawCaption = update.caption?.trim();
   const description = rawCaption
     ? rawCaption.length > 155
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: shareTitle,
       description,
       url,
       type: "article",
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: shareTitle,
       description,
       ...(update.image_url && { images: [update.image_url] }),
     },

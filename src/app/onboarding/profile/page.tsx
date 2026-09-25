@@ -5,7 +5,7 @@ import { getCitiesWithRegions, getLocalBoards } from "@/lib/regions";
 import { ProfileStepForm } from "./ProfileStepForm";
 import type { DisciplineEnum, Profile } from "@/types/database";
 
-export const metadata = { title: "Set Up Your Profile — Patronage" };
+export const metadata = { title: "Set Up Your Profile" };
 
 /**
  * The one screen between signing up and seeing something worth staying for.

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { isAdmin } from "@/lib/admin";
 
 export const metadata: Metadata = {
-  title: "Resources for Artists | Patronage",
+  title: "Resources for Artists",
   description: "Guides, templates, and advice for New Zealand and Australian artists applying for grants, residencies, and arts funding opportunities.",
   alternates: { canonical: "https://patronage.nz/resources" },
   openGraph: {

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { BlogEditor } from "@/components/admin/BlogEditor";
 
-export const metadata = { title: "New Post — Blog — Admin — Patronage" };
+export const metadata = { title: "New Post — Blog — Admin" };
 
 export default async function NewBlogPostPage() {
   const supabase = await createClient();

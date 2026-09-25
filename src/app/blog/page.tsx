@@ -5,7 +5,7 @@ import { stripBodyHtml } from "@/lib/blog-text";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog | Patronage",
+  title: "Blog",
   description:
     "Insights, news, and stories from the Patronage team, connecting artists with opportunity in Aotearoa and beyond.",
   alternates: { canonical: "https://patronage.nz/blog" },

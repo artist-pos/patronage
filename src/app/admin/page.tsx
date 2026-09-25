@@ -34,7 +34,7 @@ function BarChart({ data }: { data: MediumTrend[] }) {
   );
 }
 
-export const metadata = { title: "Admin Dashboard — Patronage" };
+export const metadata = { title: "Admin Dashboard" };
 
 const TOOLS = [
   { href: "/admin/artists", label: "Manage Artists", description: "Activate, deactivate, mark as Patronage Supported, or delete." },

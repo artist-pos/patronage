@@ -34,10 +34,10 @@ function formatTimestamp(iso: string): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const thread = await getThread(id);
-  if (!thread) return { title: "Project not found — Patronage" };
+  if (!thread) return { title: "Project not found" };
   const name = thread.project.artist_full_name ?? thread.project.artist_username;
   return {
-    title: `${thread.project.title} — ${name} | Patronage`,
+    title: `${thread.project.title} — ${name}`,
     description: thread.project.description ?? `Project thread by ${name} on Patronage.`,
     // Collapse ?scroll= variants to one canonical URL (the slug, param-less).
     alternates: { canonical: `/threads/${thread.project.slug ?? id}` },

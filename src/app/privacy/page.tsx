@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Privacy Policy | Patronage",
+  title: "Privacy Policy",
   description: "Privacy Policy for Patronage.",
 };
 

@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { data: post } = await getPost(slug);
 
-  if (!post) return { title: "Post not found | Patronage" };
+  if (!post) return { title: "Post not found" };
 
   const title = `${post.title} | Patronage Blog`;
   const canonicalUrl = `${BASE_URL}/blog/${slug}`;

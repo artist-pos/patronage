@@ -10,7 +10,7 @@ interface Props {
   params: Promise<{ opportunityId: string }>;
 }
 
-export const metadata: Metadata = { title: "Applications — Patronage" };
+export const metadata: Metadata = { title: "Applications" };
 
 interface ProfileRow {
   id: string;

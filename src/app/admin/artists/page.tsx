@@ -5,7 +5,7 @@ import { buildMapPins } from "@/lib/artist-map";
 import { computeRegionCoverage, computeCatalogStatus } from "@/lib/region-coverage";
 import { AdminArtistsView } from "@/components/admin/AdminArtistsView";
 
-export const metadata = { title: "Artists — Admin — Patronage" };
+export const metadata = { title: "Artists — Admin" };
 
 export default async function AdminArtistsPage() {
   const [artists, regions, cities, boards] = await Promise.all([

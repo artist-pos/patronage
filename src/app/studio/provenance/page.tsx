@@ -11,7 +11,7 @@ import type { TransferredWork } from "./ProvenanceList";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Provenance — Studio — Patronage",
+  title: "Provenance — Studio",
 };
 
 export default async function StudioProvenancePage() {

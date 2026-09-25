@@ -5,7 +5,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { CampaignConfigPanel } from "@/components/campaigns/CampaignConfigPanel";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Campaign — Studio — Patronage" };
+export const metadata: Metadata = { title: "Campaign — Studio" };
 
 interface PageProps {
   params: Promise<{ id: string }>;

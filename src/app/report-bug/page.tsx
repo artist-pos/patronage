@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BugReportForm } from "./BugReportForm";
 
 export const metadata: Metadata = {
-  title: "Report a bug — Patronage",
+  title: "Report a bug",
   description: "Found something broken on Patronage? Let us know and we'll fix it.",
 };
 

@@ -4,7 +4,7 @@ import { StudioPageShell } from "../StudioPageShell";
 import { RoomsManager } from "./RoomsManager";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Viewing Rooms — Studio — Patronage" };
+export const metadata: Metadata = { title: "Viewing Rooms — Studio" };
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 

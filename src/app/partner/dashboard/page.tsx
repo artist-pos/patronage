@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Partner Dashboard — Patronage",
+  title: "Partner Dashboard",
 };
 
 const STATUS_COLOURS: Record<string, string> = {

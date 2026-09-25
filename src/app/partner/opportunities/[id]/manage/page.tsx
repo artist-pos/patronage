@@ -14,7 +14,7 @@ import { getRubricCriteria, getPartnerDocuments } from "@/app/partner/opportunit
 import type { Opportunity, RubricCriterion, PartnerDocument } from "@/types/database";
 import type { LocalCriterion } from "@/components/partner/wizard/RubricBuilder";
 
-export const metadata: Metadata = { title: "Manage Listing — Patronage" };
+export const metadata: Metadata = { title: "Manage Listing" };
 
 interface Props {
   params: Promise<{ id: string }>;

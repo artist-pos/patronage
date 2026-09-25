@@ -10,7 +10,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pending confirmations — Patronage",
+  title: "Pending confirmations",
 };
 
 export default async function PendingConfirmationsPage() {

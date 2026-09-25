@@ -17,7 +17,7 @@ import {
 } from "@/lib/signup-context";
 import { trackEvent } from "@/actions/trackEvent";
 
-export const metadata = { title: "Get Started — Patronage" };
+export const metadata = { title: "Get Started" };
 
 const VALID_ROLES = ["artist", "patron", "partner"] as const;
 type Role = (typeof VALID_ROLES)[number];

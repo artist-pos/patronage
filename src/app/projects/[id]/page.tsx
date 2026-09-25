@@ -19,13 +19,13 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const update = await getUpdateById(id);
-  if (!update) return { title: "Update not found — Patronage" };
+  if (!update) return { title: "Update not found" };
   const name = update.artist_full_name ?? update.artist_username;
   const ogImages = update.image_url
     ? [{ url: update.image_url, alt: update.caption ?? name }]
     : [];
   return {
-    title: `${name} — Studio Update | Patronage`,
+    title: `${name} — Studio Update`,
     description: update.caption ?? `Studio update from ${name} on Patronage.`,
     openGraph: { images: ogImages },
     // Collapse ?from=/?t= variants to one canonical URL (param-less).

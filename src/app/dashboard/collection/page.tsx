@@ -11,7 +11,7 @@ import type { CollectionGroup, PatronEmbedConfig } from "@/types/database";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Collection — Patronage",
+  title: "Collection",
 };
 
 export default async function CollectionPage() {

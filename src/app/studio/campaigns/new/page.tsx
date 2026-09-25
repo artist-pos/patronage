@@ -5,7 +5,7 @@ import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { NewCampaignForm } from "@/components/campaigns/NewCampaignForm";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "New Campaign — Studio — Patronage" };
+export const metadata: Metadata = { title: "New Campaign — Studio" };
 
 export default async function NewCampaignPage() {
   const supabase = await createClient();

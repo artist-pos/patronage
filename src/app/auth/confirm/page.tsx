@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PendingButton } from "@/components/auth/PendingButton";
 import { verifyEmail, resendConfirmation } from "./actions";
 
-export const metadata = { title: "Confirm Your Email — Patronage" };
+export const metadata = { title: "Confirm Your Email" };
 
 interface Props {
   searchParams: Promise<{

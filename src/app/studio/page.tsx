@@ -39,7 +39,7 @@ import type { Metadata } from "next";
 import type { SupportTier, ExhibitionEntry, BibliographyEntry, CollectiveMember, ProjectUpdateWithArtist, Project, Grant } from "@/types/database";
 
 export const metadata: Metadata = {
-  title: "Studio — Patronage",
+  title: "Studio",
 };
 
 // ── Page ────────────────────────────────────────────────────────────────────

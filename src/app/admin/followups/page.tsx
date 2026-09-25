@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Follow-ups — Admin — Patronage" };
+export const metadata: Metadata = { title: "Follow-ups — Admin" };
 
 interface FollowupRow {
   id: string;

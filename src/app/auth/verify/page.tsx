@@ -1,7 +1,7 @@
 import { resendConfirmation } from "@/app/auth/confirm/actions";
 import { PendingButton } from "@/components/auth/PendingButton";
 
-export const metadata = { title: "Check Your Email — Patronage" };
+export const metadata = { title: "Check Your Email" };
 
 interface Props {
   searchParams: Promise<{ email?: string; role?: string }>;

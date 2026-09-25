@@ -4,7 +4,7 @@ import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Payment received — Patronage",
+  title: "Payment received",
 };
 
 interface Props {

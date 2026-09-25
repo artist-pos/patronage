@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { BlogAdminList } from "@/components/admin/BlogAdminList";
 
-export const metadata = { title: "Blog — Admin — Patronage" };
+export const metadata = { title: "Blog — Admin" };
 
 export default async function AdminBlogPage() {
   const supabase = await createClient();

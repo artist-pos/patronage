@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminProfileEditor } from "@/components/admin/AdminProfileEditor";
 
-export const metadata = { title: "Edit profile — Admin — Patronage" };
+export const metadata = { title: "Edit profile — Admin" };
 
 interface Props {
   params: Promise<{ id: string }>;

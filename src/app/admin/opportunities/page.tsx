@@ -5,7 +5,7 @@ import { ClaimFunnelMetrics } from "@/components/admin/ClaimFunnelMetrics";
 import { getClaimStatus } from "@/lib/claim-status";
 import type { Opportunity } from "@/types/database";
 
-export const metadata = { title: "Opportunities — Admin — Patronage" };
+export const metadata = { title: "Opportunities — Admin" };
 
 function computeFunnel(opps: Opportunity[]) {
   const sent = opps.filter(o => o.claim_invite_sent_at).length;

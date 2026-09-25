@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { SocialContentPanel } from "@/components/admin/SocialContentPanel";
 
-export const metadata = { title: "Social Content — Admin — Patronage" };
+export const metadata = { title: "Social Content — Admin" };
 
 export interface SocialOpp {
   id: string;

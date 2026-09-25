@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 export const maxDuration = 60;
 
 export const metadata: Metadata = {
-  title: "Artists — Patronage",
+  title: "Artists",
   robots: { index: false, follow: false },
 };
 

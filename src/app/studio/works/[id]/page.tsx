@@ -9,7 +9,7 @@ import type { DocPhotoType } from "@/lib/artwork-documentation";
 import { listPriorHistory } from "@/lib/artwork-prior-history";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Edit Work — Studio — Patronage" };
+export const metadata: Metadata = { title: "Edit Work — Studio" };
 
 interface PageProps {
   params: Promise<{ id: string }>;

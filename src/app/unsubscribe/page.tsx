@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Unsubscribe — Patronage" };
+export const metadata: Metadata = { title: "Unsubscribe" };
 
 interface Props {
   searchParams: Promise<{ token?: string }>;

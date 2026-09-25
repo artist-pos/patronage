@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { BlogEditor } from "@/components/admin/BlogEditor";
 
-export const metadata = { title: "Edit Post — Blog — Admin — Patronage" };
+export const metadata = { title: "Edit Post — Blog — Admin" };
 
 interface Props {
   params: Promise<{ id: string }>;
