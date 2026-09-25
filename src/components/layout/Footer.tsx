@@ -31,7 +31,7 @@ const COLUMNS: FooterColumn[] = [
     label: "For Partners",
     links: [
       { text: "List an opportunity", href: "/partners" },
-      { text: "Activations", href: "/partners#activations" },
+      { text: "Work with us", href: "/partners#work-with-us" },
       { text: "List for free", href: "/partners" },
       { text: "How partnering works", href: "/partners" },
     ],

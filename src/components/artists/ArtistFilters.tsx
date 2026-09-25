@@ -17,37 +17,6 @@ import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 const COUNTRIES: CountryEnum[] = ["NZ", "AUS", "Global"];
 const STAGES: CareerStageEnum[] = ["Emerging", "Mid-Career", "Established", "Open"];
 
-function SpotlightIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="1" y="1" width="14" height="7" />
-      <rect x="1" y="10" width="6" height="5" />
-      <rect x="9" y="10" width="6" height="5" />
-    </svg>
-  );
-}
-
-function GridIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="1" y="1" width="6" height="6" />
-      <rect x="9" y="1" width="6" height="6" />
-      <rect x="1" y="9" width="6" height="6" />
-      <rect x="9" y="9" width="6" height="6" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <line x1="1" y1="4" x2="15" y2="4" />
-      <line x1="1" y1="8" x2="15" y2="8" />
-      <line x1="1" y1="12" x2="15" y2="12" />
-    </svg>
-  );
-}
-
 export function ArtistFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,7 +25,6 @@ export function ArtistFilters() {
   const currentCountry = searchParams.get("country") as CountryEnum | null;
   const currentStage = searchParams.get("stage") as CareerStageEnum | null;
   const currentDiscipline = searchParams.get("discipline") as DisciplineEnum | null;
-  const currentView = searchParams.get("view") ?? "spotlight";
   const commissionsOnly = searchParams.get("commissions") === "1";
 
   const updateParam = useCallback(
@@ -102,7 +70,7 @@ export function ArtistFilters() {
         ))}
       </div>
 
-      {/* Secondary filters + view switcher */}
+      {/* Secondary filters */}
       <div className="flex items-center justify-between gap-3 py-3.5">
         <div className="flex flex-wrap items-center gap-2">
           <Select
@@ -149,36 +117,6 @@ export function ArtistFilters() {
           </button>
         </div>
 
-        {/* View switcher */}
-        <div className="flex shrink-0 items-center border border-border">
-          <button
-            onClick={() => updateParam("view", "spotlight")}
-            aria-label="Spotlight view"
-            className={`p-2 transition-colors ${
-              currentView === "spotlight" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <SpotlightIcon />
-          </button>
-          <button
-            onClick={() => updateParam("view", "gallery")}
-            aria-label="Gallery view"
-            className={`border-l border-border p-2 transition-colors ${
-              currentView === "gallery" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <GridIcon />
-          </button>
-          <button
-            onClick={() => updateParam("view", "list")}
-            aria-label="List view"
-            className={`border-l border-border p-2 transition-colors ${
-              currentView === "list" ? "bg-foreground text-white" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <ListIcon />
-          </button>
-        </div>
       </div>
     </div>
   );

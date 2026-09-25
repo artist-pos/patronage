@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/upload-image";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { updateActivationType } from "@/app/partners/actions";
-import type { ActivationType } from "@/app/partners/page";
+import type { ActivationType } from "@/lib/activation-types";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { useFormLoadedAt } from "@/lib/use-form-loaded-at";

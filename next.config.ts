@@ -50,6 +50,19 @@ const nextConfig: NextConfig = {
       // /support was renamed /patrons; keeps old links and in-flight Stripe return URLs working.
       { source: "/support", destination: "/patrons", permanent: true },
       { source: "/support/:path*", destination: "/patrons/:path*", permanent: true },
+      // The v2 previews became the real pages (Sept 2026); shared preview links land on them.
+      { source: "/home-v2", destination: "/", permanent: true },
+      { source: "/artists-v2", destination: "/artists", permanent: true },
+      { source: "/partners-v2", destination: "/partners", permanent: true },
+      { source: "/opportunities-v2", destination: "/opportunities", permanent: true },
+      { source: "/feed-v2", destination: "/feed", permanent: true },
+      // Explore’s old in-page works tab; For sale now lives at /works (query carried over).
+      {
+        source: "/feed",
+        has: [{ type: "query", key: "tab", value: "works" }],
+        destination: "/works",
+        permanent: true,
+      },
     ];
   },
   async headers() {

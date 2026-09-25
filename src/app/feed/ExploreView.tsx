@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
@@ -17,13 +16,12 @@ import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
 import { JoinButton } from "@/components/auth/JoinButton";
 import type { JoinCity } from "@/components/auth/JoinModal";
 
-// Hidden preview of Explore: an explanatory header, "Studio updates · For
-// sale" as real tabs on one page (For sale no longer leaves for /works), a
-// signed-out follow prompt inside the feed, and v2 tab styling throughout.
-export const metadata: Metadata = {
-  title: "Explore v2 (preview)",
-  robots: { index: false, follow: false },
-};
+/**
+ * Explore: studio updates and work for sale as two tabs of one page. Rendered
+ * by /feed ("Studio updates") and /works ("For sale") so each tab keeps its own
+ * URL, title and search presence while sharing the header, tabs and join
+ * prompt. Not a route itself — the page files pick the tab.
+ */
 
 const INITIAL_COUNT = 10;
 
@@ -48,28 +46,24 @@ interface PinWorkRow {
 const EXPLORE_FILTERS = ["all", "updates"] as const;
 type ExploreFilter = (typeof EXPLORE_FILTERS)[number];
 
-interface PageProps {
-  searchParams: Promise<{
-    tab?: string;
-    sort?: string;
-    medium?: string;
-    wlayout?: string;
-    audience?: string;
-    filter?: string;
-  }>;
+export interface ExploreParams {
+  sort?: string;
+  medium?: string;
+  wlayout?: string;
+  audience?: string;
+  filter?: string;
 }
 
-export default async function FeedV2Page({ searchParams }: PageProps) {
+export async function ExploreView({ tab, params }: { tab: "feed" | "works"; params: ExploreParams }) {
   const {
-    tab = "feed",
     sort = "recent",
     medium,
     wlayout = "justified",
     audience = "everyone",
     filter: rawFilter = "all",
-  } = await searchParams;
+  } = params;
 
-  const activeTab = tab === "works" ? "works" : "feed";
+  const activeTab = tab;
   const filter: ExploreFilter = (EXPLORE_FILTERS as readonly string[]).includes(rawFilter)
     ? (rawFilter as ExploreFilter)
     : "all";
@@ -219,7 +213,7 @@ export default async function FeedV2Page({ searchParams }: PageProps) {
   const artworks = worksResult?.artworks ?? [];
   const mediumOptions = worksResult?.mediumOptions ?? [];
 
-  // Same underline tabs as /opportunities-v2: sans, black 2px underline.
+  // Same underline tabs as /opportunities: sans, black 2px underline.
   const tabCls = (active: boolean) =>
     `relative flex h-12 shrink-0 items-center whitespace-nowrap text-[14px] font-medium tracking-[-0.01em] transition-colors ${
       active
@@ -231,8 +225,8 @@ export default async function FeedV2Page({ searchParams }: PageProps) {
   // Opportunities and Articles already have their own primary nav entries;
   // listing them again here was what forced this row to scroll on mobile.
   const filterTabs: { label: string; href: string; active: boolean }[] = [
-    { label: "Studio updates", href: "/feed-v2", active: activeTab === "feed" },
-    { label: "For sale", href: "/feed-v2?tab=works", active: activeTab === "works" },
+    { label: "Studio updates", href: "/feed", active: activeTab === "feed" },
+    { label: "For sale", href: "/works", active: activeTab === "works" },
   ];
 
   return (
@@ -288,7 +282,7 @@ export default async function FeedV2Page({ searchParams }: PageProps) {
               isLoggedIn={!!user}
               currentUserId={user?.id}
               isAdmin={isAdmin}
-              basePath="/feed-v2"
+              basePath="/feed"
               variant="v2"
               rightSlot={
                 profile ? (
@@ -326,7 +320,7 @@ export default async function FeedV2Page({ searchParams }: PageProps) {
                 currentSort={sort}
                 currentMedium={medium}
                 currentLayout={worksLayout}
-                basePath="/feed-v2"
+                basePath="/works"
               />
             </Suspense>
           </div>

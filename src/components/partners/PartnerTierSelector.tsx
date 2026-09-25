@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { OpportunitySubmissionForm } from "@/components/partners/OpportunitySubmissionForm";
 import { ActivationsColumn } from "@/components/partners/ActivationsColumn";
 import { PipelineConfigPanel, type PipelineExternalConfig } from "@/components/partners/PipelineConfigPanel";
-import type { ActivationType } from "@/app/partners/page";
+import type { ActivationType } from "@/lib/activation-types";
 
 type Tier = "standard" | "featured" | "pipeline";
 

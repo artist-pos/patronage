@@ -187,11 +187,11 @@ export default async function ListAnOpportunityPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 py-10">
         <p className="t-body-sm max-w-[560px]">
           Commissioning artists for a surface you already own, like hoardings, vehicles,
-          packaging, or screens? Or after help shaping a whole programme? That&rsquo;s an
-          activation, and it works differently.
+          packaging, or screens? Or after help shaping a whole programme? That&rsquo;s a
+          surface project or art strategy, and we work on it with you.
         </p>
-        <Link href="/partners" className="btn btn-outline shrink-0">
-          Partner options →
+        <Link href="/partners#work-with-us" className="btn btn-outline shrink-0">
+          Work with us →
         </Link>
       </div>
     </div>

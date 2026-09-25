@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArtistScoreMap } from "@/lib/opportunities";
 import { sortOpportunities, type OppSort, OPP_SORTS } from "@/lib/opportunity-sort";
@@ -6,16 +8,17 @@ import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { OpportunityViewToggle } from "@/components/opportunities/OpportunityViewToggle";
+import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
 import { FeaturedOpportunityHero } from "@/components/opportunities/FeaturedOpportunityHero";
-import { OpportunitiesTabSwitch } from "@/components/opportunities/OpportunitiesTabSwitch";
-import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
 import { selectInstantMatches } from "@/lib/opportunity-match";
 import type { CountryEnum, OppTypeEnum, Opportunity, Profile } from "@/types/database";
-import Link from "next/link";
 
-export const metadata = {
+// A real title with the stats folded into one line of links (each one a way
+// into the list), one control bar (tabs, filters, view) directly above the
+// results, and the organisation CTA as a quiet text link.
+export const metadata: Metadata = {
   title: "Art Grants & Opportunities for NZ & Australian Artists",
   description:
     "Browse art grants, residencies, commissions, and open calls for New Zealand and Australian artists. Updated regularly with the latest arts funding opportunities.",
@@ -29,21 +32,18 @@ export const metadata = {
   },
 };
 
-// ── Cached public browse data — identical for every visitor. Listings change
-// via the weekly scrape + admin publishes, so a 5-minute revalidate is safe.
-// Keyed by day so the deadline cutoff rolls over. Filtered/searched queries
-// stay live (many key combos, each already a single indexed query).
+// Listings change via the weekly scrape + admin publishes, so a 5-minute
+// revalidate is safe. Keyed by day so the deadline cutoff rolls over.
 const getCachedBrowseData = unstable_cache(
   async (_today: string) => {
-    const [stats, opps] = await Promise.all([
-      getMarketplaceStats(),
-      getOpportunities({}),
-    ]);
+    const [stats, opps] = await Promise.all([getMarketplaceStats(), getOpportunities({})]);
     return { stats, opps };
   },
   ["opportunities-browse-v1"],
   { revalidate: 300, tags: ["opportunities"] }
 );
+
+const FILTER_KEYS = ["type", "country", "discipline", "freeEntry", "eligibility", "careerStage", "search", "closing"] as const;
 
 interface PageProps {
   searchParams: Promise<{
@@ -57,9 +57,8 @@ interface PageProps {
     eligibility?: string;
     careerStage?: string;
     search?: string;
-    /** One-time, set by the onboarding profile step. The verification prompt
-     *  is not here — it lives in the global banner, keyed on the profile, so
-     *  it survives the trip into a listing and back. */
+    /** "week" narrows to listings closing in the next 7 days (the stat shortcut). */
+    closing?: string;
     welcome?: string;
   }>;
 }
@@ -73,15 +72,13 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const eligibility = params.eligibility;
   const careerStage = params.careerStage;
   const search = params.search?.trim() || undefined;
+  const closingWeek = params.closing === "week";
   const view = params.view === "list" ? "list" : "gallery";
   const sort: OppSort = (OPP_SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as OppSort)
     : "deadline";
 
-  // Request-deduped auth + profile — shares the Header's round-trips.
   const { user } = await getServerUser();
-
-  // Check if this is an artist with disciplines set
   let isArtist = false;
   let hasDisciplines = false;
   let profile: Profile | null = null;
@@ -91,137 +88,156 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
 
-  // Determine active tab — default to "all"; "for-you" is opt-in
   const tab = params.tab === "for-you" ? "for-you" : "all";
+  const hasQueryFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
+  const hasManualFilters = hasQueryFilters || closingWeek;
 
-  const hasManualFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
-
-  // Fetch data — only what the active tab needs. The unfiltered browse view
-  // (stats + full list) is served from the shared cache; only filtered
-  // queries and per-user match data hit the database live.
   const today = new Date().toISOString().split("T")[0];
+  const weekAhead = new Date(`${today}T00:00:00Z`);
+  weekAhead.setUTCDate(weekAhead.getUTCDate() + 7);
+  const weekFromNow = weekAhead.toISOString().split("T")[0];
   const wantsAllList = tab === "all" || !isArtist;
   const [browse, filteredOpps, matchedOpps, scoreMap] = await Promise.all([
     getCachedBrowseData(today),
-    (wantsAllList && hasManualFilters)
+    wantsAllList && hasQueryFilters
       ? getOpportunities({ type, country, discipline, freeEntry, eligibility, careerStage, search })
       : Promise.resolve(null),
-    (tab === "for-you" && isArtist && hasDisciplines) ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
-    (tab === "all" && isArtist && hasDisciplines) ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
+    tab === "for-you" && isArtist && hasDisciplines ? getMatchedOpportunities(user!.id) : Promise.resolve([]),
+    tab === "all" && isArtist && hasDisciplines ? getArtistScoreMap(user!.id) : Promise.resolve(new Map<string, number>()),
   ]);
   const stats = browse.stats;
-  const rawAllOpps = wantsAllList ? (filteredOpps ?? browse.opps) : [];
+  const baseAll = wantsAllList ? (filteredOpps ?? browse.opps) : [];
+  // Same window as getMarketplaceStats().closingThisWeek, applied in memory.
+  const rawAllOpps = closingWeek
+    ? baseAll.filter((o) => !!o.deadline && o.deadline >= today && o.deadline <= weekFromNow)
+    : baseAll;
 
-  // The scorer fills opportunity_artist_matches on the weekly run, so an artist
-  // who signed up since the last one has no scores at all. Fall back to a
-  // deterministic discipline filter over the pool already fetched above — pure,
-  // so it costs no extra round-trip. The count and label below say which of the
-  // two is on screen: the filter is an overlap test, not a judgement of fit.
   const instantOpps =
     tab === "for-you" && isArtist && hasDisciplines && matchedOpps.length === 0 && profile
       ? selectInstantMatches(browse.opps, profile, 12)
       : [];
   const forYouOpps: Opportunity[] = matchedOpps.length > 0 ? matchedOpps : instantOpps;
-  const matchMode: "scored" | "instant" = matchedOpps.length > 0 ? "scored" : "instant";
 
-  // Merge scores onto all-tab results (score only, no reason — reason is For You only)
-  const scoredAllOpps = scoreMap.size > 0
-    ? rawAllOpps.map((o) => scoreMap.has(o.id) ? { ...o, match_score: scoreMap.get(o.id) } : o)
-    : rawAllOpps;
-  // The sort control only shows in Browse — "deadline" already matches the
-  // query's own default order, so this only does real work for the other two.
+  const scoredAllOpps =
+    scoreMap.size > 0 ? rawAllOpps.map((o) => (scoreMap.has(o.id) ? { ...o, match_score: scoreMap.get(o.id) } : o)) : rawAllOpps;
   const allOpps = tab === "all" ? sortOpportunities(scoredAllOpps, sort) : scoredAllOpps;
 
-  const featuredOpp = (tab === "all" && !hasManualFilters)
-    ? (allOpps.find((o) => o.is_featured) ?? null)
-    : null;
-  const gridOpps = tab === "for-you" ? forYouOpps : (featuredOpp ? allOpps.filter((o) => o.id !== featuredOpp.id) : allOpps);
+  const featuredOpp = tab === "all" && !hasManualFilters ? (allOpps.find((o) => o.is_featured) ?? null) : null;
+  const gridOpps =
+    tab === "for-you" ? forYouOpps : featuredOpp ? allOpps.filter((o) => o.id !== featuredOpp.id) : allOpps;
+
+  // ── Links built on the server: tabs, stat shortcuts, clearing a chip ──
+  const hrefWith = (changes: Record<string, string | null>, dropFilters = false) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (typeof v === "string" && v) q.set(k, v);
+    q.delete("welcome");
+    if (dropFilters) FILTER_KEYS.forEach((k) => q.delete(k));
+    for (const [k, v] of Object.entries(changes)) {
+      if (v === null) q.delete(k);
+      else q.set(k, v);
+    }
+    const s = q.toString();
+    return s ? `/opportunities?${s}` : "/opportunities";
+  };
+  const allHref = hrefWith({ tab: null });
+  const forYouHref = hrefWith({ tab: "for-you" }, true);
+  const closingHref = hrefWith({ tab: null, closing: "week" }, true);
+  const freeHref = hrefWith({ tab: null, freeEntry: "1" }, true);
+
+  const tabCls = (active: boolean) =>
+    `relative flex h-12 items-center gap-1.5 text-[14px] font-medium tracking-[-0.01em] transition-colors ${
+      active
+        ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-foreground"
+        : "text-[color:var(--fg-muted)] hover:text-foreground"
+    }`;
+  const statLink = "underline decoration-[color:var(--fg-subtle)] underline-offset-4 transition-colors hover:decoration-foreground";
+
+  const shownCount = tab === "for-you" ? forYouOpps.length : allOpps.length;
 
   return (
     <div>
-      {/* ══ Page header — title, quiet stat line, mode switch. Filters and
-          sort live in the sidebar below, not here — keeping this block to
-          just "what page is this / what's the headline number" leaves the
-          sidebar as the one place anyone looks for narrowing the list. ══ */}
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-[1600px] px-4 pt-7 sm:px-6 pb-5">
-          <div className="mb-2 flex items-end justify-between gap-4">
-            <h1 className="text-2xl font-semibold tracking-[-0.025em]">
-              Art Grants &amp; Opportunities
-            </h1>
-            {/* Matches the header CTA used on /feed and /partner/dashboard —
-                solid foreground, not the teal brand accent or the .btn-sm
-                variant (undocumented in the design system, and not what any
-                other page's header button actually uses). */}
-            <Link
-              href="/list-an-opportunity"
-              className="shrink-0 bg-foreground px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85"
-            >
-              List opportunity
-            </Link>
-          </div>
-
-          {/* AI-extractable description */}
-          {tab === "all" && !hasManualFilters && (
-            <p className="sr-only">
-              Patronage lists arts grants, residencies, open calls, commissions, prizes, and jobs for New Zealand and Australian artists.
-              Opportunities are sourced from Creative NZ, Creative Australia, NZ On Air, state and regional arts councils, galleries, and independent organisations.
-              The directory covers visual art, music, writing, poetry, dance, film, photography, craft, and performance disciplines.
-              All listings are reviewed before publishing and updated weekly.
+      {/* ══ Header — what this page is, then the numbers as shortcuts ══ */}
+      <div className="mx-auto max-w-[1600px] px-4 pb-5 pt-7 sm:px-6 sm:pt-9">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="t-display text-[32px] sm:text-[40px]">Opportunities</h1>
+            <p className="mt-2 max-w-[560px] text-[14.5px] leading-[1.55] text-[color:var(--fg-muted)]">
+              Grants, residencies, commissions and open calls for artists in Aotearoa and beyond.
             </p>
-          )}
-
-          {/* Stats — same stacked number-over-label pattern as the homepage
-              hero. A 2-col grid on mobile (not a single stacked column —
-              four full-width rows reads too tall) with its own gap for
-              spacing; a flex row with border-r dividers from sm up, where
-              they all fit on one line (a wrapped flex row would orphan the
-              border-r on whichever stat wraps last). */}
-          <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-5 sm:flex sm:flex-row sm:flex-wrap sm:gap-0">
-            <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
-              <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                {tab === "for-you"
-                  ? forYouOpps.length
-                  : (hasManualFilters && allOpps.length < stats.count ? allOpps.length : stats.count)}
-              </p>
-              <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">
-                {tab === "for-you"
-                  ? (matchMode === "scored" ? "matched for you" : "open in your disciplines")
-                  : (hasManualFilters && allOpps.length < stats.count ? "filtered results" : "active opportunities")}
-              </p>
-            </div>
-            {tab === "all" && (
-              <>
-                <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
-                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-[color:var(--urgent)]">
-                    {stats.closingThisWeek}
-                  </p>
-                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">close this week</p>
-                </div>
-                <div className="sm:mr-6 sm:border-r sm:border-border sm:pr-6">
-                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                    {stats.freeToEnter}
-                  </p>
-                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">free to enter</p>
-                </div>
-                <div>
-                  <p className="font-mono text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                    {stats.totalFunding > 0 ? formatFunding(stats.totalFunding) : "–"}
-                  </p>
-                  <p className="mt-1.5 font-mono text-[10px] text-[color:var(--fg-subtle)]">approx. funding tracked</p>
-                </div>
-              </>
-            )}
           </div>
+          <TrackedNavLink
+            href="/list-an-opportunity"
+            event="list_opportunity_click"
+            props={{ placement: "opportunities_header" }}
+            className="text-[13px] text-[color:var(--fg-muted)] underline decoration-[color:var(--fg-subtle)] underline-offset-4 transition-colors hover:text-foreground max-sm:order-last"
+          >
+            Organisation? List an opportunity →
+          </TrackedNavLink>
+        </div>
 
-          {/* Mode switch — always visible */}
-          <Suspense>
-            <OpportunitiesTabSwitch activeTab={tab as "for-you" | "all"} matchCount={forYouOpps.length} />
-          </Suspense>
+        {/* AI-extractable description */}
+        {tab === "all" && !hasManualFilters && (
+          <p className="sr-only">
+            Patronage lists arts grants, residencies, open calls, commissions, prizes, and jobs for New Zealand and Australian artists.
+            Opportunities are sourced from Creative NZ, Creative Australia, NZ On Air, state and regional arts councils, galleries, and independent organisations.
+            The directory covers visual art, music, writing, poetry, dance, film, photography, craft, and performance disciplines.
+            All listings are reviewed before publishing and updated weekly.
+          </p>
+        )}
+
+        {/* Stats as one line of links: each one is also a way into the list. */}
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px] text-[color:var(--fg-muted)]">
+          <TrackedNavLink href="/opportunities" event="opportunities_shortcut_click" props={{ shortcut: "open" }} className={statLink}>
+            <span className="font-semibold text-foreground">{stats.count}</span> open
+          </TrackedNavLink>
+          <span aria-hidden className="text-[color:var(--fg-subtle)]">·</span>
+          <TrackedNavLink href={closingHref} event="opportunities_shortcut_click" props={{ shortcut: "closing_week" }} className={`${statLink} text-[color:var(--urgent)]`}>
+            <span className="font-semibold">{stats.closingThisWeek}</span> close this week
+          </TrackedNavLink>
+          <span aria-hidden className="text-[color:var(--fg-subtle)]">·</span>
+          <TrackedNavLink href={freeHref} event="opportunities_shortcut_click" props={{ shortcut: "free_entry" }} className={statLink}>
+            <span className="font-semibold text-foreground">{stats.freeToEnter}</span> free to enter
+          </TrackedNavLink>
+        </p>
+      </div>
+
+      {/* ══ Control bar — mode tabs left, narrowing + view right. Sticks under
+          the site header so filters stay in reach while scrolling. ══ */}
+      <div className="sticky top-[53px] z-20 border-y border-border bg-[rgb(250_250_249/0.9)] backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 sm:px-6">
+          <nav aria-label="Opportunity lists" className="flex shrink-0 items-center gap-6 whitespace-nowrap">
+            <TrackedNavLink href={allHref} event="opportunities_tab_click" props={{ tab: "all" }} className={tabCls(tab === "all")} aria-current={tab === "all" ? "page" : undefined}>
+              All
+            </TrackedNavLink>
+            <TrackedNavLink href={forYouHref} event="opportunities_tab_click" props={{ tab: "for-you", signed_in: user ? "true" : "false" }} className={tabCls(tab === "for-you")} aria-current={tab === "for-you" ? "page" : undefined}>
+              For you
+              {user && isArtist && forYouOpps.length > 0 && (
+                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">{forYouOpps.length}</span>
+              )}
+            </TrackedNavLink>
+          </nav>
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+            {tab === "all" && (
+              <span className="hidden font-mono text-[11px] text-[color:var(--fg-subtle)] sm:inline">
+                {shownCount} shown
+              </span>
+            )}
+            {/* Mobile filter trigger; the sidebar carries the same panel from lg up. */}
+            {tab === "all" && (
+              <div className="lg:hidden">
+                <Suspense>
+                  <OpportunityFilters />
+                </Suspense>
+              </div>
+            )}
+            <Suspense>
+              <OpportunityViewToggle />
+            </Suspense>
+          </div>
         </div>
       </div>
 
-      {/* ══ Content — sidebar (Browse only) + results, on the feed surface ══ */}
+      {/* ══ Content ══ */}
       <div className="min-h-screen bg-feed-bg">
         <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6">
           {params.welcome === "1" && isArtist && (
@@ -235,27 +251,26 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          {/* For You tab content — no sidebar, this is already a curated list */}
           {tab === "for-you" && (
             <>
-              {/* Unauthenticated — CTA */}
               {!user && <ForYouTeaser />}
-
-              {/* Authenticated non-artist (patron/partner) */}
               {user && !isArtist && (
                 <p className="py-12 text-center text-sm text-muted-foreground">
                   Personalised matches are available for artist profiles.
                 </p>
               )}
-
-              {/* Artist states */}
               {user && isArtist && (
                 <>
                   {!hasDisciplines ? (
                     <div className="space-y-3 bg-card p-8 text-center">
                       <p className="text-sm font-medium">Complete your profile to get personalised matches</p>
-                      <p className="text-xs text-muted-foreground">Add your disciplines so we can surface the most relevant opportunities for your practice.</p>
-                      <Link href="/profile/edit" className="inline-block bg-foreground px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-82">
+                      <p className="text-xs text-muted-foreground">
+                        Add your disciplines so we can surface the most relevant opportunities for your practice.
+                      </p>
+                      <Link
+                        href="/profile/edit"
+                        className="inline-block bg-foreground px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-82"
+                      >
                         Edit profile
                       </Link>
                     </div>
@@ -264,7 +279,9 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                       <p className="text-sm font-medium">Nothing open in your disciplines right now</p>
                       <p className="text-xs text-muted-foreground">
                         New listings are added weekly, and you&rsquo;ll see them here first.{" "}
-                        <Link href="/opportunities?tab=all" className="underline underline-offset-2">Browse all opportunities</Link>{" "}
+                        <Link href={allHref} className="underline underline-offset-2">
+                          Browse all opportunities
+                        </Link>{" "}
                         in the meantime.
                       </p>
                     </div>
@@ -276,38 +293,39 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             </>
           )}
 
-          {/* Browse tab content — sidebar + results */}
           {tab === "all" && (
-            <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-8 lg:items-start">
-              {/* Sticky from lg up. Unscrolled, "Sort by" already lines up
-                  with "Featured" — both sit inside the same py-6 content
-                  wrapper, no extra offset needed there. But once stuck, the
-                  sticky offset IS the only thing standing in for that py-6
-                  gap — top-0 (or flush against the header) would yank the
-                  sidebar hard against the header with no breathing room the
-                  moment it caught up, unlike everything scrolling normally
-                  beneath it. header height (52px) + that same py-6 (24px)
-                  reproduces the gap it had before scrolling started. */}
-              <aside className="mb-6 lg:sticky lg:top-[76px] lg:mb-0">
+            <div className="lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-8">
+              {/* Header (53) + control bar (49) + the content's own 24px gap. */}
+              {/* Scrolls on its own when taller than the space left under the
+                  bar, so the last filters are never stranded off-screen. */}
+              <aside className="hidden lg:sticky lg:top-[126px] lg:block lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto lg:pb-2 scrollbar-hide">
                 <Suspense>
                   <OpportunityFilters />
                 </Suspense>
               </aside>
 
               <div className="space-y-6">
-                {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} />}
-
+                {/* Active shortcut filter, removable. The sidebar filters show
+                    their own state; this one comes from the stat line. */}
+                {closingWeek && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href={hrefWith({ closing: null })}
+                      className="inline-flex items-center gap-2 border border-foreground bg-card px-3 py-1.5 font-mono text-[11px] text-foreground"
+                    >
+                      Closing this week <span aria-hidden>×</span>
+                      <span className="sr-only">(remove filter)</span>
+                    </Link>
+                    <span className="font-mono text-[11px] text-[color:var(--fg-muted)]">{allOpps.length} shown</span>
+                  </div>
+                )}
+                {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} compact />}
                 {gridOpps.length === 0 ? (
                   <p className="py-12 text-center text-sm text-muted-foreground">
                     No opportunities match those filters. New listings are added regularly.
                   </p>
                 ) : (
-                  <>
-                    <div className="flex justify-end">
-                      <OpportunityViewToggle />
-                    </div>
-                    <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
-                  </>
+                  <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
                 )}
               </div>
             </div>

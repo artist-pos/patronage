@@ -39,11 +39,7 @@ const PRIVATE_PATHS = [
   // Development pages.
   "/dev/",
   "/design-system",
-  "/home-v2",
-  "/artists-v2",
-  "/partners-v2",
-  "/opportunities-v2",
-  "/feed-v2",
+  // Draft, unlinked until rewritten.
   "/about",
 ];
 
