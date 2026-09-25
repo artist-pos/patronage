@@ -11,14 +11,30 @@ import { InfiniteFeed } from "@/components/feed/InfiniteFeed";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import { WorksControls } from "@/components/feed/WorksControls";
 import { getAvailableWorksForGrid, type WorksSort } from "@/lib/works";
+import { getSellableSellerIds } from "@/lib/commerce/eligibility";
 
 export const metadata: Metadata = {
-  title: "Feed | Patronage",
+  title: "Feed",
   description: "Work in progress and available artworks from the Patronage community.",
   alternates: { canonical: "https://patronage.nz/feed" },
 };
 
 const INITIAL_COUNT = 10;
+
+// One available work as the Explore pin query returns it.
+interface PinWorkRow {
+  id: string;
+  url: string;
+  thumb_url: string | null;
+  title: string | null;
+  year: number | null;
+  edition: string | null;
+  price_cents: number | null;
+  price_currency: string | null;
+  is_poa: boolean | null;
+  hide_price: boolean | null;
+  profile: { id: string; username: string | null; full_name: string | null } | null;
+}
 
 // v2 Explore is a visual feed (studio updates + available works). Artists,
 // opportunities and articles each have a canonical browse surface — the
@@ -82,14 +98,20 @@ export default async function FeedPage({ searchParams }: PageProps) {
     wantExtras
       ? supabase
           .from("artworks")
-          .select("id, url, thumb_url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(username, full_name)")
+          .select("id, url, thumb_url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(id, username, full_name)")
           .eq("is_available", true)
           .eq("hide_available", false)
           .not("url", "is", null)
           .order("created_at", { ascending: false })
-          .limit(6)
-          .then(({ data }) =>
-            (data ?? []).map((w: any) => ({
+          // Over-fetch, then keep only sellers who can be paid, then take 6.
+          .limit(30)
+          .then(async ({ data }) => {
+            const rows = (data ?? []) as unknown as PinWorkRow[];
+            const sellable = await getSellableSellerIds(rows.map((w) => w.profile?.id ?? ""));
+            return rows.filter((w) => w.profile && sellable.has(w.profile.id)).slice(0, 6);
+          })
+          .then((data) =>
+            data.map((w) => ({
               kind: "work" as const,
               id: w.id,
               url: w.url,

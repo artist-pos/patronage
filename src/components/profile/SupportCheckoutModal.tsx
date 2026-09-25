@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
-import { initiateSupportCheckout } from "@/app/support/actions";
+import { initiateSupportCheckout } from "@/app/patrons/actions";
 import { calculateFees, formatCents } from "@/lib/commerce-fee";
 import type { SupportTier } from "@/types/database";
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCommerceEligibility, SELLER_NOT_ELIGIBLE } from "@/lib/commerce/eligibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateFees } from "@/lib/commerce-fee";
 import { createCheckoutSession, getStripe } from "@/lib/stripe";
@@ -36,6 +37,9 @@ export async function initiateSupportCheckout(
     .maybeSingle();
   if (!tier) return { error: "Tier not found." };
   if (!tier.is_active) return { error: "This tier isn't active." };
+  if (!(await getCommerceEligibility(tier.profile_id)).eligible) {
+    return { error: SELLER_NOT_ELIGIBLE };
+  }
   if (tier.tier_type !== "one_off" && tier.tier_type !== "recurring") {
     return { error: "Only one-off and recurring tiers can be paid online." };
   }
@@ -139,7 +143,7 @@ export async function initiateSupportCheckout(
             metadata: { purpose: surface, support_subscription_id: subscription.id },
             ...(connectDestination ? {
               // application_fee covers Stripe's processing fee + Patronage commission,
-              // so the platform can pay Stripe and still net the 5% commission.
+              // so the platform can pay Stripe and still net the 10% commission.
               // Artist receives sellerReceivesCents = buyerPaidTotal - stripeFee - commission.
               application_fee_amount: fees.stripeFeeCents + fees.patronageRevenueCents,
               transfer_data: { destination: connectDestination },
@@ -151,7 +155,7 @@ export async function initiateSupportCheckout(
             metadata: { purpose: surface, support_subscription_id: subscription.id },
             ...(connectDestination ? {
               // Same logic as one-off: percent must cover Stripe's fee + commission
-              // so the platform nets the 5% commission after paying Stripe.
+              // so the platform nets the 10% commission after paying Stripe.
               application_fee_percent: parseFloat(
                 (((fees.stripeFeeCents + fees.patronageRevenueCents) / fees.buyerPaidTotalCents) * 100).toFixed(2)
               ),
@@ -159,7 +163,7 @@ export async function initiateSupportCheckout(
             } : {}),
           }
         : undefined,
-      success_url: `${siteUrl()}/support/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${siteUrl()}/patrons/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl()}/`,
     });
     if (!session.url) throw new Error("Stripe didn't return a checkout URL");

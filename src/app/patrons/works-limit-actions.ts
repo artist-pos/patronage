@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   SUPPORT_WORKS_LIMIT_KEY,
   SUPPORT_WORKS_MAX,
-} from "@/app/support/works-limit-constants";
+} from "@/app/patrons/works-limit-constants";
 
 export async function saveSupportWorksLimit(limit: number) {
   const supabase = await createClient();
@@ -38,6 +38,6 @@ export async function saveSupportWorksLimit(limit: number) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/support");
+  revalidatePath("/patrons");
   return {};
 }

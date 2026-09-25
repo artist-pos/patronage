@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import type { ArtworkForGrid } from "@/components/feed/WorksJustifiedGrid";
-import { saveSupportWorksLimit } from "@/app/support/works-limit-actions";
+import { saveSupportWorksLimit } from "@/app/patrons/works-limit-actions";
 
 interface Props {
   artworks: ArtworkForGrid[];

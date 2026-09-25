@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCommerceEligibility, eligibilityError } from "@/lib/commerce/eligibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 
@@ -22,6 +23,9 @@ export async function createConnectAccountLink(): Promise<{ url?: string; error?
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
     return { error: "Artists only." };
   }
+
+  const eligibility = await getCommerceEligibility(user.id);
+  if (!eligibility.eligible) return { error: eligibilityError(eligibility) };
 
   const stripe = getStripe();
   let accountId = profile.stripe_account_id;

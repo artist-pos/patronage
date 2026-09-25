@@ -47,6 +47,9 @@ const nextConfig: NextConfig = {
       // [username] catch-all (which would render a misleading profile 404).
       { source: "/core-features", destination: "/", permanent: true },
       { source: "/market-opportunity", destination: "/opportunities", permanent: true },
+      // /support was renamed /patrons; keeps old links and in-flight Stripe return URLs working.
+      { source: "/support", destination: "/patrons", permanent: true },
+      { source: "/support/:path*", destination: "/patrons/:path*", permanent: true },
     ];
   },
   async headers() {

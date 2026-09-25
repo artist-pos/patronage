@@ -7,7 +7,7 @@ import { PaymentsSection } from "@/components/studio/PaymentsSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Earnings — Studio — Patronage",
+  title: "Earnings — Studio",
 };
 
 export default async function EarningsPage() {
@@ -276,7 +276,7 @@ export default async function EarningsPage() {
               <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
                 <span>Supporter</span>
                 <span className="text-right">Type</span>
-                <span className="text-right">Net (95%)</span>
+                <span className="text-right">Net (90%)</span>
                 <span className="text-right">Status</span>
               </div>
               {(supportPayments ?? []).map((r) => {

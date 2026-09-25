@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCommerceEligibility, eligibilityError } from "@/lib/commerce/eligibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyTransferRequest, notifyTransferAccepted, notifyShippingAddress, type ShippingAddress } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
@@ -55,6 +56,9 @@ export async function initiateTransfer(
   let checkoutUrl: string | undefined;
 
   if (!isGift) {
+    const eligibility = await getCommerceEligibility(user.id);
+    if (!eligibility.eligible) return { error: eligibilityError(eligibility) };
+
     // Create the transaction record before the Stripe session so the webhook
     // has something to match against.
     const admin = createAdminClient();

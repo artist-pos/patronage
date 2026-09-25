@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/opportunities`,        changeFrequency: "daily",   priority: 1.0 },
     { url: `${BASE_URL}/artists`,              changeFrequency: "daily",   priority: 1.0 },
     { url: `${BASE_URL}/works`,                changeFrequency: "daily",   priority: 0.9 },
-    { url: `${BASE_URL}/support`,              changeFrequency: "daily",   priority: 0.8 },
+    { url: `${BASE_URL}/patrons`,              changeFrequency: "daily",   priority: 0.8 },
     { url: `${BASE_URL}/live`,                 changeFrequency: "daily",   priority: 0.7 },
     { url: `${BASE_URL}/feed`,                 changeFrequency: "daily",   priority: 0.7 },
     { url: `${BASE_URL}/blog`,                 changeFrequency: "weekly",  priority: 0.7 },

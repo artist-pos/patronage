@@ -43,7 +43,7 @@ const CARDS: Card[] = [
       "Support monthly or one-off",
       "Browse and collect available works",
     ],
-    cta: { text: "Become a patron", href: "/support" },
+    cta: { text: "Become a patron", href: "/patrons" },
   },
 ];
 

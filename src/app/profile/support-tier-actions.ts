@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCommerceEligibility, eligibilityError } from "@/lib/commerce/eligibility";
 import { revalidatePath } from "next/cache";
 import type { SupportTierType } from "@/types/database";
 
@@ -17,6 +18,9 @@ export async function createSupportTier(data: {
 
   if (!data.title.trim()) return { error: "Title is required" };
   if (data.price <= 0) return { error: "Price must be greater than 0" };
+
+  const eligibility = await getCommerceEligibility(user.id);
+  if (!eligibility.eligible) return { error: eligibilityError(eligibility) };
 
   const { data: existing } = await supabase
     .from("support_tiers")
@@ -50,6 +54,9 @@ export async function updateSupportTier(
 
   if (!data.title.trim()) return { error: "Title is required" };
   if (data.price <= 0) return { error: "Price must be greater than 0" };
+
+  const eligibility = await getCommerceEligibility(user.id);
+  if (!eligibility.eligible) return { error: eligibilityError(eligibility) };
 
   const patch: Record<string, unknown> = {
     title: data.title.trim(),

@@ -1,5 +1,6 @@
 "use server";
 
+import { getCommerceEligibility, SELLER_NOT_ELIGIBLE } from "@/lib/commerce/eligibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCampaignEnquiryNotification } from "@/lib/email";
 import { createCheckoutSession, getStripe } from "@/lib/stripe";
@@ -95,6 +96,9 @@ export async function createCampaignSaleCheckout(opts: {
   }
   if (opts.priceCents <= 0) {
     return { error: "Use claimCampaignWorkFree for free works." };
+  }
+  if (!(await getCommerceEligibility(opts.artistId)).eligible) {
+    return { error: SELLER_NOT_ELIGIBLE };
   }
 
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";

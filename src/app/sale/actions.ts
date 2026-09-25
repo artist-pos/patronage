@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCommerceEligibility, SELLER_NOT_ELIGIBLE } from "@/lib/commerce/eligibility";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateFees } from "@/lib/commerce-fee";
 import { createCheckoutSession, getStripe } from "@/lib/stripe";
@@ -40,6 +41,9 @@ export async function initiatePrimarySale(
   if (!artwork.is_available) return { error: "This work isn't available for sale." };
   if (artwork.creator_id !== artwork.current_owner_id) {
     return { error: "This work has already changed hands. Use the resale flow." };
+  }
+  if (!(await getCommerceEligibility(artwork.creator_id)).eligible) {
+    return { error: SELLER_NOT_ELIGIBLE };
   }
   if (artwork.is_poa || !artwork.price_cents || artwork.price_cents <= 0) {
     return { error: "This work has no listed price." };
@@ -169,6 +173,9 @@ export async function createPrimaryEmbeddedCheckout(input: {
   if (!artwork.is_available) return { error: "This work isn't available for sale." };
   if (artwork.creator_id !== artwork.current_owner_id) {
     return { error: "This work has already changed hands. Use the resale flow." };
+  }
+  if (!(await getCommerceEligibility(artwork.creator_id)).eligible) {
+    return { error: SELLER_NOT_ELIGIBLE };
   }
 
   let priceCents = artwork.price_cents;

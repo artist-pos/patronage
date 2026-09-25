@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
+import { getSellableSellerIds } from "@/lib/commerce/eligibility";
 
 const WORK_SELECT =
   "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)";
@@ -48,17 +49,23 @@ export async function getAvailableWorksForGrid(opts: {
       .not("medium_category", "is", null),
   ]);
 
-  const artworkRows = artworksRes.data ?? [];
-  const artworkIds = artworkRows.map((a: { id: string }) => a.id);
-
-  const editionsRes =
-    artworkIds.length > 0
-      ? await supabase
+  // Only works whose seller can actually be paid (Verified + Stripe enabled);
+  // anything else would dead-end at checkout.
+  // Both lookups need only the fetched ids, so they run side by side; editions
+  // for works that get filtered out are simply never read.
+  const allRows = (artworksRes.data ?? []) as unknown as { id: string; profile: { id: string } | null }[];
+  const allIds = allRows.map((a) => a.id);
+  const [sellable, editionsRes] = await Promise.all([
+    getSellableSellerIds(allRows.map((a) => a.profile?.id ?? "")),
+    allIds.length > 0
+      ? supabase
           .from("editions")
           .select("id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions")
-          .in("work_id", artworkIds)
+          .in("work_id", allIds)
           .eq("listed", true)
-      : { data: [] };
+      : Promise.resolve({ data: [] as unknown[] }),
+  ]);
+  const artworkRows = allRows.filter((a) => a.profile && sellable.has(a.profile.id));
 
   const editionsByWork = new Map<string, EditionOption[]>();
   for (const ed of editionsRes.data ?? []) {
@@ -78,9 +85,9 @@ export async function getAvailableWorksForGrid(opts: {
     });
   }
 
-  const artworks = artworkRows.map((a: Record<string, unknown>) => ({
+  const artworks = artworkRows.map((a) => ({
     ...a,
-    editions: editionsByWork.get(a.id as string) ?? [],
+    editions: editionsByWork.get(a.id) ?? [],
   })) as unknown as ArtworkForGrid[];
 
   const mediumOptions = [

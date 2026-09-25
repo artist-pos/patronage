@@ -605,13 +605,13 @@ function TierForm({
 }
 
 /**
- * Up-front payout disclosure for the artist. Patronage takes 5% of the
+ * Up-front payout disclosure for the artist. Patronage takes 10% of the
  * tier price; the Stripe processing fee is added on top of the buyer's
  * total so the artist takes home the full intended cut. NZ Fair Trading
  * Act requires this not be misleading.
  */
 function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRecurring: boolean }) {
-  const commission = priceMajor * 0.05;
+  const commission = priceMajor * 0.1;
   const takeHome = priceMajor - commission;
   return (
     <div className="col-span-2 border border-stone-200 px-3 py-2.5 space-y-1 text-[11px]">
@@ -623,7 +623,7 @@ function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRe
         <span className="font-mono">NZD {priceMajor.toFixed(2)}</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Patronage commission (5%)</span>
+        <span className="text-muted-foreground">Patronage commission (10%)</span>
         <span className="font-mono">−NZD {commission.toFixed(2)}</span>
       </div>
       <div className="flex justify-between border-t border-stone-200 pt-1 mt-1">

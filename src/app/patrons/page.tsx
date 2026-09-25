@@ -5,17 +5,19 @@ import { SupportWorks } from "@/components/support/SupportWorks";
 import {
   SUPPORT_WORKS_MAX,
   SUPPORT_WORKS_DEFAULT,
-} from "@/app/support/works-limit-constants";
+} from "@/app/patrons/works-limit-constants";
 import type { ArtworkForGrid, EditionOption } from "@/components/feed/WorksJustifiedGrid";
+import { getSellableSellerIds } from "@/lib/commerce/eligibility";
 
 export const metadata: Metadata = {
-  title: "Support artists — Patronage",
+  title: "Support artists",
   description:
     "Buy work and back artists directly. Most of what you spend goes straight to the artist.",
 };
 
 // ── Types for the joined rows we read ───────────────────────────────
 type JoinedArtist = {
+  id?: string;
   username: string | null;
   full_name: string | null;
   avatar_url?: string | null;
@@ -105,18 +107,25 @@ export default async function SupportPage() {
         .order("created_at", { ascending: false })
         .limit(SUPPORT_WORKS_MAX);
 
-      const artworkRows = (rows ?? []) as Record<string, unknown>[];
-      const ids = artworkRows.map((a) => a.id as string);
+      const allRows = (rows ?? []) as Record<string, unknown>[];
+      const allIds = allRows.map((a) => a.id as string);
+      const sellerId = (a: Record<string, unknown>) => (a.profile as { id?: string } | null)?.id ?? "";
 
-      const { data: eds } = ids.length
-        ? await supabase
-            .from("editions")
-            .select(
-              "id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions",
-            )
-            .in("work_id", ids)
-            .eq("listed", true)
-        : { data: [] };
+      // Only sellers who can be paid (Verified + Stripe enabled) — anything
+      // else would dead-end at checkout. Editions are fetched alongside.
+      const [sellable, { data: eds }] = await Promise.all([
+        getSellableSellerIds(allRows.map(sellerId)),
+        allIds.length
+          ? supabase
+              .from("editions")
+              .select(
+                "id, work_id, label, type, price_cents, currency, poa, listing_mode, listed, sort_order, dimensions",
+              )
+              .in("work_id", allIds)
+              .eq("listed", true)
+          : Promise.resolve({ data: [] as unknown[] }),
+      ]);
+      const artworkRows = allRows.filter((a) => sellable.has(sellerId(a)));
 
       const editionsByWork = new Map<string, EditionOption[]>();
       for (const ed of eds ?? []) {
@@ -145,7 +154,7 @@ export default async function SupportPage() {
     supabase
       .from("support_tiers")
       .select(
-        "id, title, price, description, tier_type, artist:profiles!inner(username, full_name, avatar_url, support_enabled, stripe_connect_status)",
+        "id, title, price, description, tier_type, artist:profiles!inner(id, username, full_name, avatar_url, support_enabled, stripe_connect_status)",
       )
       .eq("is_active", true)
       .in("tier_type", ["one_off", "recurring"])
@@ -153,8 +162,13 @@ export default async function SupportPage() {
       .eq("profiles.stripe_connect_status", "enabled")
       .gt("price", 0)
       .order("created_at", { ascending: false })
-      .limit(4)
-      .then(({ data }) => ({ data: (data ?? []) as unknown as TierRow[] })),
+      // Over-fetch, keep Verified artists only (the tier checkout requires it), take 4.
+      .limit(12)
+      .then(async ({ data }) => {
+        const rows = (data ?? []) as unknown as TierRow[];
+        const sellable = await getSellableSellerIds(rows.map((t) => one(t.artist)?.id ?? ""));
+        return { data: rows.filter((t) => sellable.has(one(t.artist)?.id ?? "")).slice(0, 4) };
+      }),
     supabase
       .from("campaigns")
       .select(
@@ -185,8 +199,7 @@ export default async function SupportPage() {
           Support artists directly
         </h1>
         <p className="mt-2 text-sm text-stone-500">
-          95% of every contribution and 90% of every sale goes straight to the
-          artist.
+          90% of every contribution and every sale goes straight to the artist.
         </p>
       </header>
 

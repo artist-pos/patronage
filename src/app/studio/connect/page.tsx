@@ -5,7 +5,7 @@ import { ConnectForm } from "./ConnectForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Connect Bank — Studio — Patronage",
+  title: "Connect Bank — Studio",
 };
 
 export default async function ConnectPage() {
@@ -59,8 +59,8 @@ export default async function ConnectPage() {
             </div>
             <div className="px-4 py-3 grid grid-cols-[1fr_auto_auto] gap-4 text-sm">
               <span className="text-stone-700">Subscriptions &amp; support</span>
-              <span className="font-medium">95% to you</span>
-              <span className="text-muted-foreground text-xs self-center">5% to Patronage</span>
+              <span className="font-medium">90% to you</span>
+              <span className="text-muted-foreground text-xs self-center">10% to Patronage</span>
             </div>
             <div className="px-4 py-3 space-y-1">
               <div className="grid grid-cols-[1fr_auto] gap-4 text-sm">

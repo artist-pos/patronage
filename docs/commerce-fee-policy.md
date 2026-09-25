@@ -28,12 +28,13 @@ print.
 
 ```
 Patron pays:     $P + Stripe fee  (buyer pays gross-up)
-Patronage keeps: $P × 0.05       (5% commission)
-Artist receives: $P × 0.95
+Patronage keeps: $P × 0.10       (10% commission)
+Artist receives: $P × 0.90
 ```
 
-Support tiers (one-off and recurring) carry a 5% commission — lower than
-the resale rate to encourage artists to monetise their practice directly.
+Support tiers (one-off and recurring) carry a 10% commission — the same
+flat rate as primary and negotiated sales, so there is one number to explain
+(Sept 2026; previously 5%).
 
 ## Royalty routing
 

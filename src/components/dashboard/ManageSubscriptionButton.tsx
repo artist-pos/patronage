@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { openSupportCustomerPortal } from "@/app/support/actions";
+import { openSupportCustomerPortal } from "@/app/patrons/actions";
 
 export function ManageSubscriptionButton() {
   const [loading, setLoading] = useState(false);

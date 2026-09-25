@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Terms of Service — Patronage",
+  title: "Terms of Service",
   description: "Terms of Service for Patronage.",
 };
 
@@ -81,8 +81,8 @@ export default function TermsPage() {
 
         <p className="mt-3">
           <strong>Artist support tiers.</strong> Patrons can support artists through one-off
-          or recurring monthly payments. Patronage retains a 5% commission; the artist
-          receives the remaining 95% of the tier price. The card processing fee is added on
+          or recurring monthly payments. Patronage retains a 10% commission; the artist
+          receives the remaining 90% of the tier price. The card processing fee is added on
           top and disclosed in full before checkout.
         </p>
 
