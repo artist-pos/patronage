@@ -21,7 +21,7 @@ const COLUMNS: FooterColumn[] = [
   {
     label: "For Patrons",
     links: [
-      { text: "Support an artist", href: "/support" },
+      { text: "Support an artist", href: "/patrons" },
       { text: "Your collection", href: "/dashboard/collection" },
       { text: "Live campaigns", href: "/live" },
       { text: "Become a patron", href: "/auth/signup?role=patron" },
@@ -67,7 +67,7 @@ function Brand() {
       </div>
       <p className="mt-2 text-[13px] text-[color:var(--fg-muted)] leading-none">create anyway.</p>
       <p className="mt-3.5 max-w-[220px] text-[13px] leading-[1.65] text-[color:var(--fg-muted)]">
-        Connecting artists with opportunity in Aotearoa and beyond.
+        Connecting artists, organisations and opportunity in Aotearoa and beyond.
       </p>
     </div>
   );

@@ -6,9 +6,9 @@ import { ActivationTiles } from "@/components/partners/ActivationTiles";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Partners | Patronage",
+  title: "Partners",
   description:
-    "List opportunities for artists across Aotearoa and Australia, or work with us on activations: hoardings, billboards, and surfaces that turn existing budgets into commissioned public art.",
+    "List opportunities for artists in Aotearoa and beyond, or work with us on activations: hoardings, billboards, and surfaces that turn existing budgets into commissioned public art.",
 };
 
 export type ActivationType = {
@@ -218,9 +218,11 @@ export default async function PartnersPage() {
                 </p>
                 <div className="mb-6 border-l-2 border-brand py-1 pl-4">
                   <p className="text-sm leading-[1.6]">
-                    We designed WEL Networks&rsquo; utility box programme: 300 assets across
-                    Hamilton, artist fees structured by panel size, anti-graffiti coating
-                    positioned as asset management. That&rsquo;s what art strategy looks like.
+                    We designed a 30-box first tranche for an electricity distribution business,
+                    aimed at the highest-traffic corners of its ~300 street-level assets: artist
+                    fees set by panel size, an anti-graffiti coating treated as asset management,
+                    QR plates for condition reporting, and optional artist print sales. Proposal
+                    under review. That&rsquo;s what art strategy looks like.
                   </p>
                 </div>
                 <a

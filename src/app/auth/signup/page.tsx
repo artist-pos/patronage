@@ -3,15 +3,15 @@ import { cookies } from "next/headers";
 import { SIGNUP_CONTEXT_COOKIE, decodeSignupContext } from "@/lib/signup-context";
 import { AuthForm } from "@/components/auth/AuthForm";
 
-export const metadata = { title: "Create Account — Patronage" };
+export const metadata = { title: "Create Account" };
 
 const VALID_ROLES = ["artist", "patron", "partner"] as const;
 type Role = (typeof VALID_ROLES)[number];
 
 const ROLE_LABELS: Record<Role, string> = {
-  artist:  "Creative",
-  patron:  "Patron",
-  partner: "Partner",
+  artist:  "an artist",
+  patron:  "a supporter",
+  partner: "a partner organisation",
 };
 
 const ROLES = [
@@ -23,7 +23,7 @@ const ROLES = [
   {
     value: "patron" as const,
     label: "I support artists",
-    description: "Follow artists, collect work, discover new practices.",
+    description: "Follow artists, discover new work, and support what they make.",
   },
   {
     value: "partner" as const,
@@ -111,7 +111,7 @@ export default async function SignupPage({ searchParams }: Props) {
             Enter your details below to create your account
           </p>
           <p className="text-xs text-muted-foreground">
-            Joining as a {ROLE_LABELS[role]} ·{" "}
+            Joining as {ROLE_LABELS[role]} ·{" "}
             <Link href="/auth/signup" className="underline underline-offset-2 hover:text-foreground transition-colors">
               Change
             </Link>

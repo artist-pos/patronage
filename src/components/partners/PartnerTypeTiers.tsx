@@ -327,7 +327,7 @@ export function PartnerTypeTiers() {
                 </a>
               </div>
               <div className="bg-feed-bg p-[22px]">
-                <p className={MOCK_LABEL}>Impact report</p>
+                <p className={MOCK_LABEL}>Impact report · example</p>
                 <div className="bg-card p-4">
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>

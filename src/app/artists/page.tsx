@@ -1,8 +1,7 @@
 import { Suspense } from "react";
-import { unstable_cache } from "next/cache";
 import { getProfiles, getProfileById } from "@/lib/profiles";
 import { getServerUser } from "@/lib/supabase/get-server-user";
-import { createPublicClient } from "@/lib/supabase/public";
+import { getCachedDirectoryData } from "@/lib/artists-directory";
 import { HandleChips } from "@/components/artists/HandleChips";
 import { byCompleteness, isPresentable } from "@/lib/artist-completeness";
 import { ArtistCard } from "@/components/artists/ArtistCard";
@@ -10,73 +9,15 @@ import { ArtistFilters } from "@/components/artists/ArtistFilters";
 import { ArtistSpotlightHero } from "@/components/artists/ArtistSpotlightHero";
 import { AdminSpotlightMenu } from "@/components/artists/AdminSpotlightMenu";
 import { computeBadges, type BadgeSet } from "@/lib/badges";
+import type { WorkPreview } from "@/components/artists/ArtistCard";
 import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 import type { CountryEnum, CareerStageEnum, DisciplineEnum, ProfileWithImage } from "@/types/database";
 
 export const metadata = {
-  title: "Artists | Patronage",
+  title: "Artists",
   description: "Browse verified New Zealand and Australian artists.",
   alternates: { canonical: "https://patronage.nz/artists" },
 };
-
-// ── Cached directory extras — identical for every visitor, revalidated every
-// 5 min. Replaces two unbounded full-table artworks fetches per request.
-const getCachedDirectoryData = unstable_cache(
-  async (today: string) => {
-    const supabase = createPublicClient();
-    const [collectedResult, worksCountResult, blogSpotlightResult, profileSpotlightResult] =
-      await Promise.all([
-        // IDs of artists who have had at least one work transferred.
-        // PostgREST can't compare two columns in a filter — fetch both and
-        // compare in JS (a literal "creator_id" string was a uuid cast error).
-        supabase.from("artworks").select("creator_id, current_owner_id"),
-        // Works count per artist profile
-        supabase.from("artworks").select("profile_id"),
-        // Fallback spotlight from blog posts (legacy mechanism)
-        supabase
-          .from("blog_posts")
-          .select("featured_profile_id")
-          .eq("status", "published")
-          .not("featured_profile_id", "is", null)
-          .gte("spotlight_until", today)
-          .order("spotlight_until", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        // Admin-set spotlight (profiles.spotlight_until) — takes precedence
-        supabase
-          .from("profiles")
-          .select("id")
-          .gte("spotlight_until", today)
-          .order("spotlight_until", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-    const collectedIds = [...new Set(
-      (collectedResult.data ?? [])
-        .filter((r: { creator_id: string | null; current_owner_id: string | null }) =>
-          r.creator_id && r.current_owner_id && r.current_owner_id !== r.creator_id)
-        .map((r: { creator_id: string | null }) => r.creator_id as string)
-    )];
-
-    const worksCounts: Record<string, number> = {};
-    for (const row of worksCountResult.data ?? []) {
-      const r = row as { profile_id: string };
-      worksCounts[r.profile_id] = (worksCounts[r.profile_id] ?? 0) + 1;
-    }
-
-    return {
-      collectedIds,
-      worksCounts,
-      spotlightProfileId:
-        profileSpotlightResult.data?.id ??
-        blogSpotlightResult.data?.featured_profile_id ??
-        null,
-    };
-  },
-  ["artists-directory-v1"],
-  { revalidate: 300, tags: ["artists-directory"] }
-);
 
 interface PageProps {
   searchParams: Promise<{ country?: string; stage?: string; discipline?: string; view?: string; commissions?: string }>;
@@ -89,16 +30,18 @@ function DirectoryRow({
   isAdmin,
   spotlightProfileId,
   badges,
+  works,
 }: {
   artist: ProfileWithImage;
   isAdmin: boolean;
   spotlightProfileId: string | null;
   badges: BadgeSet;
+  works?: WorkPreview[];
 }) {
   return (
     <div className="flex items-stretch">
       <div className="min-w-0 flex-1">
-        <ArtistCard artist={artist} view="list" badges={badges} />
+        <ArtistCard artist={artist} view="list" badges={badges} works={works} />
       </div>
       {isAdmin && (
         <div className="flex items-center border-b border-border bg-card pr-1.5">
@@ -122,12 +65,14 @@ function ArtistTier({
   isAdmin,
   spotlightProfileId,
   badgesFor,
+  worksFor,
 }: {
   artists: ProfileWithImage[];
   cardView: "list" | "gallery";
   isAdmin: boolean;
   spotlightProfileId: string | null;
   badgesFor: (artist: ProfileWithImage) => BadgeSet;
+  worksFor: (artist: ProfileWithImage) => WorkPreview[] | undefined;
 }) {
   if (cardView === "gallery") {
     return (
@@ -147,6 +92,7 @@ function ArtistTier({
           isAdmin={isAdmin}
           spotlightProfileId={spotlightProfileId}
           badges={badgesFor(artist)}
+          works={worksFor(artist)}
         />
       ))}
     </div>
@@ -163,7 +109,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const [artists, { collectedIds, worksCounts, spotlightProfileId }, { user }] = await Promise.all([
+  const [artists, { collectedIds, worksCounts, worksPreviews, spotlightProfileId }, { user }] = await Promise.all([
     getProfiles({ country, career_stage, discipline, openForCommissions }),
     getCachedDirectoryData(today),
     getServerUser(),
@@ -202,6 +148,12 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const recentlyJoined = domesticArtists.filter((a) => !isPresentable(a));
   const internationalDirectory = internationalArtists.filter(isPresentable).sort(byCompleteness);
   const internationalHandles = internationalArtists.filter((a) => !isPresentable(a));
+
+  // Artists with three works on their profile show them in their row.
+  const worksFor = (artist: ProfileWithImage) => {
+    const w = worksPreviews[artist.id] ?? [];
+    return w.length >= 3 ? w : undefined;
+  };
 
   const badgesFor = (artist: ProfileWithImage) =>
     computeBadges(
@@ -277,6 +229,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
                     isAdmin={isAdmin}
                     spotlightProfileId={spotlightProfileId}
                     badgesFor={badgesFor}
+                    worksFor={worksFor}
                   />
                 </div>
               )}
@@ -300,6 +253,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
                       isAdmin={isAdmin}
                       spotlightProfileId={spotlightProfileId}
                       badgesFor={badgesFor}
+                      worksFor={worksFor}
                     />
                   )}
                   {internationalHandles.length > 0 && (

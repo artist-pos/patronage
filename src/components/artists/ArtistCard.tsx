@@ -17,6 +17,13 @@ interface Props {
   /** Replaces the default "city, country" line, e.g. with the taxonomy town on
    *  a regional page where the freeform text an artist typed can be long. */
   locationText?: string | null;
+  /** Up to three works shown in the list row (directory previews). */
+  works?: WorkPreview[];
+}
+
+export interface WorkPreview {
+  src: string;
+  title: string | null;
 }
 
 /* v2 achievement badges — mono 9px/600, tinted bg, square */
@@ -55,7 +62,7 @@ function CommissionsDot() {
   );
 }
 
-export function ArtistCard({ artist, view = "gallery", compact = false, badges, locationText }: Props) {
+export function ArtistCard({ artist, view = "gallery", compact = false, badges, locationText, works }: Props) {
   const displayName = artist.full_name ?? artist.username;
   const location = locationText !== undefined ? locationText : locationLabel(artist);
 
@@ -155,6 +162,24 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
           </div>
           {badges && <SecondaryBadges badges={badges} />}
         </div>
+
+        {/* Three works — shown for artists with a full set, so the directory
+            shows the work, not just names. Plain <img>: variable ratios. */}
+        {works && (
+          <div className="flex shrink-0 gap-1">
+            {works.map((w, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={w.src}
+                alt={w.title ?? `Work by ${displayName}`}
+                loading="lazy"
+                decoding="async"
+                className="h-12 w-12 bg-muted object-cover sm:h-14 sm:w-14"
+              />
+            ))}
+          </div>
+        )}
 
         {/* Medium tags */}
         <div className="hidden max-w-[40%] shrink-0 flex-wrap justify-end gap-1 sm:flex">

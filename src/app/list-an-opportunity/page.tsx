@@ -4,7 +4,7 @@ import { getServerUser } from "@/lib/supabase/get-server-user";
 import { OpportunityTipForm } from "@/components/opportunities/OpportunityTipForm";
 
 export const metadata: Metadata = {
-  title: "List an opportunity | Patronage",
+  title: "List an opportunity",
   description:
     "Three ways to get an opportunity in front of artists in Aotearoa and Australia: a free listing, a managed application pipeline, or a tip about a listing you found somewhere else.",
 };
@@ -91,7 +91,7 @@ export default async function ListAnOpportunityPage() {
           <p className="t-section-label mb-4">What you get</p>
           <Points
             items={[
-              "A page in the directory, in search, and on the discipline hubs",
+              "A page in the directory and search, and on the grants, residencies, open calls, prizes or jobs page that fits",
               "Included in the weekly digest emailed to artists",
               "Artists can save it and track their application",
               "View tracking, so you can see the reach",
@@ -131,7 +131,7 @@ export default async function ListAnOpportunityPage() {
           <p className="t-caption mt-3">
             {pipelineFirstRoundUsed
               ? "Charged per round, plus the card processing fee."
-              : "After your first round it’s $200 NZD per round."}
+              : "After your first round it’s $200 NZD per round, plus the card processing fee."}
           </p>
         </div>
         <div className="bg-feed-bg p-6">
@@ -173,7 +173,7 @@ export default async function ListAnOpportunityPage() {
             items={[
               "No account, and nothing to fill in on the organiser's behalf",
               "We check it, write it up, and publish it if it fits",
-              "Open to artists in Aotearoa or Australia, which is the only bar",
+              "Open to artists in Aotearoa, which is the only bar",
             ]}
           />
         </div>

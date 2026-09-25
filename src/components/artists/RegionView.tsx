@@ -191,7 +191,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
 
         <div className="flex flex-col items-start gap-3 bg-card p-6">
           <p className="text-[15px] leading-[1.5]">
-            Are you an organisation in {region.name}? Create your free Patronage profile.
+            Are you an organisation in {region.name}? Partner with us.
           </p>
           <RegionTrackedLink
             href="/auth/signup?role=partner"
@@ -201,7 +201,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
             signupContext={{ source: "regional_page", regionId: region.id }}
             className="inline-flex items-center border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
           >
-            Create an organisation profile →
+            Create a partner organisation profile →
           </RegionTrackedLink>
         </div>
       </section>

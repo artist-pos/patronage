@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, cache, type ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,8 +17,8 @@ import { StructuredDescription } from "@/components/opportunities/DescriptionAcc
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ShareTrigger } from "@/components/share/ShareTrigger";
-import { SendToFriendButton } from "@/components/opportunities/SendToFriendButton";
+import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
+import { OpportunityShareMenu } from "@/components/opportunities/OpportunityShareMenu";
 import { OpportunitySignupBanner } from "@/components/opportunities/OpportunitySignupBanner";
 import {
   ClosedOpportunityRecovery,
@@ -69,13 +69,16 @@ function relatedDeadline(deadline: string | null): { label: string; cls: string 
 }
 
 // Key-fact cell — label over value, vertical hairline between cells (no box)
+// Mobile: a compact two-column spec list (label | value), one line per fact.
+// sm and up: the facts sit in a row divided by hairlines. On mobile the
+// wrapper is display:contents so label and value land in the parent grid.
 function Fact({ label, value, urgent = false }: { label: string; value: ReactNode; urgent?: boolean }) {
   return (
-    <div className="mr-8 border-r border-border pr-8 last:mr-0 last:border-r-0 last:pr-0">
-      <div className="mb-[5px] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+    <div className="contents sm:mr-8 sm:block sm:border-r sm:border-border sm:pr-8 sm:last:mr-0 sm:last:border-r-0 sm:last:pr-0">
+      <div className="pt-[3px] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)] sm:mb-[5px] sm:pt-0">
         {label}
       </div>
-      <div className={`text-base font-semibold ${urgent ? "text-[color:var(--urgent)]" : ""}`}>
+      <div className={`text-[14px] font-medium leading-snug sm:text-base sm:font-semibold ${urgent ? "text-[color:var(--urgent)]" : ""}`}>
         {value}
       </div>
     </div>
@@ -156,7 +159,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const opp = await getOpportunityById(id);
-  if (!opp) return { title: "Opportunity not found | Patronage" };
+  if (!opp) return { title: "Opportunity not found" };
 
   const rawDescription = opp.caption ?? opp.description ?? opp.full_description ?? null;
   const description = rawDescription
@@ -188,7 +191,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       .filter(Boolean)
       .join(" · ") || description;
 
-  const title = `${opp.title}, ${opp.organiser} | Patronage`;
+  const title = `${opp.title}, ${opp.organiser}`;
+  const shareTitle = `${title} | Patronage`;
   const canonicalPath = `/opportunities/${opp.slug ?? opp.id}`;
 
   // og:image is intentionally left to the route's opengraph-image.tsx, which
@@ -199,7 +203,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: { canonical: canonicalPath },
     openGraph: {
-      title,
+      title: shareTitle,
       description: shareDescription,
       url: canonicalPath,
       type: "website",
@@ -208,7 +212,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: shareTitle,
       description: shareDescription,
     },
   };
@@ -216,61 +220,76 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
+// Secondary actions (Save, Share) share one look so the action bar lines up
+// with the 44px apply button beside it.
+const ACTION_BTN =
+  "inline-flex h-[44px] items-center gap-2 border border-border px-4 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground aria-pressed:border-foreground aria-pressed:text-foreground";
+
 function SaveButtonSkeleton() {
-  return <div className="w-4 h-4 rounded bg-muted animate-pulse" aria-hidden="true" />;
+  return <div className="h-[44px] w-[84px] bg-muted animate-pulse" aria-hidden="true" />;
 }
 
 function CTASkeleton() {
   return <div className="h-12 w-48 bg-muted animate-pulse" aria-hidden="true" />;
 }
 
-// ─── Island 1: Header actions (admin controls + save button) ──────────────────
-// Calls cookies() via createClient() — lives inside a <Suspense> boundary.
+// ─── Viewer state ─────────────────────────────────────────────────────────────
+// Save, admin and apply islands each render in more than one place, so the
+// per-viewer lookups run once per request here and are shared (React.cache).
+// Calls cookies() — only ever awaited inside <Suspense> islands.
 
-async function HeaderActions({
-  opportunityId,
-  opp,
-}: {
-  opportunityId: string;
-  opp: Opportunity;
-}) {
+const getViewerState = cache(async (opportunityId: string) => {
   const { supabase, user } = await getServerUser();
+  if (!user) return { user: null, role: null as string | null, isSaved: false, hasApplied: false };
 
-  let isSaved = false;
-  let adminUser = false;
+  const [savedResult, profileResult, appResult] = await Promise.all([
+    supabase
+      .from("user_saved_opportunities")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("opportunity_id", opportunityId)
+      .maybeSingle(),
+    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("opportunity_applications")
+      .select("id")
+      .eq("opportunity_id", opportunityId)
+      .eq("artist_id", user.id)
+      .maybeSingle(),
+  ]);
+  return {
+    user,
+    role: (profileResult.data?.role ?? null) as string | null,
+    isSaved: !!savedResult.data,
+    hasApplied: !!appResult.data,
+  };
+});
 
-  if (user) {
-    const [savedResult, profileResult] = await Promise.all([
-      supabase
-        .from("user_saved_opportunities")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("opportunity_id", opportunityId)
-        .single(),
-      supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single(),
-    ]);
-    isSaved = !!savedResult.data;
-    adminUser =
-      profileResult.data?.role === "admin" ||
-      profileResult.data?.role === "owner";
-  }
+// ─── Island 1a: Admin controls (breadcrumb row) ───────────────────────────────
 
+async function AdminActions({ opp }: { opp: Opportunity }) {
+  const { role } = await getViewerState(opp.id);
+  if (role !== "admin" && role !== "owner") return null;
   return (
     <>
-      {adminUser && <AdminRejectButton id={opp.id} />}
-      {adminUser && <AdminEditOpportunityModal opp={opp} />}
-      <SaveButton
-        opportunityId={opp.id}
-        initialSaved={isSaved}
-        saveCount={0}
-        showCount={false}
-        isAuthenticated={!!user}
-      />
+      <AdminRejectButton id={opp.id} />
+      <AdminEditOpportunityModal opp={opp} />
     </>
+  );
+}
+
+// ─── Island 1b: Save (action bar) ─────────────────────────────────────────────
+
+async function SaveAction({ opp }: { opp: Opportunity }) {
+  const { user, isSaved } = await getViewerState(opp.id);
+  return (
+    <SaveButton
+      opportunityId={opp.id}
+      initialSaved={isSaved}
+      isAuthenticated={!!user}
+      variant="button"
+      className={ACTION_BTN}
+    />
   );
 }
 
@@ -321,45 +340,30 @@ async function UserCTA({
   opportunityId: string;
   opp: Opportunity;
 }) {
-  const { supabase, user } = await getServerUser();
+  const { user, role: userRole, hasApplied } = await getViewerState(opportunityId);
 
   if (!user) {
     const returnTo = `/opportunities/${opp.slug ?? opp.id}`;
     return (
-      <Link
+      <TrackedNavLink
         href={`/auth/signup?role=artist&next=${encodeURIComponent(returnTo)}`}
+        event="opportunity_apply_click"
+        props={{ opportunity_id: opp.id, route: "patronage", signed_in: "false" }}
         className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
       >
-        Sign up as an artist to apply →
-      </Link>
+        Apply through Patronage →
+      </TrackedNavLink>
     );
   }
 
   const isJobOpportunity = opp.type === "Job / Employment";
 
-  // Just enough to decide which of four states to show — the actual apply
-  // page (/opportunities/[id]/apply) does its own full fetch server-side,
-  // so there's no need to duplicate the profile/works queries here too.
-  const [appResult, profileResult] = await Promise.all([
-    supabase
-      .from("opportunity_applications")
-      .select("id")
-      .eq("opportunity_id", opportunityId)
-      .eq("artist_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle(),
-  ]);
-
-  const existingApplication = appResult.data ?? null;
-  const userRole = profileResult.data?.role ?? null;
+  // Just enough to decide which state to show — the apply page
+  // (/opportunities/[id]/apply) does its own full fetch server-side.
   const isArtist = userRole === "artist" || userRole === "owner";
   const canApply = isArtist || (userRole === "patron" && isJobOpportunity);
 
-  if (existingApplication) {
+  if (hasApplied) {
     return (
       <div className="space-y-1">
         <p className="text-sm text-muted-foreground">
@@ -630,6 +634,30 @@ export default async function OpportunityPage({ params }: Props) {
     ],
   };
 
+  // The apply action, rendered twice: in the action bar under the key facts,
+  // and again once the reader reaches the end of the description.
+  const renderApply = () =>
+    isPipeline ? (
+      <Suspense fallback={<CTASkeleton />}>
+        <UserCTA opportunityId={opp.id} opp={opp} />
+      </Suspense>
+    ) : applyLinks.length > 0 ? (
+      <ExternalApplyCTASection
+        applyLinks={applyLinks}
+        opportunityId={opp.id}
+        title={opp.title}
+        organiser={opp.organiser}
+        isAuthenticated={!!viewerUser}
+      />
+    ) : opp.contact_email ? (
+      <a
+        href={`mailto:${opp.contact_email}`}
+        className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
+      >
+        Apply via email →
+      </a>
+    ) : null;
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 pb-16 pt-[18px]">
       <script
@@ -671,13 +699,8 @@ export default async function OpportunityPage({ params }: Props) {
           </ol>
         </nav>
         <div className="flex items-center gap-2 shrink-0">
-          <ShareTrigger
-            payload={sharePayload}
-            variant="button"
-            className="flex items-center gap-1.5 border border-border px-3 py-[7px] font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
-          />
-          <Suspense fallback={<SaveButtonSkeleton />}>
-            <HeaderActions opportunityId={opp.id} opp={opp} />
+          <Suspense fallback={null}>
+            <AdminActions opp={opp} />
           </Suspense>
         </div>
       </div>
@@ -764,7 +787,7 @@ export default async function OpportunityPage({ params }: Props) {
       )}
 
       {/* ── Key facts — no box, vertical hairlines only (per handoff) ───── */}
-      <div className="mb-5 flex flex-wrap gap-y-4">
+      <div className="mb-5 grid grid-cols-[104px_minmax(0,1fr)] gap-x-3 gap-y-2.5 border-y border-border py-3.5 sm:flex sm:flex-wrap sm:gap-y-4 sm:border-0 sm:py-0">
         {fundingLabel && <Fact label="Funding" value={fundingLabel} />}
         {opp.opens_at && (
           <Fact
@@ -811,10 +834,43 @@ export default async function OpportunityPage({ params }: Props) {
 
       {/* ── Social proof — DYNAMIC (save count + trending badge) ────────── */}
       {/* fallback=null: this line is decorative; no layout shift risk */}
-      <div className="mb-7">
+      <div className="mb-5">
         <Suspense fallback={null}>
           <SocialProof opportunityId={opp.id} viewCount={opp.view_count} />
         </Suspense>
+      </div>
+
+      {/* ── Action bar — apply, save, share, above the fold ────────────── */}
+      <div className="mb-9">
+        <div className="flex flex-wrap items-start gap-2">
+          {renderApply()}
+          <Suspense fallback={<SaveButtonSkeleton />}>
+            <SaveAction opp={opp} />
+          </Suspense>
+          <OpportunityShareMenu
+            opportunityId={opp.id}
+            title={opp.title}
+            url={canonicalUrl}
+            location={location}
+            type={opp.type}
+            value={fundingLabel}
+            deadline={deadline}
+            payload={sharePayload}
+            className={ACTION_BTN}
+          />
+        </div>
+        {/* What applying involves, stated plainly: the profile is reused, the
+            opportunity-specific material is still the artist’s to write. */}
+        {isPipeline && (
+          <div className="mt-5 max-w-[560px] border-l-2 border-border pl-4">
+            <p className="text-[13.5px] font-medium">Build your application record</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">
+              Add your bio, CV and work to your profile once, and use it across opportunities on
+              Patronage. For each application, choose the material relevant to that opportunity and
+              add anything specific it asks for.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Description — STATIC ────────────────────────────────────────── */}
@@ -836,63 +892,27 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       )}
 
-      {/* ── CTA section ─────────────────────────────────────────────────── */}
-      {/* Pipeline: dynamic — shows apply / already-applied / sign-in prompt */}
-      {/* External: static — plain link, no user data needed               */}
-      {isPipeline ? (
-        <div className="flex flex-wrap items-center gap-4">
-          <Suspense fallback={<CTASkeleton />}>
-            <UserCTA opportunityId={opp.id} opp={opp} />
-          </Suspense>
-          {opp.pipeline_config?.terms_pdf_url && (
-            <a
-              href={opp.pipeline_config.terms_pdf_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm underline underline-offset-2 text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
-            >
-              View documents →
-            </a>
-          )}
-        </div>
-      ) : applyLinks.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <ExternalApplyCTASection
-            applyLinks={applyLinks}
-            opportunityId={opp.id}
-            title={opp.title}
-            organiser={opp.organiser}
-            isAuthenticated={!!viewerUser}
-          />
-          {opp.contact_email && (
-            <a
-              href={`mailto:${opp.contact_email}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-            >
-              {opp.contact_email}
-            </a>
-          )}
-        </div>
-      ) : opp.contact_email ? (
-        <a
-          href={`mailto:${opp.contact_email}`}
-          className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
-        >
-          Apply via email →
-        </a>
-      ) : null}
-
-      {/* ── Send to a friend — a primary action, not a menu item. No auth. ─ */}
-      <div className="mt-4">
-        <SendToFriendButton
-          opportunityId={opp.id}
-          title={opp.title}
-          url={canonicalUrl}
-          location={location}
-          type={opp.type}
-          value={fundingLabel}
-          deadline={deadline}
-        />
+      {/* ── Apply again at the end of the description ─────────────────── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        {renderApply()}
+        {isPipeline && opp.pipeline_config?.terms_pdf_url && (
+          <a
+            href={opp.pipeline_config.terms_pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm underline underline-offset-2 text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
+          >
+            View documents →
+          </a>
+        )}
+        {!isPipeline && applyLinks.length > 0 && opp.contact_email && (
+          <a
+            href={`mailto:${opp.contact_email}`}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            {opp.contact_email}
+          </a>
+        )}
       </div>
 
       {/* ── Closed listing: live alternatives instead of a dead end ──────── */}
