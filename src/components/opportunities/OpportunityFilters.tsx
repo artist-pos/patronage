@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import {
@@ -208,7 +209,10 @@ export function OpportunityFilters() {
           )}
         </button>
 
-        {mobileOpen && (
+        {/* Portalled to <body>: the page's sticky control bar uses backdrop-blur,
+            which makes it the containing block for fixed children, so rendered
+            in place the drawer was trapped inside the bar, under the results. */}
+        {mobileOpen && createPortal(
           <div
             className="fixed inset-0 z-50 bg-white/20 backdrop-blur-md"
             onClick={() => setMobileOpen(false)}
@@ -230,7 +234,8 @@ export function OpportunityFilters() {
               </div>
               {panel}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </>

@@ -6,6 +6,7 @@ import { canKeepRoster, orgCategory } from "@/lib/org-categories";
 import { RosterManager, type RosterEntry } from "./RosterManager";
 import { InviteUpload } from "./InviteUpload";
 import { InviteCopyEditor } from "./InviteCopyEditor";
+import { OrgJoinLink } from "./OrgJoinLink";
 import { defaultInviteCopy } from "@/lib/email";
 import { getLocalBoards } from "@/lib/regions";
 import type { Metadata } from "next";
@@ -70,7 +71,7 @@ export default async function PartnerRosterPage() {
   // The roster, if one has been opened, and the invitation funnel. Independent
   // reads, so they go together.
   const showRegion = profile.org_category === "regional_arts_org" && !!profile.region_id;
-  const [{ data: rosterRow }, { data: inviteRows }, { data: regionRows }, allBoards] = await Promise.all([
+  const [{ data: rosterRow }, { data: inviteRows }, { data: regionRows }, allBoards, { count: linkJoins }] = await Promise.all([
     admin
       .from("collectives")
       .select("id, name, relationship, is_public")
@@ -94,7 +95,14 @@ export default async function PartnerRosterPage() {
           .limit(300)
       : Promise.resolve({ data: [] }),
     showRegion ? getLocalBoards() : Promise.resolve([]),
+    // Profiles made through the open onboarding link (/{username}/join).
+    admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("invited_by_org_id", profile.id)
+      .eq("signup_source", "org_link"),
   ]);
+  const joinUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/${profile.username}/join`;
   const regionArtists = (regionRows ?? []) as Array<{
     id: string;
     username: string;
@@ -216,6 +224,27 @@ export default async function PartnerRosterPage() {
       {keepsRoster && !roster && (
         <RosterManager entries={[]} isAlumni={isAlumni} rosterNoun={category?.rosterNoun ?? "artist"} />
       )}
+
+      <section className="space-y-4 border-t border-border pt-10">
+        <div className="space-y-2">
+          <h2 className="text-[17px] font-semibold leading-[1.3]">
+            Share your onboarding link
+          </h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            For the artists you don&apos;t have an email for. Put it in a newsletter,
+            a group chat or your bio. Anyone who joins through it signs up as an
+            artist{profile.regions?.name ? ` in ${profile.regions.name}` : ""}, sees
+            that {profile.full_name ?? profile.username} invited them, and is counted
+            here.
+          </p>
+        </div>
+        <OrgJoinLink url={joinUrl} />
+        {(linkJoins ?? 0) > 0 && (
+          <p className="text-sm text-[color:var(--fg-muted)]">
+            {linkJoins} artist{linkJoins === 1 ? " has" : "s have"} joined through your link.
+          </p>
+        )}
+      </section>
 
       <section className="space-y-5 border-t border-border pt-10">
         <div className="space-y-2">

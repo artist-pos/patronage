@@ -36,19 +36,23 @@ const TEXT_LINK =
 
 // Hero photo and the theme tuned to it: a light, soft macro, so the frosted
 // panels read as paler glass edged by a soft shadow.
+// Hero photo: Xinyi Zhang's "lived and loved before sunrise", a pale soft
+// macro, so the frosted panels read as paler glass edged by a soft shadow.
+// The photo is near-white, so the credit is grey rather than white.
 const PHOTO = {
-  src: "/images/hero-blur.webp",
-  width: 1600,
-  height: 1600,
-  base: "bg-[#E9E6DF]",
+  src: "/images/hero-blur-2.webp",
+  width: 2000,
+  height: 2000,
+  base: "bg-[#F3F1EC]",
   glass:
     "border border-white/60 bg-white/55 shadow-[0_8px_40px_rgba(0,0,0,0.14)] backdrop-blur-2xl backdrop-saturate-150",
   muted: "text-[color:var(--fg-muted)]",
   statN: "text-foreground",
   statL: "text-[color:var(--fg-muted)]",
-  credit: "text-white/85 hover:text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]",
+  credit: "text-[color:var(--fg-muted)] hover:text-foreground",
   label: "text-[#B23A2E]",
 } as const;
+const PHOTO_CREDIT = { title: "lived and loved before sunrise", artist: "心怡 Xinyi Zhang", href: "/ceciliazhang0329" };
 
 // The headline rolls through what each audience comes here to find; the body
 // splits into the offer line and the profile-link caption around {url}.
@@ -215,12 +219,11 @@ export default async function Home() {
         />
         {/* Photo credit, bottom-right on the photo. */}
         <Link
-          href="/ceciliazhang0329"
-          title="Background photo by 心怡 / Xinyi Zhang"
+          href={PHOTO_CREDIT.href}
           className={`absolute bottom-[70px] right-6 z-10 text-[11px] underline-offset-4 transition-colors hover:underline sm:right-12 ${photo.credit}`}
         >
-          <span className="sr-only">Background photo by </span>
-          心怡 / Xinyi Zhang
+          <span className="sr-only">Background photo: </span>
+          <i>{PHOTO_CREDIT.title}</i>, {PHOTO_CREDIT.artist}
         </Link>
         <div className="relative mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-12 px-6 pb-[110px] pt-[101px] sm:px-12 lg:grid-cols-[5fr_4fr] lg:gap-20 lg:pb-[86px] lg:pt-[85px]">
         <div className="flex flex-col justify-between">
