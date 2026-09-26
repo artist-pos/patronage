@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { X } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   onClose: () => void;
@@ -13,6 +15,10 @@ export function UnauthSaveModal({ onClose }: Props) {
   // Link straight to the form and come back to the page they were saving from.
   const pathname = usePathname();
   const next = encodeURIComponent(pathname ?? "/opportunities");
+
+  useEffect(() => {
+    trackEvent("save_signup_modal_view", {});
+  }, []);
 
   return (
     <div
@@ -28,11 +34,12 @@ export function UnauthSaveModal({ onClose }: Props) {
         </div>
         <div className="p-5 space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Create a free Patronage account to save grants, residencies, and open calls, and track them in your personal dashboard with deadline reminders.
+            Create a free Patronage account to save the opportunities you want to come back to.
           </p>
           <div className="flex flex-col gap-2">
             <Link
               href={`/auth/signup?role=artist&next=${next}`}
+              onClick={() => trackEvent("save_signup_modal_click", {})}
               className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
             >
               Create account →

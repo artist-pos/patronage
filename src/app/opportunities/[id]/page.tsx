@@ -403,8 +403,6 @@ async function SignupBannerIsland({
       opportunityId={opp.id}
       returnTo={`/opportunities/${opp.slug ?? opp.id}`}
       disciplines={opp.sub_categories}
-      city={opp.city}
-      country={opp.country}
       placement={placement}
     />
   );

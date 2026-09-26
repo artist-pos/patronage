@@ -3,15 +3,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const PATRONAGE_USERNAME = "patronagenz";
 
 const WELCOME_MESSAGES: Record<string, string> = {
-  artist: `Welcome to Patronage. A few things worth doing first:
+  // In Blake's voice, sent from @patronagenz. Points at the For you page they've
+  // just landed on; studio updates and provenance can wait until later.
+  artist: `Welcome to Patronage, you're all set.
 
-— Add a few works to your portfolio
-— Check the opportunities board for open deadlines
-— Post a studio update if you have something in progress
+I built Patronage to make finding opportunities to apply for a little easier. Your For you page is now matched to what you make.
 
-When you sell or gift a work, you can mark it as collected and credit the new owner — they'll get a provenance link to verify ownership.
+A few things worth doing:
 
-If you have questions or feedback, reply here — this is a real inbox.`,
+— Add where you're based
+— Add a few works to your profile
+— Add your exhibition history, awards and press
+— Save opportunities you want to come back to
+
+If you get stuck, reply here. This is a real inbox and I read it.
+
+— Blake`,
 
   patron: `Welcome to Patronage. Here's how to get started:
 

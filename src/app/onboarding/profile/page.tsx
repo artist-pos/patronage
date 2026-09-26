@@ -18,11 +18,11 @@ export const metadata = { title: "Set Up Your Profile" };
  * straight to their dashboard from the role step.
  */
 interface Props {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; signup?: string }>;
 }
 
 export default async function OnboardingProfilePage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  const { next, signup } = await searchParams;
   const resume =
     next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/onboarding")
       ? next
@@ -41,8 +41,11 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
   if (!isArtist) redirect("/dashboard");
 
   // Already answered — this step is not a place to come back to.
+  // signup=1 rides along so the client still captures signup_completed —
+  // popup signups arrive with both answered and never see this step.
   if (profile.disciplines?.length && profile.full_name?.trim()) {
-    redirect(resume ?? "/opportunities?tab=for-you");
+    const dest = resume ?? "/opportunities?tab=for-you";
+    redirect(signup === "1" ? `${dest}${dest.includes("?") ? "&" : "?"}signup=1` : dest);
   }
 
   const seeded = profile as Profile & { city_id?: string | null; region_id?: string | null; local_board_id?: string | null };
