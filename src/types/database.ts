@@ -1163,32 +1163,6 @@ export interface OpportunityCollaborator {
   } | null;
 }
 
-// ── Migration 052: Community chat ────────────────────────────────────────────
-
-export interface ChatChannel {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  sort_order: number;
-  created_at: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  channel_id: string;
-  sender_id: string | null;
-  body: string | null;
-  attachment_type: 'studio_update' | null;
-  attachment_id: string | null;
-  attachment_meta: {
-    title: string;
-    project_title: string;
-    artist_name: string;
-  } | null;
-  created_at: string;
-}
-
 // ── Migration 052: Embed config type ─────────────────────────────────────────
 
 export interface PatronEmbedConfig {
