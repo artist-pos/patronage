@@ -114,10 +114,10 @@ export async function generateMetadata({ params }: Props) {
     title: pageTitle,
     description,
     alternates: { canonical: profileUrl },
-    // An unclaimed shadow profile (e.g. a local board org created ahead of
-    // being claimed) has no real content yet — index it once someone has
-    // actually filled it in, not while it's a placeholder.
-    ...(profile.account_status === "shadow" && { robots: { index: false } }),
+    // An unclaimed shadow profile (e.g. a regional org created ahead of being
+    // claimed) is indexed once it has a bio — the same rule the organisations
+    // sitemap uses. An empty placeholder stays out of search.
+    ...(profile.account_status === "shadow" && !profile.bio?.trim() && { robots: { index: false } }),
     openGraph: {
       title,
       description,
