@@ -75,7 +75,11 @@ export async function updateOpportunityPartner(
   if ("organiser_profile_id" in updateData) {
     const wanted = updateData.organiser_profile_id;
     const allowed = !!wanted && (wanted === user.id || (await isAdmin()));
-    updateData.organiser_profile_id = allowed ? await validPartnerProfileId(wanted) : null;
+    const resolvedPid = allowed ? await validPartnerProfileId(wanted) : null;
+    updateData.organiser_profile_id = resolvedPid;
+    if (resolvedPid && (await isAdmin())) {
+      (updateData as Record<string, unknown>).profile_id = resolvedPid;
+    }
   }
 
   // Drop blank link rows the editor keeps around for in-progress typing.

@@ -129,7 +129,10 @@ export async function updateQueueOpportunity(
       title: fields.title.trim(),
       organiser: fields.organiser.trim(),
       ...("organiser_profile_id" in fields
-        ? { organiser_profile_id: await validPartnerProfileId(fields.organiser_profile_id) }
+        ? await (async () => {
+            const pid = await validPartnerProfileId(fields.organiser_profile_id);
+            return { organiser_profile_id: pid, ...(pid ? { profile_id: pid } : {}) };
+          })()
         : {}),
       caption: fields.caption?.trim() || null,
       type: fields.type,
