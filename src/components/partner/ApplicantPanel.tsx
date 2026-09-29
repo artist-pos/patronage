@@ -38,6 +38,7 @@ interface Artist {
   exhibition_history: Array<{ type: "Solo" | "Group"; title: string; venue: string; location: string; year: number }> | null;
   received_grants: string[] | null;
   is_patronage_supported: boolean;
+  email?: string | null;
 }
 
 interface Artwork {
@@ -125,6 +126,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
   const [loadingDownload, setLoadingDownload] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ val: string; label: string } | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [selectionMessage, setSelectionMessage] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>("application");
 
@@ -154,10 +156,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
   const prevApp = currentIdx > 0 ? allApps?.[currentIdx - 1] : null;
   const nextApp = allApps && currentIdx < allApps.length - 1 ? allApps[currentIdx + 1] : null;
 
-  async function applyStatusChange(newStatus: string, reason?: string) {
+  async function applyStatusChange(newStatus: string, reason?: string, message?: string) {
     const previousStatus = status;
     setSaving(true);
-    const result = await updateApplicationStatus(application.id, newStatus as Parameters<typeof updateApplicationStatus>[1], reason);
+    const result = await updateApplicationStatus(application.id, newStatus as Parameters<typeof updateApplicationStatus>[1], reason, message);
     setSaving(false);
     if (result.error) {
       setToast("Error: " + result.error);
@@ -240,6 +242,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   <span>{[artist?.city, artist?.country].filter(Boolean).join(", ")}</span>
                 )}
                 {artist?.username && <span>@{artist.username}</span>}
+                {artist?.email && <span className="select-all">{artist.email}</span>}
                 <Link href={`/${artist?.username}`} target="_blank"
                   className="hover:text-foreground transition-colors flex items-center gap-0.5">
                   View public profile ↗
@@ -604,13 +607,25 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 placeholder="Reason for not selecting (sent to artist — optional)"
                 rows={3} className="w-full text-sm border border-black/20 px-3 py-2 resize-none focus:outline-none focus:border-black" />
             )}
+            {confirmAction.val === "selected" && (
+              <textarea value={selectionMessage} onChange={(e) => setSelectionMessage(e.target.value)}
+                placeholder="Personal message to the artist (optional — included in the selection email)"
+                rows={3} className="w-full text-sm border border-black/20 px-3 py-2 resize-none focus:outline-none focus:border-black" />
+            )}
             <div className="flex gap-3">
-              <button type="button" onClick={() => { const r = confirmAction.val === "rejected" ? rejectionReason : undefined; setConfirmAction(null); setRejectionReason(""); applyStatusChange(confirmAction.val, r); }}
+              <button type="button" onClick={() => {
+                const r = confirmAction.val === "rejected" ? rejectionReason : undefined;
+                const m = confirmAction.val === "selected" ? selectionMessage : undefined;
+                setConfirmAction(null);
+                setRejectionReason("");
+                setSelectionMessage("");
+                applyStatusChange(confirmAction.val, r, m);
+              }}
                 disabled={saving}
                 className="flex-1 text-sm px-4 py-2 bg-black text-white hover:bg-black/80 transition-colors disabled:opacity-50">
                 {saving ? "Saving…" : "Confirm"}
               </button>
-              <button type="button" onClick={() => { setConfirmAction(null); setRejectionReason(""); }}
+              <button type="button" onClick={() => { setConfirmAction(null); setRejectionReason(""); setSelectionMessage(""); }}
                 className="flex-1 text-sm px-4 py-2 border border-black/20 hover:border-black transition-colors">
                 Cancel
               </button>

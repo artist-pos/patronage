@@ -181,11 +181,11 @@ export async function upsertProfileAction(
     disciplines
   );
 
-  // Subscribe artists to the digest (safety net for flows that bypass the role
-  // selection page, e.g. Google OAuth without a pre-selected role). Since 185
-  // the flag on the profile is the whole subscription.
-  const isArtistRole = savedProfile?.role === "artist" || savedProfile?.role === "owner";
-  if (isArtistRole && user.email) {
+  // Safety net: ensure weekly_digest is on for anyone who reached the profile
+  // step without the role page having set it (e.g. Google OAuth with a
+  // pre-selected role that bypassed applyRole). Only fires when the flag is
+  // still false to avoid clobbering an explicit opt-out.
+  if (user.email) {
     await supabase
       .from("profiles")
       .update({ marketing_subscription: true, weekly_digest: true })

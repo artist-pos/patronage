@@ -34,6 +34,9 @@ interface Props {
   /** Where the new artist lands once onboarding is done. */
   next: string;
   onClose: () => void;
+  /** When set, renders a secondary link below the form to skip signup entirely. */
+  skipLabel?: string;
+  onSkip?: () => void;
 }
 
 /**
@@ -57,6 +60,8 @@ export default function SignupPromptModal({
   submitLabel,
   next,
   onClose,
+  skipLabel,
+  onSkip,
 }: Props) {
   const titleId = useId();
   const [selected, setSelected] = useState<DisciplineEnum[]>([]);
@@ -190,6 +195,18 @@ export default function SignupPromptModal({
               />
             </div>
           </div>
+        )}
+
+        {skipLabel && onSkip && (
+          <p className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              {skipLabel}
+            </button>
+          </p>
         )}
       </div>
     </div>

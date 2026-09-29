@@ -5,19 +5,16 @@ import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { BlakeNote } from "@/components/auth/BlakeNote";
 
-// The popup (AuthForm, Turnstile, town search) loads only once it's due.
 const SignupPromptModal = dynamic(() => import("@/components/auth/SignupPromptModal"), { ssr: false });
 
-const POST_SIGNUP_DESTINATION = "/opportunities?tab=for-you";
+const POST_SIGNUP_DESTINATION = "/artists";
 
 /**
- * An invisible sentinel sits inline in the opportunities grid at a fixed
- * scroll depth (wherever the caller places this component — MasonryGrid
- * puts it after the 15th card, roughly the 5th row on desktop). Once it
- * scrolls into view for a signed-out visitor, the signup popup opens.
- * Fires once per page view.
+ * Invisible sentinel placed after the directory cards. Once it scrolls into
+ * view for a signed-out visitor the signup prompt opens. Fires once per
+ * page view — no session suppression so it shows on every visit.
  */
-export function OpportunitySignupModalTrigger() {
+export function ArtistDirectorySignupTrigger() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef(false);
   const [open, setOpen] = useState(false);
@@ -31,7 +28,7 @@ export function OpportunitySignupModalTrigger() {
         if (entries[0].isIntersecting && !shownRef.current) {
           shownRef.current = true;
           setOpen(true);
-          trackEvent("opportunities_signup_modal_view", {});
+          trackEvent("artists_directory_signup_modal_view", {});
           observer.disconnect();
         }
       },
@@ -43,30 +40,31 @@ export function OpportunitySignupModalTrigger() {
 
   function close() {
     setOpen(false);
+    trackEvent("artists_directory_signup_modal_dismissed", {});
   }
 
   return (
     <>
-      <div ref={sentinelRef} className="col-span-full h-px" aria-hidden />
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden />
 
       {open && (
         <SignupPromptModal
-          source="opportunities_grid_modal"
-          eventPrefix="opportunities_signup_modal"
+          source="artists_directory_modal"
+          eventPrefix="artists_directory_signup_modal"
           heading="What do you make?"
           intro={
             <>
-              Pick a few. We&rsquo;ll find the grants, residencies, commissions and open calls that fit your
-              practice and send you the best ones each week.
+              Make a free profile and join the directory. We&rsquo;ll match you with grants, residencies, commissions
+              and open calls that fit your practice.
             </>
           }
           note={
             <BlakeNote>
-              I built Patronage to make finding opportunities to apply for a little easier. Make a free profile to
-              keep your bio, CV and work in one place. I&rsquo;d love to have you in the community.
+              I built Patronage to make it easier for artists to find opportunities and get their work seen. Join for
+              free.
             </BlakeNote>
           }
-          submitLabel="Sign up free →"
+          submitLabel="Join the directory →"
           next={POST_SIGNUP_DESTINATION}
           onClose={close}
         />

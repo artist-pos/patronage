@@ -120,17 +120,24 @@ export async function getDigestRecipientCount(): Promise<number> {
 
 // ── Pool and suppression ─────────────────────────────────────────────────────
 
+/** Minimum days from now a deadline must be for us to include it in a digest.
+ *  Recipients need time to actually act — same-day and next-day deadlines
+ *  arrive too late to be useful. */
+export const DIGEST_MIN_LEAD_DAYS = 2;
+
 /** Every live listing, unranked. Curation happens in selectDigestOpportunities. */
 export async function getDigestPool(): Promise<Opportunity[]> {
   const admin = createAdminClient();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const minDate = new Date(Date.now() + DIGEST_MIN_LEAD_DAYS * 864e5)
+    .toISOString()
+    .split("T")[0];
 
   const { data, error } = await admin
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
     .eq("status", "published")
-    .or(`deadline.is.null,deadline.gte.${todayStr}`)
+    .or(`deadline.is.null,deadline.gte.${minDate}`)
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(200);
 

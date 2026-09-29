@@ -57,7 +57,8 @@ export async function savePostSelectionConfig(
 export async function updateApplicationStatus(
   applicationId: string,
   status: "pending" | "shortlisted" | "selected" | "approved_pending_assets" | "production_ready" | "rejected",
-  rejectionReason?: string
+  rejectionReason?: string,
+  selectionMessage?: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -278,6 +279,7 @@ export async function updateApplicationStatus(
             artistName,
             opportunityTitle: opp.title,
             studioUrl: `${siteUrl}/studio?section=campaigns`,
+            customMessage: selectionMessage,
           }).catch(console.error);
         }
       })().catch(console.error);

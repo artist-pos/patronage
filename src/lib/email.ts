@@ -922,9 +922,13 @@ export async function sendCampaignSelectedNotification(params: {
   artistName: string;
   opportunityTitle: string;
   studioUrl: string;
+  customMessage?: string;
 }): Promise<void> {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const { artistEmail, artistName, opportunityTitle, studioUrl } = params;
+  const { artistEmail, artistName, opportunityTitle, studioUrl, customMessage } = params;
+  const customMessageHtml = customMessage?.trim()
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${esc(customMessage.trim())}</p>`
+    : "";
   await getResend().emails.send({
     from: FROM,
     to: artistEmail,
@@ -939,7 +943,7 @@ export async function sendCampaignSelectedNotification(params: {
       <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${esc(artistName)}</strong>!</p>
       <p style="margin:0 0 16px;font-size:14px;color:#555;">You've been selected for:</p>
       <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">${esc(opportunityTitle)}</blockquote>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;">Head to your Studio to create your campaign page — choose your hero artwork, add works, configure pricing, and get your QR code.</p>
+      ${customMessageHtml}<p style="margin:0 0 24px;font-size:14px;color:#555;">Head to your Studio to create your campaign page — choose your hero artwork, add works, configure pricing, and get your QR code.</p>
       <a href="${studioUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Create your campaign page →</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
     </td></tr>

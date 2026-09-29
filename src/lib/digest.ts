@@ -121,16 +121,16 @@ export function selectDigestOpportunities(
 export async function getDigestData(): Promise<DigestData> {
   const supabase = await createClient();
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const minDate = new Date(today.getTime() + 2 * 864e5).toISOString().split("T")[0];
 
-  // Everything still open. Curation happens in selectDigestOpportunities —
-  // the query's job is only to bound the pool to live, published listings.
+  // Everything still open with enough runway. Curation happens in
+  // selectDigestOpportunities — the query's job is only to bound the pool.
   const { data } = await supabase
     .from("opportunities")
     .select("*")
     .eq("is_active", true)
     .eq("status", "published")
-    .or(`deadline.is.null,deadline.gte.${todayStr}`)
+    .or(`deadline.is.null,deadline.gte.${minDate}`)
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(200);
 

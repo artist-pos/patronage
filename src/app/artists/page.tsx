@@ -12,6 +12,7 @@ import { AdminSpotlightMenu } from "@/components/artists/AdminSpotlightMenu";
 import { computeBadges } from "@/lib/badges";
 import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 import { getAvatarGradient } from "@/lib/defaults";
+import { ArtistDirectorySignupTrigger } from "@/components/artists/ArtistDirectorySignupTrigger";
 import type { CountryEnum, CareerStageEnum, DisciplineEnum, ProfileWithImage } from "@/types/database";
 
 export const metadata = {
@@ -218,6 +219,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
                   </div>
                 ))}
               </div>
+              {!viewerProfile && <ArtistDirectorySignupTrigger />}
             </section>
           )}
 

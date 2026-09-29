@@ -84,7 +84,8 @@ async function applyRole(role: string, next?: string | null) {
     // Google has already proved this address, so an OAuth signup is verified
     // on arrival and never sees the banner. Password signups owe us a click.
     ...(isOAuth && { email_verified_at: new Date().toISOString() }),
-    ...(isArtist && { marketing_subscription: true, weekly_digest: true }),
+    marketing_subscription: true,
+    weekly_digest: true,
     ...(signupCtx && {
       signup_source: signupCtx.source,
       ...(signupCtx.opportunityId && {
