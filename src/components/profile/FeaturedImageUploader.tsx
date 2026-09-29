@@ -45,8 +45,9 @@ export function FeaturedImageUploader({ profileId }: Props) {
         upsert: true,
       });
 
-      await supabase.from("profiles").update({ featured_image_url: url }).eq("id", profileId);
-      setImageUrl(url);
+      const versioned = `${url}?v=${Date.now()}`;
+      await supabase.from("profiles").update({ featured_image_url: versioned }).eq("id", profileId);
+      setImageUrl(versioned);
     } catch {
       setError("Failed to process image.");
     }

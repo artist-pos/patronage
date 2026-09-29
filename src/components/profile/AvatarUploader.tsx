@@ -41,8 +41,9 @@ export function AvatarUploader({ profileId }: Props) {
         upsert: true,
       });
 
-      await supabase.from("profiles").update({ avatar_url: url }).eq("id", profileId);
-      setAvatarUrl(url);
+      const versioned = `${url}?v=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: versioned }).eq("id", profileId);
+      setAvatarUrl(versioned);
     } catch {
       setError("Failed to process image.");
     }
