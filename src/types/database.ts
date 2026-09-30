@@ -332,6 +332,7 @@ export interface ProfileAchievement {
   opportunity_id: string | null;
   opportunity_title: string;
   organisation: string;
+  organisation_slug?: string | null;
   type: string;
   year: number;
   verified: boolean;

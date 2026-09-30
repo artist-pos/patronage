@@ -481,7 +481,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         .eq("status", "published"),
       supabase
         .from("opportunities")
-        .select("id, slug, title, type, deadline")
+        .select("id, slug, title, type, deadline, featured_image_url")
         .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`)
         .eq("status", "published")
         .lt("deadline", todayStr)
@@ -536,7 +536,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     for (const a of apps) {
       selectedByOpp.set(a.opportunity_id, (selectedByOpp.get(a.opportunity_id) ?? 0) + 1);
     }
-    partnerPastOpps = ((pastRes.data ?? []) as Array<{ id: string; slug: string | null; title: string; type: string; deadline: string | null }>)
+    partnerPastOpps = ((pastRes.data ?? []) as Array<{ id: string; slug: string | null; title: string; type: string; deadline: string | null; featured_image_url: string | null }>)
       .map((o) => ({ ...o, selectedCount: selectedByOpp.get(o.id) ?? 0 }));
     const artistIds = [...new Set(apps.map((a) => a.artist_id))];
     partnerSelectedTotal = artistIds.length;
@@ -592,7 +592,28 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   // ── Phase 2 results — started before Phase 1 above; by now the queries have
   // been running concurrently with Phase 1, so this await is (near) free.
-  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, achievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await phase2Promise;
+  const [portfolioImages, studioUpdates, tabProjects, soldWorks, creativeWorks, rawAchievements, supportTiers, collaboratedWorks, featuredBlogPost, artworkEditionsData, artistCollectionWorks, seriesRaw, seriesArtworkIdsRaw, featuredSoldWorks] = await phase2Promise;
+
+  // Enrich achievements with organiser profile slugs so the CV tab can link them.
+  let achievements: ProfileAchievement[] = rawAchievements as ProfileAchievement[];
+  const achOppIds = (rawAchievements as ProfileAchievement[]).map((a) => a.opportunity_id).filter((id): id is string => !!id);
+  if (achOppIds.length > 0) {
+    const { data: oppOrgs } = await supabase
+      .from("opportunities")
+      .select("id, organiser_profile_id")
+      .in("id", achOppIds);
+    const orgProfileIds = [...new Set((oppOrgs ?? []).map((o: { id: string; organiser_profile_id: string | null }) => o.organiser_profile_id).filter((id): id is string => !!id))];
+    let usernameById = new Map<string, string>();
+    if (orgProfileIds.length > 0) {
+      const { data: orgProfiles } = await supabase.from("profiles").select("id, username").in("id", orgProfileIds);
+      usernameById = new Map((orgProfiles ?? []).map((p: { id: string; username: string }) => [p.id, p.username]));
+    }
+    const slugByOppId = new Map((oppOrgs ?? []).map((o: { id: string; organiser_profile_id: string | null }) => [o.id, o.organiser_profile_id ? (usernameById.get(o.organiser_profile_id) ?? null) : null]));
+    achievements = (rawAchievements as ProfileAchievement[]).map((a) => ({
+      ...a,
+      organisation_slug: a.opportunity_id ? (slugByOppId.get(a.opportunity_id) ?? null) : null,
+    }));
+  }
 
   // Build map: artworks.id → listed editions sorted by sort_order
   const artworkEditionsMap: Record<string, EditionOption[]> = {};

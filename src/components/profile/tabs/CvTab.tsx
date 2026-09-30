@@ -155,7 +155,13 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
                 <span className="font-mono text-muted-foreground w-10 shrink-0">{a.year}</span>
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="font-semibold">{a.opportunity_title}</span>
-                  <span className="text-muted-foreground">{a.organisation}</span>
+                  {a.organisation_slug ? (
+                    <Link href={`/${a.organisation_slug}`} className="text-muted-foreground hover:underline">
+                      {a.organisation}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{a.organisation}</span>
+                  )}
                   {a.verified && (
                     <span className="badge badge-grant">
                       Verified

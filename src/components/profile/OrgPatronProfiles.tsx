@@ -139,6 +139,7 @@ export interface PastOpportunityRow {
   title: string;
   type: string;
   deadline: string | null;
+  featured_image_url: string | null;
   selectedCount: number;
 }
 
@@ -387,26 +388,40 @@ export function PartnerProfileView({
           <div className={`${INNER} py-9`}>
             <h2 className={`${SECTION_LABEL} mb-[18px]`}>Past opportunities</h2>
             <div className="border-t border-border">
-              {pastOpps.map((opp) => (
-                <div
-                  key={opp.id}
-                  className="flex items-center justify-between gap-5 border-b border-border py-3.5"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-medium">{opp.title}</p>
-                    <p className="mt-[3px] font-mono text-[11px] text-[color:var(--fg-subtle)]">
-                      {[opp.deadline ? new Date(opp.deadline).getFullYear() : null, opp.type]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+              {pastOpps.map((opp) => {
+                const href = `/opportunities/${opp.slug ?? opp.id}`;
+                const inner = (
+                  <div className="flex items-center gap-4">
+                    {opp.featured_image_url && (
+                      <img
+                        src={opp.featured_image_url}
+                        alt=""
+                        className="h-12 w-12 shrink-0 object-contain bg-[#f5f5f5]"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium">{opp.title}</p>
+                      <p className="mt-[3px] font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                        {[opp.deadline ? new Date(opp.deadline).getFullYear() : null, opp.type]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    {opp.selectedCount > 0 && (
+                      <p className="shrink-0 font-mono text-xs text-[color:var(--fg-muted)]">
+                        {opp.selectedCount} artist{opp.selectedCount !== 1 ? "s" : ""} selected
+                      </p>
+                    )}
                   </div>
-                  {opp.selectedCount > 0 && (
-                    <p className="shrink-0 font-mono text-xs text-[color:var(--fg-muted)]">
-                      {opp.selectedCount} artist{opp.selectedCount !== 1 ? "s" : ""} selected
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+                return (
+                  <div key={opp.id} className="border-b border-border py-3.5">
+                    <Link href={href} className="block hover:opacity-70 transition-opacity">
+                      {inner}
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
