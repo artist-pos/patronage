@@ -414,6 +414,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           .select("*")
           .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`)
           .eq("is_active", true)
+          .or(`deadline.gte.${new Date().toISOString().split("T")[0]},deadline.is.null`)
           .order("created_at", { ascending: false })
           .then(({ data }) => (data ?? []) as Opportunity[])
       : Promise.resolve([] as Opportunity[]),
