@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PendingButton } from "@/components/auth/PendingButton";
-import { verifyEmail, resendConfirmation } from "./actions";
+import { verifyEmail, exchangeCode, resendConfirmation } from "./actions";
 
 export const metadata = { title: "Confirm Your Email" };
 
@@ -33,13 +33,27 @@ export default async function ConfirmPage({ searchParams }: Props) {
   const sp = await searchParams;
 
   // Legacy/PKCE fallback: if the confirmation email still uses the default
-  // ConfirmationURL, Supabase redirects here with ?code=. Hand it to the
-  // existing callback, which exchanges the code and routes by role/next.
+  // ConfirmationURL, Supabase redirects here with ?code=. Exchange it only on
+  // an explicit click — an immediate server-side redirect let email scanners
+  // (Gmail, Outlook Safe Links, Apple Mail) follow the redirect to /auth/callback
+  // and consume the single-use code before the real user arrived.
   if (sp.code) {
-    const params = new URLSearchParams({ code: sp.code });
-    if (sp.role) params.set("role", sp.role);
-    if (sp.next) params.set("next", sp.next);
-    redirect(`/auth/callback?${params.toString()}`);
+    return (
+      <Shell title="Confirm your email">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Click below to verify your email address and continue setting up your
+          account.
+        </p>
+        <form action={exchangeCode}>
+          <input type="hidden" name="code" value={sp.code} />
+          {sp.role && <input type="hidden" name="role" value={sp.role} />}
+          {sp.next && <input type="hidden" name="next" value={sp.next} />}
+          <PendingButton className="w-full text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity disabled:opacity-60">
+            Confirm email
+          </PendingButton>
+        </form>
+      </Shell>
+    );
   }
 
   const isExpired = sp.status === "expired" || sp.status === "invalid";

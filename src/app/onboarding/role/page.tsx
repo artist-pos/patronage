@@ -148,6 +148,12 @@ async function applyRole(role: string, next?: string | null) {
   // Never redirect the user onward as if this succeeded when it didn't — that's
   // exactly how an auth.users row ends up with no matching profile ("orphaned").
   if (upsertError) {
+    console.error("applyRole: profile upsert failed", {
+      userId: user.id,
+      role,
+      code: upsertError.code,
+      message: upsertError.message,
+    });
     const params = new URLSearchParams({ role, error: "1" });
     if (next) params.set("next", next);
     redirect(`/onboarding/role?${params.toString()}`);
