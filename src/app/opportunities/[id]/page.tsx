@@ -634,7 +634,9 @@ export default async function OpportunityPage({ params }: Props) {
 
   // The apply action, rendered twice: in the action bar under the key facts,
   // and again once the reader reaches the end of the description.
+  // Never shown once the deadline has passed or the listing has been deactivated.
   const renderApply = () =>
+    isClosed ? null :
     isPipeline ? (
       <Suspense fallback={<CTASkeleton />}>
         <UserCTA opportunityId={opp.id} opp={opp} />
