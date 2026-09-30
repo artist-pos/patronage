@@ -21,6 +21,11 @@ export default async function ApplyPage({ params }: Props) {
   // External opportunities apply on the organiser's own site — nothing to do here.
   if (opp.routing_type !== "pipeline") redirect(backHref);
 
+  // Closed opportunities (deadline past or deactivated) no longer accept submissions.
+  const todayStr = new Date().toISOString().split("T")[0];
+  const isClosed = (!!opp.deadline && opp.deadline < todayStr) || !opp.is_active;
+  if (isClosed) redirect(backHref);
+
   const { supabase, user } = await getServerUser();
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(`${backHref}/apply`)}`);
 

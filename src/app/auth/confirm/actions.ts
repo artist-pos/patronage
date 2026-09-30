@@ -32,6 +32,31 @@ function destinationFor(role: string | null, next: string | null): string {
 }
 
 /**
+ * Exchange a PKCE code for a session. Like verifyEmail below, this runs only
+ * on an explicit button click so email scanners can't consume the single-use
+ * code before the human gets here. Unlike token_hash verification this DOES
+ * need the code_verifier cookie, so opening the email on a different device
+ * than signup will fail — the expired-link recovery path handles that.
+ */
+export async function exchangeCode(formData: FormData): Promise<void> {
+  const code = String(formData.get("code") ?? "");
+  const role = (formData.get("role") as string) || null;
+  const next = (formData.get("next") as string) || null;
+
+  if (!code) redirect("/auth/confirm?status=invalid");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    const params = new URLSearchParams({ status: "expired" });
+    if (role) params.set("role", role);
+    redirect(`/auth/confirm?${params.toString()}`);
+  }
+
+  redirect(destinationFor(role, next));
+}
+
+/**
  * Verify the email confirmation token. This runs only on an explicit button
  * click (not on GET), so email link-scanners that prefetch the link can't
  * consume the single-use token before the human clicks. verifyOtp with a

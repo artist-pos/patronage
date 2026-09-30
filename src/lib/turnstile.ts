@@ -20,6 +20,7 @@ export async function verifyTurnstile(
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ secret, response: token, remoteip: ip }),
+      signal: AbortSignal.timeout(5000),
     });
     const data = (await res.json()) as { success: boolean; "error-codes"?: string[] };
     // Surface *why* — e.g. "invalid-input-secret" (key mismatch) or

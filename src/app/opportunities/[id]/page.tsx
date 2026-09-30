@@ -634,7 +634,9 @@ export default async function OpportunityPage({ params }: Props) {
 
   // The apply action, rendered twice: in the action bar under the key facts,
   // and again once the reader reaches the end of the description.
+  // Never shown once the deadline has passed or the listing has been deactivated.
   const renderApply = () =>
+    isClosed ? null :
     isPipeline ? (
       <Suspense fallback={<CTASkeleton />}>
         <UserCTA opportunityId={opp.id} opp={opp} />
@@ -857,9 +859,14 @@ export default async function OpportunityPage({ params }: Props) {
             className={ACTION_BTN}
           />
         </div>
+        {isClosed && (
+          <p className="mt-3 text-[13px] text-[color:var(--fg-muted)]">
+            Applications for this opportunity have closed.
+          </p>
+        )}
         {/* What applying involves, stated plainly: the profile is reused, the
             opportunity-specific material is still the artist’s to write. */}
-        {isPipeline && (
+        {isPipeline && !isClosed && (
           <div className="mt-5 max-w-[560px] border-l-2 border-border pl-4">
             <p className="text-[13.5px] font-medium">Build your application record</p>
             <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">

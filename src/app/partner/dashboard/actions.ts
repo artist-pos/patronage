@@ -168,8 +168,11 @@ export async function updateApplicationStatus(
     })().catch(console.error);
   }
 
-  // Auto-create a verified profile achievement when selected or approved
-  if (status === "selected" || status === "approved_pending_assets") {
+  // Auto-create a verified profile achievement at any advanced status so the
+  // profile shows the win even when a partner skips straight to production_ready.
+  // The upsert is idempotent (unique on profile_id + opportunity_id), so passing
+  // through multiple statuses never duplicates the row.
+  if (status === "selected" || status === "approved_pending_assets" || status === "production_ready") {
     // Upsert achievement (idempotent — unique index on profile_id + opportunity_id)
     await admin
       .from("profile_achievements")

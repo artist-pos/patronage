@@ -18,7 +18,7 @@ export async function captureServerEvent(
   if (!POSTHOG_KEY) return;
 
   try {
-    await fetch(`${POSTHOG_HOST}/i/v0/e/`, {
+    const res = await fetch(`${POSTHOG_HOST}/capture/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -33,9 +33,13 @@ export async function captureServerEvent(
         },
         timestamp: new Date().toISOString(),
       }),
+      signal: AbortSignal.timeout(3000),
     });
+    if (!res.ok) {
+      console.error(`PostHog capture failed: ${res.status} ${res.statusText}`, { event, distinctId });
+    }
   } catch {
-    // Network hiccup reaching PostHog. The email event itself already happened;
-    // losing the analytics copy is not worth a 500 back to the provider.
+    // Network hiccup or timeout reaching PostHog. The email event itself already
+    // happened; losing the analytics copy is not worth a 500 back to the provider.
   }
 }
