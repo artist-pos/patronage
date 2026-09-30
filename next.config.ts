@@ -30,15 +30,11 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "recharts"],
   },
   images: {
-    formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
-    remotePatterns: [
-      ...(supabaseHostname ? [{ protocol: "https" as const, hostname: supabaseHostname }] : []),
-      { protocol: "https", hostname: "*.cloudfront.net" },
-      // Opportunity hero images come from 50+ scraped external domains — allow
-      // all HTTPS origins so Next.js can convert to WebP/AVIF and cache them.
-      { protocol: "https", hostname: "**" },
-    ],
+    // All user-uploaded images are already compressed to WebP by our own
+    // pipeline on upload. External scraped images are served as-is — modern
+    // browsers handle JPEG/PNG/WebP natively. Disabling Vercel's optimizer
+    // eliminates redundant transforms and the associated budget spend.
+    unoptimized: true,
   },
   async redirects() {
     return [
