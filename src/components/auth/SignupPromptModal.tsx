@@ -7,7 +7,6 @@ import { stashSignupContext } from "@/lib/signup-context.client";
 import type { SignupContext } from "@/lib/signup-context";
 import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
 import { AuthForm } from "@/components/auth/AuthForm";
-import { PlaceField, type JoinCity, type Place } from "@/components/auth/PlaceField";
 import type { DisciplineEnum } from "@/types/database";
 
 // "other" doesn't round-trip through toDisciplineEnums (no regex matches the
@@ -41,13 +40,11 @@ interface Props {
 
 /**
  * The artist signup popup behind every opportunity-side prompt: what you make →
- * where you're based → signup. The form stays hidden until something is picked —
- * a small IKEA-effect nudge instead of a flat "sign up" ask. Every answer is
- * stashed in the signup-context cookie as it changes, so it survives the email
- * and Google paths alike and /onboarding/role writes it to the profile.
+ * signup. The form stays hidden until something is picked — a small IKEA-effect
+ * nudge instead of a flat "sign up" ask. Disciplines are stashed in the
+ * signup-context cookie so /onboarding/role writes them to the profile.
  *
- * These signups skip the onboarding profile step (name and disciplines are
- * already there), so this is the only place their location gets asked.
+ * Location is collected at /onboarding/profile after signup, not here.
  */
 export default function SignupPromptModal({
   source,
@@ -65,12 +62,7 @@ export default function SignupPromptModal({
 }: Props) {
   const titleId = useId();
   const [selected, setSelected] = useState<DisciplineEnum[]>([]);
-  const [place, setPlace] = useState<Place | null>(null);
-  // The town list is fetched once, on the first pick, when the location field
-  // appears — no page carries it. Until it lands (or if it fails) the field
-  // still takes free text.
-  const [cities, setCities] = useState<JoinCity[]>([]);
-  const citiesRequested = useRef(false);
+  const firstPickTracked = useRef(false);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -94,9 +86,6 @@ export default function SignupPromptModal({
       source,
       ...(opportunityId && { opportunityId }),
       disciplines: selected,
-      ...(place?.city && { city: place.city }),
-      ...(place?.country && { country: place.country }),
-      ...(place?.regionId && { regionId: place.regionId }),
     };
     try {
       const stored = sessionStorage.getItem("patronage_ref");
@@ -105,7 +94,7 @@ export default function SignupPromptModal({
       // Blocked storage — attribution degrades, signup still works.
     }
     stashSignupContext(ctx);
-  }, [source, opportunityId, selected, place]);
+  }, [source, opportunityId, selected]);
 
   function dismiss() {
     trackEvent(`${eventPrefix}_dismissed`, {
@@ -117,14 +106,9 @@ export default function SignupPromptModal({
 
   function toggle(d: DisciplineEnum) {
     setSelected((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-    // First pick of the popup's life — the town fetch fires once, at the same moment.
-    if (!citiesRequested.current) {
-      citiesRequested.current = true;
+    if (!firstPickTracked.current) {
+      firstPickTracked.current = true;
       trackEvent(`${eventPrefix}_first_pick`, opportunityId ? { opportunity_id: opportunityId } : {});
-      fetch("/api/public/cities")
-        .then((r) => (r.ok ? r.json() : []))
-        .then(setCities)
-        .catch(() => {});
     }
   }
 
@@ -182,18 +166,15 @@ export default function SignupPromptModal({
             of investment instead of upfront. */}
         {hasPicked && (
           <div className="mt-6 animate-[pin-in_400ms_ease] border-t border-border pt-6">
-            <PlaceField cities={cities} value={place} onChange={setPlace} />
-            {note && <div className="mt-6 text-sm leading-[1.6]">{note}</div>}
-            <div className="mt-6">
-              <AuthForm
-                mode="signup"
-                role="artist"
-                next={next}
-                analyticsSource={source}
-                submitClassName="w-full bg-brand text-white hover:bg-brand/90"
-                submitLabel={submitLabel}
-              />
-            </div>
+            {note && <div className="mb-6 text-sm leading-[1.6]">{note}</div>}
+            <AuthForm
+              mode="signup"
+              role="artist"
+              next={next}
+              analyticsSource={source}
+              submitClassName="w-full bg-brand text-white hover:bg-brand/90"
+              submitLabel={submitLabel}
+            />
           </div>
         )}
 

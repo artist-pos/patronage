@@ -41,9 +41,12 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
   if (!isArtist) redirect("/dashboard");
 
   // Already answered — this step is not a place to come back to.
-  // signup=1 rides along so the client still captures signup_completed —
-  // popup signups arrive with both answered and never see this step.
-  if (profile.disciplines?.length && profile.full_name?.trim()) {
+  // signup=1 rides along so the client still captures signup_completed.
+  // Popup signups seed disciplines and name but not location, so they land
+  // here to fill that in before continuing.
+  const profileAny = profile as Profile & { city_id?: string | null };
+  const hasLocation = !!(profileAny.city_id || profile.country);
+  if (profile.disciplines?.length && profile.full_name?.trim() && hasLocation) {
     const dest = resume ?? "/opportunities?tab=for-you";
     redirect(signup === "1" ? `${dest}${dest.includes("?") ? "&" : "?"}signup=1` : dest);
   }
