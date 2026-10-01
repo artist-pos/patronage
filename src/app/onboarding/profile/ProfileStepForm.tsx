@@ -1,9 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { LocationPicker } from "@/components/profile/LocationPicker";
+import { CombinedLocationPicker } from "@/components/profile/CombinedLocationPicker";
 import { DisciplineInput } from "@/components/profile/DisciplineInput";
-import { SELECTABLE_COUNTRIES } from "@/lib/constants/countries";
 import { saveOnboardingProfile, type ProfileStepState } from "./actions";
 import type { CityWithRegion, DisciplineEnum, LocalBoard } from "@/types/database";
 
@@ -89,28 +88,11 @@ export function ProfileStepForm({
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="country" className="text-sm font-medium">
-          Where you&rsquo;re based
-        </label>
-        <select
-          id="country"
-          name="country"
-          defaultValue={defaultCountry}
-          required
-          className="w-full border border-black bg-background px-3 py-2 text-base focus-visible:outline-none sm:text-sm"
-        >
-          <option value="">– Select –</option>
-          {SELECTABLE_COUNTRIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
-      <LocationPicker
+      <CombinedLocationPicker
         cities={cities}
         defaultCityId={defaultCityId}
         defaultFreeform={defaultCity}
+        defaultCountry={defaultCountry}
         defaultRegionId={defaultRegionId}
         boards={boards}
         defaultLocalBoardId={defaultLocalBoardId}
