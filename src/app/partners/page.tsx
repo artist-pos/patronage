@@ -8,9 +8,9 @@ import { getServerUser } from "@/lib/supabase/get-server-user";
 // consultancy and commissioning work up front and Pipeline (the self-serve
 // software) below it.
 export const metadata: Metadata = {
-  title: "Partners",
+  title: "Public Art Consultant NZ | Art Strategy & Commissioning | Patronage",
   description:
-    "Art strategy, commissioning and public art for organisations in Aotearoa and beyond: from site and brief to open call, artists and delivery. Or run your own opportunity through Pipeline.",
+    "Patronage helps developers, councils and companies across Aotearoa plan, commission and deliver public art, from construction hoardings and utility boxes to full art strategies.",
   alternates: { canonical: "https://patronage.nz/partners" },
 };
 
@@ -38,19 +38,52 @@ const PROCESS = ["Site", "Strategy", "Brief", "Opportunity", "Artists", "Commiss
 const SERVICES = [
   {
     title: "Art strategy",
-    body: "Identify where art can contribute to a development, place, organisation or programme.",
+    href: "/partners/art-strategy",
+    body: "A creative audit of your project, consent and design documents. We map what's funded, what's required and where art can create value across a masterplan or programme.",
   },
   {
-    title: "Commissioning",
-    body: "Develop the brief, find artists, curate proposals and manage the commissioning process.",
+    title: "Construction hoardings",
+    href: "/partners/construction-hoardings",
+    body: "Commission a New Zealand artist to design artwork for your hoarding. Softens site impact, reduces graffiti, and gives the street something worth seeing while you build.",
   },
   {
-    title: "Opportunities",
-    body: "Publish an open call, funding round, residency, exhibition or commission through Patronage.",
+    title: "Utility boxes",
+    href: "/partners/utility-boxes",
+    body: "Commissioned artwork with an anti-graffiti coating turns a maintenance problem into a streetscape asset. We run programmes from ten boxes to hundreds.",
   },
   {
-    title: "Surface projects",
-    body: "Use existing surfaces and budgets to introduce artwork into public-facing environments.",
+    title: "Vacant shopfronts",
+    href: "/partners/vacant-shopfronts",
+    body: "Artist-designed window vinyl with a QR code to the live listing. Makes empty tenancies easier to lease and better for the street.",
+  },
+  {
+    title: "Councils",
+    href: "/partners/councils",
+    body: "Open, fair commissioning for bus shelters, laneways, utility boxes and town centre surfaces. Clear briefs, visible budgets, complete artist records.",
+  },
+  {
+    title: "Workplaces & hotels",
+    href: "/partners/workplaces-and-hotels",
+    body: "Commission New Zealand artists for lobbies, restaurants and arrival spaces, or bring an artist inside your organisation for a six-month residency.",
+  },
+];
+
+const WHY = [
+  {
+    title: "We start with your project, not with art",
+    body: "Before anyone talks about murals or sculpture, we ask what the place needs: who uses it, what it should say and how it should feel. The brief comes from your project's goals, so the art serves them.",
+  },
+  {
+    title: "Then we find the right artist",
+    body: "Every brief goes out as an open call. You shortlist from complete career records, portfolios, exhibition history and past commissions, not just who a consultant happens to know.",
+  },
+  {
+    title: "Artists are paid properly",
+    body: "Our fees are structured so most of the budget reaches the artist. Every commission records what was paid and to whom.",
+  },
+  {
+    title: "You can show what it achieved",
+    body: "Every project is documented through the platform, from the brief and selection rationale to the finished work, ready for ESG, community and board reporting.",
   },
 ];
 
@@ -86,14 +119,14 @@ export default async function PartnersPage() {
           <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:gap-20">
             <div className="max-w-[600px]">
               <p className="text-[19px] leading-[1.5] tracking-[-0.01em] text-foreground">
-                Patronage works with organisations to identify, develop and deliver creative
-                opportunities.
+                Patronage is a public art consultant and commissioning service for organisations
+                across Aotearoa.
               </p>
               <p className="t-body mt-5 text-[color:var(--fg-muted)]">
-                A project might need a stronger identity, a sense of place, better public
-                engagement, resident connection, or simply a reason for people to spend time
-                somewhere. We start with the place and the project, then work out where art can
-                create value.
+                We start with something you already have, like a hoarding, a utility box, an empty
+                shopfront or a new neighbourhood, and work out what art can do there. Then we find
+                the New Zealand artist who best fits the brief, the place and your team, and
+                commission them to do it.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <a href="#contact" className={BTN_PRIMARY}>
@@ -140,20 +173,42 @@ export default async function PartnersPage() {
         </div>
       </section>
 
-      {/* ══ WORK WITH US — four services as white tiles on the feed surface ══ */}
+      {/* ══ WORK WITH US — six services as white tiles on the feed surface ══ */}
       <section id="work-with-us" className="scroll-mt-16 bg-feed-bg">
         <LegacyAnchors ids={["activations", "strategy"]} />
         <div className="mx-auto max-w-[1600px] px-6 pb-20 pt-10 sm:px-12 lg:pb-28">
           <p className="t-section-label mb-3">Work with us</p>
           <h2 className="t-display max-w-[640px] text-[36px] sm:text-[44px]">From the first question to the finished work.</h2>
-          <div className="mt-12 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {SERVICES.map((s, i) => (
-              <div key={s.title} className="flex flex-col bg-white p-6">
+              <Link key={s.title} href={s.href} className="flex flex-col bg-white p-6 transition-opacity hover:opacity-75">
                 <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="t-heading mt-6">{s.title}</h3>
-                <p className="t-body-sm mt-2">{s.body}</p>
+                <p className="t-body-sm mt-2 flex-1">{s.body}</p>
+                <span className="mt-5 text-[13px] font-medium text-[color:var(--fg-subtle)]">Learn more →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ WHY PATRONAGE ══ */}
+      <section>
+        <div className="mx-auto max-w-[1600px] px-6 py-20 sm:px-12 lg:py-28">
+          <p className="t-section-label mb-3">Why Patronage</p>
+          <h2 className="t-display max-w-[560px] text-[36px] sm:text-[44px]">The right artist for the right project.</h2>
+          <p className="t-body mt-5 max-w-[620px] text-[color:var(--fg-muted)]">
+            Art shouldn&rsquo;t be decoration added at the end. Done well, it adds to what a project
+            is trying to be: its values, its amenity, how it&rsquo;s positioned, and how it feels to
+            the people who live in it, work in it or walk past it every day.
+          </p>
+          <div className="mt-12 grid grid-cols-1 gap-0 sm:grid-cols-2">
+            {WHY.map((w) => (
+              <div key={w.title} className="border-t border-border py-5 sm:py-6">
+                <h3 className="t-heading">{w.title}</h3>
+                <p className="t-body-sm mt-2 max-w-[440px]">{w.body}</p>
               </div>
             ))}
           </div>
@@ -266,8 +321,8 @@ export default async function PartnersPage() {
             <h2 className="t-display max-w-[560px] text-[36px] sm:text-[44px]">Tell us about the place or the project.</h2>
             <p className="t-body mt-4 max-w-[520px] text-[color:var(--fg-muted)]">
               A site, a programme, a budget, or just a question about whether art belongs there.
-              Blake is an architectural designer, artist and the founder of Patronage, and replies
-              within two business days.
+              Blake is an architectural designer, artist and public art consultant based in
+              Aotearoa, and replies within two business days.
             </p>
             <Link href="/blakeaitken" className={`${TEXT_LINK} mt-2`}>
               Blake&rsquo;s profile <span aria-hidden>→</span>
