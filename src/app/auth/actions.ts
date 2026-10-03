@@ -177,13 +177,14 @@ export async function signInAction(input: {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, disciplines, full_name")
+      .select("role, disciplines, full_name, country, city_id")
       .eq("id", user.id)
       .maybeSingle();
     if (!profile) return { redirectTo: "/onboarding/role" };
 
     const isArtist = profile.role === "artist" || profile.role === "owner";
-    const incomplete = !profile.role || (isArtist && (!profile.disciplines?.length || !profile.full_name?.trim()));
+    const hasLocation = !!(profile.city_id || profile.country);
+    const incomplete = !profile.role || (isArtist && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation));
     if (incomplete) return { redirectTo: "/onboarding/role" };
 
     // A returning, fully onboarded artist gets more value from their matched

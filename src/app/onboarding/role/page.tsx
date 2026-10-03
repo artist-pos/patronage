@@ -265,7 +265,8 @@ export default async function SelectRolePage({ searchParams }: Props) {
     // mirrors the same completeness check signInAction and
     // /onboarding/profile already use.
     const isArtistProfile = profile.role === "artist" || profile.role === "owner";
-    const incomplete = isArtistProfile && (!profile.disciplines?.length || !profile.full_name?.trim());
+    const hasLocation = !!((profile as { city_id?: string | null }).city_id || profile.country);
+    const incomplete = isArtistProfile && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation);
     if (incomplete) {
       const safeNext = next && next.startsWith("/") && !next.startsWith("/onboarding") ? next : null;
       redirect(`/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`);
