@@ -177,15 +177,24 @@ export async function signInAction(input: {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, disciplines, full_name, country, city_id")
+      .select("role, disciplines, full_name, country, city_id, org_category")
       .eq("id", user.id)
       .maybeSingle();
     if (!profile) return { redirectTo: "/onboarding/role" };
+    if (!profile.role) return { redirectTo: "/onboarding/role" };
 
     const isArtist = profile.role === "artist" || profile.role === "owner";
     const hasLocation = !!(profile.city_id || profile.country);
-    const incomplete = !profile.role || (isArtist && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation));
-    if (incomplete) return { redirectTo: "/onboarding/role" };
+
+    if (isArtist && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation)) {
+      return { redirectTo: "/onboarding/role" };
+    }
+    if (profile.role === "patron" && !hasLocation) {
+      return { redirectTo: "/onboarding/patron" };
+    }
+    if (profile.role === "partner" && (!hasLocation || !profile.org_category)) {
+      return { redirectTo: "/onboarding/partner" };
+    }
 
     // A returning, fully onboarded artist gets more value from their matched
     // opportunities than from the studio management screen.

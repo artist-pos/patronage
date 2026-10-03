@@ -163,11 +163,9 @@ async function applyRole(role: string, next?: string | null) {
   // without a PostHog API key, since this is the one place every signup path
   // converges with both the source and the account's existence confirmed.
   await trackEvent("signup_account_created", { source: signupCtx?.source ?? "none", role });
-  // Patrons/partners have no further onboarding step — artists take one more
-  // (the profile step below), so their "onboarding completed" fires there.
-  if (!isArtist) {
-    await trackEvent("signup_onboarding_completed", { source: signupCtx?.source ?? "none", role });
-  }
+  // All roles now have a profile step (artist: disciplines+location;
+  // patron: taste+location; partner: org type+location), so
+  // signup_onboarding_completed fires there rather than here.
 
   // Close the loop on the invitation so the inviting organisation can see that
   // this one converted. Not awaited for correctness of the signup: a failure
@@ -234,8 +232,15 @@ async function applyRole(role: string, next?: string | null) {
   // is AuthForm's own default and a redirect stub to /studio, so honouring it
   // here landed new artists in the thirteen-field form this step replaced.
   // A genuine resume target rides along and is honoured once the step is done.
-  const destination = isArtist
-    ? `/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
+  const profileBase = isArtist
+    ? "/onboarding/profile"
+    : role === "patron"
+      ? "/onboarding/patron"
+      : role === "partner"
+        ? "/onboarding/partner"
+        : null;
+  const destination = profileBase
+    ? `${profileBase}${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
     : (safeNext ?? "/dashboard");
   redirect(`${destination}${destination.includes("?") ? "&" : "?"}signup=1`);
 }
@@ -266,10 +271,17 @@ export default async function SelectRolePage({ searchParams }: Props) {
     // /onboarding/profile already use.
     const isArtistProfile = profile.role === "artist" || profile.role === "owner";
     const hasLocation = !!((profile as { city_id?: string | null }).city_id || profile.country);
-    const incomplete = isArtistProfile && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation);
-    if (incomplete) {
-      const safeNext = next && next.startsWith("/") && !next.startsWith("/onboarding") ? next : null;
-      redirect(`/onboarding/profile${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`);
+    const safeNext = next && next.startsWith("/") && !next.startsWith("/onboarding") ? next : null;
+    const qs = safeNext ? `?next=${encodeURIComponent(safeNext)}` : "";
+
+    if (isArtistProfile && (!profile.disciplines?.length || !profile.full_name?.trim() || !hasLocation)) {
+      redirect(`/onboarding/profile${qs}`);
+    }
+    if (profile.role === "patron" && !hasLocation) {
+      redirect(`/onboarding/patron${qs}`);
+    }
+    if (profile.role === "partner" && (!hasLocation || !profile.org_category)) {
+      redirect(`/onboarding/partner${qs}`);
     }
     redirect("/settings");
   }
