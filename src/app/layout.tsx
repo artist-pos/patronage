@@ -9,6 +9,7 @@ import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { Footer } from "@/components/layout/Footer";
 import { MobileTabBarServer } from "@/components/layout/MobileTabBarServer";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -144,6 +145,7 @@ export default function RootLayout({
           <Footer />
           <MobileTabBarServer />
           {modal}
+          <OnboardingGate />
           <Toaster position="bottom-center" />
         </PostHogProvider>
         <Analytics />

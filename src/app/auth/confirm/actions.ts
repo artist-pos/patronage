@@ -18,17 +18,19 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 }
 
-/** Mirror the callback's role-aware routing so a verified user lands in the
- *  right onboarding step. */
+/** Route a newly-confirmed user to their destination.
+ *
+ *  The onboarding modal (OnboardingGate) handles profile creation inline on
+ *  whichever page the user lands on, so we skip the full-page /onboarding/role
+ *  step and send them straight to the app. The fallback pages still exist for
+ *  login-time routing and JS-off edge cases.
+ */
 function destinationFor(role: string | null, next: string | null): string {
-  if (role && VALID_ROLES.includes(role)) {
-    const params = new URLSearchParams({ role });
-    // Carry next through onboarding so post-signup flows (e.g. a free listing
-    // started while logged out) can resume where the user left off.
-    if (next && next.startsWith("/")) params.set("next", next);
-    return `/onboarding/role?${params.toString()}`;
+  void role; // role pre-selection now handled by OnboardingGate via suggestedRoleForPath
+  if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/onboarding")) {
+    return next;
   }
-  return next || "/onboarding/role";
+  return "/opportunities";
 }
 
 /**
