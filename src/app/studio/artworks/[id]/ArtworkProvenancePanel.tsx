@@ -127,8 +127,9 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="e.g. This work was created during a period of sustained studio practice in 2024…"
-          rows={4}
-          className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none"
+          rows={2}
+          className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
         <div className="flex items-center gap-3">
           <button
@@ -139,7 +140,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
             {savingNote ? "Saving…" : "Save note"}
           </button>
           {noteSaved && <p className="text-xs text-emerald-600">Saved.</p>}
-          {noteError && <p className="text-xs text-red-600">{noteError}</p>}
+          {noteError && <p className="text-sm text-red-600">{noteError}</p>}
         </div>
       </section>
 
@@ -226,7 +227,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
               </div>
             </div>
             {transferError && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{transferError}</p>
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{transferError}</p>
             )}
             <div className="flex items-center gap-3">
               <button
@@ -264,11 +265,11 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
               {claims.length} pending
             </span>
           </div>
-          <p className="text-xs text-stone-400">
+          <p className="text-sm text-stone-400">
             Someone has submitted a claim saying they own this work. Approve to transfer ownership, or decline if the claim is invalid.
           </p>
           {resolveError && (
-            <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{resolveError}</p>
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{resolveError}</p>
           )}
           <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
             {claims.map(claim => (
@@ -314,7 +315,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
               return (
                 <li key={entry.id} className="ml-5 pb-5">
                   <div className={`absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full border-2 ${isLast ? "border-stone-900 bg-stone-900" : "border-stone-300 bg-white"}`} />
-                  <p className="text-[11px] text-stone-400">{formatDate(entry.transferred_at)}</p>
+                  <p className="text-sm text-stone-400">{formatDate(entry.transferred_at)}</p>
                   <p className="text-sm font-medium text-stone-800">{label}</p>
                   <p className="text-xs text-stone-500">{entry.owner_name}</p>
                 </li>

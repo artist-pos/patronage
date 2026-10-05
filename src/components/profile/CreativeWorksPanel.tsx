@@ -497,8 +497,9 @@ function UploadModal({ profileId, onSuccess, onClose }: UploadModalProps) {
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
                   placeholder="Paste or type your writing here…"
-                  rows={10}
-                  className="w-full border border-black text-sm px-3 py-2 resize-y outline-none focus:border-foreground transition-colors font-mono leading-relaxed"
+                  rows={4}
+                  className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors font-mono leading-relaxed"
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                 />
               )}
 
@@ -545,7 +546,7 @@ function UploadModal({ profileId, onSuccess, onClose }: UploadModalProps) {
                 </select>
               </div>
 
-              {error && <p className="text-xs text-destructive">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
               <div className="flex items-center justify-end gap-4 pt-1">
                 <button

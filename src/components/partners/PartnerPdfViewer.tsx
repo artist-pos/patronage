@@ -297,7 +297,7 @@ export function PartnerPdfViewer({ pdfUrl, fixedA4Portrait = false }: Props) {
             <span className="font-mono text-xs text-white/60">
               {pageNumber} / {numPages || "–"}
             </span>
-            <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest">
+            <span className="font-mono text-xs text-white/40 uppercase tracking-widest">
               Rotate device for landscape
             </span>
           </div>

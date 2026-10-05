@@ -113,7 +113,7 @@ export function GenerateTokenModal({ onClose, onGenerated, coverage, catalog }: 
   }
 
   const inputCls = "w-full text-xs border border-border bg-transparent px-2.5 py-1.5 focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300";
-  const labelCls = "text-[10px] font-medium uppercase tracking-widest text-stone-400";
+  const labelCls = "text-xs font-medium uppercase tracking-widest text-stone-400";
 
   return (
     <>
@@ -293,7 +293,7 @@ export function GenerateTokenModal({ onClose, onGenerated, coverage, catalog }: 
                       </div>
                     )}
                     {entityType === "partner" && orgCategory === "regional_arts_org" && selectedRegion && (
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {selectedRegion.artistCount} artist{selectedRegion.artistCount === 1 ? " is" : "s are"} already in {selectedRegion.name} and will
                         show on this organisation&apos;s region page.
                         {selectedRegion.org && (
@@ -301,7 +301,7 @@ export function GenerateTokenModal({ onClose, onGenerated, coverage, catalog }: 
                         )}
                       </p>
                     )}
-                    <p className="text-[10px] text-muted-foreground">A shadow profile will be created and activated when claimed.</p>
+                    <p className="text-xs text-muted-foreground">A shadow profile will be created and activated when claimed.</p>
                   </div>
                 )}
               </div>
@@ -324,7 +324,7 @@ export function GenerateTokenModal({ onClose, onGenerated, coverage, catalog }: 
                 <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes…" className={inputCls} />
               </div>
 
-              {error && <p className="text-xs text-red-600">{error}</p>}
+              {error && <p className="text-sm text-red-600">{error}</p>}
 
               <div className="flex gap-2 pt-1">
                 <button onClick={onClose} className="flex-1 text-xs font-medium py-2.5 border border-border hover:bg-stone-50 transition-colors">

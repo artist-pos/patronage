@@ -215,7 +215,7 @@ function demoPreview(): InvitePreview {
 function Banner() {
   return (
     <div className="border border-border bg-[color:var(--brand-sub)] p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+      <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
         Design preview
       </p>
       <p className="mt-1 text-sm">
@@ -249,7 +249,7 @@ function Block({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="bg-card p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+      <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
         {label}
       </p>
       <p className="mt-1 text-[22px] font-semibold leading-none">{value}</p>

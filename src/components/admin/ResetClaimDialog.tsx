@@ -96,11 +96,11 @@ export function ResetClaimDialog({ opps, onClose, onDone }: Props) {
                 <div key={o.id} className="px-3 py-2 flex items-start justify-between gap-3">
                   <span className="text-xs line-clamp-1">{o.title}</span>
                   {o.ownerLabel ? (
-                    <span className="text-[11px] text-amber-700 shrink-0">
+                    <span className="text-xs text-amber-700 shrink-0">
                       Owned by {o.ownerLabel}
                     </span>
                   ) : (
-                    <span className="text-[11px] text-muted-foreground shrink-0">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {o.opened ? "Opened, no owner" : "Nothing to reset"}
                     </span>
                   )}
@@ -119,7 +119,7 @@ export function ResetClaimDialog({ opps, onClose, onDone }: Props) {
           )}
 
           {error && (
-            <p className="flex items-center gap-1.5 text-xs text-destructive">
+            <p className="flex items-center gap-1.5 text-sm text-destructive">
               <AlertCircle className="w-3.5 h-3.5" /> {error}
             </p>
           )}

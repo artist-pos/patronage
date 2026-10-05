@@ -85,7 +85,7 @@ export function TriageView({ apps, stages, onOpenApp, onStatusChange }: Props) {
     <div className="flex gap-0 border border-black/10 h-[calc(100vh-200px)] min-h-[500px]">
       {/* List pane */}
       <div ref={listRef} className="w-[360px] shrink-0 border-r border-black/10 overflow-y-auto">
-        <div className="px-3 py-2 border-b border-black/5 text-[10px] text-stone-400 font-medium uppercase tracking-widest">
+        <div className="px-3 py-2 border-b border-black/5 text-xs text-stone-400 font-medium uppercase tracking-widest">
           {localApps.length} applications — j/k navigate
           {hasStage("shortlisted") && ", s shortlist"}
           {hasStage("selected") && ", a select"}

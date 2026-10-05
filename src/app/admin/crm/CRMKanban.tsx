@@ -71,14 +71,14 @@ function CRMCard({
         <p className="text-xs text-muted-foreground">{contact.contact_name}{contact.role ? `, ${contact.role}` : ""}</p>
       )}
       <div className="flex flex-wrap items-center gap-1">
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[contact.category] ?? "bg-stone-100 text-stone-600"}`}>
+        <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[contact.category] ?? "bg-stone-100 text-stone-600"}`}>
           {CATEGORY_LABELS[contact.category] ?? contact.category}
         </span>
         {contact.sent_from === "personal" && (
-          <span className="text-[10px] text-stone-400">personal</span>
+          <span className="text-xs text-stone-400">personal</span>
         )}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         {contact.follow_up_date ? (
           <span className={overdue ? "text-red-600 font-medium" : ""}>
             ↺ {formatDate(contact.follow_up_date)}
@@ -122,8 +122,8 @@ function KanbanColumn({
   return (
     <div className="flex flex-col min-w-[200px] w-[200px] shrink-0">
       <div className="flex items-center justify-between mb-2 px-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-500 leading-none">{col.label}</p>
-        <span className="text-[10px] text-stone-400">{contacts.length}</span>
+        <p className="text-xs font-semibold uppercase tracking-widest text-stone-500 leading-none">{col.label}</p>
+        <span className="text-xs text-stone-400">{contacts.length}</span>
       </div>
       <div
         ref={setNodeRef}

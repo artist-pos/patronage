@@ -246,7 +246,7 @@ export default function DesignSystemPage() {
             />
             <div data-pin-overlay>
               <p className="text-white text-[13px] font-medium">Composition in Ochre</p>
-              <p className="font-mono text-[10px] text-white/50 mt-0.5">Anahera Reweti · 2024</p>
+              <p className="font-mono text-xs text-white/50 mt-0.5">Anahera Reweti · 2024</p>
             </div>
           </div>
 
@@ -260,7 +260,7 @@ export default function DesignSystemPage() {
             <div data-pin-overlay>
               <p className="text-white text-[13px] font-medium">Untitled (Series III)</p>
               <p className="font-mono text-[13px] font-semibold text-white mt-0.5">$1,200 NZD</p>
-              <p className="font-mono text-[10px] text-white/50 mt-0.5">Blake Aitken</p>
+              <p className="font-mono text-xs text-white/50 mt-0.5">Blake Aitken</p>
             </div>
           </div>
 
@@ -273,9 +273,9 @@ export default function DesignSystemPage() {
             <p className="font-mono text-[12px] text-[color:var(--fg-muted)] mb-3.5">Te Tuhi</p>
             <div className="border-t border-border pt-3 mb-3 flex items-baseline justify-between">
               <span className="font-mono text-[22px] font-semibold">
-                $8,000 <span className="text-[11px] font-normal text-[color:var(--fg-muted)]">NZD</span>
+                $8,000 <span className="text-xs font-normal text-[color:var(--fg-muted)]">NZD</span>
               </span>
-              <span className="font-mono text-[11px] font-medium text-[color:var(--urgent)]">5 days left</span>
+              <span className="font-mono text-xs font-medium text-[color:var(--urgent)]">5 days left</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               <span className="tag">NZ</span>
@@ -293,7 +293,7 @@ export default function DesignSystemPage() {
             </p>
             <div className="border-t border-border pt-3">
               <span className="text-[13px] font-medium">Anahera Reweti</span>
-              <span className="font-mono text-[10px] text-[color:var(--fg-subtle)] ml-2">2 days ago</span>
+              <span className="font-mono text-xs text-[color:var(--fg-subtle)] ml-2">2 days ago</span>
             </div>
           </div>
 
@@ -301,7 +301,7 @@ export default function DesignSystemPage() {
           <div className="pin-audio p-5 cursor-pointer">
             <p className="t-kicker mb-3">Audio</p>
             <p className="text-[15px] font-medium mb-0.5">Field recording — Otira</p>
-            <p className="font-mono text-[11px] text-[color:var(--fg-muted)] mb-4">Aroha Ngata</p>
+            <p className="font-mono text-xs text-[color:var(--fg-muted)] mb-4">Aroha Ngata</p>
             <div className="flex items-center gap-2.5">
               <button className="h-[30px] w-[30px] shrink-0 bg-foreground flex items-center justify-center">
                 <svg className="w-[11px] h-[11px] ml-0.5" viewBox="0 0 24 24" fill="white">
@@ -311,7 +311,7 @@ export default function DesignSystemPage() {
               <div className="relative h-px flex-1 bg-border">
                 <div className="h-full w-[38%] bg-foreground" />
               </div>
-              <span className="font-mono text-[11px] text-[color:var(--fg-muted)]">3:42</span>
+              <span className="font-mono text-xs text-[color:var(--fg-muted)]">3:42</span>
             </div>
           </div>
 
@@ -323,7 +323,7 @@ export default function DesignSystemPage() {
             <div className="p-4">
               <div className="flex items-center gap-1.5 mb-2.5">
                 <span className="tag">essay</span>
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">6 min read</span>
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">6 min read</span>
               </div>
               <p className="text-[17px] font-semibold leading-snug tracking-[-0.022em] mb-2">
                 On the economics of the residency
@@ -334,7 +334,7 @@ export default function DesignSystemPage() {
               </p>
               <div className="border-t border-border pt-3">
                 <span className="text-[13px] font-medium">Patronage</span>
-                <span className="font-mono text-[10px] text-[color:var(--fg-subtle)] ml-2">26 Jun 2026</span>
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)] ml-2">26 Jun 2026</span>
               </div>
             </div>
           </div>

@@ -149,7 +149,7 @@ function SortableCriterionItem({
     return (
       <div className="border border-black/10 p-3 bg-stone-50 text-xs text-stone-500 flex items-center justify-between">
         <span className="font-medium text-foreground">{c.label || `Criterion ${idx + 1}`}</span>
-        <span className="text-[10px] text-stone-400 uppercase tracking-wide">Locked — scoring started</span>
+        <span className="text-xs text-stone-400 uppercase tracking-wide">Locked — scoring started</span>
       </div>
     );
   }

@@ -50,7 +50,7 @@ export function SeriesTab({ series: initialSeries }: Props) {
       </div>
 
       {error && (
-        <p className="text-xs text-destructive border border-destructive/30 px-3 py-2">{error}</p>
+        <p className="text-sm text-destructive border border-destructive/30 px-3 py-2">{error}</p>
       )}
 
       {series.length === 0 ? (
@@ -78,7 +78,7 @@ export function SeriesTab({ series: initialSeries }: Props) {
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{s.title}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {s.artworkCount} {s.artworkCount === 1 ? "work" : "works"}
                 </p>
               </div>
@@ -93,7 +93,7 @@ export function SeriesTab({ series: initialSeries }: Props) {
                 <button
                   onClick={() => setDeleteTarget(s)}
                   disabled={deleting === s.id}
-                  className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-40"
+                  className="text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-40"
                 >
                   Remove
                 </button>

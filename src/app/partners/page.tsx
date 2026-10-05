@@ -161,7 +161,7 @@ export default async function PartnersPage() {
             {PROCESS.map((step, i) => (
               <li key={step} className="flex items-center gap-3">
                 <span className="flex items-baseline gap-2">
-                  <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="text-[15px] font-medium tracking-[-0.01em]">{step}</span>
@@ -186,7 +186,7 @@ export default async function PartnersPage() {
           <div className="mt-12 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {SERVICES.map((s, i) => (
               <Link key={s.title} href={s.href} className="flex flex-col bg-white p-6 transition-opacity hover:opacity-75">
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="t-heading mt-6">{s.title}</h3>
@@ -272,7 +272,7 @@ export default async function PartnersPage() {
           <ol className="mt-12 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {PLATFORM.map(([title, body], i) => (
               <li key={title} className="bg-white p-6">
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="t-heading mt-6">{title}</h3>

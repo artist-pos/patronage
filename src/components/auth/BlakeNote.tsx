@@ -8,7 +8,7 @@ export function BlakeNote({ children }: { children: React.ReactNode }) {
   return (
     <>
       <p>{children}</p>
-      <p className="mt-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">— Blake</p>
+      <p className="mt-2 font-mono text-xs text-[color:var(--fg-subtle)]">— Blake</p>
     </>
   );
 }

@@ -89,7 +89,7 @@ export function OnboardingModal({ existingRole, suggestedRole, onComplete }: Pro
         <div className="p-6 sm:p-8 space-y-8">
           {/* Step indicator */}
           {showRoleStep && (
-            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+            <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               Step {step === "role" ? "1" : "2"} of 2
             </p>
           )}

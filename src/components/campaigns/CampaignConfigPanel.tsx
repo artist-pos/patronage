@@ -154,7 +154,7 @@ function WorkCard({
         <img src={work.url} alt={label} className="w-full aspect-square object-cover" />
       ) : (
         <div className="w-full aspect-square bg-muted flex items-center justify-center">
-          <span className="text-[10px] text-muted-foreground uppercase">{work.content_type ?? "work"}</span>
+          <span className="text-xs text-muted-foreground uppercase">{work.content_type ?? "work"}</span>
         </div>
       )}
 
@@ -169,7 +169,7 @@ function WorkCard({
         </div>
       )}
 
-      <p className="text-[10px] text-muted-foreground truncate px-1 py-0.5">{label}</p>
+      <p className="text-xs text-muted-foreground truncate px-1 py-0.5">{label}</p>
 
       <div className="flex gap-1 px-1 pb-1">
         <button
@@ -533,7 +533,7 @@ export function CampaignConfigPanel({
             <img src={qrUrl} alt="Campaign QR code" className="w-36 h-36 border border-black" />
           ) : (
             <div className="w-36 h-36 border border-dashed border-border flex items-center justify-center">
-              <span className="text-[11px] text-muted-foreground">No QR yet</span>
+              <span className="text-xs text-muted-foreground">No QR yet</span>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
@@ -541,14 +541,14 @@ export function CampaignConfigPanel({
               type="button"
               onClick={handleDownloadZip}
               disabled={!qrUrl}
-              className="text-[11px] border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-40"
+              className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-40"
             >
               Download QR assets (.zip)
             </button>
             <button
               type="button"
               onClick={handleRegenQr}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Regenerate
             </button>
@@ -558,7 +558,7 @@ export function CampaignConfigPanel({
         {/* Landing URL + preview */}
         <div className="space-y-3 min-w-0 flex-1">
           <div>
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest mb-1">Storefront URL</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Storefront URL</p>
             <p className="text-xs font-mono break-all">{landingUrl}</p>
           </div>
           <a
@@ -571,21 +571,21 @@ export function CampaignConfigPanel({
           </a>
           {isLive && (
             <div className="flex items-center gap-3">
-              <span className={`inline-block text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${isPublic ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+              <span className={`inline-block text-xs px-2 py-0.5 font-medium uppercase tracking-wide ${isPublic ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                 {isPublic ? "Live" : "Delisted"}
               </span>
               <button
                 type="button"
                 onClick={handleTogglePublic}
                 disabled={togglingPublic}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
               >
                 {togglingPublic ? "Saving…" : isPublic ? "Delist from profile" : "Re-publish to profile"}
               </button>
             </div>
           )}
           {isSubmitted && (
-            <span className="inline-block text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 font-medium uppercase tracking-wide">
+            <span className="inline-block text-xs bg-amber-100 text-amber-700 px-2 py-0.5 font-medium uppercase tracking-wide">
               Awaiting approval
             </span>
           )}
@@ -699,7 +699,7 @@ export function CampaignConfigPanel({
       <section className="space-y-4 border-t border-border pt-8">
         <div className="space-y-1">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Layout</h2>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             How your storefront looks when visitors scan the campaign QR.
           </p>
         </div>
@@ -717,7 +717,7 @@ export function CampaignConfigPanel({
             </div>
             <div>
               <p className="text-xs font-medium">Shopfront</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">Grid of all works. Good for art fairs and markets.</p>
+              <p className="text-xs text-muted-foreground leading-tight">Grid of all works. Good for art fairs and markets.</p>
             </div>
           </button>
           <button
@@ -733,11 +733,11 @@ export function CampaignConfigPanel({
             </div>
             <div>
               <p className="text-xs font-medium">Showcase</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">Hero work prominent, others below. Good for exhibitions and hoardings.</p>
+              <p className="text-xs text-muted-foreground leading-tight">Hero work prominent, others below. Good for exhibitions and hoardings.</p>
             </div>
           </button>
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Each individual work also gets its own QR — when scanned, it always spotlights that specific work.
         </p>
       </section>
@@ -747,7 +747,7 @@ export function CampaignConfigPanel({
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Hero Artwork</h2>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               The featured work on your storefront. Required to publish.
             </p>
           </div>
@@ -755,7 +755,7 @@ export function CampaignConfigPanel({
             <button
               type="button"
               onClick={() => setShowHeroPicker(true)}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
             >
               Change
             </button>
@@ -777,7 +777,7 @@ export function CampaignConfigPanel({
               <div className="min-w-0">
                 <p className="text-sm font-medium">{heroLabel}</p>
                 {isProfileFeatured && (
-                  <p className="text-[11px] text-muted-foreground">From your profile settings</p>
+                  <p className="text-xs text-muted-foreground">From your profile settings</p>
                 )}
               </div>
             </div>
@@ -787,7 +787,7 @@ export function CampaignConfigPanel({
         {/* Inline hero picker */}
         {(!heroWorkId || showHeroPicker) && (
           <div className="space-y-3">
-            <p className="text-[11px] text-muted-foreground">Select the main image for your storefront:</p>
+            <p className="text-xs text-muted-foreground">Select the main image for your storefront:</p>
 
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {/* Profile featured image option */}
@@ -802,7 +802,7 @@ export function CampaignConfigPanel({
                   <div className="absolute top-1 left-1 bg-stone-700 text-white text-[8px] font-bold px-1 py-0.5 leading-none">
                     PROFILE
                   </div>
-                  <p className="text-[10px] text-muted-foreground truncate px-1 py-0.5">Profile image</p>
+                  <p className="text-xs text-muted-foreground truncate px-1 py-0.5">Profile image</p>
                 </button>
               )}
 
@@ -814,7 +814,7 @@ export function CampaignConfigPanel({
                   className="border-2 border-dashed border-border hover:border-black transition-colors aspect-square flex flex-col items-center justify-center gap-1"
                 >
                   <span className="text-xl text-muted-foreground">+</span>
-                  <span className="text-[10px] text-muted-foreground text-center leading-tight px-1">
+                  <span className="text-xs text-muted-foreground text-center leading-tight px-1">
                     Upload<br />new work
                   </span>
                 </button>
@@ -836,10 +836,10 @@ export function CampaignConfigPanel({
                       <img src={work.url} alt={label} className="w-full aspect-square object-cover" />
                     ) : (
                       <div className="w-full aspect-square bg-muted flex items-center justify-center">
-                        <span className="text-[10px] text-muted-foreground uppercase">{work.content_type ?? "work"}</span>
+                        <span className="text-xs text-muted-foreground uppercase">{work.content_type ?? "work"}</span>
                       </div>
                     )}
-                    <p className="text-[10px] text-muted-foreground truncate px-1 py-0.5">{label}</p>
+                    <p className="text-xs text-muted-foreground truncate px-1 py-0.5">{label}</p>
                   </button>
                 );
               })}
@@ -850,7 +850,7 @@ export function CampaignConfigPanel({
               <div className="border border-border p-4 mt-2">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-xs font-medium">Upload new work</p>
-                  <button type="button" onClick={() => setShowUploadWork(false)} className="text-[11px] text-muted-foreground hover:text-foreground">Cancel</button>
+                  <button type="button" onClick={() => setShowUploadWork(false)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
                 </div>
                 <NewArtworkEditor
                   profileId={profileId}
@@ -864,7 +864,7 @@ export function CampaignConfigPanel({
               <button
                 type="button"
                 onClick={() => setShowHeroPicker(false)}
-                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -878,7 +878,7 @@ export function CampaignConfigPanel({
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Works</h2>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {selectedWorkIds.size} selected · max 6 · each gets its own QR label
             </p>
           </div>
@@ -886,7 +886,7 @@ export function CampaignConfigPanel({
             type="button"
             onClick={handleSaveDetails}
             disabled={saving}
-            className="text-[11px] border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50 shrink-0"
+            className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50 shrink-0"
           >
             {saving ? "Saving…" : "Save selection"}
           </button>
@@ -900,7 +900,7 @@ export function CampaignConfigPanel({
               <button
                 type="button"
                 onClick={() => setShowUploadWork(false)}
-                className="text-[11px] text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
@@ -920,7 +920,7 @@ export function CampaignConfigPanel({
               className="border-2 border-dashed border-border hover:border-black transition-colors aspect-square flex flex-col items-center justify-center gap-1"
             >
               <span className="text-xl text-muted-foreground">+</span>
-              <span className="text-[10px] text-muted-foreground text-center leading-tight px-1">
+              <span className="text-xs text-muted-foreground text-center leading-tight px-1">
                 Upload<br />new work
               </span>
             </button>
@@ -945,7 +945,7 @@ export function CampaignConfigPanel({
         <section className="space-y-4 border-t border-border pt-8">
           <div className="space-y-1">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Artwork Pricing</h2>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Set a price for each work. Visitors see this when they tap a work on your storefront.
             </p>
           </div>
@@ -970,12 +970,12 @@ export function CampaignConfigPanel({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{label}</p>
-                      {workId === heroWorkId && <p className="text-[10px] text-muted-foreground">Hero</p>}
+                      {workId === heroWorkId && <p className="text-xs text-muted-foreground">Hero</p>}
                     </div>
                     <button
                       type="button"
                       onClick={() => setWorkField(workId, "available", !wp.available)}
-                      className={`text-[10px] px-2.5 py-1 border transition-colors shrink-0 ${wp.available ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
+                      className={`text-xs px-2.5 py-1 border transition-colors shrink-0 ${wp.available ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
                     >
                       {wp.available ? "For sale" : "Not for sale"}
                     </button>
@@ -985,7 +985,7 @@ export function CampaignConfigPanel({
                     <div className="pl-[52px] space-y-4">
                       {/* Original */}
                       <div className="space-y-2">
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Original</p>
+                        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Original</p>
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
@@ -1016,7 +1016,7 @@ export function CampaignConfigPanel({
                                 key={mode}
                                 type="button"
                                 onClick={() => setWorkField(workId, "acquisition_mode", mode)}
-                                className={`text-[10px] px-2.5 py-1 border transition-colors ${wp.acquisition_mode === mode ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
+                                className={`text-xs px-2.5 py-1 border transition-colors ${wp.acquisition_mode === mode ? "border-black bg-black text-white" : "border-border text-muted-foreground hover:border-black"}`}
                               >
                                 {mode === "enquire_first" ? "Enquire first" : "Buy now"}
                               </button>
@@ -1055,7 +1055,7 @@ export function CampaignConfigPanel({
                                   className="w-24 border border-border px-3 py-1.5 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground"
                                 />
                                 <button type="button" onClick={() => removeWorkPrintRow(workId, i)}
-                                  className="text-[11px] text-muted-foreground hover:text-foreground">✕</button>
+                                  className="text-xs text-muted-foreground hover:text-foreground">✕</button>
                               </div>
                             ))}
                             <button type="button" onClick={() => addWorkPrintRow(workId)}
@@ -1083,9 +1083,10 @@ export function CampaignConfigPanel({
         <textarea
           value={artistStatement}
           onChange={e => setArtistStatement(e.target.value)}
-          rows={4}
+          rows={2}
           placeholder="A short statement about this body of work or campaign…"
-          className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+          className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
         {/* Shipping rates */}
         <div className="space-y-3 pt-2 border-t border-border">
@@ -1149,10 +1150,10 @@ export function CampaignConfigPanel({
 
           {/* Production status badge */}
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
               Production status
             </span>
-            <span className={`text-[11px] px-2 py-0.5 font-medium rounded-full ${
+            <span className={`text-xs px-2 py-0.5 font-medium rounded-full ${
               campaign.production_status === "approved" ? "bg-green-100 text-green-700"
                 : campaign.production_status === "files_submitted" ? "bg-blue-50 text-blue-700"
                 : "bg-stone-100 text-stone-600"
@@ -1170,7 +1171,7 @@ export function CampaignConfigPanel({
               disabled={uploading}
               className="text-sm file:mr-3 file:border file:border-black file:bg-transparent file:px-3 file:py-1 file:text-xs file:hover:bg-muted file:transition-colors cursor-pointer disabled:opacity-50"
             />
-            {uploading && <p className="text-[11px] text-muted-foreground">Uploading…</p>}
+            {uploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
           </div>
 
           {/* File list */}
@@ -1180,7 +1181,7 @@ export function CampaignConfigPanel({
                 <div key={f.id} className="flex items-center gap-3 px-3 py-2.5">
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <p className="text-sm font-medium truncate">{f.file_name}</p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {f.file_type?.replace("_", " ") ?? "file"}
                       {f.file_size_bytes ? ` · ${fmtBytes(f.file_size_bytes)}` : ""}
                     </p>
@@ -1190,14 +1191,14 @@ export function CampaignConfigPanel({
                       href={f.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                      className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground"
                     >
                       View
                     </a>
                     <button
                       type="button"
                       onClick={() => handleDeleteFile(f.id)}
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       Remove
                     </button>

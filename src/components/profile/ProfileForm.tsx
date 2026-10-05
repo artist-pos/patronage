@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
-import { upsertProfileAction, type ProfileFormState } from "@/app/onboarding/actions";
+import { upsertProfileAction, updateProfileAction, type ProfileFormState } from "@/app/onboarding/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SaveConfirmation } from "@/components/ui/SaveConfirmation";
 import { MediumInput } from "./MediumInput";
 import { DisciplineInput } from "./DisciplineInput";
 import { LocationPicker } from "./LocationPicker";
@@ -23,12 +24,14 @@ interface Props {
   boards: LocalBoard[];
   /** Regional arts bodies an artist may name as theirs (189). */
   artsOrgs: ArtsOrganisation[];
+  /** When true, stay on the page after saving instead of redirecting. */
+  stayOnPage?: boolean;
 }
 
-export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) {
+export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPage }: Props) {
   const isArtist = role === "artist" || role === "owner";
   const [state, action, isPending] = useActionState<ProfileFormState, FormData>(
-    upsertProfileAction,
+    stayOnPage ? updateProfileAction : upsertProfileAction,
     {}
   );
 
@@ -82,7 +85,8 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
           defaultValue={profile?.bio ?? ""}
           rows={4}
           placeholder={isArtist ? "A short description of your practice…" : "Describe your mission or interest in supporting the arts…"}
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
         />
       </div>
 
@@ -243,7 +247,8 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
               defaultValue={profile?.commission_info ?? ""}
               rows={3}
               placeholder="What you take commissions for, typical lead time, price guidance…"
-              className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+              className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+              onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
             />
           </div>
         </div>
@@ -303,9 +308,12 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Save profile"}
-      </Button>
+      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-black bg-background px-4 sm:px-6 py-3 flex items-center gap-3">
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Saving…" : "Save profile"}
+        </Button>
+        {state.success && <SaveConfirmation message="Profile saved" visible />}
+      </div>
     </form>
   );
 }

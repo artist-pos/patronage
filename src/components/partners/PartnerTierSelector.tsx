@@ -131,7 +131,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                 }`}
               >
                 {tier.popular && (
-                  <span className="absolute -top-2.5 left-3 bg-black text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wider">
+                  <span className="absolute -top-2.5 left-3 bg-black text-white text-xs font-semibold px-2 py-0.5 uppercase tracking-wider">
                     Most popular
                   </span>
                 )}
@@ -139,12 +139,12 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                   <p className="text-sm font-semibold">{tier.label}</p>
                   <div className="flex items-baseline gap-1.5 flex-wrap">
                     {"strikePrice" in tier && tier.strikePrice && (
-                      <s className="text-[11px] text-muted-foreground font-mono">{tier.strikePrice}</s>
+                      <s className="text-xs text-muted-foreground font-mono">{tier.strikePrice}</s>
                     )}
                     <span className="text-xs font-medium font-mono">{tier.price}</span>
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">{tier.body}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{tier.body}</p>
               </button>
             ))}
           </div>
@@ -166,7 +166,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                   {" "}
                   <span className="font-medium text-foreground">$75 NZD</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Pinned to top of feed and weekly digest for the duration of your listing.
                 </p>
               </div>
@@ -182,7 +182,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
             </p>
           )}
           {(selectedTier === "featured" || (selectedTier === "standard" && addFeatured) || (selectedTier === "pipeline" && (pipelineFirstRoundUsed || addFeatured))) && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Paid tiers add a 2.9% + 30c card processing fee at checkout. Itemised on the Stripe payment page.
             </p>
           )}
@@ -298,7 +298,7 @@ function PipelineInfoPanel({ pipelineFirstRoundUsed }: { pipelineFirstRoundUsed:
         <p className="text-xs font-medium">
           {pipelineFirstRoundUsed ? "$200 NZD per round" : "First round free"}
         </p>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           {pipelineFirstRoundUsed
             ? "Each Pipeline round is $200 NZD. Running multiple opportunities per year? Get in touch about volume pricing."
             : "Your first Pipeline round is free with no commitment. After that, $200 NZD per round. Running multiple opportunities per year? Get in touch about volume pricing."}

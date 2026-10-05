@@ -51,7 +51,7 @@ export function CreateCampaignFromSelectionButton({
       >
         {loading ? "Creating…" : "Create campaign"}
       </button>
-      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      {error && <p className="text-sm text-destructive mt-1">{error}</p>}
     </div>
   );
 }

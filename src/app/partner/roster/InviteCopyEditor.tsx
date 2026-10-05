@@ -96,7 +96,7 @@ export function InviteCopyEditor({ initial, defaults }: Props) {
               : "You have written your own wording."}
           </span>
         </span>
-        <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+        <span className="shrink-0 font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
           {open ? "Close" : "Edit"}
         </span>
       </button>
@@ -181,7 +181,7 @@ export function InviteCopyEditor({ initial, defaults }: Props) {
             )}
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           {toast && (
             <p aria-live="polite" className="text-xs text-[color:var(--fg-muted)]">
               {toast}
@@ -190,7 +190,7 @@ export function InviteCopyEditor({ initial, defaults }: Props) {
 
           {preview && (
             <div className="space-y-2 border-t border-border pt-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+              <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
                 Subject
               </p>
               <p className="text-[14px]">{preview.subject}</p>
@@ -244,7 +244,8 @@ function Field({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full border border-border bg-card px-3 py-2.5 text-[15px] outline-none focus:border-foreground"
+          className="w-full border border-border bg-card px-3 py-2.5 text-[15px] outline-none focus:border-foreground resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       ) : (
         <input
@@ -259,8 +260,8 @@ function Field({
       <p
         className={
           over
-            ? "text-[11px] text-destructive"
-            : "text-[11px] text-[color:var(--fg-subtle)]"
+            ? "text-sm text-destructive"
+            : "text-xs text-[color:var(--fg-subtle)]"
         }
       >
         {value.length > 0 ? `${value.length} of ${max}` : "Blank uses the standard wording"}

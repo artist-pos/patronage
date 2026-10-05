@@ -66,7 +66,7 @@ export function WizardChrome({
                   )}
                   <div className="flex flex-col items-center gap-0.5">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold border transition-colors ${
                         done
                           ? "bg-black border-black text-white"
                           : active
@@ -77,7 +77,7 @@ export function WizardChrome({
                       {done ? "✓" : step.number}
                     </div>
                     <span
-                      className={`text-[10px] font-medium whitespace-nowrap transition-colors ${
+                      className={`text-xs font-medium whitespace-nowrap transition-colors ${
                         active ? "text-foreground" : done ? "text-stone-500" : "text-stone-300"
                       }`}
                     >
@@ -92,7 +92,7 @@ export function WizardChrome({
           {/* Right: save + preview */}
           <div className="flex items-center gap-2 shrink-0">
             {saveLabel && (
-              <span className="text-[11px] text-stone-400 hidden sm:block">{saveLabel}</span>
+              <span className="text-xs text-stone-400 hidden sm:block">{saveLabel}</span>
             )}
             {!anonymous && (
               <Link
@@ -127,7 +127,7 @@ export function WizardChrome({
             </Link>
           )}
 
-          <span className="text-[11px] text-stone-400 hidden sm:block">
+          <span className="text-xs text-stone-400 hidden sm:block">
             {saveLabel || ""}
           </span>
 

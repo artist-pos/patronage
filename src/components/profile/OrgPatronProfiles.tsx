@@ -15,7 +15,7 @@ import { affiliationYears, rosterHeading, type OrgRoster } from "@/lib/affiliati
 // commissioned artists. Patron = donor wall: cover w/ big name, following grid,
 // collected works — no dollar amounts anywhere.
 
-const SECTION_LABEL = "font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]";
+const SECTION_LABEL = "font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]";
 const ICON_BTN = "flex h-9 w-9 shrink-0 items-center justify-center border border-border text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground";
 const BADGE_GREEN = "bg-[#E1F5EE] px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-[#085041]";
 const BADGE_NEUTRAL = "bg-muted px-[7px] py-[3px] font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-[color:var(--fg-muted)]";
@@ -78,7 +78,7 @@ function ArtistTile({ a }: { a: ArtistTileData }) {
         />
       )}
       <div className="absolute inset-x-0 bottom-0 bg-black/75 px-2.5 py-2 opacity-0 transition-opacity duration-[180ms] group-hover:opacity-100">
-        <p className="truncate text-[11px] text-white">{a.full_name ?? a.username}</p>
+        <p className="truncate text-xs text-white">{a.full_name ?? a.username}</p>
         {a.medium?.[0] && (
           <p className="mt-px truncate font-mono text-[9px] lowercase text-white/60">{a.medium[0]}</p>
         )}
@@ -220,7 +220,7 @@ export function PartnerProfileView({
           <div className="mx-auto max-w-[1280px]">
             <Link
               href={regionLink ? `/artists/${regionLink.slug}` : "/partners"}
-              className="mb-3.5 inline-block font-mono text-[10px] tracking-[0.12em] text-white/70 transition-colors hover:text-white"
+              className="mb-3.5 inline-block font-mono text-xs tracking-[0.12em] text-white/70 transition-colors hover:text-white"
             >
               {regionLink ? `← Artists in ${regionLink.name}` : "← Partners"}
             </Link>
@@ -241,7 +241,7 @@ export function PartnerProfileView({
                 )}
               </div>
               <div>
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-white/55">
+                <p className="mb-2 font-mono text-xs uppercase tracking-[0.1em] text-white/55">
                   {orgType}
                 </p>
                 <h1 className="text-[38px] font-semibold leading-none tracking-[-0.03em] text-white">
@@ -276,7 +276,7 @@ export function PartnerProfileView({
             {isOwner && (
               <Link
                 href="/profile/edit"
-                className="inline-flex h-9 items-center border border-border px-4 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                className="inline-flex h-9 items-center border border-border px-4 font-mono text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
                 Edit Profile
               </Link>
@@ -315,7 +315,7 @@ export function PartnerProfileView({
               <h2 className={SECTION_LABEL}>Artists in {regionLink.name}</h2>
               <Link
                 href={`/artists/${regionLink.slug}`}
-                className="inline-flex h-9 items-center border border-border bg-background px-4 font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+                className="inline-flex h-9 items-center border border-border bg-background px-4 font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
               >
                 View all in {regionLink.name} &rarr;
               </Link>
@@ -336,7 +336,7 @@ export function PartnerProfileView({
             {stats.map(([value, label]) => (
               <div key={label} className="mr-6 border-r border-border pr-6 last:mr-0 last:border-r-0 last:pr-0">
                 <p className="font-mono text-[26px] font-semibold tracking-[-0.01em]">{value}</p>
-                <p className="mt-1 font-mono text-[11px] text-[color:var(--fg-subtle)]">{label}</p>
+                <p className="mt-1 font-mono text-xs text-[color:var(--fg-subtle)]">{label}</p>
               </div>
             ))}
           </div>
@@ -374,11 +374,11 @@ export function PartnerProfileView({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="mb-1 truncate text-base font-medium">{opp.title}</p>
-                      <p className="font-mono text-[11px] text-[color:var(--fg-muted)]">
+                      <p className="font-mono text-xs text-[color:var(--fg-muted)]">
                         {[opp.type, opp.city ?? opp.country].filter(Boolean).join(" · ")}
                       </p>
                     </div>
-                    <p className={`shrink-0 text-right font-mono text-[11px] font-medium ${d.cls}`}>
+                    <p className={`shrink-0 text-right font-mono text-xs font-medium ${d.cls}`}>
                       {d.label}
                     </p>
                   </Link>
@@ -408,7 +408,7 @@ export function PartnerProfileView({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-medium">{opp.title}</p>
-                      <p className="mt-[3px] font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                      <p className="mt-[3px] font-mono text-xs text-[color:var(--fg-subtle)]">
                         {[opp.deadline ? new Date(opp.deadline).getFullYear() : null, opp.type]
                           .filter(Boolean)
                           .join(" · ")}
@@ -443,7 +443,7 @@ export function PartnerProfileView({
           <div className={`${INNER} py-9`}>
             <div className="mb-[18px] flex items-baseline justify-between">
               <h2 className={SECTION_LABEL}>{rosterHeading(roster.relationship)}</h2>
-              <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+              <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                 {roster.artists.length} artist{roster.artists.length !== 1 ? "s" : ""}
               </span>
             </div>
@@ -452,7 +452,7 @@ export function PartnerProfileView({
                 <div key={a.id}>
                   <ArtistTile a={a} />
                   {roster.relationship === "participant" && affiliationYears(a) && (
-                    <p className="bg-card px-3 pb-3 font-mono text-[10px] text-[color:var(--fg-subtle)]">
+                    <p className="bg-card px-3 pb-3 font-mono text-xs text-[color:var(--fg-subtle)]">
                       {affiliationYears(a)}
                     </p>
                   )}
@@ -469,7 +469,7 @@ export function PartnerProfileView({
           <div className={`${INNER} py-9`}>
             <div className="mb-[18px] flex items-baseline justify-between">
               <h2 className={SECTION_LABEL}>Commissioned artists</h2>
-              <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+              <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                 {selectedTotal} artist{selectedTotal !== 1 ? "s" : ""}, through Patronage
               </span>
             </div>
@@ -596,7 +596,7 @@ export function PatronProfileView({
             {isOwner && (
               <Link
                 href="/profile/edit"
-                className="inline-flex h-9 items-center border border-border px-4 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                className="inline-flex h-9 items-center border border-border px-4 font-mono text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
                 Edit Profile
               </Link>
@@ -641,7 +641,7 @@ export function PatronProfileView({
                   {(profile.medium ?? []).map((m) => (
                     <span
                       key={m}
-                      className="border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)]"
+                      className="border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)]"
                     >
                       {m}
                     </span>
@@ -702,7 +702,7 @@ export function PatronProfileView({
                     >
                       {w.title && <p className="truncate text-xs text-white">{w.title}</p>}
                       {w.artistName && (
-                        <p className="mt-0.5 truncate font-mono text-[10px] text-white/60">{w.artistName}</p>
+                        <p className="mt-0.5 truncate font-mono text-xs text-white/60">{w.artistName}</p>
                       )}
                     </div>
                   </>

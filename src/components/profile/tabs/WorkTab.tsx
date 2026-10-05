@@ -271,7 +271,7 @@ export function WorkTab({
 
             {archiveCount > 0 && (
               <details name="work-panel" className="js-archive group/archive" open={selectedItems.length === 0}>
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/archive:border-foreground group-open/archive:bg-foreground group-open/archive:text-white">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-xs font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/archive:border-foreground group-open/archive:bg-foreground group-open/archive:text-white">
                   <span>Archive</span>
                   <span className="text-muted-foreground group-open/archive:text-white/70">
                     · {archiveCount}, by year
@@ -290,7 +290,7 @@ export function WorkTab({
 
             {forSaleWorks.length > 0 && (
               <details name="work-panel" className="js-avail group/avail">
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/avail:border-foreground group-open/avail:bg-foreground group-open/avail:text-white">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-xs font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/avail:border-foreground group-open/avail:bg-foreground group-open/avail:text-white">
                   <span>Available</span>
                   <span className="text-muted-foreground group-open/avail:text-white/70">
                     · {forSaleWorks.length}
@@ -320,7 +320,7 @@ export function WorkTab({
                     const items = groups.get(year)!.sort(byPosition);
                     return (
                       <div key={year ?? "undated"} className="space-y-3">
-                        <div className="border-b border-border pb-1.5 font-mono text-[11px] text-muted-foreground">
+                        <div className="border-b border-border pb-1.5 font-mono text-xs text-muted-foreground">
                           {year ?? "Undated"} · {items.length} work{items.length !== 1 ? "s" : ""}
                         </div>
                         <GalleryWithControls

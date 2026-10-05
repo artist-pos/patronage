@@ -143,14 +143,15 @@ export function PaymentRequestModal({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              rows={2}
               placeholder="e.g. Artist fee for participation in Open Call 2026"
-              className="w-full text-sm border border-black/30 px-3 py-2 focus:outline-none focus:border-black resize-none"
+              className="w-full text-sm border border-black/30 px-3 py-2 focus:outline-none focus:border-black resize-none overflow-hidden"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </Field>
 
           {toast && (
-            <p className="text-xs text-destructive">{toast}</p>
+            <p className="text-sm text-destructive">{toast}</p>
           )}
 
           <p className="text-xs text-muted-foreground">
@@ -186,7 +187,7 @@ function Field({
       <label className="text-sm font-medium">{label}</label>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

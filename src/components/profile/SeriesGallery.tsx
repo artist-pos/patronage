@@ -47,7 +47,7 @@ export function SeriesGallery({ artworks, artistId, artistName, artistUsername, 
               )}
               {artwork.is_available && (
                 <div className="absolute bottom-2 left-2">
-                  <span className="bg-white/90 text-[10px] font-medium px-1.5 py-0.5 text-stone-700">
+                  <span className="bg-white/90 text-xs font-medium px-1.5 py-0.5 text-stone-700">
                     Available
                   </span>
                 </div>

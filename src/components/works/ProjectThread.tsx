@@ -131,7 +131,7 @@ export function ProjectThread({ project, updates, campaignOutcome }: Props) {
                         />
                       ) : (
                         <div className="w-full aspect-square bg-stone-50 border border-border flex items-center justify-center">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                          <span className="text-xs text-muted-foreground uppercase tracking-widest">
                             {TAG_LABELS[tag]}
                           </span>
                         </div>
@@ -145,7 +145,7 @@ export function ProjectThread({ project, updates, campaignOutcome }: Props) {
                           {TAG_LABELS[tag]}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mb-1">{formatDate(u.created_at)}</p>
+                      <p className="text-xs text-muted-foreground mb-1">{formatDate(u.created_at)}</p>
                       {displayTitle && (
                         <p className="text-sm font-medium text-foreground mb-1">{displayTitle}</p>
                       )}
@@ -171,7 +171,7 @@ export function ProjectThread({ project, updates, campaignOutcome }: Props) {
                       </span>
                     </div>
                     {campaignOutcome.liveDate && (
-                      <p className="text-[11px] text-muted-foreground mb-1">{formatDate(campaignOutcome.liveDate)}</p>
+                      <p className="text-xs text-muted-foreground mb-1">{formatDate(campaignOutcome.liveDate)}</p>
                     )}
                     <p className="text-sm font-medium text-foreground mb-1">{campaignOutcome.title}</p>
                     <Link

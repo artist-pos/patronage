@@ -60,7 +60,7 @@ export function LiveOpportunitiesSection({ initialOpportunities, isOwner }: Prop
               style={{ height: CARD_H, width: CARD_W, boxSizing: "border-box" }}
             >
               {/* Type badge */}
-              <span className="text-[10px] font-mono uppercase tracking-widest border border-black px-1.5 py-0.5 self-start leading-none">
+              <span className="text-xs font-mono uppercase tracking-widest border border-black px-1.5 py-0.5 self-start leading-none">
                 {TYPE_LABELS[opp.type] ?? opp.type}
               </span>
 
@@ -76,14 +76,14 @@ export function LiveOpportunitiesSection({ initialOpportunities, isOwner }: Prop
 
               {/* Description snippet */}
               {opp.description && (
-                <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+                <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
                   {opp.description}
                 </p>
               )}
 
               {/* Deadline */}
               {opp.deadline && (
-                <p className="text-[10px] font-mono text-muted-foreground mt-auto">
+                <p className="text-xs font-mono text-muted-foreground mt-auto">
                   Closes {formatDeadline(opp.deadline)}
                 </p>
               )}

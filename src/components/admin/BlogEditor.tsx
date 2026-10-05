@@ -488,7 +488,7 @@ export function BlogEditor({ post, userId }: Props) {
               <p className="text-sm font-medium leading-none">
                 {featuredProfile.full_name ?? featuredProfile.username}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 @{featuredProfile.username}
               </p>
             </div>
@@ -540,7 +540,7 @@ export function BlogEditor({ post, userId }: Props) {
                         <p className="text-sm leading-none font-medium">
                           {profile.full_name ?? profile.username}
                         </p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           @{profile.username}
                         </p>
                       </div>
@@ -588,19 +588,19 @@ export function BlogEditor({ post, userId }: Props) {
               <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
                 Also post as studio update
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Posted from your account · {featuredProfile.full_name ?? featuredProfile.username} tagged as credit · blog link attached
               </p>
             </div>
             {localLinkedUpdateId ? (
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
                   ✓ Posted
                 </span>
                 <button
                   type="button"
                   onClick={() => { setLocalLinkedUpdateId(null); setCreateStudioUpdate(true); }}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                 >
                   Repost
                 </button>
@@ -680,7 +680,7 @@ export function BlogEditor({ post, userId }: Props) {
                 )}
               </div>
 
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 The studio update will be created when you publish.
               </p>
             </div>
@@ -730,7 +730,7 @@ export function BlogEditor({ post, userId }: Props) {
           </div>
           <EditorContent editor={editor} />
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Use <strong className="font-medium">Image</strong> to place a picture in the body at the
           cursor — the caption sits under it and is optional. Hover an image for its width
           (<strong className="font-medium">S / M / L / F</strong>), and{" "}
@@ -838,7 +838,7 @@ export function BlogEditor({ post, userId }: Props) {
         </div>
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2 border-t border-border">

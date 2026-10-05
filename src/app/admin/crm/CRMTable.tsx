@@ -180,7 +180,7 @@ export function CRMTable({ contacts, onSelectContact, onStatusChange }: Props) {
     return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   }
 
-  const thCls = "text-left text-[10px] font-medium uppercase tracking-widest text-stone-400 py-2 pr-4 whitespace-nowrap cursor-pointer hover:text-foreground transition-colors select-none";
+  const thCls = "text-left text-xs font-medium uppercase tracking-widest text-stone-400 py-2 pr-4 whitespace-nowrap cursor-pointer hover:text-foreground transition-colors select-none";
   const tdCls = "py-2.5 pr-4 align-top";
 
   function handleLocalStatusChange(id: string, status: OutreachContactStatus) {
@@ -242,7 +242,7 @@ export function CRMTable({ contacts, onSelectContact, onStatusChange }: Props) {
                 <td className={`${tdCls} hidden sm:table-cell`}>
                   <div className="space-y-0.5">
                     <p className="text-xs">{c.contact_name ?? "—"}</p>
-                    {c.role && <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">{c.role}</p>}
+                    {c.role && <p className="text-xs text-muted-foreground truncate max-w-[160px]">{c.role}</p>}
                   </div>
                 </td>
                 <td className={`${tdCls} hidden md:table-cell`}>

@@ -220,7 +220,7 @@ export default async function Home() {
         {/* Photo credit, bottom-right on the photo. */}
         <Link
           href={PHOTO_CREDIT.href}
-          className={`absolute bottom-[70px] right-6 z-10 text-[11px] underline-offset-4 transition-colors hover:underline sm:right-12 ${photo.credit}`}
+          className={`absolute bottom-[70px] right-6 z-10 text-xs underline-offset-4 transition-colors hover:underline sm:right-12 ${photo.credit}`}
         >
           <span className="sr-only">Background photo: </span>
           <i>{PHOTO_CREDIT.title}</i>, {PHOTO_CREDIT.artist}
@@ -363,7 +363,7 @@ export default async function Home() {
             <span key={dup} className="flex items-center" aria-hidden={dup === 1}>
               {DISCIPLINES.map((d) => (
                 <span key={`${dup}-${d}`} className="flex items-center">
-                  <span className="whitespace-nowrap px-4 font-mono text-[11px] text-[color:var(--fg-muted)]">{d}</span>
+                  <span className="whitespace-nowrap px-4 font-mono text-xs text-[color:var(--fg-muted)]">{d}</span>
                   <span className="px-1 text-border">·</span>
                 </span>
               ))}
@@ -422,7 +422,7 @@ export default async function Home() {
             <ol className="flex flex-col gap-2">
               {STEPS.map((step, i) => (
                 <li key={step.title} className="grid flex-1 grid-cols-[40px_1fr] items-start bg-white p-6">
-                  <span className="pt-1 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="pt-1 font-mono text-xs text-[color:var(--fg-subtle)]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <div>

@@ -85,7 +85,7 @@ function DirectTransferModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1.5">Buyer name</label>
+            <label className="block text-sm font-medium text-stone-600 mb-1.5">Buyer name</label>
             <input
               type="text"
               required
@@ -97,7 +97,7 @@ function DirectTransferModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1.5">Buyer email</label>
+            <label className="block text-sm font-medium text-stone-600 mb-1.5">Buyer email</label>
             <input
               type="email"
               required
@@ -109,7 +109,7 @@ function DirectTransferModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1.5">
+            <label className="block text-sm font-medium text-stone-600 mb-1.5">
               Sale price <span className="text-stone-400 font-normal">(optional, NZD)</span>
             </label>
             <input
@@ -124,7 +124,7 @@ function DirectTransferModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1.5">
+            <label className="block text-sm font-medium text-stone-600 mb-1.5">
               Notes <span className="text-stone-400 font-normal">(optional)</span>
             </label>
             <textarea
@@ -132,7 +132,8 @@ function DirectTransferModal({
               onChange={e => setNotes(e.target.value)}
               placeholder="Private notes for the ledger record…"
               rows={2}
-              className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none"
+              className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none overflow-hidden"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
 
@@ -290,7 +291,7 @@ export function ProvenanceTab({ artworks, pendingClaims: initialClaims, recentAc
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium ${
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                       transferred || isDone
                         ? "bg-stone-100 text-stone-400"
                         : "bg-emerald-50 text-emerald-700"

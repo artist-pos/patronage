@@ -37,7 +37,7 @@ export default async function ClaimTokensPage() {
           {(["pending", "sent", "claimed", "expired"] as const).map((s) => (
             <div key={s} className="border border-border p-3 space-y-1">
               <p className="text-lg font-semibold">{counts[s] ?? 0}</p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 capitalize">{s}</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400 capitalize">{s}</p>
             </div>
           ))}
         </div>

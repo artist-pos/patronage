@@ -175,7 +175,7 @@ function PricingCalculator({
   const p = pricingFromNet(net);
 
   const ci = "w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground";
-  const sl = "text-xs text-muted-foreground";
+  const sl = "text-sm text-muted-foreground";
   const tabCls = (active: boolean) =>
     `flex-1 py-1.5 text-xs border-b-2 transition-colors ${active ? "border-foreground text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`;
 
@@ -406,7 +406,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
           </button>
         </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {/* Type picker — add new edition cards */}
         <div className="flex gap-2 flex-wrap">
@@ -450,7 +450,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
                     ) : (
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     )}
-                    <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
+                    <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
                       {TYPE_LABELS[edition.type]}
                     </span>
                     <span className="text-sm font-medium truncate">{edition.label}</span>
@@ -499,7 +499,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
           <div key={draft.tempId} className="border border-border p-4 space-y-4">
             {/* Card header */}
             <div className="flex items-center justify-between">
-              <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide">
+              <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide">
                 {TYPE_LABELS[draft.type]}
               </span>
               <div className="flex items-center gap-4">
@@ -526,7 +526,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
             {/* Label + print size + edition size */}
             <div className={`grid gap-3 ${isOriginal ? "grid-cols-1" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">Label</label>
+                <label className="text-sm text-muted-foreground">Label</label>
                 <input
                   type="text"
                   value={draft.label}
@@ -538,7 +538,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
               {!isOriginal && (
                 <>
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">Print size</label>
+                    <label className="text-sm text-muted-foreground">Print size</label>
                     <input
                       type="text"
                       value={draft.printSize}
@@ -548,7 +548,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">Edition size</label>
+                    <label className="text-sm text-muted-foreground">Edition size</label>
                     <input
                       type="number"
                       value={draft.editionSize}
@@ -564,7 +564,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
 
             {!isOriginal && (
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">Substrate</label>
+                <label className="text-sm text-muted-foreground">Substrate</label>
                 <input
                   type="text"
                   value={draft.substrate}
@@ -588,7 +588,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
               </label>
               {!draft.poa && (
                 <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">
+                  <label className="text-sm text-muted-foreground">
                     {isOriginal ? "You want to receive" : "You want to receive per unit"}
                   </label>
                   <div className="flex gap-2">
@@ -618,7 +618,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
 
             {/* How collectors buy */}
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">How collectors buy</label>
+              <label className="text-sm text-muted-foreground">How collectors buy</label>
               <div className="flex gap-2 flex-wrap">
                 {HOW_TO_BUY.map(({ value, label }) => (
                   <button
@@ -635,7 +635,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {draft.acquisitionMode === "buy_now" && "Shows price and a Buy button. Enables direct checkout."}
                 {draft.acquisitionMode === "make_offer" && "Shows price and an offer button. Buyer proposes a price."}
                 {draft.acquisitionMode === "enquire_first" && "Price is hidden. Buyer contacts you to start a conversation."}
@@ -722,7 +722,7 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
     <div className="space-y-4">
       {/* Edition type */}
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Type</label>
+        <label className="text-sm text-muted-foreground">Type</label>
         <div className="flex flex-wrap gap-2">
           {EDITION_TYPES_EDIT.map(({ value, label }) => (
             <button
@@ -741,7 +741,7 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
 
       {/* Label */}
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Label</label>
+        <label className="text-sm text-muted-foreground">Label</label>
         <input
           type="text"
           value={draft.label}
@@ -753,14 +753,14 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
 
       {showEditionSize && (
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Edition size</label>
+          <label className="text-sm text-muted-foreground">Edition size</label>
           <input type="number" min={1} value={draft.edition_size} onChange={(e) => onChange({ edition_size: e.target.value })} placeholder="e.g. 10"
             className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
       )}
       {showInventory && (
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Inventory (in stock)</label>
+          <label className="text-sm text-muted-foreground">Inventory (in stock)</label>
           <input type="number" min={0} value={draft.inventory} onChange={(e) => onChange({ inventory: e.target.value })} placeholder="e.g. 24"
             className="w-28 border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
@@ -768,12 +768,12 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Dimensions (override)</label>
+          <label className="text-sm text-muted-foreground">Dimensions (override)</label>
           <input type="text" value={draft.dimensions} onChange={(e) => onChange({ dimensions: e.target.value })} placeholder="e.g. 594 × 420 mm"
             className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Substrate</label>
+          <label className="text-sm text-muted-foreground">Substrate</label>
           <input type="text" value={draft.substrate} onChange={(e) => onChange({ substrate: e.target.value })} placeholder="e.g. Hahnemühle Photo Rag 308gsm"
             className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground" />
         </div>
@@ -803,7 +803,7 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
 
       {/* How collectors buy */}
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">How collectors buy</label>
+        <label className="text-sm text-muted-foreground">How collectors buy</label>
         <div className="flex gap-2">
           {HOW_TO_BUY.map(({ value, label }) => (
             <button key={value} type="button" onClick={() => onChange({ acquisitionMode: value })}
@@ -812,7 +812,7 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
             </button>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {draft.acquisitionMode === "buy_now" && "Shows price and a Buy button. Enables direct checkout."}
           {draft.acquisitionMode === "make_offer" && "Shows price and an offer button. Buyer proposes a price."}
           {draft.acquisitionMode === "enquire_first" && "Price is hidden. Buyer contacts you to start a conversation."}
@@ -835,7 +835,7 @@ function ExistingEditionForm({ draft, onChange, onSave, onCancel, onDelete, busy
         <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3">Cancel</button>
         {onDelete && (
           <button onClick={onDelete} disabled={busy}
-            className="ml-auto flex items-center gap-1.5 text-xs text-destructive hover:opacity-70 transition-opacity disabled:opacity-40">
+            className="ml-auto flex items-center gap-1.5 text-sm text-destructive hover:opacity-70 transition-opacity disabled:opacity-40">
             <Trash2 className="w-3 h-3" />Delete
           </button>
         )}

@@ -73,7 +73,7 @@ export function AvailableWorkPill({
 
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1 bg-stone-100 text-[10px] font-medium text-stone-700 px-2.5 py-1 rounded-full hover:bg-stone-200 transition-colors whitespace-nowrap"
+        className="flex items-center gap-1 bg-stone-100 text-xs font-medium text-stone-700 px-2.5 py-1 rounded-full hover:bg-stone-200 transition-colors whitespace-nowrap"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
         For sale

@@ -111,7 +111,7 @@ export function NotificationBell({ userId, initialUnreadCount }: Props) {
       >
         <Bell className="w-4 h-4" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-black text-white text-[10px] font-semibold rounded-full flex items-center justify-center leading-none">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-black text-white text-xs font-semibold rounded-full flex items-center justify-center leading-none">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -147,7 +147,7 @@ export function NotificationBell({ userId, initialUnreadCount }: Props) {
                       {n.body && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{n.body}</p>
                       )}
-                      <p className="text-[10px] text-stone-400 mt-1">{timeAgo(n.created_at)}</p>
+                      <p className="text-xs text-stone-400 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
                     {!n.read && (
                       <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-black shrink-0" />

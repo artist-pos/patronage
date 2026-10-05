@@ -185,7 +185,7 @@ export function LocationPicker({
                   }`}
                 >
                   <span className="text-sm">{cityFullName(city)}</span>
-                  <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                     {city.region?.name}
                   </span>
                 </button>
@@ -202,7 +202,7 @@ export function LocationPicker({
                 }`}
               >
                 <span className="text-sm">Somewhere else</span>
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                   keep what I typed
                 </span>
               </button>
@@ -300,7 +300,7 @@ export function LocationPicker({
         </div>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

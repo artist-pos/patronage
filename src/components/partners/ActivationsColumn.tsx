@@ -217,7 +217,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={editDraft.image_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-[10px] text-muted-foreground">
+                      <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
                         Click to upload image
                       </div>
                     )}
@@ -244,18 +244,19 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                     value={editDraft.description ?? ""}
                     onChange={e => setEditDraft(p => ({ ...p, description: e.target.value }))}
                     placeholder="Description"
-                    rows={3}
-                    className="w-full border border-border px-2 py-1 text-[11px] leading-relaxed focus:outline-none focus:border-black resize-none"
+                    rows={2}
+                    className="w-full border border-border px-2 py-1 text-xs leading-relaxed focus:outline-none focus:border-black resize-none overflow-hidden"
+                    onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                   />
 
-                  {saveError && <p className="text-[10px] text-destructive">{saveError}</p>}
+                  {saveError && <p className="text-sm text-destructive">{saveError}</p>}
 
                   <div className="flex gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => saveEdit(card.id)}
                       disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-1 text-[10px] bg-black text-white py-1 hover:bg-black/80 transition-colors disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1 text-xs bg-black text-white py-1 hover:bg-black/80 transition-colors disabled:opacity-50"
                     >
                       <Check className="w-3 h-3" />
                       {saving ? "Saving…" : "Save"}
@@ -263,7 +264,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                     <button
                       type="button"
                       onClick={cancelEdit}
-                      className="flex-1 flex items-center justify-center gap-1 text-[10px] border border-border py-1 hover:border-black transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 text-xs border border-border py-1 hover:border-black transition-colors"
                     >
                       <X className="w-3 h-3" />
                       Cancel
@@ -282,7 +283,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                   )}
 
                   <p className="text-sm font-semibold">{card.title}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{card.description}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
 
                   {/* Admin controls — appear on hover */}
                   {isAdmin && (
@@ -441,15 +442,16 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 required
-                rows={4}
-                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none"
+                rows={2}
+                className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none overflow-hidden"
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               />
             </div>
 
             <HoneypotField />
             <TurnstileWidget onVerify={setTurnstileToken} />
 
-            {sendError && <p className="text-xs text-destructive">{sendError}</p>}
+            {sendError && <p className="text-sm text-destructive">{sendError}</p>}
 
             <button
               type="submit"

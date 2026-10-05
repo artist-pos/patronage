@@ -187,7 +187,7 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
         >
           {imageEl}
           <span
-            className={`absolute top-2 left-2 w-5 h-5 rounded border flex items-center justify-center text-[10px] ${
+            className={`absolute top-2 left-2 w-5 h-5 rounded border flex items-center justify-center text-xs ${
               isSelected
                 ? "bg-stone-900 text-white border-stone-900"
                 : "bg-white border-stone-300"
@@ -210,10 +210,10 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
         <p className="text-xs font-medium truncate leading-tight">
           {entry.artwork.title ?? "Untitled"}
         </p>
-        <p className="text-[11px] text-muted-foreground truncate">{artistName}</p>
+        <p className="text-xs text-muted-foreground truncate">{artistName}</p>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between text-[11px] gap-1">
+      <div className="mt-1.5 flex items-center justify-between text-xs gap-1">
         <button
           type="button"
           onClick={handleTogglePublic}

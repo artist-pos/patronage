@@ -299,7 +299,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
     <div className="border border-black bg-background">
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-black flex items-center justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
           Add Work
         </p>
         <button
@@ -336,7 +336,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           {/* ── Image ── */}
           {tab === "image" && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Image</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Image</p>
               <input ref={imageFileRef} type="file" accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageFileChange} className="hidden" id="new-work-image" />
               {imagePreview ? (
@@ -367,7 +367,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           {/* ── Audio ── */}
           {tab === "audio" && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Audio file</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Audio file</p>
               <input ref={audioFileRef} type="file"
                 accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/flac,audio/aac,audio/x-m4a"
                 onChange={handleAudioFileChange} className="hidden" id="new-work-audio" />
@@ -418,7 +418,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           {/* ── Video ── */}
           {tab === "video" && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Video</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Video</p>
               <input ref={videoFileRef} type="file"
                 accept="video/mp4,video/webm,video/ogg,video/quicktime"
                 onChange={handleVideoFileChange} className="hidden" id="new-work-video" />
@@ -453,13 +453,14 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           {/* ── Writing ── */}
           {tab === "text" && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Writing</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Writing</p>
               <textarea
                 value={textContent}
                 onChange={e => setTextContent(e.target.value)}
                 placeholder="Poem, lyrics, artist statement, short fiction…"
-                rows={14}
-                className={`${inputCls} resize-none font-mono text-sm leading-relaxed`}
+                rows={4}
+                className={`${inputCls} resize-none overflow-hidden font-mono text-sm leading-relaxed`}
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               />
             </>
           )}
@@ -467,7 +468,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           {/* ── Embed ── */}
           {tab === "embed" && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Embed</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Embed</p>
               <div className="space-y-2">
                 <input type="url" value={embedUrl}
                   onChange={e => setEmbedUrl(e.target.value)}
@@ -488,7 +489,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
         {/* Right — Metadata */}
         <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Details</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Details</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1">
@@ -523,8 +524,9 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Notes about this work — context, edition details…"
-              rows={4}
-              className={`${inputCls} resize-none`}
+              rows={2}
+              className={`${inputCls} resize-none overflow-hidden`}
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
 

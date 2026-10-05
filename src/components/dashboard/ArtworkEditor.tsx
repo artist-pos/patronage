@@ -95,7 +95,7 @@ function GalleryItem({
       {/* Delete */}
       <button
         onClick={e => { e.stopPropagation(); onDelete(); }}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white w-4 h-4 flex items-center justify-center text-[11px] leading-none"
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white w-4 h-4 flex items-center justify-center text-xs leading-none"
         aria-label="Remove image"
       >
         ×
@@ -344,12 +344,12 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
     <div className="border border-black bg-background">
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-black flex items-center justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
           Edit Work
         </p>
         <button
           onClick={onCancel}
-          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           ✕ Close
         </button>
@@ -359,7 +359,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
       <div className="flex min-h-0">
         {/* Left — Media Manager */}
         <div className="w-[38%] shrink-0 border-r border-black p-5 space-y-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
             Media
           </p>
 
@@ -374,7 +374,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
                 className="w-full h-full object-contain"
               />
             ) : (
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground">
                 {work.content_type}
               </span>
             )}
@@ -382,12 +382,12 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
           {/* Gallery grid with DnD */}
           <div className="space-y-2">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Gallery
             </p>
 
             {loadingImages ? (
-              <p className="text-[11px] text-muted-foreground">Loading…</p>
+              <p className="text-xs text-muted-foreground">Loading…</p>
             ) : (
               <DndContext
                 sensors={sensors}
@@ -421,7 +421,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
                     />
                     <label
                       htmlFor={`gallery-upload-${work.id}`}
-                      className={`w-[72px] h-[72px] border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground cursor-pointer hover:border-black hover:text-foreground transition-colors ${
+                      className={`w-[72px] h-[72px] border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:border-black hover:text-foreground transition-colors ${
                         uploading ? "opacity-40 pointer-events-none" : ""
                       }`}
                     >
@@ -441,7 +441,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
             {/* Per-image caption input — shown for the selected image */}
             {selectedImageId && captionDrafts[selectedImageId] !== undefined && (
               <div className="space-y-1 pt-1">
-                <label className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+                <label className="text-xs font-medium uppercase tracking-widest text-stone-400">
                   Image Caption
                 </label>
                 <input
@@ -462,7 +462,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
         {/* Right — Metadata form */}
         <div className="flex-1 p-5 space-y-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
             Details
           </p>
 
@@ -522,9 +522,10 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
             <textarea
               value={description}
               onChange={e => { setDescription(e.target.value); clearSaved(); }}
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
               placeholder="Notes about this work — materials, context, edition details…"
-              rows={6}
-              className={`${inputCls} resize-none`}
+              rows={3}
+              className={`${inputCls} resize-none overflow-hidden`}
             />
           </div>
 
@@ -544,7 +545,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
                       onProjectChanged?.();
                       setProjectBusy(false);
                     }}
-                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-40"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-40"
                   >
                     Unlink
                   </button>
@@ -614,7 +615,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
             Cancel
           </button>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     </div>
   );

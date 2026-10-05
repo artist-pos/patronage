@@ -63,7 +63,7 @@ export function DocumentationGallery({ photos }: Props) {
                 </div>
               )}
             </div>
-            <p className="mt-1.5 text-[11px] uppercase tracking-wider text-stone-400 group-hover:text-stone-700 transition-colors">
+            <p className="mt-1.5 text-xs uppercase tracking-wider text-stone-400 group-hover:text-stone-700 transition-colors">
               {TYPE_LABEL[p.type]}
             </p>
             {p.caption && (

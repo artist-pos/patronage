@@ -148,13 +148,13 @@ export function ProvenanceLookup() {
         </button>
       )}
       {scanError && (
-        <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{scanError}</p>
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{scanError}</p>
       )}
 
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-stone-200" />
-        <span className="text-[11px] uppercase tracking-widest text-stone-400">or enter ID</span>
+        <span className="text-xs uppercase tracking-widest text-stone-400">or enter ID</span>
         <div className="flex-1 h-px bg-stone-200" />
       </div>
 
@@ -210,8 +210,8 @@ export function ProvenanceLookup() {
             }}
           />
         </div>
-        {inputError && <p className="text-xs text-red-600">{inputError}</p>}
-        {ocrError && <p className="text-xs text-red-600">{ocrError}</p>}
+        {inputError && <p className="text-sm text-red-600">{inputError}</p>}
+        {ocrError && <p className="text-sm text-red-600">{ocrError}</p>}
 
         <button
           type="submit"
@@ -220,7 +220,7 @@ export function ProvenanceLookup() {
         >
           Verify provenance
         </button>
-        <p className="text-[11px] text-stone-400 text-center pt-1">
+        <p className="text-xs text-stone-400 text-center pt-1">
           Tip: tap the camera icon to scan the printed ID instead of typing it.
         </p>
       </form>

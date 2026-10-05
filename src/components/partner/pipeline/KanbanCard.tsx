@@ -59,7 +59,7 @@ export function KanbanCard({ app, onClick }: Props) {
           <img src={thumb} alt="" className="w-full h-20 object-cover" />
         </div>
       )}
-      <p className="text-[10px] text-stone-400 cursor-pointer" onClick={onClick}>
+      <p className="text-xs text-stone-400 cursor-pointer" onClick={onClick}>
         {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
       </p>
     </div>

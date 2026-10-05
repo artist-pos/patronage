@@ -46,7 +46,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
 
           {/* Pipeline */}
           <div className="bg-background p-6 space-y-6 flex flex-col relative">
-            <span className="absolute -top-3 left-4 bg-black text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wider">
+            <span className="absolute -top-3 left-4 bg-black text-white text-xs font-semibold px-2 py-0.5 uppercase tracking-wider">
               Most popular
             </span>
             <div className="space-y-3 flex-1">

@@ -136,12 +136,13 @@ function AppealCard({
             value={adminNote}
             onChange={(e) => setAdminNote(e.target.value)}
             rows={2}
-            className="w-full border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-stone-400"
+            className="w-full border border-stone-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-stone-400 resize-none overflow-hidden"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </label>
 
         {error && (
-          <p className="text-xs text-red-600 bg-red-50 rounded-md px-3 py-2">{error}</p>
+          <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{error}</p>
         )}
 
         <div className="flex flex-wrap gap-2">

@@ -13,5 +13,5 @@ export default async function ConnectReturnPage() {
   if (!user) redirect("/auth/login");
 
   await syncConnectStatus();
-  redirect("/studio/earnings");
+  redirect("/studio/connect?setup=complete");
 }

@@ -83,7 +83,7 @@ function StripCard({ u }: { u: ProjectUpdateWithArtist }) {
       </div>
       <div className="flex items-baseline gap-2">
         <span className="truncate text-xs font-medium">{name}</span>
-        <span className="shrink-0 font-mono text-[10px] text-[color:var(--fg-subtle)]">
+        <span className="shrink-0 font-mono text-xs text-[color:var(--fg-subtle)]">
           {formatTimestamp(u.created_at)}
         </span>
       </div>
@@ -169,7 +169,7 @@ function StripCard({ u }: { u: ProjectUpdateWithArtist }) {
         style={{ height: FOOTER_H - 36 }}
       >
         <span className="truncate text-xs font-medium">{name}</span>
-        <span className="shrink-0 font-mono text-[10px] text-[color:var(--fg-subtle)]">
+        <span className="shrink-0 font-mono text-xs text-[color:var(--fg-subtle)]">
           {formatTimestamp(u.created_at)}
         </span>
       </div>
@@ -270,7 +270,7 @@ export function ProfileUpdatesSection({ campaigns, updates, projects, username, 
                   {href && (
                     <Link
                       href={href}
-                      className="mt-1 self-start text-[10px] font-medium text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                      className="mt-1 self-start text-xs font-medium text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                     >
                       View →
                     </Link>
@@ -289,7 +289,7 @@ export function ProfileUpdatesSection({ campaigns, updates, projects, username, 
             <h2 className="t-section-label">From the studio</h2>
             {hasMore && (
               <details className="js-updates-toggle group/updates">
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-mono text-[11px] font-normal text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-mono text-xs font-normal text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
                   <span className="group-open/updates:hidden">View all {updates.length}</span>
                   <span className="hidden group-open/updates:inline">Show less</span>
                   <svg
@@ -341,7 +341,7 @@ export function ProfileUpdatesSection({ campaigns, updates, projects, username, 
                         </div>
                         <div className="px-3.5 py-3">
                           <p className="truncate text-sm font-semibold leading-snug">{t.title}</p>
-                          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                          <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                             {t.count} update{t.count !== 1 ? "s" : ""} · {t.dateRange}
                           </p>
                         </div>

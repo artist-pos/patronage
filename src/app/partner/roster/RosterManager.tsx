@@ -94,7 +94,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
       <div className="space-y-3 bg-[color:var(--brand-sub)] p-5">
         <label
           htmlFor="roster-search"
-          className="block font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]"
+          className="block font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]"
         >
           Add an artist
         </label>
@@ -122,7 +122,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
                   className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[color:var(--tint)]"
                 >
                   <span className="text-[14px]">{c.full_name ?? c.username}</span>
-                  <span className="ml-auto font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="ml-auto font-mono text-xs text-[color:var(--fg-subtle)]">
                     {c.city ?? `@${c.username}`}
                   </span>
                 </button>
@@ -183,7 +183,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
           They confirm before appearing anywhere public.
         </p>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         {toast && (
           <p aria-live="polite" className="text-xs text-[color:var(--fg-muted)]">
             {toast}
@@ -194,7 +194,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
       {/* ── The list ── */}
       {accepted.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             {isAlumni ? "Been through" : "On your page"}
           </h2>
           <ul className="divide-y divide-border border-y border-border">
@@ -207,7 +207,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
 
       {waiting.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             Waiting for them to confirm
           </h2>
           <ul className="divide-y divide-border border-y border-border">
@@ -256,7 +256,7 @@ function YearField({
         placeholder="2024"
         className="w-24 border border-border bg-card px-3 py-2 text-[15px] outline-none focus:border-foreground"
       />
-      {hint && <p className="text-[11px] text-[color:var(--fg-subtle)]">{hint}</p>}
+      {hint && <p className="text-xs text-[color:var(--fg-subtle)]">{hint}</p>}
     </div>
   );
 }
@@ -288,7 +288,7 @@ function Row({
       </Link>
 
       {isAlumni && !editing && (
-        <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+        <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
           {years ?? "no years set"}
         </span>
       )}
@@ -363,7 +363,7 @@ function Row({
         </button>
       </span>
 
-      {error && <p className="w-full text-xs text-destructive">{error}</p>}
+      {error && <p className="w-full text-sm text-destructive">{error}</p>}
     </li>
   );
 }

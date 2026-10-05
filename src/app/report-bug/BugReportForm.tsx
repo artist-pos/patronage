@@ -82,9 +82,10 @@ export function BugReportForm() {
           id="message"
           name="message"
           required
-          rows={6}
+          rows={3}
           placeholder="What were you trying to do, what happened, and what did you expect instead?"
-          className="border-input w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          className="border-input w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 

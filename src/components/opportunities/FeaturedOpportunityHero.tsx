@@ -3,7 +3,7 @@ import type { Opportunity } from "@/types/database";
 import { formatFunding } from "./OpportunityCard";
 
 const TAG_CLS =
-  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+  "border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
 
 /* Mirrors OpportunityPin's deadlineBits in ExplorePinCards.tsx — same urgency
    colour scale, so a featured listing reads consistently with the pin grid. */
@@ -74,7 +74,7 @@ export function FeaturedOpportunityHero({ opportunity: o, compact = false }: Pro
             {funding ? (
               <span className="truncate font-mono text-base font-semibold">{funding}</span>
             ) : <span />}
-            <span className={`shrink-0 font-mono text-[11px] ${d.cls}`}>{d.label}</span>
+            <span className={`shrink-0 font-mono text-xs ${d.cls}`}>{d.label}</span>
           </div>
 
           {/* Blurb */}
@@ -94,7 +94,7 @@ export function FeaturedOpportunityHero({ opportunity: o, compact = false }: Pro
           </div>
 
           {/* CTA */}
-          <div className={`mt-auto border-t border-border pt-4 ${c("", "max-sm:hidden")} font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground`}>
+          <div className={`mt-auto border-t border-border pt-4 ${c("", "max-sm:hidden")} font-mono text-xs text-muted-foreground transition-colors group-hover:text-foreground`}>
             View opportunity →
           </div>
         </div>

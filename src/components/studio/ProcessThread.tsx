@@ -61,7 +61,7 @@ export function ProcessThread({ projectId, projectTitle, updates }: Props) {
                 {u.text_content && !u.caption && (
                   <p className="text-sm line-clamp-2">{u.text_content}</p>
                 )}
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {new Date(u.created_at).toLocaleDateString("en-NZ", {
                     day: "numeric", month: "short", year: "numeric",
                   })}

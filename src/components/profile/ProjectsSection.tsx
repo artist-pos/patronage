@@ -96,7 +96,7 @@ export function ProjectsSection({ projects, updates, isOwner }: Props) {
                   </p>
                 )}
                 {updateCount > 0 && (
-                  <p className="text-[10px] font-mono text-muted-foreground pt-0.5">
+                  <p className="text-xs font-mono text-muted-foreground pt-0.5">
                     {updateCount} update{updateCount !== 1 ? "s" : ""}
                   </p>
                 )}

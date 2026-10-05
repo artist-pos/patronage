@@ -461,12 +461,12 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
                 {meta.type === "blog_post" ? "Patronage Blog" : "Patronage"}
               </p>
               <p className="text-sm font-medium leading-snug">{meta.title}</p>
-              <p className="text-[11px] text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 {isMe ? `Sent to ${otherName} →` : "You were featured in this post →"}
               </p>
             </div>
             <div className="border-t border-black px-3 py-2">
-              <span className="text-[10px] font-mono text-muted-foreground">
+              <span className="text-xs font-mono text-muted-foreground">
                 {formatTime(msg.created_at)}
               </span>
             </div>
@@ -486,7 +486,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
           }`}
         >
           <p className="break-words whitespace-pre-wrap">{msg.content}</p>
-          <p className={`text-[10px] font-mono mt-1 ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
+          <p className={`text-xs font-mono mt-1 ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
             {formatTime(msg.created_at)}
           </p>
         </div>
@@ -531,7 +531,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
                 style={{ width: 40, height: 40 }}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Enquiry re:
                 </p>
                 <p className="text-xs font-medium truncate">
@@ -541,7 +541,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               {otherUserId && (
                 <button
                   onClick={() => setOfferModal(true)}
-                  className="text-[11px] border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-colors shrink-0"
+                  className="text-xs border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-colors shrink-0"
                 >
                   Make an Offer
                 </button>
@@ -575,29 +575,34 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-destructive pb-2">{error}</p>
+        <p className="text-sm text-destructive pb-2">{error}</p>
       )}
 
       {/* Input row */}
-      <div className="border-t border-black pt-4 flex gap-2 items-end">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message…"
-          rows={1}
-          disabled={sending}
-          autoFocus
-          className="flex-1 resize-none overflow-hidden border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50"
-          style={{ minHeight: "2.375rem", maxHeight: "10rem", overflowY: "auto" }}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!content.trim() || sending}
-        >
-          Send
-        </Button>
+      <div className="border-t border-black pt-4 space-y-1.5">
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message…"
+            rows={1}
+            disabled={sending}
+            autoFocus
+            className="flex-1 resize-none overflow-hidden border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-50"
+            style={{ minHeight: "2.375rem", maxHeight: "10rem", overflowY: "auto" }}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={!content.trim() || sending}
+          >
+            Send
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Press <kbd className="px-1 py-0.5 border border-border rounded text-xs font-mono">Enter</kbd> to send, <kbd className="px-1 py-0.5 border border-border rounded text-xs font-mono">Shift + Enter</kbd> for a new line
+        </p>
       </div>
     </div>
   );

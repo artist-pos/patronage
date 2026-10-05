@@ -110,10 +110,11 @@ export function PartnerContactForm() {
         <textarea
           id="pc-message"
           required
-          rows={3}
+          rows={2}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className={`${INPUT} resize-y`}
+          className={`${INPUT} resize-none overflow-hidden`}
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
       <HoneypotField />

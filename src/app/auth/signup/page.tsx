@@ -102,7 +102,7 @@ export default async function SignupPage({ searchParams }: Props) {
               the ask. Saying so again here keeps the warmth of the email
               instead of dropping the reader into a generic signup form. */}
           {invitedBy && (
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+            <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               Invited by {invitedBy}
             </p>
           )}

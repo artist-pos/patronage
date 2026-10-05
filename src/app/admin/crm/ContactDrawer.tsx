@@ -280,7 +280,7 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
 
   const inputCls = "w-full text-xs border border-border bg-transparent px-2.5 py-1.5 focus:outline-none focus:border-foreground transition-colors placeholder:text-stone-300";
   const selectCls = `${inputCls} cursor-pointer`;
-  const labelCls = "text-[10px] font-medium uppercase tracking-widest text-stone-400";
+  const labelCls = "text-xs font-medium uppercase tracking-widest text-stone-400";
 
   return (
     <>
@@ -295,8 +295,8 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
           <div className="flex items-center gap-2">
             {!isNew && (
               <>
-                {saveStatus === "saving" && <span className="text-[10px] text-muted-foreground">Saving…</span>}
-                {saveStatus === "saved" && <span className="text-[10px] text-stone-400">Saved</span>}
+                {saveStatus === "saving" && <span className="text-xs text-muted-foreground">Saving…</span>}
+                {saveStatus === "saved" && <span className="text-xs text-stone-400">Saved</span>}
                 <button
                   onClick={handleSave}
                   disabled={isPending || !dirty}
@@ -322,9 +322,10 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
                 <textarea
                   value={theirResponse}
                   onChange={field(setTheirResponse)}
-                  rows={3}
+                  rows={2}
                   placeholder="What did they say?"
-                  className={`${inputCls} resize-y bg-stone-50 font-medium`}
+                  className={`${inputCls} resize-none overflow-hidden bg-stone-50 font-medium`}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                 />
               </div>
             )}
@@ -415,7 +416,8 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
             {isNew && (
               <div className="space-y-1.5">
                 <label className={labelCls}>Their Response</label>
-                <textarea value={theirResponse} onChange={field(setTheirResponse)} rows={2} placeholder="What did they say?" className={`${inputCls} resize-y`} />
+                <textarea value={theirResponse} onChange={field(setTheirResponse)} rows={2} placeholder="What did they say?" className={`${inputCls} resize-none overflow-hidden`}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
               </div>
             )}
 
@@ -428,7 +430,8 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
             {/* Notes */}
             <div className="space-y-1.5">
               <label className={labelCls}>Notes</label>
-              <textarea value={notes} onChange={field(setNotes)} rows={3} placeholder="Context, background, ideas…" className={`${inputCls} resize-y`} />
+              <textarea value={notes} onChange={field(setNotes)} rows={2} placeholder="Context, background, ideas…" className={`${inputCls} resize-none overflow-hidden`}
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
             </div>
 
             {/* Quick links */}
@@ -515,7 +518,7 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
                         <span className="shrink-0 text-base leading-none mt-0.5">{ACTIVITY_ICONS[act.activity_type] ?? "•"}</span>
                         <div className="min-w-0 space-y-0.5">
                           <p className="leading-snug">{act.description}</p>
-                          <p className="text-[10px] text-muted-foreground">{formatActivityDate(act.created_at)}</p>
+                          <p className="text-xs text-muted-foreground">{formatActivityDate(act.created_at)}</p>
                         </div>
                       </div>
                     ))}
@@ -530,7 +533,7 @@ export function ContactDrawer({ contact, onClose, onUpdated, onCreated, onDelete
                 <button
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete contact
                 </button>

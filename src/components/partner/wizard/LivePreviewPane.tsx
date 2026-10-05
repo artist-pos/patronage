@@ -25,7 +25,7 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
     <div className="space-y-4">
       <div className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Preview</p>
-        <p className="text-[11px] text-stone-400">How artists will see your application form.</p>
+        <p className="text-xs text-stone-400">How artists will see your application form.</p>
       </div>
 
       <div className="border border-black/10 bg-stone-50 p-5 space-y-5">
@@ -93,15 +93,15 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
                 <div key={i} className="aspect-square border border-black/20 bg-stone-100" />
               ))}
             </div>
-            <p className="text-[10px] text-stone-400">
+            <p className="text-xs text-stone-400">
               {pickerDocs.map((d) => d.label).join(" / ")}
             </p>
             {workDescriptionsEnabled && (
               <div className="space-y-1 pt-1">
-                <p className="text-[10px] text-stone-400">
+                <p className="text-xs text-stone-400">
                   Required for each work they attach<span className="text-[color:var(--urgent)]">*</span>
                 </p>
-                <div className="border border-black/20 bg-white px-3 py-2 text-[10px] text-stone-400">
+                <div className="border border-black/20 bg-white px-3 py-2 text-xs text-stone-400">
                   Description of this work…
                 </div>
               </div>
@@ -111,7 +111,7 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
 
         {showBadges && (
           <div className="border-t border-black/10 pt-4">
-            <p className="text-[11px] text-stone-400">Reputation badges will be shown alongside submission.</p>
+            <p className="text-xs text-stone-400">Reputation badges will be shown alongside submission.</p>
           </div>
         )}
       </div>

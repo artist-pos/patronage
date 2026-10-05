@@ -75,7 +75,7 @@ function relatedDeadline(deadline: string | null): { label: string; cls: string 
 function Fact({ label, value, urgent = false }: { label: string; value: ReactNode; urgent?: boolean }) {
   return (
     <div className="contents sm:mr-8 sm:block sm:border-r sm:border-border sm:pr-8 sm:last:mr-0 sm:last:border-r-0 sm:last:pr-0">
-      <div className="pt-[3px] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)] sm:mb-[5px] sm:pt-0">
+      <div className="pt-[3px] font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)] sm:mb-[5px] sm:pt-0">
         {label}
       </div>
       <div className={`text-[14px] font-medium leading-snug sm:text-base sm:font-semibold ${urgent ? "text-[color:var(--urgent)]" : ""}`}>
@@ -111,7 +111,7 @@ function RelatedRow({ r }: { r: RelatedOpp }) {
           {r.title}
           {d && <span className={`font-medium ${d.cls}`}> · {d.label}</span>}
         </div>
-        <div className="truncate font-mono text-[11px] text-[color:var(--fg-subtle)]">
+        <div className="truncate font-mono text-xs text-[color:var(--fg-subtle)]">
           {r.organiser}
         </div>
       </div>
@@ -317,7 +317,7 @@ async function SocialProof({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {isTrending && (
-        <span className="bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-none text-background">
+        <span className="bg-foreground px-1.5 py-0.5 font-mono text-xs leading-none text-background">
           Trending
         </span>
       )}
@@ -730,32 +730,32 @@ export default async function OpportunityPage({ params }: Props) {
             </div>
           </div>
           <div className="absolute bottom-4 left-6">
-            <span className="font-mono text-[10px] uppercase text-white/60">{opp.organiser}</span>
+            <span className="font-mono text-xs uppercase text-white/60">{opp.organiser}</span>
           </div>
         </div>
       )}
 
       {/* ── Tags — solid brand pill for the type, outlined for the rest ─── */}
       <div className="mb-4 flex flex-wrap gap-1.5">
-        <span className="bg-brand px-2.5 py-1 font-mono text-[11px] text-white">{opp.type}</span>
-        <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">{opp.country}</span>
+        <span className="bg-brand px-2.5 py-1 font-mono text-xs text-white">{opp.type}</span>
+        <span className="border border-border px-2.5 py-1 font-mono text-xs text-[color:var(--fg-muted)]">{opp.country}</span>
         {opp.grant_type && (
-          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">{opp.grant_type}</span>
+          <span className="border border-border px-2.5 py-1 font-mono text-xs text-[color:var(--fg-muted)]">{opp.grant_type}</span>
         )}
         {opp.recipients_count != null && (
-          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">
+          <span className="border border-border px-2.5 py-1 font-mono text-xs text-[color:var(--fg-muted)]">
             {opp.recipients_count} recipient{opp.recipients_count !== 1 ? "s" : ""}
           </span>
         )}
         {opp.is_recurring && (
-          <span className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]">
+          <span className="border border-border px-2.5 py-1 font-mono text-xs text-[color:var(--fg-muted)]">
             {opp.recurrence_pattern ? RECURRENCE_LABELS[opp.recurrence_pattern] : "Recurring"}
           </span>
         )}
         {(opp.sub_categories ?? []).map((cat) => (
           <span
             key={cat}
-            className="border border-border px-2.5 py-1 font-mono text-[11px] text-[color:var(--fg-muted)]"
+            className="border border-border px-2.5 py-1 font-mono text-xs text-[color:var(--fg-muted)]"
           >
             {cat}
           </span>
@@ -881,7 +881,7 @@ export default async function OpportunityPage({ params }: Props) {
       {/* ── Description — STATIC ────────────────────────────────────────── */}
       {(opp.caption || opp.full_description || opp.description) && (
         <div className="mb-8 space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             About
           </h2>
           {/* Lead paragraph: short summary only. When there's no caption/description,
@@ -945,7 +945,7 @@ export default async function OpportunityPage({ params }: Props) {
           ← Back to opportunities
         </Link>
         {sourceInfo && (
-          <p className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+          <p className="font-mono text-xs text-[color:var(--fg-subtle)]">
             Source:{" "}
             <a
               href={sourceLinkUrl}
@@ -964,7 +964,7 @@ export default async function OpportunityPage({ params }: Props) {
              backdrop, hairline left divider on desktop ─────────────────── */}
       {related.length > 0 && (
         <aside className="border-t border-border pt-6 lg:sticky lg:top-[72px] lg:self-start lg:border-t-0 lg:border-l lg:pl-8 lg:pt-0">
-          <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <p className="mb-3.5 font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             Related opportunities
           </p>
           <div className="flex flex-col gap-[2px] bg-feed-bg">

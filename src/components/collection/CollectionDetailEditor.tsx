@@ -268,7 +268,7 @@ export function CollectionDetailEditor({ entry, sourceDocs, groups }: Props) {
           </Field>
           <Field label="Description">
             {isEditing
-              ? <textarea className={`${inputCls} resize-none`} rows={4} value={artworkDraft.description} onChange={e => setArtworkDraft(d => ({ ...d, description: e.target.value }))} />
+              ? <textarea className={`${inputCls} resize-none overflow-hidden`} rows={2} value={artworkDraft.description} onChange={e => setArtworkDraft(d => ({ ...d, description: e.target.value }))} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
               : <Value v={artworkDraft.description} />}
           </Field>
         </Section>
@@ -347,7 +347,7 @@ export function CollectionDetailEditor({ entry, sourceDocs, groups }: Props) {
         {/* Certificate statement */}
         <Section title="Certificate statement" description="Optional note displayed on the public certificate.">
           {isEditing
-            ? <textarea className={`${inputCls} resize-none`} rows={5} value={acquisitionDraft.certificateStatement} onChange={e => setAcquisitionDraft(d => ({ ...d, certificateStatement: e.target.value }))} />
+            ? <textarea className={`${inputCls} resize-none overflow-hidden`} rows={2} value={acquisitionDraft.certificateStatement} onChange={e => setAcquisitionDraft(d => ({ ...d, certificateStatement: e.target.value }))} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
             : <Value v={acquisitionDraft.certificateStatement} />}
         </Section>
 

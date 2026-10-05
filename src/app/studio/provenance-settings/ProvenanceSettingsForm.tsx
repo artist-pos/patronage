@@ -139,7 +139,7 @@ function LogoUploader({
       <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
         className="hidden" />
-      {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
+      {uploadError && <p className="text-sm text-red-600 mt-2">{uploadError}</p>}
     </div>
   );
 }
@@ -316,7 +316,7 @@ export function ProvenanceSettingsForm({
                   <p className="text-[15px] mb-0.5" style={{ fontFamily: p.cssHeadingStack, fontWeight: p.cssHeadingWeight }}>
                     {p.label}
                   </p>
-                  <p className="text-[11px] text-stone-500" style={{ fontFamily: p.cssBodyStack }}>
+                  <p className="text-xs text-stone-500" style={{ fontFamily: p.cssBodyStack }}>
                     {p.description}
                   </p>
                 </button>
@@ -385,7 +385,7 @@ export function ProvenanceSettingsForm({
       <div className="hidden lg:block lg:sticky lg:top-8">
         <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-4">Live preview</p>
         {preview}
-        <p className="text-[11px] text-stone-400 mt-3 leading-relaxed">
+        <p className="text-xs text-stone-400 mt-3 leading-relaxed">
           <span className="inline-block border border-dashed border-stone-300 rounded px-1 mr-1 text-stone-500">
             Dashed borders
           </span>
@@ -416,7 +416,7 @@ export function ProvenanceSettingsForm({
               </button>
             </div>
             {preview}
-            <p className="text-[11px] text-stone-400 mt-3 leading-relaxed">
+            <p className="text-xs text-stone-400 mt-3 leading-relaxed">
               <span className="inline-block border border-dashed border-stone-300 rounded px-1 mr-1 text-stone-500">
                 Dashed borders
               </span>

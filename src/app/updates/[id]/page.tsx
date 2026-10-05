@@ -4,7 +4,8 @@ import Link from "next/link";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import type { Metadata } from "next";
 import { getUpdateById } from "@/lib/feed";
-import type { ProjectUpdateWithArtist } from "@/types/database";
+import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
+import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -120,7 +121,7 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
       <div className="border border-black p-6 sm:p-8 bg-background">
         {update.discipline && (
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
-            {update.discipline.replace(/_/g, " ")}
+            {DISCIPLINE_TO_MEDIUM[update.discipline as DisciplineEnum] ?? update.discipline.replace(/_/g, " ")}
           </p>
         )}
         {text_content.split("\n\n").map((para, i) => (

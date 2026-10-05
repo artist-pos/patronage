@@ -94,7 +94,7 @@ export function ClosedOpportunityRecovery({ opportunityId, suggestions }: Props)
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="mb-1 truncate font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+              <p className="mb-1 truncate font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
                 {s.organiser}
               </p>
               <p className="mb-1 text-[13.5px] font-semibold leading-[1.35]">{s.title}</p>

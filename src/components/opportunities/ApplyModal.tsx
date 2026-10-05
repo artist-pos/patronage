@@ -386,7 +386,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
 
   // Segmented mode switch, per the v2 vocabulary (solid fill = active).
   const modeSegCls = (active: boolean) =>
-    `px-3 py-1.5 font-mono text-[11px] transition-colors ${
+    `px-3 py-1.5 font-mono text-xs transition-colors ${
       active ? "bg-foreground text-white" : "bg-card text-muted-foreground hover:text-foreground"
     }`;
 
@@ -628,7 +628,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                 {localAvatarUrl ? (
                   <Image src={localAvatarUrl} alt={displayName} fill className="object-cover" sizes="64px" />
                 ) : missingKeys.has("avatar") ? (
-                  <label className="absolute inset-0 flex items-center justify-center cursor-pointer px-1 text-center text-[10px] leading-tight text-muted-foreground hover:text-foreground transition-colors">
+                  <label className="absolute inset-0 flex items-center justify-center cursor-pointer px-1 text-center text-xs leading-tight text-muted-foreground hover:text-foreground transition-colors">
                     {avatarUploading ? "…" : "Add photo"}
                     <input
                       type="file"
@@ -812,7 +812,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                 <button
                   type="button"
                   onClick={clearAllWorkSelections}
-                  className={`aspect-square border font-mono text-[11px] flex items-center justify-center transition-colors ${
+                  className={`aspect-square border font-mono text-xs flex items-center justify-center transition-colors ${
                     selectedWorkIds.length === 0 && selectedArtworkId === null && !submittedImageUrl
                       ? "border-foreground bg-muted text-foreground"
                       : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -866,7 +866,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
                       }`}
                     >
                       {selected && (
-                        <span className="absolute top-0 left-0 z-10 w-5 h-5 bg-foreground text-white font-mono text-[10px] flex items-center justify-center leading-none">
+                        <span className="absolute top-0 left-0 z-10 w-5 h-5 bg-foreground text-white font-mono text-xs flex items-center justify-center leading-none">
                           {selectedWorkIds.indexOf(work.id) + 1}
                         </span>
                       )}

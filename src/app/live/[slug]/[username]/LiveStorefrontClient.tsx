@@ -294,13 +294,14 @@ export function LiveStorefrontClient({
         </div>
       ) : (
         <form onSubmit={handleEnquirySubmit} className="space-y-3">
-          {enquirySubject && <p className="text-[11px] text-muted-foreground">{enquirySubject}</p>}
+          {enquirySubject && <p className="text-xs text-muted-foreground">{enquirySubject}</p>}
           <input type="text" value={enquiryName} onChange={e => setEnquiryName(e.target.value)} required placeholder="Your name"
             className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
           <input type="email" value={enquiryEmail} onChange={e => setEnquiryEmail(e.target.value)} required placeholder="Email address"
             className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
-          <textarea value={enquiryMessage} onChange={e => setEnquiryMessage(e.target.value)} rows={3} placeholder="Message (optional)"
-            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none bg-[#FAFAF9]" />
+          <textarea value={enquiryMessage} onChange={e => setEnquiryMessage(e.target.value)} rows={2} placeholder="Message (optional)"
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none overflow-hidden bg-[#FAFAF9]"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
           <div className="flex gap-2">
             <button type="submit" disabled={enquirySending || !enquiryName.trim() || !enquiryEmail.trim()}
               className="flex-1 py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40">
@@ -409,7 +410,7 @@ export function LiveStorefrontClient({
                             : `Buy now — $${resolvedPricing.price?.toLocaleString()} →`}
                       </button>
                     </form>
-                    <p className="text-[10px] text-muted-foreground text-center">
+                    <p className="text-xs text-muted-foreground text-center">
                       {isFree ? "No payment required · You'll receive a certificate of authenticity by email" : "Secure checkout via Stripe"}
                     </p>
                   </div>
@@ -427,7 +428,7 @@ export function LiveStorefrontClient({
                     className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
                     {resolvedPricing.is_poa ? "Enquire about price →" : "Enquire →"}
                   </button>
-                  <p className="text-[10px] text-muted-foreground text-center">Artist responds directly · No obligation</p>
+                  <p className="text-xs text-muted-foreground text-center">Artist responds directly · No obligation</p>
                 </div>
               );
             })()}
@@ -475,7 +476,7 @@ export function LiveStorefrontClient({
                       className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40">
                       {purchaseSubmitting ? "Redirecting to checkout…" : `Buy — ${selectedPrint.size} →`}
                     </button>
-                    <p className="text-[10px] text-muted-foreground text-center">Secure checkout via Stripe</p>
+                    <p className="text-xs text-muted-foreground text-center">Secure checkout via Stripe</p>
                   </form>
                 )}
                 {purchaseDone && selectedPrint && (
@@ -523,7 +524,7 @@ export function LiveStorefrontClient({
             )}
             <div>
               <p className="text-sm font-medium">{artistName}</p>
-              <p className="text-[11px] text-muted-foreground">@{profile.username}</p>
+              <p className="text-xs text-muted-foreground">@{profile.username}</p>
             </div>
           </div>
           <a href={`/${profile.username}`}
@@ -576,7 +577,7 @@ export function LiveStorefrontClient({
                     )}
                   </div>
                   <button onClick={() => setActiveWork(null)}
-                    className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">
+                    className="text-xs text-muted-foreground hover:text-foreground shrink-0">
                     Close
                   </button>
                 </div>
@@ -616,7 +617,7 @@ export function LiveStorefrontClient({
               {campaign.partner_name}{dateRange ? ` · ${dateRange}` : ""}
             </p>
           </div>
-          <p className="text-[10px] text-stone-300 tracking-wide">patronage.nz</p>
+          <p className="text-xs text-stone-300 tracking-wide">patronage.nz</p>
         </div>
       )}
     </div>
@@ -629,11 +630,11 @@ export function LiveStorefrontClient({
       <div className={`sticky top-0 z-50 bg-[#FAFAF9]/90 backdrop-blur-sm border-b border-border px-5 py-2.5 flex items-center justify-between ${fade("delay-0")}`}>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
             {typeLabel}{campaign.location_address ? ` · ${campaign.location_address}` : ""}
           </span>
         </div>
-        <span className="text-[10px] text-muted-foreground tracking-wide">patronage.nz</span>
+        <span className="text-xs text-muted-foreground tracking-wide">patronage.nz</span>
       </div>
 
       {/* ── Mobile layout ────────────────────────────────────────────────── */}
@@ -645,7 +646,7 @@ export function LiveStorefrontClient({
             <img src={displayImageUrl} alt={displayLabel} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-[11px] uppercase tracking-widest text-stone-300">No image</span>
+              <span className="text-xs uppercase tracking-widest text-stone-300">No image</span>
             </div>
           )}
         </div>
@@ -667,7 +668,7 @@ export function LiveStorefrontClient({
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[11px] uppercase tracking-widest text-stone-300">No image</span>
+              <span className="text-xs uppercase tracking-widest text-stone-300">No image</span>
             </div>
           )}
 
@@ -741,7 +742,7 @@ function WorkTile({
       </div>
       <div className="px-1 pb-2 space-y-0.5">
         <p className="text-xs font-medium leading-snug truncate">{label}</p>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {resolved
             ? resolved.is_poa
               ? "POA"

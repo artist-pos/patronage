@@ -58,7 +58,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
           Artists in {region.name}
         </h1>
         {region.name_maori && region.name_maori !== region.name && (
-          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             {region.name_maori}
           </p>
         )}
@@ -91,7 +91,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
               </div>
             )}
             <div className="min-w-0">
-              <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+              <p className="mb-1 font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
                 Arts organisation for {region.name}
               </p>
               <p className="mb-1 text-[17px] font-semibold leading-[1.3]">
@@ -111,10 +111,10 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
       {shown.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+            <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               Artists
             </h2>
-            <Link href="/artists" className="font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
+            <Link href="/artists" className="font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
               View all &rarr;
             </Link>
           </div>
@@ -148,7 +148,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
 
       {recentlyJoined.length > 0 && (
         <section className="space-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             Recently joined
           </h2>
           <HandleChips artists={recentlyJoined} />
@@ -159,10 +159,10 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
       {opportunities.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+            <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               Opportunities in {region.name}
             </h2>
-            <Link href="/opportunities" className="font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
+            <Link href="/opportunities" className="font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
               View all &rarr;
             </Link>
           </div>

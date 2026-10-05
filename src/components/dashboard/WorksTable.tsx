@@ -164,7 +164,7 @@ function MoreMenu({ items, align = "right" }: { items: MenuItem[]; align?: "left
 
 function Badge({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 leading-none border ${muted ? "border-border text-muted-foreground" : "border-black font-medium"}`}>
+    <span className={`text-xs px-1.5 py-0.5 leading-none border ${muted ? "border-border text-muted-foreground" : "border-black font-medium"}`}>
       {children}
     </span>
   );
@@ -176,7 +176,7 @@ function StatusPill({ status }: { status: WorkStatus | "series" }) {
     : status === "sold"   ? "bg-stone-100 text-stone-500 border-stone-200"
     : "bg-stone-100 text-stone-600 border-stone-200";
   return (
-    <span className={`text-[10px] px-2 py-0.5 leading-none rounded-full border ${tone}`}>
+    <span className={`text-xs px-2 py-0.5 leading-none rounded-full border ${tone}`}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -354,7 +354,7 @@ function SortableItem({
         <div className="absolute bottom-1 left-1 right-1 flex items-center gap-1 flex-wrap">{pills}</div>
         <div className="p-2">
           <p className="text-xs font-medium truncate">{title}</p>
-          <p className="text-[11px] text-muted-foreground truncate">{secondaryLine(item)}</p>
+          <p className="text-xs text-muted-foreground truncate">{secondaryLine(item)}</p>
         </div>
       </div>
     );
@@ -369,15 +369,15 @@ function SortableItem({
       <Thumb url={thumbUrl} caption={title} type={thumbType} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{title}</p>
-        <p className="text-[11px] text-muted-foreground truncate">{secondaryLine(item)}</p>
+        <p className="text-xs text-muted-foreground truncate">{secondaryLine(item)}</p>
         {provenanceHref && (
-          <a href={provenanceHref} className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors">
+          <a href={provenanceHref} className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
             {(item as WorkItem).ledger_id}
           </a>
         )}
       </div>
       {stats && (
-        <div className="hidden sm:flex items-center gap-2 shrink-0 text-[10px] text-muted-foreground">
+        <div className="hidden sm:flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
           {stats.view > 0 && <span>👁 {stats.view}</span>}
           {isMedia && stats.play > 0 && <span>▶ {stats.play}</span>}
         </div>
@@ -540,7 +540,7 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
   return (
     <div className="space-y-3">
       {error && (
-        <div className="text-xs text-destructive border border-destructive/30 px-3 py-2">{error}</div>
+        <div className="text-sm text-destructive border border-destructive/30 px-3 py-2">{error}</div>
       )}
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">

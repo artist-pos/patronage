@@ -256,7 +256,7 @@ export function CombinedLocationPicker({
                   }`}
                 >
                   <span>{cityFullName(city)}</span>
-                  <span className="shrink-0 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="shrink-0 font-mono text-xs text-[color:var(--fg-subtle)]">
                     {city.region?.name} · NZ
                   </span>
                 </button>
@@ -276,7 +276,7 @@ export function CombinedLocationPicker({
                     }`}
                   >
                     <span>{city.name}</span>
-                    <span className="shrink-0 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                    <span className="shrink-0 font-mono text-xs text-[color:var(--fg-subtle)]">
                       {city.state} · AUS
                     </span>
                   </button>
@@ -294,7 +294,7 @@ export function CombinedLocationPicker({
                 }`}
               >
                 <span className="text-sm">Somewhere else</span>
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                   keep what I typed
                 </span>
               </button>
@@ -401,7 +401,7 @@ export function CombinedLocationPicker({
         </div>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

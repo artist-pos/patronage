@@ -173,7 +173,7 @@ export function AdminLocationSearch({ cities, value, freeform, disabled, onChang
                 } ${o.kind === "clear" ? "border-t border-border text-muted-foreground" : ""}`}
               >
                 <span className="text-xs">{o.label}</span>
-                {o.sub && <span className="font-mono text-[10px] text-stone-400">{o.sub}</span>}
+                {o.sub && <span className="font-mono text-xs text-stone-400">{o.sub}</span>}
               </button>
             </li>
           ))}

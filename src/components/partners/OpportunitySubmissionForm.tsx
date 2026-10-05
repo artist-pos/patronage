@@ -227,7 +227,7 @@ export function OpportunitySubmissionForm({
       )}
 
       <form action={action} className="space-y-0">
-        {state.error && <p className="text-xs text-destructive mb-4">{state.error}</p>}
+        {state.error && <p className="text-sm text-destructive mb-4">{state.error}</p>}
 
         {/* Hidden inputs — map controlled state to FormData for server action */}
         <input type="hidden" name="title"                      value={formData.title} />

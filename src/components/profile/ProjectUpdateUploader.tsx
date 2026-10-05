@@ -117,7 +117,8 @@ export function ProjectUpdateUploader({ profileId }: Props) {
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Add a caption… (optional)"
               rows={2}
-              className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+              className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
             <button
               onClick={handlePost}
@@ -129,7 +130,7 @@ export function ProjectUpdateUploader({ profileId }: Props) {
           </div>
         )}
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
       {/* Existing updates grid */}

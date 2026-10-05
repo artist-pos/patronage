@@ -304,7 +304,7 @@ export function ShareSheet({ payload, onClose }: Props) {
             {/* Image picker — profile share with multiple options */}
             {payload.imageOptions && payload.imageOptions.length > 1 && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {payload.imageOptions.map((opt, i) => (
                     <button
@@ -325,7 +325,7 @@ export function ShareSheet({ payload, onClose }: Props) {
 
             {/* Format */}
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Format</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Format</p>
               <div className="flex gap-2">
                 {(["story", "post"] as ShareFormat[]).map(f => (
                   <button
@@ -344,7 +344,7 @@ export function ShareSheet({ payload, onClose }: Props) {
             {/* Layout variant — opportunity cards only */}
             {isOpportunity && avail && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Layout</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Layout</p>
                 <div className="flex gap-2">
                   {VARIANT_LABELS.map(v => {
                     const enabled = avail[v.id];
@@ -373,7 +373,7 @@ export function ShareSheet({ payload, onClose }: Props) {
             {/* Theme — opportunity cards (light/dark, like other share types) */}
             {isOpportunity && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Theme</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Theme</p>
                 <div className="flex gap-1.5">
                   {([
                     { id: "dark" as OpportunityTheme, label: "Dark", bg: "#0f0f0f", text: "#ffffff" },
@@ -403,10 +403,10 @@ export function ShareSheet({ payload, onClose }: Props) {
             {canDragImage && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Image</p>
                   <button
                     onClick={() => setImgTransform(NO_TRANSFORM)}
-                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <RotateCcw className="w-3 h-3" /> Reset
                   </button>
@@ -421,14 +421,14 @@ export function ShareSheet({ payload, onClose }: Props) {
                   className="w-full accent-black"
                   aria-label="Zoom"
                 />
-                <p className="text-[10px] text-muted-foreground">Drag the image in the preview to reposition.</p>
+                <p className="text-xs text-muted-foreground">Drag the image in the preview to reposition.</p>
               </div>
             )}
 
             {/* Template — generic share types only */}
             {!isOpportunity && (
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Template</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Template</p>
               <div className="flex gap-1.5">
                 {TEMPLATES.map(tmpl => (
                   <button
@@ -455,17 +455,18 @@ export function ShareSheet({ payload, onClose }: Props) {
             {/* Caption — generic share types only */}
             {!isOpportunity && (
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Caption <span className="font-normal normal-case tracking-normal opacity-50">— optional</span>
               </p>
               <textarea
                 value={caption}
                 onChange={e => { setCaption(e.target.value); redraw(); }}
                 placeholder="Add a personal note…"
-                rows={3}
-                className="w-full text-sm border border-border px-3 py-2 resize-none bg-background focus:outline-none focus:border-black transition-colors placeholder:text-muted-foreground"
+                rows={2}
+                className="w-full text-sm border border-border px-3 py-2 resize-none overflow-hidden bg-background focus:outline-none focus:border-black transition-colors placeholder:text-muted-foreground"
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               />
-              <p className="text-[10px] text-muted-foreground text-right">
+              <p className="text-xs text-muted-foreground text-right">
                 Long captions are wrapped to fit the space above the footer
               </p>
             </div>
@@ -527,7 +528,7 @@ export function ShareSheet({ payload, onClose }: Props) {
             </button>
 
             {igFellBack && (
-              <p className="text-[11px] leading-[1.5] text-muted-foreground">
+              <p className="text-xs leading-[1.5] text-muted-foreground">
                 Card saved to your photos and the link copied. Instagram cannot be
                 handed a story background from a browser, so add the saved image
                 yourself and paste the link as a sticker.

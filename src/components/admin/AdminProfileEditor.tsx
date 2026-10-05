@@ -35,7 +35,7 @@ export function AdminProfileEditor({ profileId, defaults }: Props) {
 
   const inputCls =
     "w-full border border-black bg-background px-3 py-2 text-sm focus-visible:outline-none";
-  const labelCls = "text-[10px] font-medium uppercase tracking-widest text-stone-400";
+  const labelCls = "text-xs font-medium uppercase tracking-widest text-stone-400";
 
   return (
     <div className="space-y-8">

@@ -264,7 +264,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
           {loading && <p className="text-xs text-muted-foreground py-6">Preparing claim links…</p>}
 
           {error && (
-            <p className="flex items-center gap-1.5 text-xs text-destructive py-6">
+            <p className="flex items-center gap-1.5 text-sm text-destructive py-6">
               <AlertCircle className="w-3.5 h-3.5" /> {error}
             </p>
           )}
@@ -326,7 +326,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                               href={r.listingUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-block mt-1 text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                              className="inline-block mt-1 text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground"
                             >
                               View listing ↗
                             </a>
@@ -364,7 +364,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                             {r.alreadyOwned ? (
                               <span
                                 title="This listing already has an owner — a claim link would be rejected, so none was generated."
-                                className="flex items-center gap-1 text-[11px] text-amber-700 cursor-default"
+                                className="flex items-center gap-1 text-xs text-amber-700 cursor-default"
                               >
                                 <AlertCircle className="w-3 h-3 shrink-0" /> Owned
                               </span>
@@ -374,7 +374,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title={r.claimUrl}
-                                className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground break-all"
+                                className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground break-all"
                               >
                                 {r.tokenIsNew ? "New link ↗" : "Link ↗"}
                               </a>
@@ -387,7 +387,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                 </table>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-4 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-4 text-xs text-muted-foreground">
                 {expiryDate && <span>Links work until {expiryDate}.</span>}
                 {newTokens > 0 && (
                   <span>

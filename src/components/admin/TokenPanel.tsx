@@ -291,7 +291,7 @@ function Row({ row, uploads }: { row: ClaimTokenRow; uploads: number }) {
         >
           Regenerate token
         </button>
-        {error && <p className="text-red-600 text-[11px]">{error}</p>}
+        {error && <p className="text-red-600 text-xs">{error}</p>}
       </td>
     </tr>
   );

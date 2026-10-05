@@ -8,7 +8,8 @@ import { deleteUpdate, editUpdate } from "@/actions/updates";
 import { gridImageSrc } from "@/lib/image";
 import { AssignProjectButton } from "./AssignProjectButton";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
-import type { ProjectUpdateWithArtist } from "@/types/database";
+import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
+import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
 
 interface Props {
   updates: ProjectUpdateWithArtist[];
@@ -127,8 +128,8 @@ function AudioTileContent({ u }: { u: ProjectUpdateWithArtist }) {
         <p className="text-xs text-center line-clamp-3 opacity-80 leading-snug">{u.caption}</p>
       )}
       {u.discipline && (
-        <span className="text-[9px] uppercase tracking-widest opacity-40">
-          {u.discipline.replace(/_/g, " ")}
+        <span className="text-xs uppercase tracking-widest opacity-40">
+          {DISCIPLINE_TO_MEDIUM[u.discipline as DisciplineEnum] ?? u.discipline.replace(/_/g, " ")}
         </span>
       )}
     </div>
@@ -150,8 +151,8 @@ function TextTileContent({ u }: { u: ProjectUpdateWithArtist }) {
   return (
     <div className="w-full h-full flex flex-col gap-2 p-3 bg-background overflow-hidden">
       {u.discipline && (
-        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
-          {u.discipline.replace(/_/g, " ")}
+        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+          {DISCIPLINE_TO_MEDIUM[u.discipline as DisciplineEnum] ?? u.discipline.replace(/_/g, " ")}
         </span>
       )}
       {u.text_content ? (
@@ -342,19 +343,20 @@ function Tile({
               onChange={(e) => setDraft(e.target.value)}
               autoFocus
               placeholder={isTextUpdate ? "Edit your update…" : "Edit caption…"}
-              className="flex-1 w-full border border-black text-[11px] leading-snug px-2 py-1.5 resize-none outline-none focus:border-foreground"
+              className="flex-1 w-full border border-black text-xs leading-snug px-2 py-1.5 resize-none overflow-hidden outline-none focus:border-foreground"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="border border-black bg-black text-white px-2.5 py-1 text-[10px] hover:opacity-80 transition-opacity disabled:opacity-40"
+                className="border border-black bg-black text-white px-2.5 py-1 text-xs hover:opacity-80 transition-opacity disabled:opacity-40"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="border border-border px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                className="border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -367,7 +369,7 @@ function Tile({
       {(du.caption || isOwner) && (
         <div className="px-2 py-1.5 border-t border-border min-w-0 overflow-hidden">
           {du.caption && (
-            <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{du.caption}</p>
+            <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{du.caption}</p>
           )}
           {isOwner && (
             <p className="text-[9px] font-mono text-muted-foreground mt-0.5">
@@ -383,7 +385,7 @@ function Tile({
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddModalOpen(true); }}
-            className="w-full border-t border-border px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors text-left"
+            className="w-full border-t border-border px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors text-left"
           >
             + Add update to thread
           </button>

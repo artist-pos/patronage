@@ -142,7 +142,7 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
       <div className="space-y-3">
         <label
           htmlFor="invite-csv"
-          className="block font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]"
+          className="block font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]"
         >
           Upload a CSV
         </label>
@@ -314,7 +314,7 @@ export function InviteUpload({ orgName, regionName, demoPreview }: Props) {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="py-2 pr-3 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+    <th className="py-2 pr-3 font-mono text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
       {children}
     </th>
   );

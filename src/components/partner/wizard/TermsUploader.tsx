@@ -69,7 +69,7 @@ export function TermsUploader({ opportunityId, termsPdfUrl, onChange }: Props) {
           {uploading ? "Uploading…" : "Upload PDF"}
         </button>
       )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <input
         ref={fileRef}

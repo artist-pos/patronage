@@ -144,7 +144,7 @@ function ModalThreadPost({
       </div>
 
       <div className="space-y-3">
-        <p className="text-[11px] font-mono text-muted-foreground pt-1">
+        <p className="text-xs font-mono text-muted-foreground pt-1">
           {formatTimestamp(post.created_at)}
         </p>
 

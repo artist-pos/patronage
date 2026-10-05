@@ -87,7 +87,7 @@ function OppCard({ opp, today }: { opp: SocialOpp; today: string }) {
     <div className="border border-border rounded-xl p-5 space-y-3 bg-white">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 flex-1 min-w-0">
-          <span className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <span className="text-xs font-medium uppercase tracking-widest text-stone-400">
             {opp.type}
           </span>
           <p className="font-semibold text-sm leading-snug">{opp.title}</p>
@@ -118,7 +118,7 @@ function OppCard({ opp, today }: { opp: SocialOpp; today: string }) {
 
       <p className="text-xs font-medium">{formatDeadline(opp.deadline)}</p>
 
-      <pre className="text-[10px] text-stone-400 font-mono bg-stone-50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
+      <pre className="text-xs text-stone-400 font-mono bg-stone-50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
         {copyText}
       </pre>
     </div>

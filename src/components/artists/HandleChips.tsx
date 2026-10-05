@@ -8,7 +8,7 @@ export function HandleChips({ artists }: { artists: Pick<ProfileWithImage, "id" 
         <a
           key={artist.id}
           href={`/${artist.username}`}
-          className="border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+          className="border border-border bg-card px-2.5 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
         >
           @{artist.username}
         </a>

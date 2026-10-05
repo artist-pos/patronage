@@ -302,7 +302,7 @@ export default async function PartnerRosterPage() {
           {groups.map((g) => (
             <div key={g.key} className="space-y-2">
               {g.title && (
-                <h3 className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+                <h3 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
                   {g.title} · {g.artists.length}
                 </h3>
               )}
@@ -316,7 +316,7 @@ export default async function PartnerRosterPage() {
                       {a.full_name ?? a.username}
                     </Link>
                     {a.city && (
-                      <span className="ml-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                      <span className="ml-2 font-mono text-xs text-[color:var(--fg-subtle)]">
                         {a.city}
                       </span>
                     )}
@@ -349,7 +349,7 @@ export default async function PartnerRosterPage() {
                   {a.full_name ?? a.username}
                 </Link>
                 {a.city && (
-                  <span className="ml-2 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                  <span className="ml-2 font-mono text-xs text-[color:var(--fg-subtle)]">
                     {a.city}
                   </span>
                 )}
@@ -374,7 +374,7 @@ export default async function PartnerRosterPage() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="bg-card p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+      <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
         {label}
       </p>
       <p className="mt-1 text-[22px] font-semibold leading-none">{value}</p>

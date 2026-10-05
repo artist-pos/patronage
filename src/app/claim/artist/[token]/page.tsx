@@ -102,7 +102,7 @@ export default async function ArtistClaimPage({ params }: Props) {
                   </div>
                   <p className="text-xs truncate">{art.title ?? "Untitled"}</p>
                   {art.year && (
-                    <p className="text-[11px] text-muted-foreground">{art.year}</p>
+                    <p className="text-xs text-muted-foreground">{art.year}</p>
                   )}
                 </li>
               ))}

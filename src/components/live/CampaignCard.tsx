@@ -48,11 +48,11 @@ export function CampaignCard({ campaign, artist, opportunityTitle, opportunityTy
         <div className="p-4 space-y-2">
           {/* Live badge + type */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1 text-[10px] font-medium text-red-600 uppercase tracking-wider">
+            <span className="flex items-center gap-1 text-xs font-medium text-red-600 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block animate-pulse" />
               Live
             </span>
-            <span className="text-[10px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5">
+            <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5">
               {typeLabel}
             </span>
           </div>
@@ -75,7 +75,7 @@ export function CampaignCard({ campaign, artist, opportunityTitle, opportunityTy
                 className="w-6 h-6 rounded-full object-cover bg-stone-100 shrink-0"
               />
             ) : (
-              <span className="w-6 h-6 rounded-full bg-stone-200 shrink-0 flex items-center justify-center text-[10px] text-stone-500 font-medium">
+              <span className="w-6 h-6 rounded-full bg-stone-200 shrink-0 flex items-center justify-center text-xs text-stone-500 font-medium">
                 {displayName.charAt(0).toUpperCase()}
               </span>
             )}

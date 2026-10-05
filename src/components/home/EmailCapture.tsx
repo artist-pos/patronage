@@ -40,7 +40,7 @@ export function EmailCapture() {
         </Button>
       </div>
       {state.status === "error" && (
-        <p className="text-xs text-destructive">{state.message}</p>
+        <p className="text-sm text-destructive">{state.message}</p>
       )}
     </form>
   );

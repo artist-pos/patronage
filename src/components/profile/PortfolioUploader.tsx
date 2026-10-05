@@ -127,7 +127,7 @@ function SortableThumb({
           onClick={() => onRemove(img)}
           disabled={isPending}
           aria-label="Remove image"
-          className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black hover:text-white disabled:opacity-40"
+          className="absolute top-1 right-1 w-5 h-5 bg-background border border-black flex items-center justify-center z-10 hover:bg-black hover:text-white disabled:opacity-40"
         >
           <X className="w-3 h-3" />
         </button>
@@ -149,26 +149,27 @@ function SortableThumb({
         defaultValue={img.description ?? ""}
         placeholder="Description…"
         maxLength={560}
-        rows={3}
+        rows={2}
         onChange={(e) => setDescLen(e.target.value.length)}
         onBlur={(e) => onDescriptionBlur(img.id, e.target.value.trim() || null)}
-        className="w-full text-xs border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground resize-none leading-snug"
+        onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
+        className="w-full text-sm border-b border-border bg-transparent py-0.5 placeholder:text-muted-foreground focus:outline-none focus:border-foreground resize-none overflow-hidden leading-snug"
         style={{ minWidth: "80px" }}
       />
-      <span className="text-[10px] text-muted-foreground tabular-nums self-end">
+      <span className="text-xs text-muted-foreground tabular-nums self-end">
         {descLen}/560
       </span>
 
       {/* Hide / Show toggle */}
       {hiddenFromArchive && (
-        <span className="text-[10px] font-mono uppercase tracking-widest border border-border px-1.5 py-0.5 self-start leading-none text-muted-foreground">
+        <span className="text-xs font-mono uppercase tracking-widest border border-border px-1.5 py-0.5 self-start leading-none text-muted-foreground">
           Hidden
         </span>
       )}
       <button
         onClick={handleHideToggle}
         disabled={togglingHide}
-        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors self-start disabled:opacity-40"
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors self-start disabled:opacity-40"
       >
         {hiddenFromArchive ? "Show" : "Hide"}
       </button>
@@ -382,7 +383,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
             </span>
           )}
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     );
   }
@@ -460,7 +461,7 @@ export function PortfolioUploader({ profileId, mode = "portfolio" }: Props) {
       )}
 
       <p className="text-xs text-muted-foreground">{images.length}/{MAX_IMAGES} images</p>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {images.length >= MAX_IMAGES && (
         <div className="flex items-center gap-3">

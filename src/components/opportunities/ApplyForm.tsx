@@ -151,7 +151,7 @@ function ListingReference({ opportunity: o }: { opportunity: OpportunityForApply
 // parsed from a CV, so a miscategorised entry (a press mention the parser
 // read as an exhibition, or vice versa) can be dragged into the other column
 // instead of deleted and retyped. Reorders within a column too. Kept
-// deliberately small/dense (text-[11px] fields, no Label components) to
+// deliberately small/dense (text-xs fields, no Label components) to
 // match the rest of this form instead of the heavier /studio editor style. ──
 interface ReviewExhibition extends ExhibitionEntry { _id: string }
 interface ReviewPress extends BibliographyEntry { _id: string }
@@ -160,7 +160,7 @@ function withIds<T extends object>(arr: T[]): (T & { _id: string })[] {
   return arr.map((x) => ({ ...x, _id: crypto.randomUUID() }));
 }
 
-const reviewFieldCls = "w-full border-b border-border bg-transparent py-1 text-[11px] focus:outline-none focus:border-foreground";
+const reviewFieldCls = "w-full border-b border-border bg-transparent py-1 text-xs focus:outline-none focus:border-foreground";
 
 function ExhibitionCard({
   item, onChange, onBlur, onRemove,
@@ -184,7 +184,7 @@ function ExhibitionCard({
               key={t}
               type="button"
               onClick={() => { onChange("type", t); onBlur(); }}
-              className={`px-2 py-0.5 font-mono text-[10px] transition-colors ${item.type === t ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground"} ${t === "Group" ? "border-l border-border" : ""}`}
+              className={`px-2 py-0.5 font-mono text-xs transition-colors ${item.type === t ? "bg-foreground text-white" : "text-muted-foreground hover:text-foreground"} ${t === "Group" ? "border-l border-border" : ""}`}
             >
               {t}
             </button>
@@ -230,7 +230,7 @@ function PressCard({
         <select
           value={item.type}
           onChange={(e) => { onChange("type", e.target.value); onBlur(); }}
-          className="border-b border-border bg-transparent py-0.5 text-[10px] focus:outline-none focus:border-foreground"
+          className="border-b border-border bg-transparent py-0.5 text-xs focus:outline-none focus:border-foreground"
         >
           {(["Review", "Interview", "Feature", "Essay", "Article"] as const).map((t) => (
             <option key={t} value={t}>{t}</option>
@@ -635,7 +635,7 @@ export function ApplyForm({
   );
 
   const modeSegCls = (active: boolean) =>
-    `px-3 py-1.5 font-mono text-[11px] transition-colors ${
+    `px-3 py-1.5 font-mono text-xs transition-colors ${
       active ? "bg-foreground text-white" : "bg-card text-muted-foreground hover:text-foreground"
     }`;
 
@@ -851,7 +851,7 @@ export function ApplyForm({
               className="group flex items-center gap-2 flex-1 text-left"
             >
               <span
-                className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full font-mono text-[11px] transition-colors ${
+                className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full font-mono text-xs transition-colors ${
                   step === s.n ? "bg-foreground text-white" : step > s.n ? "bg-foreground/20 text-foreground group-hover:bg-foreground/30" : "bg-muted text-muted-foreground group-hover:bg-foreground/10"
                 }`}
               >
@@ -911,7 +911,7 @@ export function ApplyForm({
               {localAvatarUrl ? (
                 <Image src={localAvatarUrl} alt={displayName} fill className="object-cover" sizes="64px" />
               ) : missingKeys.has("avatar") ? (
-                <label className="absolute inset-0 flex items-center justify-center cursor-pointer px-1 text-center text-[10px] leading-tight text-muted-foreground hover:text-foreground transition-colors">
+                <label className="absolute inset-0 flex items-center justify-center cursor-pointer px-1 text-center text-xs leading-tight text-muted-foreground hover:text-foreground transition-colors">
                   {avatarUploading ? "…" : "Add photo"}
                   <input
                     type="file"
@@ -1086,7 +1086,7 @@ export function ApplyForm({
                   </div>
                   <DragOverlay>
                     {draggingCard && (
-                      <div className="border border-foreground bg-background shadow-xl p-2.5 text-[11px] w-56">
+                      <div className="border border-foreground bg-background shadow-xl p-2.5 text-xs w-56">
                         {draggingCard.kind === "exhibition"
                           ? exhibitionEntries.find((x) => x._id === draggingCard.id)?.title || "Untitled exhibition"
                           : pressEntries.find((x) => x._id === draggingCard.id)?.title || "Untitled press mention"}
@@ -1215,7 +1215,7 @@ export function ApplyForm({
                           />
                         ))}
                       </div>
-                      <span className="font-mono text-[11px] text-muted-foreground">
+                      <span className="font-mono text-xs text-muted-foreground">
                         {selectedWorkIds.length}/{portfolioPickCount} selected
                       </span>
                     </div>
@@ -1234,7 +1234,7 @@ export function ApplyForm({
                           >
                             <Image src={w.thumbUrl ?? w.url} alt={w.title || "Untitled work"} fill className="object-cover" sizes="160px" />
                             {w.selected && (
-                              <span className="absolute top-0 left-0 z-10 w-5 h-5 bg-foreground text-white font-mono text-[10px] flex items-center justify-center leading-none">
+                              <span className="absolute top-0 left-0 z-10 w-5 h-5 bg-foreground text-white font-mono text-xs flex items-center justify-center leading-none">
                                 {selectedIndex}
                               </span>
                             )}
@@ -1245,7 +1245,7 @@ export function ApplyForm({
                             placeholder="Title"
                             onChange={(e) => updateWorkField(w.id, "title", e.target.value)}
                             onBlur={(e) => saveWorkField(w.id, "title", e.target.value)}
-                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-[11px] focus:outline-none focus:border-foreground"
+                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-xs focus:outline-none focus:border-foreground"
                           />
                           <input
                             type="text"
@@ -1253,7 +1253,7 @@ export function ApplyForm({
                             placeholder="Medium"
                             onChange={(e) => updateWorkField(w.id, "medium", e.target.value)}
                             onBlur={(e) => saveWorkField(w.id, "medium", e.target.value)}
-                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-[11px] focus:outline-none focus:border-foreground"
+                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-xs focus:outline-none focus:border-foreground"
                           />
                           <input
                             type="text"
@@ -1261,9 +1261,9 @@ export function ApplyForm({
                             placeholder="Size (e.g. 40 x 60cm)"
                             onChange={(e) => updateWorkField(w.id, "dimensions", e.target.value)}
                             onBlur={(e) => saveWorkField(w.id, "dimensions", e.target.value)}
-                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-[11px] focus:outline-none focus:border-foreground"
+                            className="w-full border-b border-border bg-transparent px-0.5 py-1 text-xs focus:outline-none focus:border-foreground"
                           />
-                          {w.saving && <p className="text-[10px] text-muted-foreground">Saving…</p>}
+                          {w.saving && <p className="text-xs text-muted-foreground">Saving…</p>}
                         </div>
                       );
                     })}
@@ -1300,7 +1300,7 @@ export function ApplyForm({
                     <button
                       type="button"
                       onClick={() => setSelectedArtworkId(null)}
-                      className={`aspect-square border font-mono text-[11px] flex items-center justify-center transition-colors ${
+                      className={`aspect-square border font-mono text-xs flex items-center justify-center transition-colors ${
                         selectedArtworkId === null ? "border-foreground bg-muted text-foreground" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
                       }`}
                     >

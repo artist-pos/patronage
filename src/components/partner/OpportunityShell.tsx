@@ -268,27 +268,27 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
           {/* Title + tags */}
           <div className="pb-2 space-y-1.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              {opp.type && <span className="text-[10px] border border-black/20 px-2 py-0.5 text-stone-500">{opp.type}</span>}
-              {opp.country && <span className="text-[10px] border border-black/20 px-2 py-0.5 text-stone-500">{opp.country}{opp.city ? `, ${opp.city}` : ""}</span>}
-              {collaborators.length > 0 && <span className="text-[10px] border border-black/20 px-2 py-0.5 text-stone-500">Committee · {collaborators.length}</span>}
+              {opp.type && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.type}</span>}
+              {opp.country && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.country}{opp.city ? `, ${opp.city}` : ""}</span>}
+              {collaborators.length > 0 && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">Committee · {collaborators.length}</span>}
               {daysLeft !== null && (
-                <span className={`text-[10px] border px-2 py-0.5 ${daysLeft < 7 && daysLeft > 0 ? "border-red-300 text-red-600 bg-red-50" : "border-black/20 text-stone-500"}`}>
+                <span className={`text-xs border px-2 py-0.5 ${daysLeft < 7 && daysLeft > 0 ? "border-red-300 text-red-600 bg-red-50" : "border-black/20 text-stone-500"}`}>
                   {daysLeft > 0 ? `${daysLeft} days left` : "Closed"}
                 </span>
               )}
               {counts.pending > 0 && (
                 <button type="button" onClick={() => { setTab("pipeline"); setStatusFilter("pending"); }}
-                  className="text-[10px] border border-amber-300 bg-amber-50 text-amber-700 px-2 py-0.5 hover:bg-amber-100 transition-colors">
+                  className="text-xs border border-amber-300 bg-amber-50 text-amber-700 px-2 py-0.5 hover:bg-amber-100 transition-colors">
                   {counts.pending} new to review
                 </button>
               )}
               {(counts.production_ready ?? 0) > 0 && (
-                <span className="text-[10px] border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5">
+                <span className="text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5">
                   {counts.production_ready} in production
                 </span>
               )}
-              {isClosed && <span className="text-[10px] border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Applications closed</span>}
-              {isDelisted && <span className="text-[10px] border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Delisted</span>}
+              {isClosed && <span className="text-xs border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Applications closed</span>}
+              {isDelisted && <span className="text-xs border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Delisted</span>}
             </div>
             <div>
               <h1 className="text-xl font-semibold tracking-tight">{opp.title}</h1>
@@ -436,7 +436,7 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
       <div className="border border-black/10 overflow-hidden">
         <div className="p-6 grid grid-cols-1 sm:grid-cols-[1fr_200px] gap-6">
           <div className="space-y-3">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Opportunity</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Opportunity</p>
             <div className="space-y-1">
               <h2 className="text-lg font-semibold">{opp.title}</h2>
               {opp.caption && <p className="text-sm text-stone-500">{opp.caption}</p>}
@@ -452,28 +452,28 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
           <div className="space-y-3 text-xs">
             {opp.funding_range && (
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-0.5">Funding</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Funding</p>
                 <p className="font-medium">{opp.funding_range}</p>
               </div>
             )}
             {opp.opens_at && (
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-0.5">Opens</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Opens</p>
                 <p>{new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
               </div>
             )}
             {opp.deadline && (
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-0.5">Closes</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Closes</p>
                 <p>{new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
               </div>
             )}
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-0.5">Routing</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Routing</p>
               <p>{opp.routing_type === "pipeline" ? `Pipeline${isPipelinePaid ? " · paid" : " · free round"}` : "External link"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-0.5">Featured</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Featured</p>
               <p>
                 {opp.is_featured ? "Yes" : (
                   <span>No · <a href={`/partner/opportunities/${opportunityId}/manage`} className="underline underline-offset-2 hover:text-foreground transition-colors">boost</a></span>
@@ -524,7 +524,7 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
           <div className="border border-black/10 divide-y divide-black/5">
             {questions.map((q: { id: string; label: string; type: string; required?: boolean }, i: number) => (
               <div key={q.id} className="flex items-center gap-4 px-4 py-3">
-                <span className="text-[11px] font-mono text-stone-300 w-6 shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-xs font-mono text-stone-300 w-6 shrink-0">{String(i + 1).padStart(2, "0")}</span>
                 <p className="flex-1 text-sm font-medium">{q.label}</p>
                 <span className="text-xs text-stone-400 shrink-0 hidden sm:block">{q.type?.replace("_", " ")}</span>
                 <span className={`text-xs font-medium shrink-0 ${q.required !== false ? "text-red-500" : "text-stone-400"}`}>
@@ -589,7 +589,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
           { label: "SELECTION RATE", value: `${selectionRate}%`, sub: `${selected} of ${total}` },
         ].map((k) => (
           <div key={k.label} className="bg-background p-5 space-y-1">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">{k.label}</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{k.label}</p>
             <p className="text-3xl font-semibold tabular-nums">{k.value}</p>
             <p className="text-xs text-stone-400">{k.sub}</p>
           </div>
@@ -825,7 +825,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
       {responded.length > 0 && (
         <div className="border border-black/10 overflow-hidden">
           <div className="px-6 py-4 border-b border-black/10 bg-stone-50/50">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Cumulative impact</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Cumulative impact</p>
             <p className="text-sm font-semibold mt-0.5">Across {responded.length} past recipient{responded.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-black/10">
@@ -836,7 +836,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
               { label: "Income from practice", value: totalIncome > 0 ? `$${(totalIncome / 1000).toFixed(0)}k` : "—" },
             ].map((m) => (
               <div key={m.label} className="p-5 space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
                 <p className="text-2xl font-semibold">{m.value}</p>
                 {m.label === "Income from practice" && totalIncome > 0 && (
                   <p className="text-xs text-stone-400">reported, this cohort</p>
@@ -850,7 +850,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
       {/* Per-recipient cards */}
       {selectedApps.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Recipients</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Recipients</p>
           <div className="space-y-4">
             {selectedApps.map((app) => {
               const artist = app.artist;
@@ -869,8 +869,8 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm">{artist.full_name ?? artist.username}</p>
-                          <span className="text-[10px] border border-black/20 px-1.5 py-0.5 text-stone-400">recipient</span>
-                          <span className="text-[10px] text-stone-400">{new Date(app.created_at).getFullYear()}</span>
+                          <span className="text-xs border border-black/20 px-1.5 py-0.5 text-stone-400">recipient</span>
+                          <span className="text-xs text-stone-400">{new Date(app.created_at).getFullYear()}</span>
                         </div>
                         {followup?.further_opportunities && (
                           <p className="text-xs text-stone-500 mt-0.5">{followup.further_opportunities}</p>
@@ -894,7 +894,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                           { label: "Income from practice", value: income > 0 ? `$${income.toLocaleString("en-NZ")}` : (followup.income_from_practice || "—") },
                         ].map((m) => (
                           <div key={m.label} className="px-4 py-3">
-                            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
+                            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
                             <p className="text-base font-semibold mt-0.5">{m.value}</p>
                           </div>
                         ))}
@@ -904,7 +904,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                           <blockquote className="text-sm italic text-stone-700 leading-relaxed">
                             &ldquo;{followup.testimonial}&rdquo;
                           </blockquote>
-                          <p className="text-[11px] text-stone-400 mt-2 flex items-center gap-1">
+                          <p className="text-xs text-stone-400 mt-2 flex items-center gap-1">
                             <span>✓</span> Consent given to share publicly
                           </p>
                         </div>

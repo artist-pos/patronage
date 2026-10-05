@@ -59,7 +59,7 @@ export function SupportWorks({ artworks, initialLimit, isAdmin }: Props) {
             {saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Save"}
           </button>
           {saveState === "error" && (
-            <span className="text-xs text-red-600">Error saving</span>
+            <span className="text-sm text-red-600">Error saving</span>
           )}
         </div>
       )}

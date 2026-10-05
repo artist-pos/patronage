@@ -65,7 +65,7 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
             </td>
             <td className="py-3 pr-4">
               <span
-                className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide ${
+                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide ${
                   post.status === "published"
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-stone-100 text-stone-500"

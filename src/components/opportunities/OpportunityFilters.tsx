@@ -83,7 +83,7 @@ export function OpportunityFilters() {
     <div className="space-y-6">
       {/* Sort */}
       <div>
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        <p className="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
           Sort by
         </p>
         <Select value={currentSort} onValueChange={(v) => updateParam("sort", v === "deadline" ? null : v)}>
@@ -100,7 +100,7 @@ export function OpportunityFilters() {
 
       {/* Type */}
       <div>
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        <p className="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
           Type
         </p>
         <div className="flex flex-col gap-1">
@@ -118,7 +118,7 @@ export function OpportunityFilters() {
       {/* Refinement selects */}
       <div className="space-y-3">
         <div>
-          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-1.5 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Country
           </p>
           <Select value={currentCountry ?? "all"} onValueChange={(v) => updateParam("country", v)}>
@@ -133,7 +133,7 @@ export function OpportunityFilters() {
         </div>
 
         <div>
-          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-1.5 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Discipline
           </p>
           <Select value={currentDiscipline ?? "all"} onValueChange={(v) => updateParam("discipline", v)}>
@@ -148,7 +148,7 @@ export function OpportunityFilters() {
         </div>
 
         <div>
-          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-1.5 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
             Career stage
           </p>
           <Select value={currentCareerStage ?? "all"} onValueChange={(v) => updateParam("careerStage", v)}>
@@ -180,7 +180,7 @@ export function OpportunityFilters() {
         <button
           type="button"
           onClick={clearAll}
-          className="font-mono text-[11px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+          className="font-mono text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
         >
           Clear all filters
         </button>
@@ -203,7 +203,7 @@ export function OpportunityFilters() {
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filters &amp; sort
           {activeCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center bg-foreground px-1 text-[10px] text-white">
+            <span className="flex h-4 min-w-4 items-center justify-center bg-foreground px-1 text-xs text-white">
               {activeCount}
             </span>
           )}

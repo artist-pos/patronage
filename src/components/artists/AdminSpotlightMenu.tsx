@@ -115,12 +115,12 @@ export function AdminSpotlightMenu({ profileId, artistName, isSpotlit }: Props) 
               >
                 {pending ? "Saving…" : "Set as featured artist"}
               </button>
-              <p className="text-[11px] leading-snug text-muted-foreground">
+              <p className="text-xs leading-snug text-muted-foreground">
                 Replaces the current spotlight on /artists and the home page.
               </p>
             </div>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
       )}
     </div>

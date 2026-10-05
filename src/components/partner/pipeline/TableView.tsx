@@ -216,7 +216,7 @@ export function TableView({ apps, stages, onOpenApp, onStatusChange }: Props) {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); changeStatus(app.id, "shortlisted"); }}
-                        className="text-[10px] px-2 py-0.5 border border-blue-200 text-blue-600 hover:bg-blue-50"
+                        className="text-xs px-2 py-0.5 border border-blue-200 text-blue-600 hover:bg-blue-50"
                       >
                         ↑
                       </button>
@@ -225,7 +225,7 @@ export function TableView({ apps, stages, onOpenApp, onStatusChange }: Props) {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); changeStatus(app.id, "rejected"); }}
-                        className="text-[10px] px-2 py-0.5 border border-red-200 text-red-500 hover:bg-red-50"
+                        className="text-xs px-2 py-0.5 border border-red-200 text-red-500 hover:bg-red-50"
                       >
                         ✕
                       </button>

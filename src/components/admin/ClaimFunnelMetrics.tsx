@@ -64,7 +64,7 @@ export function ClaimFunnelMetrics({ data }: { data: FunnelData }) {
               pctLabel={pct(pipelineActivated, claimed)}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-3">
+          <p className="text-xs text-muted-foreground mt-3">
             Percentages show conversion from previous step: opened/sent → claimed/opened → open call/claimed.
           </p>
         </div>

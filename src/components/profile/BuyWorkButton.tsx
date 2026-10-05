@@ -201,7 +201,7 @@ export function BuyWorkButton({
                   {/* Edition selector */}
                   {listedEditions.length > 1 && (
                     <div className="space-y-2">
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                         Edition
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -279,7 +279,7 @@ export function BuyWorkButton({
                     </button>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground text-center">
+                  <p className="text-xs text-muted-foreground text-center">
                     You&apos;ll receive a verified certificate of authenticity after purchase.
                   </p>
                 </>

@@ -111,6 +111,7 @@ export function CreateUpdateModal({
   const [textContent, setTextContent] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState(false);
 
   // Project selection
   const [projectMode, setProjectMode] = useState<"none" | "existing" | "new">(
@@ -289,8 +290,12 @@ export function CreateUpdateModal({
         });
       if (dbErr) { setError(dbErr.message); setUploading(false); return; }
 
-      handleClose();
-      router.refresh();
+      setSuccessToast(true);
+      setTimeout(() => {
+        setSuccessToast(false);
+        handleClose();
+        router.refresh();
+      }, 1200);
     } catch (err: any) {
       setError(err?.message ?? "Failed to post update.");
     }
@@ -345,7 +350,7 @@ export function CreateUpdateModal({
                   <button
                     key={type}
                     onClick={() => handleTypeChange(type)}
-                    className={`flex-1 flex flex-col items-center gap-1 py-2 text-[10px] border transition-colors ${
+                    className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-xs border transition-colors ${
                       contentType === type
                         ? "border-black bg-black text-white"
                         : "border-border text-muted-foreground hover:border-black hover:text-foreground"
@@ -379,7 +384,7 @@ export function CreateUpdateModal({
                 ) : (
                   <label className="flex flex-col items-center justify-center w-full h-40 border border-dashed border-black cursor-pointer hover:bg-muted/40 transition-colors gap-1">
                     <span className="text-sm text-muted-foreground">Click to select an image</span>
-                    <span className="text-xs text-muted-foreground">JPEG, PNG, WebP</span>
+                    <span className="text-sm text-muted-foreground">JPEG, PNG, WebP</span>
                     <input
                       ref={imageInputRef}
                       type="file"
@@ -401,7 +406,7 @@ export function CreateUpdateModal({
                     ) : (
                       <>
                         <span className="text-sm text-muted-foreground">Click to select an audio file</span>
-                        <span className="text-xs text-muted-foreground">MP3, WAV, FLAC, AAC, OGG</span>
+                        <span className="text-sm text-muted-foreground">MP3, WAV, FLAC, AAC, OGG</span>
                       </>
                     )}
                     <input
@@ -412,7 +417,7 @@ export function CreateUpdateModal({
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-muted-foreground text-center">— or paste a SoundCloud / Bandcamp URL —</p>
+                  <p className="text-sm text-muted-foreground text-center">— or paste a SoundCloud / Bandcamp URL —</p>
                   <input
                     type="url"
                     value={embedUrl}
@@ -434,7 +439,7 @@ export function CreateUpdateModal({
                     ) : (
                       <>
                         <span className="text-sm text-muted-foreground">Click to select a video file</span>
-                        <span className="text-xs text-muted-foreground">MP4, MOV, WebM</span>
+                        <span className="text-sm text-muted-foreground">MP4, MOV, WebM</span>
                       </>
                     )}
                     <input
@@ -445,7 +450,7 @@ export function CreateUpdateModal({
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-muted-foreground text-center">— or paste a YouTube / Vimeo URL —</p>
+                  <p className="text-sm text-muted-foreground text-center">— or paste a YouTube / Vimeo URL —</p>
                   <input
                     type="url"
                     value={embedUrl}
@@ -462,9 +467,10 @@ export function CreateUpdateModal({
                 <textarea
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
                   placeholder="Write your poem, prose, or notes…"
-                  rows={8}
-                  className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+                  rows={4}
+                  className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors"
                 />
               )}
 
@@ -479,7 +485,7 @@ export function CreateUpdateModal({
                     className="w-full border border-black text-sm px-3 py-2 outline-none focus:border-foreground transition-colors"
                   />
                   {embedUrl && detectProvider(embedUrl) && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Detected: {detectProvider(embedUrl)}
                     </p>
                   )}
@@ -491,9 +497,10 @@ export function CreateUpdateModal({
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
                   placeholder="Add a caption… (optional)"
-                  rows={3}
-                  className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+                  rows={2}
+                  className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors"
                 />
               )}
 
@@ -506,7 +513,7 @@ export function CreateUpdateModal({
                     </p>
                     <div className="flex items-center gap-2 border border-black px-3 py-2 bg-muted/40">
                       <span className="text-sm flex-1 truncate">{defaultProjectTitle ?? "Project"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Locked</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-widest">Locked</span>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -566,7 +573,8 @@ export function CreateUpdateModal({
                           onChange={(e) => setNewProjectLead(e.target.value)}
                           placeholder="Project description… (optional)"
                           rows={2}
-                          className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+                          className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors"
+                          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                         />
                       </div>
                     )}
@@ -594,7 +602,14 @@ export function CreateUpdateModal({
                 </button>
               )}
 
-              {error && <p className="text-xs text-destructive">{error}</p>}
+              {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+
+              {successToast && (
+                <div className="flex items-center gap-2 text-sm text-emerald-700" role="status">
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm3.78 5.22a.75.75 0 0 0-1.06 0L7 8.94 5.28 7.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l4.25-4.25a.75.75 0 0 0 0-1.06Z"/></svg>
+                  Update posted
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-4">
                 <button

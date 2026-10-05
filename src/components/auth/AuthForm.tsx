@@ -261,7 +261,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
               aria-invalid={!!fieldErrors.name}
               className={nameFieldCls(fieldErrors.name)}
             />
-            {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
+            {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
           </div>
         )}
         <div className="space-y-2">
@@ -281,7 +281,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             className={fieldErrors.email ? "border-destructive focus-visible:border-destructive" : undefined}
           />
           {fieldErrors.email && (
-            <p id="email-error" className="text-xs text-destructive">{fieldErrors.email}</p>
+            <p id="email-error" className="text-sm text-destructive">{fieldErrors.email}</p>
           )}
         </div>
         <div className="space-y-2">
@@ -301,9 +301,9 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             className={fieldErrors.password ? "border-destructive focus-visible:border-destructive" : undefined}
           />
           {fieldErrors.password ? (
-            <p id="password-error" className="text-xs text-destructive">{fieldErrors.password}</p>
+            <p id="password-error" className="text-sm text-destructive">{fieldErrors.password}</p>
           ) : mode === "signup" ? (
-            <p className="text-xs text-muted-foreground">Must be at least 8 characters long.</p>
+            <p className="text-sm text-muted-foreground">Must be at least 8 characters long.</p>
           ) : null}
         </div>
         {mode === "signup" && (
@@ -323,17 +323,17 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
                 <Link href="/terms" target="_blank" className="underline underline-offset-2">terms of service</Link>{" "}
                 and{" "}
                 <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
-                <span className="block text-xs text-muted-foreground mt-1">
+                <span className="block text-sm text-muted-foreground mt-1">
                   We&rsquo;ll also email you occasionally about new opportunities and Patronage itself. Every email has an unsubscribe link.
                 </span>
               </span>
             </label>
-            {fieldErrors.terms && <p className="text-xs text-destructive">{fieldErrors.terms}</p>}
+            {fieldErrors.terms && <p className="text-sm text-destructive">{fieldErrors.terms}</p>}
           </div>
         )}
         {mode === "signup" && <HoneypotField />}
         {mode === "signup" && <TurnstileWidget onVerify={setTurnstileToken} />}
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <Button
           type="submit"
           className={submitClassName ?? "w-full"}

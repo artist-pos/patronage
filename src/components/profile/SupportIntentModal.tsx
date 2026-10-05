@@ -82,7 +82,7 @@ export function SupportIntentModal({ tier, artistName, onClose }: Props) {
                   required
                   className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
                 />
-                {error && <p className="text-xs text-destructive">{error}</p>}
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <button
                   type="submit"
                   disabled={submitting || !email}

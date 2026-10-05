@@ -116,7 +116,7 @@ export function StepReviewPublish({ opp, criteria, isPipeline, submitError }: Pr
             <span className="text-sm text-stone-500">One-off publishing fee</span>
             <span className="text-lg font-semibold">$200 NZD</span>
           </div>
-          <p className="text-[11px] text-stone-400">
+          <p className="text-xs text-stone-400">
             Your first open call listing is free. Payment page follows after submitting.
           </p>
         </div>

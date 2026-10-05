@@ -239,7 +239,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
       {/* Pending invitations */}
       {pending.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Pending invitations</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Pending invitations</p>
           <div className="divide-y divide-border border border-border">
             {pending.map(m => (
               <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-4">
@@ -247,7 +247,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                   <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{m.collective?.name ?? "Unnamed collective"}</p>
-                    <p className="text-[11px] text-muted-foreground">You&apos;ve been invited to join</p>
+                    <p className="text-xs text-muted-foreground">You&apos;ve been invited to join</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -295,7 +295,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                     <Users className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{m.collective?.name ?? "Unnamed"}</p>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         {isAdmin ? <><Crown className="w-3 h-3" />Admin</> : "Member"}
                       </p>
                     </div>
@@ -333,7 +333,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
 
                     {/* Members list */}
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Members</p>
+                      <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Members</p>
                       {loadingMembers === m.collective_id ? (
                         <p className="text-xs text-muted-foreground">Loading…</p>
                       ) : members.length === 0 ? (
@@ -373,7 +373,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                     {/* Add members (admin only) */}
                     {isAdmin && (
                       <div className="space-y-3">
-                        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Invite members</p>
+                        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Invite members</p>
 
                         {/* Search existing Patronage users */}
                         <CollaboratorPicker
@@ -395,7 +395,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
 
                         {/* Email invite for non-Patronage users */}
                         <div className="space-y-1 pt-1">
-                          <label className="text-[11px] text-muted-foreground">Not on Patronage? Invite by email</label>
+                          <label className="text-xs text-muted-foreground">Not on Patronage? Invite by email</label>
                           <div className="flex gap-2">
                             <input
                               type="email"
@@ -434,7 +434,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
         <form onSubmit={handleCreate} className="space-y-3 border border-border p-4">
           <p className="text-sm font-medium">New collective</p>
           <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Name *</label>
+            <label className="text-xs text-muted-foreground">Name *</label>
             <input
               type="text"
               value={name}
@@ -445,16 +445,17 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Description (optional)</label>
+            <label className="text-xs text-muted-foreground">Description (optional)</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="A brief description of your group…"
               rows={2}
-              className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black resize-none"
+              className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black resize-none overflow-hidden"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
           <div className="flex gap-2">
             <button
               type="submit"

@@ -91,7 +91,7 @@ function matchBadgeCls(score: number): string {
 
 // v2 square bordered mono tag
 const TAG_CLS =
-  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+  "border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
 
 export function OpportunityCard({ opp, isPreview = false, view = "gallery", priority = false, isAuthenticated = false, savedByUser = false }: Props) {
   const rawScore = "match_score" in opp ? opp.match_score : undefined;
@@ -152,7 +152,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           <p className="truncate text-sm font-semibold leading-snug group-hover:underline underline-offset-2">
             {opp.title}
           </p>
-          <p className="truncate font-mono text-[11px] text-muted-foreground">{opp.organiser}</p>
+          <p className="truncate font-mono text-xs text-muted-foreground">{opp.organiser}</p>
         </div>
 
         {/* Type tag */}
@@ -160,7 +160,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Recurring badge */}
         {recurringLabel && (
-          <span className="hidden shrink-0 whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-white md:block">
+          <span className="hidden shrink-0 whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-xs leading-relaxed text-white md:block">
             {recurringLabel}
           </span>
         )}
@@ -228,7 +228,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
           <span className={TAG_CLS}>{opp.type}</span>
           <span className={TAG_CLS}>{opp.country}</span>
           {recurringLabel && (
-            <span className="whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-white">
+            <span className="whitespace-nowrap bg-foreground px-1.5 py-0.5 font-mono text-xs leading-relaxed text-white">
               {recurringLabel}
             </span>
           )}
@@ -255,8 +255,8 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
 
         {/* Organiser + days */}
         <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate font-mono text-[11px] text-muted-foreground">{opp.organiser}</span>
-          <span className={`whitespace-nowrap font-mono text-[11px] ${daysCls}`}>
+          <span className="truncate font-mono text-xs text-muted-foreground">{opp.organiser}</span>
+          <span className={`whitespace-nowrap font-mono text-xs ${daysCls}`}>
             {days}
           </span>
         </div>

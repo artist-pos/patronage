@@ -7,7 +7,7 @@ import { OnboardingModal } from "./OnboardingModal";
 
 // Pages where we never show the gate (auth loops, admin, already in onboarding)
 const SKIP_PREFIXES = ["/auth", "/onboarding", "/admin"];
-const SKIP_EXACT = new Set(["/"]);
+const SKIP_EXACT = new Set<string>();
 
 // Default role suggestion by pathname
 function suggestedRoleForPath(pathname: string): string {

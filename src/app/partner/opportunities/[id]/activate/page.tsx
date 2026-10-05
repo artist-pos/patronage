@@ -56,7 +56,7 @@ export default function ActivatePage({ params }: Props) {
             <span className="text-sm text-stone-500">Publishing fee</span>
             <span className="text-lg font-semibold">$200 NZD</span>
           </div>
-          <p className="text-[11px] text-stone-400">+ 2.9% + 30c card processing fee (Stripe)</p>
+          <p className="text-xs text-stone-400">+ 2.9% + 30c card processing fee (Stripe)</p>
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}

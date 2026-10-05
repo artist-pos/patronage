@@ -194,7 +194,7 @@ export function SignatureInput({ userId, initialPath, initialSignedUrl, onSave }
         </div>
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

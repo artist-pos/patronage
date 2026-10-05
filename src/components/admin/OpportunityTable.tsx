@@ -68,13 +68,13 @@ function ClaimStatusBadge({ opp }: { opp: Opportunity }) {
   }
 
   if (status === "none") {
-    return <span className="text-[11px] text-muted-foreground">—</span>;
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
 
   return (
     <span
       title={tooltip || undefined}
-      className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium cursor-default ${styles[status]}`}
+      className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium cursor-default ${styles[status]}`}
     >
       {labels[status]}
     </span>
@@ -705,7 +705,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                   >
                     Reset claim state
                   </button>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                  <p className="text-xs text-muted-foreground mt-1.5">
                     {claimOpp.profile_id
                       ? "Currently claimed — resets to unclaimed and issues a fresh link."
                       : "Clears the recorded link open and issues a fresh link."}

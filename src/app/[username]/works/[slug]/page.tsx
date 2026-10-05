@@ -334,7 +334,7 @@ export default async function WorkDetailPage({ params }: Props) {
 
           {isSold && !isOwner && (
             <div className="py-3 border-t border-border border-b">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Sold</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Sold</p>
             </div>
           )}
 

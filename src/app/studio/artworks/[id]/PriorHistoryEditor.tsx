@@ -70,7 +70,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-medium text-stone-700">{priorHistoryLabel(e.type)}</span>
-                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-200 text-stone-600">
+                      <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-200 text-stone-600">
                         Self-attested
                       </span>
                       {e.date_text && (
@@ -96,7 +96,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
             <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Add entry</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] text-stone-500 mb-1">Type</label>
+                <label className="block text-xs text-stone-500 mb-1">Type</label>
                 <select
                   value={type}
                   onChange={e => setType(e.target.value as PriorHistoryType)}
@@ -108,7 +108,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] text-stone-500 mb-1">Date</label>
+                <label className="block text-xs text-stone-500 mb-1">Date</label>
                 <input
                   type="text"
                   value={dateText}
@@ -119,7 +119,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-[11px] text-stone-500 mb-1">Description</label>
+              <label className="block text-xs text-stone-500 mb-1">Description</label>
               <input
                 type="text"
                 required
@@ -129,7 +129,7 @@ export function PriorHistoryEditor({ artworkId, initialEntries }: Props) {
                 className="w-full h-10 px-3 border border-stone-200 rounded-lg text-sm"
               />
             </div>
-            {submitError && <p className="text-xs text-red-600">{submitError}</p>}
+            {submitError && <p className="text-sm text-red-600">{submitError}</p>}
             <button
               type="submit"
               disabled={submitting || !description.trim()}

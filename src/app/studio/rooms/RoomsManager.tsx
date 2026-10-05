@@ -120,23 +120,23 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-medium">{room.title}</p>
                   {!room.is_active && (
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground border border-border px-1.5 py-0.5">
+                    <span className="text-xs uppercase tracking-widest text-muted-foreground border border-border px-1.5 py-0.5">
                       Inactive
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground font-mono">
+                <p className="text-xs text-muted-foreground font-mono">
                   /{username}/rooms/{room.slug}
                 </p>
                 {room.description && (
-                  <p className="text-[11px] text-muted-foreground">{room.description}</p>
+                  <p className="text-xs text-muted-foreground">{room.description}</p>
                 )}
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {room.artwork_count} work{room.artwork_count !== 1 ? "s" : ""}
                   {!room.show_prices && " · Prices hidden"}
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0 text-[11px]">
+              <div className="flex items-center gap-3 shrink-0 text-xs">
                 <button
                   type="button"
                   onClick={() => copyLink(room.slug, room.id)}
@@ -178,11 +178,11 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
       {/* Create form */}
       {showCreate ? (
         <form onSubmit={handleCreate} className="space-y-5 border border-border p-5">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">New Online Exhibition</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">New Online Exhibition</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500">Title</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500">Title</label>
               <input
                 type="text"
                 value={title}
@@ -193,7 +193,7 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
               />
             </div>
             <div className="col-span-2 space-y-1.5">
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500">URL slug</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500">URL slug</label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground shrink-0">/{username}/rooms/</span>
                 <input
@@ -207,7 +207,7 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
               </div>
             </div>
             <div className="col-span-2 space-y-1.5">
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500">Description (optional)</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500">Description (optional)</label>
               <input
                 type="text"
                 value={description}
@@ -231,7 +231,7 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
           {/* Work selection */}
           {availableArtworks.length > 0 && (
             <div className="space-y-2">
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500">
+              <label className="block text-xs uppercase tracking-wider text-stone-500">
                 Select works ({selectedArtworkIds.size} selected)
               </label>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-56 overflow-y-auto border border-stone-100 p-2">
@@ -258,7 +258,7 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
             </div>
           )}
 
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex items-center gap-3">
             <button

@@ -139,7 +139,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
         <form onSubmit={handleSave} className="border-t border-stone-100 px-5 py-5 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Title</label>
+            <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Title</label>
             <input
               type="text"
               value={title}
@@ -151,7 +151,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
 
           {/* Medium Category (multi-select) */}
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-2">Medium Category</label>
+            <label className="block text-xs uppercase tracking-wider text-stone-500 mb-2">Medium Category</label>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {MEDIUM_CATEGORIES.map((cat) => (
                 <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
@@ -170,7 +170,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
           {/* Surface / Substrate + Medium free-text */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Surface / Substrate</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Surface / Substrate</label>
               <select
                 value={surfaceOrSubstrate}
                 onChange={(e) => setSurfaceOrSubstrate(e.target.value)}
@@ -183,7 +183,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Medium / Material</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Medium / Material</label>
               <input
                 type="text"
                 value={medium}
@@ -197,7 +197,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
           {/* Year + Dimensions */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Year</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Year</label>
               <input
                 type="number"
                 value={year}
@@ -209,7 +209,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Dimensions</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Dimensions</label>
               <input
                 type="text"
                 value={dimensions}
@@ -222,7 +222,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
 
           {/* Edition — free-text display value */}
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition</label>
+            <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Edition</label>
             <input
               type="text"
               value={edition}
@@ -235,7 +235,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
           {/* Structured edition fields */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition No.</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Edition No.</label>
               <input
                 type="number"
                 value={editionNumber}
@@ -246,7 +246,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition Total</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Edition Total</label>
               <input
                 type="number"
                 value={editionTotal}
@@ -257,7 +257,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Edition Type</label>
+              <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Edition Type</label>
               <select
                 value={editionType}
                 onChange={(e) => setEditionType(e.target.value)}
@@ -273,7 +273,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
 
           {/* Location */}
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-stone-500 mb-1.5">Location</label>
+            <label className="block text-xs uppercase tracking-wider text-stone-500 mb-1.5">Location</label>
             <input
               type="text"
               value={locationText}
@@ -292,7 +292,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
             </label>
           </div>
 
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex items-center gap-3 pt-1">
             <button

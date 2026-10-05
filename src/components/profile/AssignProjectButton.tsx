@@ -54,7 +54,7 @@ export function AssignProjectButton({ updateId, currentProjectId, projects, artw
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         aria-label="Assign to project"
         title="Add to project"
-        className="w-5 h-5 bg-background border border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold leading-none"
+        className="w-5 h-5 bg-background border border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-xs font-bold leading-none"
       >
         ⊕
       </button>
@@ -63,7 +63,7 @@ export function AssignProjectButton({ updateId, currentProjectId, projects, artw
         <div className="absolute top-full left-0 mt-1 w-52 bg-background border border-black z-20 p-3 space-y-2">
           {mode === "select" ? (
             <>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Add to project
               </p>
               <select
@@ -78,7 +78,7 @@ export function AssignProjectButton({ updateId, currentProjectId, projects, artw
               </select>
               <button
                 onClick={() => setMode("new")}
-                className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 + Create new project
               </button>
@@ -92,7 +92,7 @@ export function AssignProjectButton({ updateId, currentProjectId, projects, artw
             </>
           ) : (
             <>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 New project
               </p>
               <input
@@ -108,7 +108,8 @@ export function AssignProjectButton({ updateId, currentProjectId, projects, artw
                 onChange={(e) => setNewLead(e.target.value.slice(0, MAX_LEAD))}
                 placeholder="Description… (optional)"
                 rows={2}
-                className="w-full border border-black text-xs px-2 py-1.5 resize-none outline-none"
+                className="w-full border border-black text-xs px-2 py-1.5 resize-none overflow-hidden outline-none"
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               />
               {artworks.length > 0 && (
                 <select

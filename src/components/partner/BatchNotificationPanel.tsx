@@ -124,7 +124,7 @@ export function BatchNotificationPanel({ opportunityId, onClose }: Props) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-medium truncate">{name}</p>
-                            <span className="text-[10px] text-stone-400 shrink-0 uppercase tracking-wide">
+                            <span className="text-xs text-stone-400 shrink-0 uppercase tracking-wide">
                               {TYPE_LABELS[item.notification_type as string] ?? item.notification_type}
                             </span>
                           </div>

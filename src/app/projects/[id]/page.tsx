@@ -10,7 +10,8 @@ import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
-import type { ProjectUpdateWithArtist } from "@/types/database";
+import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
+import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -130,7 +131,7 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
       <div className="border border-black p-6 sm:p-8 bg-background">
         {update.discipline && (
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
-            {update.discipline.replace(/_/g, " ")}
+            {DISCIPLINE_TO_MEDIUM[update.discipline as DisciplineEnum] ?? update.discipline.replace(/_/g, " ")}
           </p>
         )}
         <div className="prose prose-sm max-w-none">

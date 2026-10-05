@@ -155,7 +155,7 @@ function SortableArtworkCard({
 
       <div className="flex-1 min-w-0">
         {artwork.uploadError && (
-          <p className="text-xs text-destructive mb-1">{artwork.uploadError}</p>
+          <p className="text-sm text-destructive mb-1">{artwork.uploadError}</p>
         )}
         <p className="text-sm font-medium truncate">{displayName}</p>
         <p className="text-xs text-muted-foreground">
@@ -163,11 +163,11 @@ function SortableArtworkCard({
         </p>
         <div className="flex items-center gap-2 mt-1">
           {artwork.is_available ? (
-            <span className="text-[10px] font-medium bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-sm">
+            <span className="text-xs font-medium bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-sm">
               {priceDisplay ?? "For sale"}
             </span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">Archival</span>
+            <span className="text-xs text-muted-foreground">Archival</span>
           )}
         </div>
       </div>
@@ -421,7 +421,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
         <h1 className="text-xl font-semibold">Edit Series</h1>
       </div>
 
-      {error && <p className="text-xs text-destructive border border-destructive/30 px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-destructive border border-destructive/30 px-3 py-2">{error}</p>}
       {successMsg && <p className="text-xs text-emerald-700 border border-emerald-200 bg-emerald-50 px-3 py-2">{successMsg}</p>}
 
       {/* Hero */}
@@ -454,7 +454,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleHeroDrop(f); }}
           />
         </div>
-        <p className="text-[11px] text-muted-foreground">Drop a new image to replace the hero. Saved immediately.</p>
+        <p className="text-xs text-muted-foreground">Drop a new image to replace the hero. Saved immediately.</p>
       </div>
 
       {/* Title + description */}
@@ -497,11 +497,12 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
             onChange={(e) => setDescription(e.target.value)}
             onBlur={handleDescBlur}
             placeholder="A few sentences about this series…"
-            rows={3}
-            className="w-full text-sm border border-border focus:border-foreground focus:outline-none p-2 bg-transparent resize-none"
+            rows={2}
+            className="w-full text-sm border border-border focus:border-foreground focus:outline-none p-2 bg-transparent resize-none overflow-hidden"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </div>
-        <p className="text-[11px] text-muted-foreground">Title and description auto-save when you click away.</p>
+        <p className="text-xs text-muted-foreground">Title and description auto-save when you click away.</p>
       </div>
 
       {/* Artworks */}
@@ -545,7 +546,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
           onDrop={handleArtworkDrop}
         >
           <p className="text-xs text-muted-foreground">Drop artwork images here or click to upload</p>
-          <p className="text-[10px] text-stone-400 mt-1">Multiple files supported</p>
+          <p className="text-xs text-stone-400 mt-1">Multiple files supported</p>
           <input
             ref={artworkInputRef}
             type="file"

@@ -258,7 +258,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
 
           <div className="flex-1 sm:overflow-y-auto p-5 space-y-3 sm:min-h-0">
             {ct !== "image" && ct !== "document" && (
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 {ct === "audio" && <Music className="w-3 h-3" />}
                 {ct === "video" && <Play className="w-3 h-3" />}
                 {ct === "text" && <Type className="w-3 h-3" />}
@@ -288,8 +288,8 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
                 >
                   {featured ? "★ Featured" : "☆ Mark as Featured"}
                 </button>
-                {featErr && <p className="text-[11px] text-destructive">{featErr}</p>}
-                <p className="text-[11px] text-muted-foreground">
+                {featErr && <p className="text-sm text-destructive">{featErr}</p>}
+                <p className="text-xs text-muted-foreground">
                   Featured works appear on your profile overview, up to 8.
                 </p>
               </div>

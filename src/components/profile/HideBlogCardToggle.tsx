@@ -20,7 +20,7 @@ export function HideBlogCardToggle({ hidden }: { hidden: boolean }) {
       type="button"
       onClick={toggle}
       disabled={saving}
-      className="text-[10px] text-stone-400 hover:text-stone-600 transition-colors underline underline-offset-2 disabled:opacity-50"
+      className="text-xs text-stone-400 hover:text-stone-600 transition-colors underline underline-offset-2 disabled:opacity-50"
     >
       {saving ? "Saving…" : isHidden ? "Show on profile" : "Hide from profile"}
     </button>

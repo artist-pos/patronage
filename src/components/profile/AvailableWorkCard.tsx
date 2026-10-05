@@ -99,7 +99,7 @@ export function AvailableWorkCard({ img, artistId, artistUsername, isOwner, onRe
               {title}
             </p>
             {displayPrice && (
-              <p className="text-[11px] text-muted-foreground mt-0.5">{displayPrice}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{displayPrice}</p>
             )}
           </div>
         </Link>
@@ -110,13 +110,13 @@ export function AvailableWorkCard({ img, artistId, artistUsername, isOwner, onRe
             <button
               onClick={handleHideToggle}
               disabled={toggling}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
             >
               {hidden ? "Show" : "Hide"}
             </button>
             <button
               onClick={() => setCollectModal(true)}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Collected
             </button>

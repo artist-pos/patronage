@@ -106,7 +106,7 @@ function TokenRow({ token, onUpdated }: { token: EnrichedClaimToken; onUpdated: 
       </td>
       <td className={tdCls}>
         <div className="flex items-center gap-1">
-          <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[160px]">{claimUrl}</span>
+          <span className="font-mono text-xs text-muted-foreground truncate max-w-[160px]">{claimUrl}</span>
           <CopyButton text={claimUrl} />
           <a
             href={claimUrl}
@@ -145,7 +145,7 @@ function TokenRow({ token, onUpdated }: { token: EnrichedClaimToken; onUpdated: 
             </button>
           )}
         </div>
-        {error && <p className="text-[10px] text-red-600 mt-1">{error}</p>}
+        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </td>
     </tr>
   );
@@ -167,7 +167,7 @@ export function ClaimTokensTable({ tokens: initialTokens }: Props) {
   });
 
   const selectCls = "text-xs border border-border bg-transparent px-2 py-1.5 focus:outline-none focus:border-foreground";
-  const thCls = "text-left text-[10px] font-medium uppercase tracking-widest text-stone-400 py-2 pr-4 whitespace-nowrap";
+  const thCls = "text-left text-xs font-medium uppercase tracking-widest text-stone-400 py-2 pr-4 whitespace-nowrap";
 
   return (
     <div className="space-y-3">

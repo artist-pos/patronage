@@ -216,7 +216,7 @@ function ThreadPostItem({
       <div className="space-y-4">
         {/* Timestamp + admin edit + share */}
         <div className="flex items-center justify-between gap-2 pt-1">
-          <p className="text-[11px] font-mono text-muted-foreground">
+          <p className="text-xs font-mono text-muted-foreground">
             {formatTimestamp(post.created_at)}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">

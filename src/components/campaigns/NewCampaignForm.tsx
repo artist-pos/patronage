@@ -94,7 +94,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
               className="text-left border border-border p-4 space-y-1 hover:border-black transition-colors"
             >
               <p className="text-sm font-medium">{t.label}</p>
-              <p className="text-[11px] text-muted-foreground">{t.description}</p>
+              <p className="text-xs text-muted-foreground">{t.description}</p>
             </button>
           ))}
         </div>
@@ -138,7 +138,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
 
         <div className="space-y-1">
           <p className="text-sm font-medium">Tell us what you're planning</p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             We'll help you set it up. This won't create a campaign — it's a direct enquiry to the Patronage team.
           </p>
         </div>
@@ -149,9 +149,10 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
             <textarea
               value={enquiryMessage}
               onChange={e => setEnquiryMessage(e.target.value)}
-              rows={5}
+              rows={3}
               placeholder="Describe your live experience, performance, activation, or event idea…"
-              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none placeholder:text-muted-foreground"
+              className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black resize-none overflow-hidden placeholder:text-muted-foreground"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
         </div>
@@ -258,7 +259,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
                 <option key={p.id} value={p.id}>{p.title}</option>
               ))}
             </select>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Optionally connect this campaign to a Studio project.
             </p>
           </div>
@@ -271,7 +272,8 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
             onChange={e => setNotes(e.target.value)}
             rows={2}
             placeholder="Anything else useful"
-            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none"
+            className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground resize-none overflow-hidden"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </div>
       </div>

@@ -222,7 +222,7 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
             </div>
 
             <form onSubmit={handleSubmit} className="divide-y divide-black">
-              {error && <p className="px-6 py-3 text-xs text-destructive">{error}</p>}
+              {error && <p className="px-6 py-3 text-sm text-destructive">{error}</p>}
 
               <ModalField label="Title *">
                 <input value={title} onChange={(e) => setTitle(e.target.value)}
@@ -344,8 +344,9 @@ export function RichOpportunityModal({ onSuccess, triggerLabel = "+ Post Opportu
 
               <ModalField label={`Description (${description.length} chars)`}>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-                  rows={6} placeholder="Eligibility, focus areas, how to apply…"
-                  className={`${FIELD} resize-none`} />
+                  rows={3} placeholder="Eligibility, focus areas, how to apply…"
+                  className={`${FIELD} resize-none overflow-hidden`}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
               </ModalField>
 
               <ModalField label="Featured Image">

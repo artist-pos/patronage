@@ -1135,10 +1135,11 @@ export function OpportunityForm({
           <textarea
             value={value.caption}
             onChange={(e) => set({ caption: e.target.value })}
-            rows={3}
+            rows={2}
             maxLength={mode === "admin" ? 500 : 160}
             placeholder="One-sentence summary of the opportunity…"
-            className={`${FIELD} resize-none`}
+            className={`${FIELD} resize-none overflow-hidden`}
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
           <p className="text-xs text-muted-foreground tabular-nums text-right">
             {value.caption.length}/{mode === "admin" ? 500 : 160}
@@ -1504,9 +1505,10 @@ export function OpportunityForm({
             ref={descriptionRef}
             value={value.fullDescription}
             onChange={(e) => set({ fullDescription: e.target.value })}
-            rows={mode === "admin" ? 5 : 6}
+            rows={3}
             placeholder="Full details, eligibility criteria, how to apply…"
-            className={`${FIELD} resize-none rounded-t-none`}
+            className={`${FIELD} resize-none overflow-hidden rounded-t-none`}
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
           {mode === "create" && (
             <p className="text-xs text-muted-foreground font-mono mt-1">

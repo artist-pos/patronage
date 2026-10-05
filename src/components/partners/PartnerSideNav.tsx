@@ -65,7 +65,7 @@ export function PartnerSideNav() {
               </button>
 
               {/* Tooltip */}
-              <span className="pointer-events-none absolute left-6 font-mono text-[10px] uppercase tracking-widest text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <span className="pointer-events-none absolute left-6 font-mono text-xs uppercase tracking-widest text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 {label}
               </span>
             </div>

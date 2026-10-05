@@ -109,7 +109,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
             <span className="text-xs text-muted-foreground">· {c.partner_name}</span>
           )}
           {c.opportunity_id && (
-            <span className="text-[10px] border border-stone-300 text-stone-500 px-1.5 py-0.5 leading-none">
+            <span className="text-xs border border-stone-300 text-stone-500 px-1.5 py-0.5 leading-none">
               Partner campaign
             </span>
           )}

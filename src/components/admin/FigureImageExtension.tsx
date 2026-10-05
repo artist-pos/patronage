@@ -281,7 +281,7 @@ function FigureImageView({
                   type="button"
                   title={step.title}
                   onClick={() => updateAttributes({ size: step.value })}
-                  className={`px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  className={`px-1.5 py-0.5 text-xs font-medium transition-colors ${
                     size === step.value
                       ? "bg-white text-black"
                       : "text-white hover:bg-white/20"
@@ -297,7 +297,7 @@ function FigureImageView({
               type="button"
               title="Place side by side with the image below"
               onClick={pairWithNext}
-              className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-black/80"
+              className="rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white transition-colors hover:bg-black/80"
             >
               ⇄ Pair
             </button>
@@ -306,7 +306,7 @@ function FigureImageView({
             type="button"
             title="Remove image"
             onClick={removeSelf}
-            className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-black/80"
+            className="rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white transition-colors hover:bg-black/80"
           >
             Remove
           </button>
@@ -351,7 +351,7 @@ function FigureRowView({ node, editor, getPos }: NodeViewProps) {
           type="button"
           title={`Stack these ${node.childCount} images back onto their own lines`}
           onClick={breakApart}
-          className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-black/80"
+          className="rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white transition-colors hover:bg-black/80"
         >
           Unpair
         </button>

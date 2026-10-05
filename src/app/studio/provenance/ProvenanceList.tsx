@@ -90,7 +90,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
               "Manage details" jumps to the per-artwork page where the artist
               can fill in medium/dimensions, upload doc photos, and log prior
               history. */}
-          <p className="text-[11px] text-stone-400">
+          <p className="text-xs text-stone-400">
             {work.certificate_note ? "Statement added" : "Statement missing"}
             {" · "}
             {work.doc_photo_count}/4 photos
@@ -111,7 +111,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
               href={`/provenance/${work.ledger_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-[11px] font-mono text-stone-400 hover:text-stone-700 transition-colors"
+              className="inline-block text-xs font-mono text-stone-400 hover:text-stone-700 transition-colors"
             >
               {work.ledger_id}
             </a>
@@ -120,7 +120,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
 
         {/* State + actions */}
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className={`text-[10px] font-medium uppercase tracking-wide px-2.5 py-0.5 rounded-full ${
+          <span className={`text-xs font-medium uppercase tracking-wide px-2.5 py-0.5 rounded-full ${
             isPublished
               ? "bg-emerald-100 text-emerald-700"
               : "bg-amber-100 text-amber-700"
@@ -165,8 +165,9 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="e.g. This work was created during a period of sustained studio practice in 2024…"
-            rows={3}
-            className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none"
+            rows={2}
+            className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-stone-900 resize-none overflow-hidden"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
           <div className="flex items-center gap-3">
             <button
@@ -177,7 +178,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
               {saving ? "Saving…" : "Save statement"}
             </button>
             {saved && <p className="text-xs text-emerald-600">Saved.</p>}
-            {saveError && <p className="text-xs text-red-600">{saveError}</p>}
+            {saveError && <p className="text-sm text-red-600">{saveError}</p>}
           </div>
         </div>
       )}

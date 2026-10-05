@@ -165,18 +165,19 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
             <textarea
               value={body}
               onChange={e => { setBody(e.target.value); setBodyDirty(true); }}
-              rows={14}
-              className="w-full border border-border px-2 py-1.5 text-xs leading-relaxed focus:outline-none focus:border-black resize-none font-mono"
+              rows={6}
+              className="w-full border border-border px-2 py-1.5 text-xs leading-relaxed focus:outline-none focus:border-black resize-none overflow-hidden font-mono"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
 
           {!claimToken && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2">
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2">
               No claim token yet — one will be generated when you send.
             </p>
           )}
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* Send buttons */}
           <div className="flex gap-2 pt-1">

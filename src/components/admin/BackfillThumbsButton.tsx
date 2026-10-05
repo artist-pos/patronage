@@ -61,7 +61,7 @@ export function BackfillThumbsButton() {
         </button>
       </div>
       {status && <p className="text-xs text-muted-foreground font-mono">{status}</p>}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

@@ -137,7 +137,7 @@ export function BibliographyEditor({ profileId, initial }: Props) {
         </div>
       ))}
 
-      <div className="flex items-center gap-4 pt-2">
+      <div className="sticky bottom-0 z-10 border-t border-black bg-background py-3 flex items-center gap-4">
         <button
           type="button"
           onClick={add}

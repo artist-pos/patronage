@@ -123,7 +123,7 @@ export function ManageFormSection({ opp }: Props) {
 
       <div className="flex items-center justify-end gap-3">
         {saveStatus === "error" && (
-          <span className="text-xs text-destructive">Couldn&apos;t save — try again</span>
+          <span className="text-sm text-destructive">Couldn&apos;t save — try again</span>
         )}
         <button
           type="button"

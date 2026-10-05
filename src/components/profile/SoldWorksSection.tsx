@@ -176,7 +176,7 @@ function SoldLightbox({
           />
           {/* Sold badge */}
           <div className="absolute top-3 left-3">
-            <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 bg-white/90 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
               Sold
             </span>
@@ -200,7 +200,7 @@ function SoldLightbox({
             {/* Collector */}
             {ownerName && ownerUsername && (
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mb-1">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">
                   Collection
                 </p>
                 <Link
@@ -231,7 +231,7 @@ function SoldLightbox({
             {/* Provenance ledger */}
             {(ledger.length > 0 || ledgerLoading || work.ledger_id) && (
               <div className="border-t border-border pt-4 space-y-2">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
                   Provenance
                 </p>
                 {ledgerLoading ? (
@@ -241,10 +241,10 @@ function SoldLightbox({
                     {ledger.map((entry) => (
                       <li key={entry.id} className="ml-3 pb-3 last:pb-0">
                         <div className="absolute -left-[4px] mt-1 h-2 w-2 rounded-full border border-stone-300 bg-white" />
-                        <p className="text-[10px] text-stone-400">{formatDate(entry.transferred_at)}</p>
+                        <p className="text-xs text-stone-400">{formatDate(entry.transferred_at)}</p>
                         <p className="text-xs text-stone-700">{entryLabel(entry.entry_type)}</p>
                         {entry.price != null && (
-                          <p className="text-[10px] text-stone-400">
+                          <p className="text-xs text-stone-400">
                             NZD {entry.price.toLocaleString()}
                           </p>
                         )}
@@ -255,7 +255,7 @@ function SoldLightbox({
                 {work.ledger_id && (
                   <Link
                     href={`/provenance/${work.ledger_id}`}
-                    className="text-[10px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
+                    className="text-xs font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
                   >
                     {work.ledger_id} →
                   </Link>
@@ -266,7 +266,7 @@ function SoldLightbox({
             {/* Owner controls */}
             {isOwner && (
               <div className="border-t border-border pt-4 space-y-2">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
                   Manage
                 </p>
                 <div className="flex flex-col gap-1.5">
@@ -293,14 +293,14 @@ function SoldLightbox({
                   </button>
                   {confirmDelete ? (
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground leading-tight">
+                      <p className="text-xs text-muted-foreground leading-tight">
                         Request patron approval via DM?
                       </p>
                       <div className="flex gap-3">
                         <button
                           onClick={() => { setBusy(true); onRequestDeletion(work.id); }}
                           disabled={busy}
-                          className="text-xs text-destructive hover:opacity-70 transition-opacity"
+                          className="text-sm text-destructive hover:opacity-70 transition-opacity"
                         >
                           {busy ? "Sending…" : "Yes, send request"}
                         </button>
@@ -315,7 +315,7 @@ function SoldLightbox({
                   ) : (
                     <button
                       onClick={() => setConfirmDelete(true)}
-                      className="text-xs text-destructive/70 hover:text-destructive transition-colors text-left"
+                      className="text-sm text-destructive/70 hover:text-destructive transition-colors text-left"
                     >
                       Request deletion
                     </button>
@@ -414,7 +414,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
           flex container, shown purely via the :has() selector on the right,
           so opening/closing it can never reflow this row. */}
       <details name="work-panel" className="js-sold group/sold">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-[11px] font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/sold:border-foreground group-open/sold:bg-foreground group-open/sold:text-white">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 border border-border bg-card px-3 py-[7px] font-mono text-xs font-normal tracking-normal text-muted-foreground transition-colors hover:border-foreground [&::-webkit-details-marker]:hidden group-open/sold:border-foreground group-open/sold:bg-foreground group-open/sold:text-white">
           <span>Sold</span>
           <span className="text-muted-foreground group-open/sold:text-white/70">
             · {visibleWorks.length}
@@ -499,7 +499,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
 
                   {/* Sold badge */}
                   <div className="absolute top-2 left-2" style={{ pointerEvents: "none" }}>
-                    <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 bg-white/90 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full">
                       <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
                       Sold
                     </span>
@@ -524,7 +524,7 @@ export function SoldWorksSection({ initialWorks, isOwner, hideSoldSection }: Pro
                       </p>
                     )}
                     {ownerName && (
-                      <p className="text-[10px] text-white/70 mt-0.5">
+                      <p className="text-xs text-white/70 mt-0.5">
                         Collection of {ownerName}
                       </p>
                     )}

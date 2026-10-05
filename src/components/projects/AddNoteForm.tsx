@@ -55,14 +55,15 @@ export function AddNoteForm({ updateId, artistId }: Props) {
           value={content}
           onChange={(e) => setContent(e.target.value.slice(0, MAX))}
           placeholder="Say something about this work…"
-          rows={3}
-          className="w-full border border-black text-sm px-3 py-2 resize-none outline-none focus:border-foreground transition-colors"
+          rows={2}
+          className="w-full border border-black text-sm px-3 py-2 resize-none overflow-hidden outline-none focus:border-foreground transition-colors"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
-        <span className="absolute bottom-2 right-2 text-[10px] text-muted-foreground font-mono">
+        <span className="absolute bottom-2 right-2 text-xs text-muted-foreground font-mono">
           {content.length}/{MAX}
         </span>
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <button
         type="submit"
         disabled={!content.trim() || pending}

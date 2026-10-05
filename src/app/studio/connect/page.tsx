@@ -7,25 +7,40 @@ export const metadata: Metadata = {
   title: "Connect Bank — Studio",
 };
 
-export default async function ConnectPage() {
+export default async function ConnectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, username, stripe_connect_status")
-    .eq("id", user.id)
-    .single();
+  const [profile, params] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("role, username, stripe_connect_status")
+      .eq("id", user.id)
+      .single()
+      .then((r) => r.data),
+    searchParams,
+  ]);
 
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
     redirect("/studio");
   }
 
   const status = profile.stripe_connect_status as string | null;
+  const justCompleted = params.setup === "complete";
 
   return (
     <div className="max-w-lg space-y-8">
+        {justCompleted && (
+          <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4 text-sm text-emerald-800" role="status">
+            Stripe setup complete — your bank connection has been updated.
+          </div>
+        )}
+
         <div className="space-y-1">
           <h2 className="text-xl font-semibold tracking-tight">Connect your bank</h2>
           <p className="text-sm text-muted-foreground">
@@ -36,7 +51,7 @@ export default async function ConnectPage() {
         {status === "enabled" ? (
           <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-5 space-y-2">
             <p className="text-sm font-medium text-emerald-800">Bank account connected</p>
-            <p className="text-xs text-emerald-700">
+            <p className="text-sm text-emerald-700">
               Your Stripe account is active. Payouts deposit automatically after each transaction.
             </p>
           </div>
@@ -73,7 +88,7 @@ export default async function ConnectPage() {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Patronage uses <strong>Stripe Connect Express</strong> — your banking details are held by Stripe, not Patronage.
         </p>
     </div>

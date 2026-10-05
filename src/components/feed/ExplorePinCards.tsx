@@ -67,7 +67,7 @@ export type ExplorePin =
   | ArticlePinData;
 
 const TAG_CLS =
-  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+  "border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
 
 /* Deadline label + urgency colour */
 function deadlineBits(deadline: string | null): { label: string; cls: string } {
@@ -106,7 +106,7 @@ export function OpportunityPin({ p }: { p: OpportunityPinData }) {
       <div className="mb-2 text-[15px] font-semibold leading-[1.28] tracking-[-0.018em]">
         {p.title}
       </div>
-      <div className="mb-3 truncate font-mono text-[11px] text-[color:var(--fg-muted)]">
+      <div className="mb-3 truncate font-mono text-xs text-[color:var(--fg-muted)]">
         {p.organiser}
         {p.city ? ` · ${p.city}` : ""}
       </div>
@@ -115,13 +115,13 @@ export function OpportunityPin({ p }: { p: OpportunityPinData }) {
           <span className="truncate font-mono text-base font-semibold">
             {money.amount}{" "}
             {money.code && (
-              <span className="text-[10px] font-normal text-[color:var(--fg-muted)]">{money.code}</span>
+              <span className="text-xs font-normal text-[color:var(--fg-muted)]">{money.code}</span>
             )}
           </span>
         ) : (
           <span />
         )}
-        <span className={`shrink-0 font-mono text-[11px] ${d.cls}`}>{d.label}</span>
+        <span className={`shrink-0 font-mono text-xs ${d.cls}`}>{d.label}</span>
       </div>
       <div className="flex flex-wrap gap-1">
         {p.country && <span className={TAG_CLS}>{p.country}</span>}
@@ -156,12 +156,12 @@ export function ArtistPin({ p, priority = false }: { p: ArtistPinData; priority?
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold leading-tight">{name}</div>
             {loc && (
-              <div className="mt-0.5 truncate font-mono text-[10px] text-[color:var(--fg-subtle)]">
+              <div className="mt-0.5 truncate font-mono text-xs text-[color:var(--fg-subtle)]">
                 {loc}
               </div>
             )}
           </div>
-          <span className="shrink-0 whitespace-nowrap border border-foreground px-2.5 py-1 font-mono text-[11px] font-medium">
+          <span className="shrink-0 whitespace-nowrap border border-foreground px-2.5 py-1 font-mono text-xs font-medium">
             view
           </span>
         </div>
@@ -215,7 +215,7 @@ export function WorkSalePin({ p, priority = false }: { p: WorkSalePinData; prior
         )}
         <div className="mt-0.5 font-mono text-[13px] font-semibold text-white">{priceLabel}</div>
         {p.artist_name && (
-          <div className="mt-0.5 font-mono text-[10px] text-white/45">{p.artist_name}</div>
+          <div className="mt-0.5 font-mono text-xs text-white/45">{p.artist_name}</div>
         )}
       </div>
     </Link>
@@ -247,7 +247,7 @@ export function ArticlePin({ p, priority = false }: { p: ArticlePinData; priorit
         <div className="mb-2 flex items-center gap-1.5">
           <span className={TAG_CLS}>article</span>
           {date && (
-            <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">{date}</span>
+            <span className="font-mono text-xs text-[color:var(--fg-subtle)]">{date}</span>
           )}
         </div>
         <div className="mb-3 text-[15px] font-semibold leading-[1.3] tracking-[-0.018em]">

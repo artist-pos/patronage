@@ -77,7 +77,7 @@ export function DocumentationPhotosEditor({ artworkId, initialPhotos }: Props) {
                       {t.label}
                       {counts[t.id] ? <span className="ml-2 text-stone-400">{counts[t.id]}</span> : null}
                     </p>
-                    <p className="text-[11px] text-stone-400 mt-0.5">{t.hint}</p>
+                    <p className="text-xs text-stone-400 mt-0.5">{t.hint}</p>
                   </div>
                   <button
                     type="button"
@@ -127,7 +127,7 @@ export function DocumentationPhotosEditor({ artworkId, initialPhotos }: Props) {
               </div>
             );
           })}
-          {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+          {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
         </div>
     </div>
   );

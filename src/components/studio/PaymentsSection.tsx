@@ -79,7 +79,7 @@ export function PaymentsSection({ profileId, initialGstRegistered = false, initi
           </div>
         )}
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <button
           type="button"

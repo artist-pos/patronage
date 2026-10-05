@@ -323,7 +323,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <span className="text-[10px] text-muted-foreground text-center px-1 leading-tight">
+                  <span className="text-xs text-muted-foreground text-center px-1 leading-tight">
                     No image
                   </span>
                 )}
@@ -334,10 +334,10 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                 <p className="text-sm font-semibold leading-snug line-clamp-2">{opp.title}</p>
                 <p className="text-xs text-muted-foreground">{opp.organiser}</p>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  <span className="text-[10px] border border-border px-1.5 py-0.5 leading-none">{opp.type}</span>
-                  <span className="text-[10px] border border-border px-1.5 py-0.5 leading-none">{opp.country}</span>
+                  <span className="text-xs border border-border px-1.5 py-0.5 leading-none">{opp.type}</span>
+                  <span className="text-xs border border-border px-1.5 py-0.5 leading-none">{opp.country}</span>
                   {opp.confidence && (
-                    <span className={`text-[10px] px-1.5 py-0.5 leading-none font-medium ${
+                    <span className={`text-xs px-1.5 py-0.5 leading-none font-medium ${
                       opp.confidence === "high"
                         ? "bg-green-100 text-green-700"
                         : opp.confidence === "medium"
@@ -348,18 +348,18 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                     </span>
                   )}
                   {opp.deadline && (
-                    <span className={`text-[10px] font-mono font-medium ${
+                    <span className={`text-xs font-mono font-medium ${
                       expired ? "text-red-600" : expiringSoon ? "text-amber-600" : "text-muted-foreground"
                     }`}>
                       {expired ? "Expired" : "Closes"} {opp.deadline}
                     </span>
                   )}
                   {opp.funding_range && (
-                    <span className="text-[10px] font-mono font-bold">{opp.funding_range}</span>
+                    <span className="text-xs font-mono font-bold">{opp.funding_range}</span>
                   )}
                 </div>
                 {opp.caption && (
-                  <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2 mt-1">
+                  <p className="text-xs text-muted-foreground leading-snug line-clamp-2 mt-1">
                     {opp.caption}
                   </p>
                 )}
@@ -368,7 +368,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                     href={opp.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                   >
                     {new URL(opp.source_url).hostname}
                   </a>
@@ -404,7 +404,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                         href={opp.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-center"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
                       >
                         View →
                       </a>

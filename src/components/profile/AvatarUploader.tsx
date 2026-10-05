@@ -68,7 +68,7 @@ export function AvatarUploader({ profileId }: Props) {
             <button
               onClick={handleRemove}
               disabled={isPending}
-              className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+              className="absolute bottom-0 inset-x-0 flex items-center justify-center bg-background/80 py-1 text-xs"
             >
               Remove
             </button>
@@ -87,11 +87,11 @@ export function AvatarUploader({ profileId }: Props) {
           onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           className="text-sm file:mr-4 file:border file:border-black file:bg-transparent file:text-sm file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-muted"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Cropped and resized to 400 × 400 px before uploading.
         </p>
-        {uploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
+        {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
       </div>
     </div>
   );

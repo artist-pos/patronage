@@ -129,7 +129,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
       >
         <div className="mb-5 flex items-center justify-between">
           {step === "role" ? (
-            <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">Join Patronage · free</span>
+            <span className="font-mono text-xs text-[color:var(--fg-subtle)]">Join Patronage · free</span>
           ) : (
             <button
               type="button"
@@ -141,7 +141,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
           )}
           <div className="flex items-center gap-3">
             {role && (
-              <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+              <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                 {stepNumber} of {stepTotal}
               </span>
             )}
@@ -199,7 +199,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
                     onClick={() =>
                       setDisciplines((prev) => (active ? prev.filter((d) => d !== value) : [...prev, value]))
                     }
-                    className={`border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
+                    className={`border px-2.5 py-1.5 font-mono text-xs transition-colors ${
                       active
                         ? "border-foreground bg-foreground text-white"
                         : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"

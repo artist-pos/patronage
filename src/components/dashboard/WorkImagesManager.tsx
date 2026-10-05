@@ -132,7 +132,7 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
   return (
     <div className="space-y-4">
       {error && (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       )}
 
       {images.length > 0 && (
@@ -153,10 +153,10 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
                 value={captions[img.id] ?? ""}
                 onChange={e => setCaptions(prev => ({ ...prev, [img.id]: e.target.value }))}
                 onBlur={() => handleCaptionSave(img.id)}
-                className="w-full text-[11px] border-b border-border bg-transparent px-0 py-0.5 placeholder:text-muted-foreground/50 focus:outline-none focus:border-black"
+                className="w-full text-xs border-b border-border bg-transparent px-0 py-0.5 placeholder:text-muted-foreground/50 focus:outline-none focus:border-black"
               />
 
-              <div className="flex items-center gap-1 text-[10px]">
+              <div className="flex items-center gap-1 text-xs">
                 <button
                   onClick={() => handleMove(img.id, -1)}
                   disabled={i === 0}

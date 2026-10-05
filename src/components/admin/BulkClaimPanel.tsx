@@ -195,15 +195,15 @@ export function BulkClaimPanel({ opps, onClose, onDone }: Props) {
 
                   <div className="shrink-0">
                     {alreadySent && !status && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded-full">
+                      <span className="text-xs px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded-full">
                         {includeAlreadySent ? "re-send" : "already sent"}
                       </span>
                     )}
                     {status?.state === "skipped_no_email" && (
-                      <span className="text-[10px] text-destructive">no email</span>
+                      <span className="text-sm text-destructive">no email</span>
                     )}
                     {status?.state === "failed" && (
-                      <span className="text-[10px] text-destructive truncate max-w-[100px]">{status.error}</span>
+                      <span className="text-sm text-destructive truncate max-w-[100px]">{status.error}</span>
                     )}
                   </div>
 
@@ -217,11 +217,11 @@ export function BulkClaimPanel({ opps, onClose, onDone }: Props) {
                         setEmailOverrides(prev => ({ ...prev, [o.id]: e.target.value }));
                         setConfirmed(false);
                       }}
-                      className="w-32 border border-border px-1.5 py-0.5 text-[10px] focus:outline-none focus:border-black"
+                      className="w-32 border border-border px-1.5 py-0.5 text-xs focus:outline-none focus:border-black"
                     />
                   )}
                   {email && !running && !summary && (
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{email}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{email}</span>
                   )}
                 </div>
               );

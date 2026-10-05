@@ -58,7 +58,7 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
           >
             <p className="text-sm font-semibold">{TEMPLATE_LABELS[key]}</p>
             <p className="text-xs text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
-            <p className="text-[11px] text-stone-400">
+            <p className="text-xs text-stone-400">
               {PIPELINE_TEMPLATES[key].length} default question{PIPELINE_TEMPLATES[key].length !== 1 ? "s" : ""}
             </p>
           </button>
@@ -95,7 +95,7 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
               >
                 <p className="text-sm font-semibold">{TEMPLATE_LABELS[key]}</p>
                 <p className="text-xs text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
-                <p className="text-[11px] text-stone-400">
+                <p className="text-xs text-stone-400">
                   {PIPELINE_TEMPLATES[key].length} default question{PIPELINE_TEMPLATES[key].length !== 1 ? "s" : ""}
                 </p>
               </button>

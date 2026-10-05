@@ -91,7 +91,7 @@ export function PipelineConfigPanel({ config, onChange }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Application questions
           </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Artists answer these when applying. Drag to reorder.
           </p>
         </div>
@@ -146,7 +146,7 @@ export function PipelineConfigPanel({ config, onChange }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Artist documents
           </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Pulled automatically from the artist&apos;s Patronage profile.
           </p>
         </div>
@@ -174,7 +174,7 @@ export function PipelineConfigPanel({ config, onChange }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Terms & conditions (optional)
           </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Artists can download this before applying.
           </p>
         </div>

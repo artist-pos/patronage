@@ -79,7 +79,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
                   <p className={`font-medium ${compact ? "text-xs" : "text-sm"}`}>{c.label}</p>
                   {!compact && c.helper && <p className="text-xs text-stone-400">{c.helper}</p>}
                 </div>
-                {!compact && <span className="text-[10px] text-stone-400 shrink-0 mt-0.5">×{c.weight}</span>}
+                {!compact && <span className="text-xs text-stone-400 shrink-0 mt-0.5">×{c.weight}</span>}
               </div>
               <div className="flex gap-1">
                 {steps.map((n) => (
@@ -88,7 +88,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
                     type="button"
                     disabled={isSaving}
                     onClick={() => handleScore(c.id, compact ? Math.round((n / 5) * c.scale_max) : n)}
-                    className={`${compact ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs"} font-medium border transition-colors ${
+                    className={`${compact ? "w-6 h-6 text-xs" : "w-8 h-8 text-xs"} font-medium border transition-colors ${
                       compact
                         ? current !== null && n <= Math.round((current / c.scale_max) * 5)
                           ? "border-black bg-black text-white"
@@ -108,7 +108,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
       </div>
 
       {scored.length < criteria.length && (
-        <p className="text-[11px] text-stone-400">
+        <p className="text-xs text-stone-400">
           {criteria.length - scored.length} criterion{criteria.length - scored.length !== 1 ? "a" : ""} not yet scored.
         </p>
       )}

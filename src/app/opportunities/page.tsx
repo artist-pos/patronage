@@ -212,13 +212,13 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             <TrackedNavLink href={forYouHref} event="opportunities_tab_click" props={{ tab: "for-you", signed_in: user ? "true" : "false" }} className={tabCls(tab === "for-you")} aria-current={tab === "for-you" ? "page" : undefined}>
               For you
               {user && isArtist && forYouOpps.length > 0 && (
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">{forYouOpps.length}</span>
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">{forYouOpps.length}</span>
               )}
             </TrackedNavLink>
           </nav>
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
             {tab === "all" && (
-              <span className="hidden font-mono text-[11px] text-[color:var(--fg-subtle)] sm:inline">
+              <span className="hidden font-mono text-xs text-[color:var(--fg-subtle)] sm:inline">
                 {shownCount} shown
               </span>
             )}
@@ -311,12 +311,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                   <div className="flex flex-wrap items-center gap-3">
                     <Link
                       href={hrefWith({ closing: null })}
-                      className="inline-flex items-center gap-2 border border-foreground bg-card px-3 py-1.5 font-mono text-[11px] text-foreground"
+                      className="inline-flex items-center gap-2 border border-foreground bg-card px-3 py-1.5 font-mono text-xs text-foreground"
                     >
                       Closing this week <span aria-hidden>×</span>
                       <span className="sr-only">(remove filter)</span>
                     </Link>
-                    <span className="font-mono text-[11px] text-[color:var(--fg-muted)]">{allOpps.length} shown</span>
+                    <span className="font-mono text-xs text-[color:var(--fg-muted)]">{allOpps.length} shown</span>
                   </div>
                 )}
                 {featuredOpp && <FeaturedOpportunityHero opportunity={featuredOpp} compact />}

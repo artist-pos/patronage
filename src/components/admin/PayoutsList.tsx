@@ -94,7 +94,7 @@ function SellerRow({ row }: { row: SellerPayoutRow }) {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
         <div>
           <p className="text-sm font-medium">
-            <span className="text-[10px] uppercase tracking-widest text-stone-400 mr-2">
+            <span className="text-xs uppercase tracking-widest text-stone-400 mr-2">
               {kindLabel}
             </span>
             {sellerLabel} — <span className="font-normal">{row.workTitle}</span>
@@ -148,7 +148,8 @@ function SellerRow({ row }: { row: SellerPayoutRow }) {
             onChange={(e) => setRevertReason(e.target.value)}
             placeholder="Reason (required — appears in audit trail)"
             rows={2}
-            className="w-full border border-red-200 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-red-400"
+            className="w-full border border-red-200 rounded px-2 py-1.5 text-xs resize-none overflow-hidden focus:outline-none focus:border-red-400"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
           <div className="flex gap-2">
             <button
@@ -170,7 +171,7 @@ function SellerRow({ row }: { row: SellerPayoutRow }) {
         </div>
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </li>
   );
 }
@@ -236,7 +237,7 @@ function RoyaltyRow({ row }: { row: RoyaltyHoldRow }) {
         >
           Refund seller
         </button>
-        {error && <p className="text-xs text-red-600 w-full">{error}</p>}
+        {error && <p className="text-sm text-red-600 w-full">{error}</p>}
       </div>
     </li>
   );

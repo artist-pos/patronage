@@ -60,7 +60,7 @@ export function ClaimArtistButton({ token }: Props) {
       >
         {isPending ? "Claiming…" : "Yes, this is me — claim these records"}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

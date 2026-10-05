@@ -20,7 +20,7 @@ function ExpandableDescription({ text, clamp = 4 }: { text: string; clamp?: numb
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
-          className="mt-0.5 text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+          className="mt-0.5 text-xs text-stone-400 hover:text-stone-600 transition-colors"
         >
           {expanded ? "Show less" : "Read more"}
         </button>
@@ -495,7 +495,7 @@ function WorksLightbox({
               {ownerActions && (
                 <div className="border-t border-border pt-4 space-y-4">
                   <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
                       Manage
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -525,7 +525,7 @@ function WorksLightbox({
 
                   {/* Generate documents */}
                   <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
                       Generate
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -627,7 +627,7 @@ function WorksLightbox({
                         />
                         <div className="flex gap-2">
                           <div className="flex-1 space-y-0.5">
-                            <label className="text-[10px] text-muted-foreground">Start date</label>
+                            <label className="text-xs text-muted-foreground">Start date</label>
                             <input
                               type="date"
                               value={consignStartDate}
@@ -636,7 +636,7 @@ function WorksLightbox({
                             />
                           </div>
                           <div className="flex-1 space-y-0.5">
-                            <label className="text-[10px] text-muted-foreground">End date</label>
+                            <label className="text-xs text-muted-foreground">End date</label>
                             <input
                               type="date"
                               value={consignEndDate}
@@ -1136,7 +1136,7 @@ export function WorksJustifiedGrid({
                     )}
                   </button>
                   {hasMultipleEditions && (
-                    <span className="absolute top-2 left-2 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                    <span className="absolute top-2 left-2 bg-white/90 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full">
                       {artwork.editions!.length} editions
                     </span>
                   )}
@@ -1153,16 +1153,16 @@ export function WorksJustifiedGrid({
                     className="flex items-center gap-1.5 mb-0.5"
                   >
                     <ArtistAvatar avatarUrl={artwork.profile?.avatar_url ?? null} displayName={displayName} size={14} />
-                    <span className="text-[11px] text-stone-500 truncate">{displayName}</span>
+                    <span className="text-xs text-stone-500 truncate">{displayName}</span>
                   </Link>
                   <p className="text-xs font-medium text-stone-900 truncate leading-tight">{title}</p>
                   {artwork.medium && (
-                    <p className="text-[11px] text-stone-400 truncate mt-0.5">{artwork.medium}</p>
+                    <p className="text-xs text-stone-400 truncate mt-0.5">{artwork.medium}</p>
                   )}
                   {formattedPrice && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-[11px] font-medium text-stone-900">{formattedPrice}</span>
+                      <span className="text-xs font-medium text-stone-900">{formattedPrice}</span>
                     </div>
                   )}
                 </div>
@@ -1263,12 +1263,12 @@ export function WorksJustifiedGrid({
                           gap: 4,
                         }}
                       >
-                        <span className="flex items-center gap-1 bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                        <span className="flex items-center gap-1 bg-white/90 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           For sale
                         </span>
                         {hasMultipleEditions && (
-                          <span className="bg-white/90 text-[10px] font-medium text-stone-700 px-2 py-0.5 rounded-full">
+                          <span className="bg-white/90 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full">
                             {artwork.editions!.length} editions
                           </span>
                         )}

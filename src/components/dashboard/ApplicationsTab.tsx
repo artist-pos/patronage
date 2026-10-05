@@ -317,7 +317,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                     <div className="mt-2 space-y-2">
                       {reason && (
                         <div className="p-3 bg-stone-50 border border-stone-200 space-y-1">
-                          <p className="text-[11px] font-medium uppercase tracking-widest text-stone-500">Feedback from organiser</p>
+                          <p className="text-xs font-medium uppercase tracking-widest text-stone-500">Feedback from organiser</p>
                           <p className="text-xs text-stone-700 whitespace-pre-wrap">{reason}</p>
                         </div>
                       )}
@@ -337,8 +337,9 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                             value={rs.text}
                             onChange={(e) => setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, text: e.target.value } }))}
                             placeholder="Thank you for considering my application…"
-                            rows={3}
-                            className="w-full text-xs border border-black/30 px-3 py-2 resize-none focus:outline-none focus:border-black"
+                            rows={2}
+                            className="w-full text-sm border border-black/30 px-3 py-2 resize-none overflow-hidden focus:outline-none focus:border-black"
+                            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                           />
                           <div className="flex gap-2">
                             <button

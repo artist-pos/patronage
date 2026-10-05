@@ -290,7 +290,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
                     {isAdmin && (
                       <Link
                         href="/studio/feed"
-                        className="shrink-0 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                        className="shrink-0 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
                       >
                         Manage feed →
                       </Link>
@@ -311,7 +311,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
         <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6">
           {/* Works controls row: count on left, controls + layout switcher on right */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <p className="font-mono text-[11px] text-muted-foreground">
+            <p className="font-mono text-xs text-muted-foreground">
               {artworks.length} work{artworks.length !== 1 ? "s" : ""} available
             </p>
             <Suspense>

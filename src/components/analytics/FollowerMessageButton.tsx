@@ -40,7 +40,7 @@ export function FollowerMessageButton({ followerId, followerName }: { followerId
         )}
       </button>
       {blocked && (
-        <p className="absolute right-0 top-full mt-1 w-56 rounded-md bg-stone-100 px-3 py-2 text-[11px] text-muted-foreground shadow-sm z-10">
+        <p className="absolute right-0 top-full mt-1 w-56 rounded-md bg-stone-100 px-3 py-2 text-xs text-muted-foreground shadow-sm z-10">
           Message {displayName} once they follow you, or save/apply to their opportunities.
         </p>
       )}

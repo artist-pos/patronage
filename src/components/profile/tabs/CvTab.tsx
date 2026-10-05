@@ -100,7 +100,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
                   <span className="font-semibold">{ex.title}</span>
                   {ex.venue && <span className="text-muted-foreground">, {ex.venue}</span>}
                   {ex.location && <span className="text-muted-foreground">, {ex.location}</span>}
-                  <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{ex.type}</span>
+                  <span className="ml-2 font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{ex.type}</span>
                 </div>
               </div>
             ))}
@@ -136,7 +136,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
                 {item.publication && <span className="italic text-muted-foreground">, {item.publication}</span>}
                 {item.date && <span className="text-muted-foreground">, {item.date}</span>}
                 {item.type && (
-                  <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{item.type}</span>
+                  <span className="ml-2 font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">{item.type}</span>
                 )}
               </div>
             ))}

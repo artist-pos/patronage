@@ -81,8 +81,9 @@ export function DocumentationSubmitter({ applicationId, fields, initial }: Props
               value={values[field.id] ?? ""}
               onChange={(e) => setValue(field.id, e.target.value)}
               required={field.required}
-              rows={4}
-              className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:border-black resize-y"
+              rows={2}
+              className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:border-black resize-none overflow-hidden"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           )}
           {field.type === "link" && (
@@ -125,7 +126,7 @@ export function DocumentationSubmitter({ applicationId, fields, initial }: Props
         </div>
       ))}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
 
       <button
         type="submit"

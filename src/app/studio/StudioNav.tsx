@@ -27,7 +27,7 @@ export function StudioNav({ role, sectionDots, sectionCounts, lockedSections, ch
           <Link
             key={id}
             href={href}
-            className={`flex items-center gap-1 px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1 px-3 py-3 text-sm whitespace-nowrap transition-colors ${
               activeSection === id
                 ? "font-semibold border-b-2 border-black -mb-px"
                 : "text-muted-foreground hover:text-foreground"
@@ -62,7 +62,7 @@ export function StudioNav({ role, sectionDots, sectionCounts, lockedSections, ch
 
           {/* Secondary */}
           <div className="space-y-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
               Settings & tools
             </p>
             {secondary.map(({ id, label, href }) => (
@@ -107,7 +107,7 @@ function NavLink({
       <div className="flex items-center gap-1.5">
         {locked && <Lock className="w-3 h-3 text-muted-foreground" aria-label="Locked" />}
         {count != null && count > 0 && (
-          <span className="text-[10px] tabular-nums bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">
+          <span className="text-xs tabular-nums bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">
             {count}
           </span>
         )}

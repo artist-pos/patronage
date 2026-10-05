@@ -94,7 +94,7 @@ export function CertificatePreview({
     <div className="flex flex-col gap-3">
       {/* Page 1 */}
       <div
-        className={`relative ${aspectClass} ${tone.bg} border ${tone.border} rounded-xl overflow-hidden shadow-sm text-[10px] leading-snug flex flex-col`}
+        className={`relative ${aspectClass} ${tone.bg} border ${tone.border} rounded-xl overflow-hidden shadow-sm text-xs leading-snug flex flex-col`}
         style={bodyStyle}
       >
         {/* Header */}
@@ -106,7 +106,7 @@ export function CertificatePreview({
           </div>
         </div>
 
-        <p className="px-4 text-[11px] tracking-[0.18em] mb-2" style={{ ...headingStyle, color: primaryColor }}>
+        <p className="px-4 text-xs tracking-[0.18em] mb-2" style={{ ...headingStyle, color: primaryColor }}>
           CERTIFICATE OF AUTHENTICITY
         </p>
         <div className="mx-4 mb-3 border-b" style={{ borderColor: primaryColor }} />
@@ -152,7 +152,7 @@ export function CertificatePreview({
 
       {/* Page 2 */}
       <div
-        className={`relative ${aspectClass} ${tone.bg} border ${tone.border} rounded-xl overflow-hidden shadow-sm text-[10px] leading-snug flex flex-col`}
+        className={`relative ${aspectClass} ${tone.bg} border ${tone.border} rounded-xl overflow-hidden shadow-sm text-xs leading-snug flex flex-col`}
         style={bodyStyle}
       >
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -216,7 +216,7 @@ function Row({
       >
         {label}
       </span>
-      <span className="text-[10px]" style={{ color: valueColor }}>
+      <span className="text-xs" style={{ color: valueColor }}>
         {children}
       </span>
     </div>
@@ -241,7 +241,7 @@ function CustodyItem({
   return (
     <div>
       <p className="text-[8px]" style={{ color: accentColor }}>{date}</p>
-      <p className="text-[10px]" style={{ ...headingStyle, color: primaryColor }}>{event}</p>
+      <p className="text-xs" style={{ ...headingStyle, color: primaryColor }}>{event}</p>
       <p className="text-[9px]" style={{ color: accentColor }}>{detail}</p>
     </div>
   );

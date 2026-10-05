@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
         )}
         {error === "callback" && (
-          <div className="text-xs text-destructive space-y-1">
+          <div className="text-sm text-destructive space-y-1">
             <p>
               That link didn&rsquo;t work — it may have expired or been opened on a
               different device.

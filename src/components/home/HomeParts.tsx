@@ -43,15 +43,15 @@ export const DISCIPLINES = [
 export function OppRow({ opp, variant = "default" }: { opp: Opportunity; variant?: "default" | "glass" }) {
   const glass = variant === "glass";
   const tagCls = glass
-    ? "bg-white/75 px-1.5 py-px font-mono text-[10px] text-foreground/70"
-    : "border border-border px-[5px] py-px font-mono text-[10px] text-[color:var(--fg-muted)]";
+    ? "bg-white/75 px-1.5 py-px font-mono text-xs text-foreground/70"
+    : "border border-border px-[5px] py-px font-mono text-xs text-[color:var(--fg-muted)]";
   const d = deadlineInfo(opp.deadline);
   const money = moneyLabel(opp);
   const img = opp.featured_image_url;
   const meta = (
     <>
       <div className="mb-0.5 truncate text-[13px] font-semibold leading-tight">{opp.title}</div>
-      <div className="mb-1.5 truncate font-mono text-[11px] text-[color:var(--fg-muted)]">
+      <div className="mb-1.5 truncate font-mono text-xs text-[color:var(--fg-muted)]">
         {opp.organiser}
         {opp.city ? ` · ${opp.city}` : ""}
       </div>
@@ -90,7 +90,7 @@ export function OppRow({ opp, variant = "default" }: { opp: Opportunity; variant
           {money && (
             <div className="mb-0.5 line-clamp-2 font-mono text-[13px] font-semibold leading-tight">{money}</div>
           )}
-          <div className={`whitespace-nowrap font-mono text-[10px] ${d.cls}`}>{d.label}</div>
+          <div className={`whitespace-nowrap font-mono text-xs ${d.cls}`}>{d.label}</div>
         </div>
       </Link>
     );
@@ -115,7 +115,7 @@ export function OppRow({ opp, variant = "default" }: { opp: Opportunity; variant
         <div className="mb-0.5 truncate text-[13px] font-semibold leading-tight">
           {opp.title}
         </div>
-        <div className="mb-1.5 truncate font-mono text-[11px] text-[color:var(--fg-muted)]">
+        <div className="mb-1.5 truncate font-mono text-xs text-[color:var(--fg-muted)]">
           {opp.organiser}
           {opp.city ? ` · ${opp.city}` : ""}
         </div>
@@ -136,7 +136,7 @@ export function OppRow({ opp, variant = "default" }: { opp: Opportunity; variant
         {money && (
           <div className="mb-0.5 line-clamp-2 font-mono text-[13px] font-semibold leading-tight">{money}</div>
         )}
-        <div className={`whitespace-nowrap font-mono text-[10px] ${d.cls}`}>{d.label}</div>
+        <div className={`whitespace-nowrap font-mono text-xs ${d.cls}`}>{d.label}</div>
       </div>
     </Link>
   );
@@ -193,7 +193,7 @@ export function ArtistFeature({
         }}
       >
         {spotlit && (
-          <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-white/75">
+          <p className="mb-1.5 font-mono text-xs uppercase tracking-[0.08em] text-white/75">
             Featured artist
           </p>
         )}
@@ -202,7 +202,7 @@ export function ArtistFeature({
             {a.full_name ?? a.username}
           </div>
           {a.country && (
-            <div className="font-mono text-[11px] text-white/75">{a.country}</div>
+            <div className="font-mono text-xs text-white/75">{a.country}</div>
           )}
         </div>
         {a.bio && (
@@ -213,7 +213,7 @@ export function ArtistFeature({
         {a.medium && a.medium.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {a.medium.slice(0, 3).map((m) => (
-              <span key={m} className="border border-white/30 px-1.5 py-0.5 font-mono text-[10px] lowercase text-white/85">
+              <span key={m} className="border border-white/30 px-1.5 py-0.5 font-mono text-xs lowercase text-white/85">
                 {m}
               </span>
             ))}
@@ -246,7 +246,7 @@ export function ArtistStripTile({ a }: { a: ProfileWithImage }) {
           </div>
         )}
       </div>
-      <div className="truncate text-[11px] font-semibold leading-[1.3]">
+      <div className="truncate text-xs font-semibold leading-[1.3]">
         {a.full_name ?? a.username}
       </div>
       {a.medium?.[0] && (
@@ -284,7 +284,7 @@ export function ArtistCompact({ a }: { a: ProfileWithImage }) {
       <div className="min-w-0 flex-1">
         <div className="mb-0.5 text-[14px] font-semibold">{a.full_name ?? a.username}</div>
         {a.country && (
-          <div className="mb-1.5 font-mono text-[10px] text-[color:var(--fg-muted)]">
+          <div className="mb-1.5 font-mono text-xs text-[color:var(--fg-muted)]">
             {a.country}
           </div>
         )}

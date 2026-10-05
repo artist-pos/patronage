@@ -156,7 +156,7 @@ function SubmissionCard({ sub }: { sub: Submission }) {
 function Kv({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-muted-foreground uppercase tracking-widest text-[10px]">{label}</p>
+      <p className="text-muted-foreground uppercase tracking-widest text-xs">{label}</p>
       <p className="font-mono">{value}</p>
     </div>
   );

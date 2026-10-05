@@ -69,7 +69,7 @@ function Tile({ work, onOpen, detailHref }: {
           />
         )}
         {price && (
-          <span className="absolute bottom-1.5 right-1.5 bg-white/90 px-2 py-0.5 font-mono text-[10px] font-medium text-stone-800">
+          <span className="absolute bottom-1.5 right-1.5 bg-white/90 px-2 py-0.5 font-mono text-xs font-medium text-stone-800">
             {price}
           </span>
         )}

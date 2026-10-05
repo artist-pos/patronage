@@ -83,7 +83,7 @@ export function ProfileStepForm({
             className="min-w-0 flex-1 bg-transparent py-2 pr-3 text-base focus-visible:outline-none sm:text-sm"
           />
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Your public profile link. You can change it later.
         </p>
       </div>
@@ -101,7 +101,7 @@ export function ProfileStepForm({
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Your disciplines</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Pick everything that applies. This is what we match opportunities against.
         </p>
         <DisciplineInput defaultValue={defaultDisciplines} />
@@ -116,7 +116,7 @@ export function ProfileStepForm({
         />
         <span className="text-sm">
           Email me new opportunities weekly
-          <span className="block text-xs text-muted-foreground">
+          <span className="block text-sm text-muted-foreground">
             One email, the listings closing soonest. Unsubscribe any time.
           </span>
         </span>

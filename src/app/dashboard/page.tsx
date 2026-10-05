@@ -274,7 +274,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   >
                     <span className="capitalize">{f === "closing" ? "Closing soon" : f}</span>
                     {oppCounts[f] > 0 && (
-                      <span className={`text-[10px] tabular-nums ${activeOppFilter === f ? "opacity-70" : ""}`}>
+                      <span className={`text-xs tabular-nums ${activeOppFilter === f ? "opacity-70" : ""}`}>
                         {oppCounts[f]}
                       </span>
                     )}
@@ -379,13 +379,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                             {isRecurring ? " / month" : ""}
                           </p>
                           {isActive && isRecurring && sub.current_period_end && (
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               Renews {new Date(sub.current_period_end).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide rounded-sm ${statusClass}`}>
+                          <span className={`text-xs px-2 py-0.5 font-medium uppercase tracking-wide rounded-sm ${statusClass}`}>
                             {statusLabel}
                           </span>
                           {isActive && isRecurring && <ManageSubscriptionButton />}

@@ -108,7 +108,7 @@ export function TerminateAccountButton() {
                 <label htmlFor="termination-details" className="text-sm font-medium">
                   Anything else you&apos;d like us to know?
                 </label>
-                <span className="text-[11px] text-muted-foreground tabular-nums">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {details.length}/{DETAILS_MAX}
                 </span>
               </div>
@@ -124,7 +124,7 @@ export function TerminateAccountButton() {
             </div>
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <AlertDialogFooter className="gap-2 sm:gap-2">
             <AlertDialogCancel className="border-black" disabled={isPending}>
@@ -149,7 +149,7 @@ export function TerminateAccountButton() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {error && !open && <p className="text-xs text-destructive">{error}</p>}
+      {error && !open && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

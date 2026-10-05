@@ -796,7 +796,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         const sharePayload = {
           type: "profile" as const,
           title: displayName,
-          sub: [profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
+          sub: [DISCIPLINE_LABELS[profile.disciplines?.[0] ?? ""] ?? profile.disciplines?.[0]?.replace(/_/g, " "), profile.city ?? profile.country].filter(Boolean).join(" · "),
           price: null,
           tag: "ARTIST",
           handle: `@${profile.username}`,
@@ -844,7 +844,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-8 sm:px-6">
                 <Link
                   href="/artists"
-                  className="mb-3 inline-block font-mono text-[10px] tracking-[0.12em] text-white/50 transition-colors hover:text-white/85"
+                  className="mb-3 inline-block font-mono text-xs tracking-[0.12em] text-white/50 transition-colors hover:text-white/85"
                 >
                   ← Artists
                 </Link>
@@ -927,7 +927,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   {isOwner && (
                     <Link
                       href="/studio"
-                      className="flex h-9 items-center border border-border px-3 font-mono text-[11px] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                      className="flex h-9 items-center border border-border px-3 font-mono text-xs text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
                     >
                       Edit Profile
                     </Link>
@@ -991,7 +991,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       profileId={profile.id}
                       username={profile.username}
                       eventType="cv_click"
-                      className="flex h-9 items-center border border-border px-2.5 font-mono text-[11px] transition-colors hover:bg-muted"
+                      className="flex h-9 items-center border border-border px-2.5 font-mono text-xs transition-colors hover:bg-muted"
                     >
                       CV
                     </TrackedLink>
@@ -1031,7 +1031,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 <div className={`grid items-start gap-10 ${hasAside ? "lg:grid-cols-[3fr_2fr] lg:gap-16" : ""}`}>
                   <div>
                     {profile.is_patronage_supported && (
-                      <p className="mb-2 font-mono text-[10px] tracking-wide text-muted-foreground opacity-70">
+                      <p className="mb-2 font-mono text-xs tracking-wide text-muted-foreground opacity-70">
                         With Patronage
                       </p>
                     )}
@@ -1044,7 +1044,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       <p className="mt-4">
                         <a
                           href="#work"
-                          className="font-mono text-[11px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                          className="font-mono text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                         >
                           {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available →
                         </a>
@@ -1096,7 +1096,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                                   <>&ldquo;{item.title}&rdquo;</>
                                 )}
                               </div>
-                              <div className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                              <div className="font-mono text-xs text-[color:var(--fg-subtle)]">
                                 {[item.publication, item.date].filter(Boolean).join(" · ")}
                               </div>
                             </div>
@@ -1200,7 +1200,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                 />
                 {profile.open_for_commissions && (
                   <aside className="mb-8 space-y-3 bg-[color:var(--tint)] p-5 lg:mt-14">
-                    <p className="flex items-center gap-2 font-mono text-[11px] text-[color:var(--success)]">
+                    <p className="flex items-center gap-2 font-mono text-xs text-[color:var(--success)]">
                       <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-success" />
                       Currently accepting commissions
                     </p>

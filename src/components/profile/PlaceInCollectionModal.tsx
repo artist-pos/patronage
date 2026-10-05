@@ -81,7 +81,7 @@ export function PlaceInCollectionModal({ artworkId, artworkTitle, onClose, onSuc
                   key={s}
                   type="button"
                   onClick={() => setLabel(s)}
-                  className="text-[11px] border border-border px-2 py-0.5 hover:border-foreground transition-colors"
+                  className="text-xs border border-border px-2 py-0.5 hover:border-foreground transition-colors"
                 >
                   {s}
                 </button>
@@ -102,7 +102,7 @@ export function PlaceInCollectionModal({ artworkId, artworkTitle, onClose, onSuc
               placeholder="username or email@example.com"
               className="w-full border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:border-foreground"
             />
-            <p className="text-[11px] text-muted-foreground leading-snug">
+            <p className="text-xs text-muted-foreground leading-snug">
               Patronage users get an in-app verification request. Non-members get an email invite to claim the work.
             </p>
           </div>

@@ -399,10 +399,11 @@ export function OutreachCompose() {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={"Hi Jane,\n\nI'm reaching out about…"}
-            rows={10}
-            className={`${inputCls} resize-y min-h-[200px]`}
+            rows={4}
+            className={`${inputCls} resize-none overflow-hidden min-h-[200px]`}
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Double line breaks become paragraphs. Sent from hello@patronage.nz.
           </p>
         </div>
@@ -419,7 +420,7 @@ export function OutreachCompose() {
           </div>
         )}
 
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex items-center justify-between pt-1">
           {toast ? (
@@ -639,7 +640,7 @@ export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
                 type="button"
                 onClick={(e) => handleCancel(email.id, e)}
                 disabled={isPending}
-                className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+                className="text-sm text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
                 title="Permanently delete this scheduled email"
               >
                 {busyId === email.id && isPending ? "…" : "Delete"}
@@ -648,7 +649,7 @@ export function ScheduledHistory({ emails }: { emails: ScheduledEmail[] }) {
           </div>
         ))}
         {actionError && (
-          <p className="text-xs text-red-600 pt-2">{actionError}</p>
+          <p className="text-sm text-red-600 pt-2">{actionError}</p>
         )}
       </div>
     </>
@@ -669,7 +670,7 @@ export function CancelButton({ id }: { id: string }) {
     <button
       onClick={handleCancel}
       disabled={isPending}
-      className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+      className="text-sm text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
     >
       {isPending ? "Cancelling…" : "Cancel"}
     </button>

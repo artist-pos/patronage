@@ -114,7 +114,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
             <p className="mt-1.5 font-mono text-lg font-semibold">
               NZD {tier.price.toLocaleString("en-NZ")}
               {isRecurring && (
-                <span className="text-[11px] font-normal text-muted-foreground"> / month</span>
+                <span className="text-xs font-normal text-muted-foreground"> / month</span>
               )}
             </p>
             {tier.description && (

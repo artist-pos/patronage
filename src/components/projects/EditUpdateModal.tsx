@@ -107,34 +107,36 @@ export function EditUpdateModal({
             {/* Caption (media posts) / Written content (text posts) */}
             {isText ? (
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Written content
                 </label>
                 <textarea
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
                   placeholder="Your poem, prose, or notes…"
-                  rows={8}
-                  className="w-full text-sm border border-border px-3 py-2 resize-none bg-background focus:outline-none focus:border-black transition-colors"
+                  rows={4}
+                  className="w-full text-sm border border-border px-3 py-2 resize-none overflow-hidden bg-background focus:outline-none focus:border-black transition-colors"
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                 />
               </div>
             ) : (
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Caption
                 </label>
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Add a caption…"
-                  rows={3}
-                  className="w-full text-sm border border-border px-3 py-2 resize-none bg-background focus:outline-none focus:border-black transition-colors"
+                  rows={2}
+                  className="w-full text-sm border border-border px-3 py-2 resize-none overflow-hidden bg-background focus:outline-none focus:border-black transition-colors"
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Title <span className="font-normal normal-case tracking-normal opacity-50">— heading in thread &amp; on share card</span>
               </label>
               <input
@@ -148,7 +150,7 @@ export function EditUpdateModal({
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 TL;DR <span className="font-normal normal-case tracking-normal opacity-50">— subtitle on share card</span>
               </label>
               <textarea
@@ -156,10 +158,11 @@ export function EditUpdateModal({
                 onChange={(e) => setTldr(e.target.value)}
                 placeholder="e.g. Glaze tests for the new series"
                 maxLength={160}
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                 rows={3}
                 className="w-full text-sm border border-border px-3 py-2 resize-none bg-background focus:outline-none focus:border-black transition-colors"
               />
-              <p className="text-[10px] text-muted-foreground text-right">{tldr.length} / 160</p>
+              <p className="text-xs text-muted-foreground text-right">{tldr.length} / 160</p>
             </div>
 
             <button

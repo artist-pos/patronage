@@ -42,7 +42,7 @@ export default async function OnboardingPatronPage({ searchParams }: Props) {
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-6 py-12">
       <div className="w-full max-w-md space-y-8">
         <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
             Step 2 of 2
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">

@@ -39,7 +39,7 @@ function KanbanColumn({
         <span className="text-xs text-stone-400">{apps.length}</span>
       </div>
       {disabled && (
-        <p className="text-[10px] text-stone-400 mb-1.5 px-0.5">Move these applicants to continue.</p>
+        <p className="text-xs text-stone-400 mb-1.5 px-0.5">Move these applicants to continue.</p>
       )}
       <div
         ref={setNodeRef}

@@ -150,7 +150,7 @@ export default function SignupPromptModal({
                 type="button"
                 aria-pressed={active}
                 onClick={() => toggle(value)}
-                className={`border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
+                className={`border px-2.5 py-1.5 font-mono text-xs transition-colors ${
                   active
                     ? "border-foreground bg-foreground text-white"
                     : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"

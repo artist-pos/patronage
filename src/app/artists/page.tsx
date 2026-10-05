@@ -57,7 +57,7 @@ function WorkCard({ artist, works }: { artist: ProfileWithImage; works: WorkPrev
           {place && <p className="truncate text-[12px] text-[color:var(--fg-muted)]">{place}</p>}
         </div>
         {artist.open_for_commissions && (
-          <span className="shrink-0 text-[11px] text-[color:var(--success)]" title="Open for commissions">
+          <span className="shrink-0 text-xs text-[color:var(--success)]" title="Open for commissions">
             ● Open
           </span>
         )}
@@ -68,7 +68,7 @@ function WorkCard({ artist, works }: { artist: ProfileWithImage; works: WorkPrev
           {disciplines.map((m) => (
             <span
               key={m}
-              className="whitespace-nowrap border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)]"
+              className="whitespace-nowrap border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)]"
             >
               {m}
             </span>

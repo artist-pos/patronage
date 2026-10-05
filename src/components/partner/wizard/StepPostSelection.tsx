@@ -141,12 +141,12 @@ export function StepPostSelection({
                   placeholder={def.label}
                   className="flex-1 text-sm border-0 border-b border-black/10 focus:border-black focus:outline-none pb-0.5 bg-transparent disabled:cursor-not-allowed"
                 />
-                {locked && <span className="text-[10px] text-stone-400 uppercase tracking-widest shrink-0">Always on</span>}
+                {locked && <span className="text-xs text-stone-400 uppercase tracking-widest shrink-0">Always on</span>}
               </div>
             );
           })}
         </div>
-        <p className="text-[11px] text-stone-400">
+        <p className="text-xs text-stone-400">
           The underlying application status never changes — this only controls what&apos;s shown and what it&apos;s called. Applicants already sitting in a stage you turn off stay visible (greyed out) until you move them.
         </p>
       </div>
@@ -185,7 +185,7 @@ export function StepPostSelection({
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-stone-400">
+        <p className="text-xs text-stone-400">
           &ldquo;Hold&rdquo; queues the notification so you can review and edit it before sending.
         </p>
       </div>

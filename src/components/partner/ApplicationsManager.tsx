@@ -668,7 +668,7 @@ export function ApplicationsManager({ apps, opp, opportunityId, followups = [] }
                       {app.artist?.career_stage && (
                         <p className="text-xs text-muted-foreground truncate">{app.artist.career_stage}</p>
                       )}
-                      <span className="text-[10px] bg-muted px-1.5 py-0.5 leading-none">{STATUS_LABELS[app.status] ?? app.status}</span>
+                      <span className="text-xs bg-muted px-1.5 py-0.5 leading-none">{STATUS_LABELS[app.status] ?? app.status}</span>
                     </div>
                   </button>
                 );

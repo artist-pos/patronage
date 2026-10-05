@@ -76,7 +76,7 @@ function StatsBar({ contacts }: { contacts: OutreachContact[] }) {
         {keyStatuses.map((s) => (
           <div key={s} className="border border-border p-3 space-y-1">
             <p className="text-lg font-semibold">{byStatus[s] ?? 0}</p>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 leading-tight">{STATUS_LABELS[s]}</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400 leading-tight">{STATUS_LABELS[s]}</p>
           </div>
         ))}
       </div>
@@ -84,15 +84,15 @@ function StatsBar({ contacts }: { contacts: OutreachContact[] }) {
       <div className="grid grid-cols-3 gap-2">
         <div className={`border p-3 space-y-1 ${overdue.length > 0 ? "border-red-200 bg-red-50" : "border-border"}`}>
           <p className={`text-lg font-semibold ${overdue.length > 0 ? "text-red-600" : ""}`}>{overdue.length}</p>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Overdue follow-ups</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Overdue follow-ups</p>
         </div>
         <div className="border border-border p-3 space-y-1">
           <p className="text-lg font-semibold">{meetings.length}</p>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Meetings this week</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Meetings this week</p>
         </div>
         <div className={`border p-3 space-y-1 ${needsAttention.length > 0 ? "border-amber-200 bg-amber-50" : "border-border"}`}>
           <p className={`text-lg font-semibold ${needsAttention.length > 0 ? "text-amber-600" : ""}`}>{needsAttention.length}</p>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Needs attention</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Needs attention</p>
         </div>
       </div>
     </div>

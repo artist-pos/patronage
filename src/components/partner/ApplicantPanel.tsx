@@ -250,10 +250,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               </div>
               {opportunity.show_badges_in_submission && badges && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {badges.withPatronage && <span className="text-[10px] bg-black text-white px-2 py-0.5">With Patronage</span>}
-                  {badges.verified && <span className="text-[10px] border border-black/20 text-stone-500 px-2 py-0.5">Verified</span>}
-                  {badges.exhibited && <span className="text-[10px] border border-black/20 text-stone-500 px-2 py-0.5">Exhibited</span>}
-                  {badges.grantRecipient && <span className="text-[10px] border border-black/20 text-stone-500 px-2 py-0.5">Grant Recipient</span>}
+                  {badges.withPatronage && <span className="text-xs bg-black text-white px-2 py-0.5">With Patronage</span>}
+                  {badges.verified && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Verified</span>}
+                  {badges.exhibited && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Exhibited</span>}
+                  {badges.grantRecipient && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Grant Recipient</span>}
                 </div>
               )}
             </div>
@@ -320,7 +320,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                           The viewer pages itself, so the panel's scroll is unaffected. */}
                       {pdfs.map((url, i) => (
                         <div key={url} className="space-y-1.5 pt-1">
-                          <p className="font-mono text-[11px] text-stone-400 truncate">
+                          <p className="font-mono text-xs text-stone-400 truncate">
                             {fileNameFromUrl(url, `Document ${i + 1}`)}
                           </p>
                           <PartnerPdfViewerClient pdfUrl={url} />
@@ -365,7 +365,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   {artworkImages.map((img) => (
                     <div key={img.id} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-widest text-stone-400">For sale</p>
+                        <p className="text-xs uppercase tracking-widest text-stone-400">For sale</p>
                         {artist?.username && (
                           <a href={`/${artist.username}/works/${img.id}`} target="_blank" rel="noopener noreferrer"
                             className="text-stone-400 hover:text-foreground transition-colors" title="View this work">
@@ -436,7 +436,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                       <div key={i} className="py-2.5 grid grid-cols-[80px_1fr] gap-4 text-sm">
                         <span className="text-stone-400 tabular-nums">{ex.year}</span>
                         <div>
-                          <span className="text-[10px] border border-black/20 px-1.5 py-0.5 mr-2 text-stone-500">{ex.type}</span>
+                          <span className="text-xs border border-black/20 px-1.5 py-0.5 mr-2 text-stone-500">{ex.type}</span>
                           <span className="font-medium">{ex.title}</span>
                           <span className="text-stone-400"> · {ex.venue}{ex.location ? `, ${ex.location}` : ""}</span>
                         </div>
@@ -521,7 +521,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
 
           {/* Decision */}
           <div className="space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Decision</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Decision</p>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full shrink-0 ${currentStageDot}`} />
               <span className="text-sm font-medium">{stageLabel(status, stagesCfg)}</span>
@@ -571,14 +571,14 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
           {/* Rubric scoring */}
           {(opportunity.pipeline_config?.questions?.length ?? 0) > 0 && (
             <div className="space-y-3 border-t border-black/10 pt-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Your scoring</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Your scoring</p>
               <RubricScoringPanel opportunityId={opportunity.id} applicationId={application.id} compact />
             </div>
           )}
 
           {/* Actions */}
           <div className="space-y-2 border-t border-black/10 pt-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Actions</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Actions</p>
             <Link href={`/messages`} className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors w-full">
               <span>Message {artist?.full_name?.split(" ")[0] ?? "artist"}</span>
             </Link>

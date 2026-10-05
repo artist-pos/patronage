@@ -72,7 +72,7 @@ export function BlogPreviewModal({
       >
         {/* Header bar */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-3 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-xl">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
             Preview · how this will look when published
           </p>
           <button
@@ -116,7 +116,7 @@ export function BlogPreviewModal({
               <p className="text-sm text-muted-foreground">
                 {formatDate(displayDate)}
                 {scheduledAt && !publishedAt && (
-                  <span className="ml-2 text-[11px] uppercase tracking-widest text-stone-400">
+                  <span className="ml-2 text-xs uppercase tracking-widest text-stone-400">
                     (scheduled)
                   </span>
                 )}
@@ -137,7 +137,7 @@ export function BlogPreviewModal({
                   <div className="w-14 h-14 rounded-full bg-stone-200 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 mb-1">
+                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-1">
                     Featured Artist
                   </p>
                   <p className="text-sm font-semibold leading-snug">

@@ -163,7 +163,7 @@ export default async function EarningsPage() {
             />
           ) : (
             <div className="border border-stone-100 rounded-lg divide-y divide-stone-100 overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-xs uppercase tracking-widest text-stone-400 bg-stone-50">
                 <span>Work</span>
                 <span className="text-right">Sale price</span>
                 <span className="text-right">Your take (90%)</span>
@@ -221,7 +221,7 @@ export default async function EarningsPage() {
               Resale Royalties
             </h3>
             <div className="border border-stone-100 rounded-lg divide-y divide-stone-100 overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2 text-xs uppercase tracking-widest text-stone-400 bg-stone-50">
                 <span>Work</span>
                 <span className="text-right">Royalty (5%)</span>
                 <span className="text-right">Status</span>
@@ -282,7 +282,7 @@ export default async function EarningsPage() {
             />
           ) : (
             <div className="border border-stone-100 rounded-lg divide-y divide-stone-100 overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-xs uppercase tracking-widest text-stone-400 bg-stone-50">
                 <span>Supporter</span>
                 <span className="text-right">Type</span>
                 <span className="text-right">Net (90%)</span>
@@ -344,7 +344,7 @@ function SummaryCard({
 }) {
   return (
     <div className={`border rounded-lg p-4 space-y-1 ${highlight ? "border-amber-300 bg-amber-50/40" : "border-stone-100"}`}>
-      <p className="text-[10px] uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="text-xs uppercase tracking-widest text-stone-400">{label}</p>
       <p className={`text-xl font-semibold ${highlight ? "text-amber-700" : ""}`}>{value}</p>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>

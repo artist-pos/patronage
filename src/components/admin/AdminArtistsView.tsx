@@ -66,7 +66,7 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-2">
           <ArtistMap pins={pins} focusRegion={focusRegion} />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Black circles are artists (count per town); an amber ring means an organisation is also
             there; faded circles are placed by region only.
             {unplacedArtists > 0 && (
@@ -81,20 +81,20 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
 
         <aside className="space-y-2">
           <div className="flex items-baseline justify-between">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
               Regional arts organisations
             </p>
             {focusRegion && (
               <button
                 type="button"
                 onClick={() => setFocusRegion(null)}
-                className="text-[11px] text-muted-foreground underline underline-offset-2"
+                className="text-xs text-muted-foreground underline underline-offset-2"
               >
                 Reset view
               </button>
             )}
           </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto border border-border">
             {catalog.map((o) => (
@@ -111,11 +111,11 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
                     {o.artistCount} artist{o.artistCount === 1 ? "" : "s"}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">{o.regionNames.join(" · ")}</p>
+                <p className="text-xs text-muted-foreground">{o.regionNames.join(" · ")}</p>
                 {o.boards.length > 0 && (
                   <ul className="space-y-1 border-l border-border pl-2">
                     {o.boards.map((b) => (
-                      <li key={b.boardId ?? "unset"} className="flex items-center justify-between gap-2 text-[11px]">
+                      <li key={b.boardId ?? "unset"} className="flex items-center justify-between gap-2 text-xs">
                         <span className="text-muted-foreground">
                           {b.name} <span>· {b.count}</span>
                         </span>
@@ -184,7 +184,7 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
 
           {uncovered.length > 0 && (
             <div className="space-y-1 pt-1">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">
                 No organisation listed
               </p>
               {uncovered.map((r) => (
@@ -221,7 +221,7 @@ export function AdminArtistsView({ artists, cities, boards, pins, unplacedArtist
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             An organisation anchors its region&apos;s page, so every artist in that region is already
             attached the moment its profile exists. Send it a claim link from Claim Tokens.
           </p>

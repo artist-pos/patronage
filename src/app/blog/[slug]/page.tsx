@@ -147,8 +147,13 @@ export default async function BlogPostPage({ params }: Props) {
     metaLines.push(["Practitioner", fp.full_name ?? fp.username]);
     const loc = [fp.city, fp.country].filter(Boolean).join(", ");
     if (loc) metaLines.push(["Location", loc]);
+    const DISC_LABELS: Record<string, string> = {
+      visual_art: "Visual Art", music: "Music", poetry: "Poetry",
+      writing: "Writing", dance: "Dance", film: "Film",
+      photography: "Photography", craft: "Craft", performance: "Performance", other: "Other",
+    };
     const disciplines = (fp.disciplines?.length ? fp.disciplines : fp.medium ?? [])
-      .map((d) => d.replace(/_/g, " "))
+      .map((d) => DISC_LABELS[d] ?? d.replace(/_/g, " "))
       .join(" / ");
     if (disciplines) metaLines.push(["Discipline", disciplines]);
   }
@@ -230,7 +235,7 @@ export default async function BlogPostPage({ params }: Props) {
                 />
               )}
               <div className="min-w-0">
-                <p className="mb-[3px] text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+                <p className="mb-[3px] text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
                   Featured artist
                 </p>
                 <p className="mb-[3px] text-[14.5px] font-semibold leading-snug">
@@ -250,7 +255,7 @@ export default async function BlogPostPage({ params }: Props) {
                 style={{ background: "linear-gradient(145deg,#333,#555)" }}
               />
               <div className="min-w-0">
-                <p className="mb-[3px] text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+                <p className="mb-[3px] text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
                   Written by
                 </p>
                 <p className="mb-[3px] text-[14.5px] font-semibold leading-snug">Blake Aitken</p>
@@ -305,7 +310,7 @@ export default async function BlogPostPage({ params }: Props) {
         {/* ── Right: sidebar — thumbnail rows, hairline dividers ── */}
         {sidebar.length > 0 && (
           <aside className="border-t border-border pt-6 lg:sticky lg:top-[72px] lg:self-start lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-            <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+            <p className="mb-2 text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
               More from the blog
             </p>
             <div>

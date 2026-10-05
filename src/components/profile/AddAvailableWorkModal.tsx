@@ -226,7 +226,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
               <label className="text-sm font-medium">
                 Name of Work <span className="text-destructive">*</span>
               </label>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {name.length}/{NAME_MAX}
               </span>
             </div>
@@ -243,7 +243,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Medium Category
-              <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional, select all that apply)</span>
+              <span className="ml-1 text-xs text-muted-foreground font-normal">(optional, select all that apply)</span>
             </label>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {MEDIUM_CATEGORIES.map((cat) => (
@@ -265,7 +265,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Surface / Substrate
-                <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
+                <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span>
               </label>
               <select
                 value={surfaceOrSubstrate}
@@ -281,7 +281,7 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Medium / Material
-                <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
+                <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span>
               </label>
               <input
                 type="text"
@@ -337,23 +337,24 @@ export function AddAvailableWorkModal({ profileId, onSuccess }: Props) {
             <div className="flex items-baseline justify-between">
               <label className="text-sm font-medium">
                 Description / Enquiry Context
-                <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span>
+                <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span>
               </label>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {description.length}/{DESC_MAX}
               </span>
             </div>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
-              rows={4}
+              rows={2}
               placeholder="Dimensions, year, condition… This will be included in patron enquiry messages automatically."
-              className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground resize-none"
+              className="w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground resize-none overflow-hidden"
+              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
             />
           </div>
 
           {/* ── Error ── */}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* ── Footer ── */}
           <DialogFooter className="pt-2">

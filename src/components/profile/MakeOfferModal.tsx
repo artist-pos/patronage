@@ -125,12 +125,12 @@ export function MakeOfferModal({
                   autoFocus
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Your offer will be sent as a message. You can negotiate directly with the artist.
               </p>
             </div>
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex gap-2 justify-end pt-1">
               <button

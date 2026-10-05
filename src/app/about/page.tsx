@@ -51,7 +51,7 @@ export default function AboutPage() {
           <ol className="mt-12 grid max-w-[1100px] grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {LOOP.map((line, i) => (
               <li key={line} className="bg-feed-bg p-6">
-                <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p className="t-heading mt-6">{line}</p>

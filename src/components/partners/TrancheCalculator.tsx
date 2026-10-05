@@ -95,7 +95,7 @@ export function TrancheCalculator({ tiers, defaultQtys }: Props) {
             </div>
 
             {/* Breakdown — below controls */}
-            <p className="text-[11px] text-stone-400 mt-2.5 leading-relaxed">
+            <p className="text-xs text-stone-400 mt-2.5 leading-relaxed">
               {fmt(tier.artistFee)} fee · ~{fmt(tier.materials)} materials · {fmt(Math.round(tier.artistFee * MGMT_RATE))} mgmt
             </p>
           </div>
@@ -214,7 +214,7 @@ export function TrancheCalculator({ tiers, defaultQtys }: Props) {
         </div>
 
       {/* Footnote */}
-      <p className="font-mono text-[10px] text-stone-400">
+      <p className="font-mono text-xs text-stone-400">
         NZD, ex GST. Paint path materials shown. Wrap materials differ. Stations priced per concept via EOI.
       </p>
     </div>

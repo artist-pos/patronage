@@ -41,6 +41,7 @@ async function maybeSetVerifiedAt(
 export interface ProfileFormState {
   error?: string;
   fieldErrors?: Partial<Record<string, string>>;
+  success?: boolean;
 }
 
 export async function upsertProfileAction(
@@ -194,4 +195,114 @@ export async function upsertProfileAction(
   }
 
   redirect(`/${username}`);
+}
+
+export async function updateProfileAction(
+  _prev: ProfileFormState,
+  formData: FormData
+): Promise<ProfileFormState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated." };
+
+  const username = (formData.get("username") as string)?.trim().toLowerCase();
+  const full_name = (formData.get("full_name") as string)?.trim() || null;
+  const bio = (formData.get("bio") as string)?.trim() || null;
+  const city = (formData.get("city") as string)?.trim() || null;
+  const city_id = (formData.get("city_id") as string)?.trim() || null;
+  const region_id = (formData.get("region_id") as string)?.trim() || null;
+  const boardSubmitted = formData.has("local_board_id");
+  const boardRaw = (formData.get("local_board_id") as string)?.trim() || null;
+  const arts_org_id = (formData.get("arts_org_id") as string)?.trim() || null;
+  const country = (formData.get("country") as string) || null;
+  const career_stage = (formData.get("career_stage") as string) || null;
+  const mediumRaw = (formData.get("medium") as string) ?? "";
+  const medium = mediumRaw.split(",").map((s) => s.trim()).filter(Boolean);
+  const disciplinesRaw = (formData.get("disciplines") as string) ?? "";
+  const disciplines = disciplinesRaw.split(",").map((s) => s.trim()).filter(Boolean);
+  const website_url = (formData.get("website_url") as string)?.trim() || null;
+  const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
+
+  const yearOfBirthRaw = (formData.get("year_of_birth") as string)?.trim();
+  let year_of_birth: number | null = null;
+  if (yearOfBirthRaw) {
+    const parsed = parseInt(yearOfBirthRaw, 10);
+    const currentYear = new Date().getFullYear();
+    if (isNaN(parsed) || parsed < 1920 || parsed > currentYear - 10) {
+      return { fieldErrors: { year_of_birth: `Year must be between 1920 and ${currentYear - 10}.` } };
+    }
+    year_of_birth = parsed;
+  }
+
+  const identity_tags = formData.getAll("identity_tags") as string[];
+
+  if (!username) return { fieldErrors: { username: "Username is required." } };
+  if (!/^[a-z0-9_-]{3,30}$/.test(username))
+    return { fieldErrors: { username: "3–30 characters, lowercase letters, numbers, hyphens and underscores only." } };
+
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .neq("id", user.id)
+    .maybeSingle();
+
+  if (existing) return { fieldErrors: { username: "Username already taken." } };
+  if (!country) return { fieldErrors: { country: "Country is required." } };
+  if (!isSelectableCountry(country))
+    return { fieldErrors: { country: "Select a valid country." } };
+
+  const profileData: Record<string, unknown> = {
+    id: user.id,
+    username,
+    full_name,
+    bio,
+    city,
+    city_id,
+    region_id,
+    ...(boardSubmitted
+      ? { local_board_id: await validLocalBoardId(supabase, boardRaw, region_id) }
+      : {}),
+    arts_org_id,
+    location_needs_review: false,
+    country: country || null,
+    career_stage: career_stage || null,
+    medium: medium.length > 0 ? medium : null,
+    website_url,
+    instagram_handle,
+    year_of_birth,
+    identity_tags,
+  };
+
+  if (disciplines.length > 0) {
+    profileData.disciplines = disciplines;
+  }
+
+  if (formData.get("has_commission_fields")) {
+    profileData.open_for_commissions = formData.get("open_for_commissions") === "on";
+    profileData.commission_info =
+      (formData.get("commission_info") as string)?.trim() || null;
+  }
+
+  const { error } = await supabase.from("profiles").upsert(profileData);
+  if (error) return { error: error.message };
+
+  const { data: savedProfile } = await supabase
+    .from("profiles")
+    .select("role, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  await maybeSetVerifiedAt(
+    supabase,
+    user.id,
+    savedProfile?.role ?? null,
+    bio,
+    savedProfile?.avatar_url ?? null,
+    disciplines
+  );
+
+  return { success: true };
 }

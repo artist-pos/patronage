@@ -12,7 +12,7 @@ function ExpandableDescription({ text }: { text: string }) {
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
-          className="mt-0.5 text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+          className="mt-0.5 text-xs text-stone-400 hover:text-stone-600 transition-colors"
         >
           {expanded ? "Show less" : "Read more"}
         </button>

@@ -120,7 +120,7 @@ export function OverviewTab({
                   {href && (
                     <Link
                       href={href}
-                      className="text-[10px] font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1 self-start"
+                      className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1 self-start"
                     >
                       View →
                     </Link>

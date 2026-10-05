@@ -16,7 +16,7 @@ function RoleBadge({ role }: { role: string | null }) {
   const label = ROLE_LABELS[role];
   if (!label) return null;
   return (
-    <span className="text-[10px] border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none shrink-0">
+    <span className="text-xs border border-black/40 text-muted-foreground px-1.5 py-0.5 leading-none shrink-0">
       {label}
     </span>
   );

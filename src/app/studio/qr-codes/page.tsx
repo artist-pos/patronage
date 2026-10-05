@@ -123,13 +123,13 @@ export default async function StudioQrCodesPage() {
             <div key={c.id} className="flex items-center gap-4 py-4">
               <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-sm font-medium truncate">{c.title}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {c.partner_name ?? "Self-managed"}
                   {c.campaign_start_date && ` · ${c.campaign_start_date}`}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`text-[10px] px-2 py-0.5 font-medium uppercase tracking-wide ${
+                <span className={`text-xs px-2 py-0.5 font-medium uppercase tracking-wide ${
                   c.status === "live" ? "bg-green-100 text-green-700"
                     : c.status === "completed" ? "bg-stone-100 text-stone-500"
                     : "bg-stone-100 text-stone-600"
@@ -138,7 +138,7 @@ export default async function StudioQrCodesPage() {
                 </span>
                 <Link
                   href={`/studio/qr-codes/${c.id}`}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {c.status === "live" ? "View →" : "Configure →"}
                 </Link>

@@ -78,16 +78,16 @@ export default async function ConfirmPage({ searchParams }: Props) {
             className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
           />
           {sp.resend === "invalid-email" && (
-            <p className="text-xs text-destructive">Enter a valid email address.</p>
+            <p className="text-sm text-destructive">Enter a valid email address.</p>
           )}
           {sp.resend === "rate-limit" && (
-            <p className="text-xs text-destructive">
+            <p className="text-sm text-destructive">
               An email was sent to this address in the last minute. Wait a
               moment, then try again — and check your spam folder.
             </p>
           )}
           {sp.resend === "error" && (
-            <p className="text-xs text-destructive">
+            <p className="text-sm text-destructive">
               Couldn&rsquo;t resend just now. Please try again.
             </p>
           )}

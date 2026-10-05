@@ -198,7 +198,7 @@ function PricingCalculator({ currency, focusedLabel, onUsePrice }: {
       active ? "border-foreground text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
   const ci = "w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground";
-  const sl = "text-xs text-muted-foreground";
+  const sl = "text-sm text-muted-foreground";
   const fmtN = (n: number) => n.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
@@ -265,7 +265,7 @@ interface Props {
 
 const inputCls = "w-full border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-foreground placeholder:text-muted-foreground";
 const labelCls = "text-sm font-medium";
-const smallLabelCls = "text-xs text-muted-foreground";
+const smallLabelCls = "text-sm text-muted-foreground";
 
 export function NewWorkClient({ profileId, mode }: Props) {
   const router = useRouter();
@@ -669,7 +669,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
             key={type}
             type="button"
             onClick={() => handleTypeChange(type)}
-            className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 text-[11px] border transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 text-xs border transition-colors ${
               contentType === type
                 ? "border-black bg-black text-white"
                 : "border-border text-muted-foreground hover:border-black hover:text-foreground"
@@ -755,8 +755,9 @@ export function NewWorkClient({ profileId, mode }: Props) {
           value={textContent}
           onChange={(e) => setTextContent(e.target.value)}
           placeholder="Write your poem, prose, or artist statement…"
-          rows={8}
-          className={`${inputCls} resize-none`}
+          rows={4}
+          className={`${inputCls} resize-none overflow-hidden`}
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       )}
 
@@ -807,7 +808,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
               <div key={i} className="relative group">
                 <img src={src} alt={`Supporting ${i + 1}`} className="w-20 h-20 object-cover border border-border bg-muted" />
                 <button type="button" onClick={() => removeSupportingImage(i)}
-                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/80 text-white flex items-center justify-center"
                   aria-label="Remove">
                   <X className="w-3 h-3" />
                 </button>
@@ -864,7 +865,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
       <section className="space-y-4">
         <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Medium</h2>
         <div className="space-y-2">
-          <label className={labelCls}>Category <span className="ml-1 text-[11px] text-muted-foreground font-normal">(select all that apply)</span></label>
+          <label className={labelCls}>Category <span className="ml-1 text-xs text-muted-foreground font-normal">(select all that apply)</span></label>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {MEDIUM_CATEGORIES.map((cat) => (
               <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
@@ -890,7 +891,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
           </div>
         </div>
         <div className="space-y-1.5">
-          <label className={labelCls}>Description <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span></label>
+          <label className={labelCls}>Description <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span></label>
           <textarea ref={descRef} value={description}
             onChange={(e) => { setDescription(e.target.value); growDesc(); }}
             rows={3} placeholder="Describe the work — context, materials, process…"
@@ -997,7 +998,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
             key={type}
             type="button"
             onClick={() => handleTypeChange(type)}
-            className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 text-[11px] border transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 text-xs border transition-colors ${
               contentType === type
                 ? "border-black bg-black text-white"
                 : "border-border text-muted-foreground hover:border-black hover:text-foreground"
@@ -1071,7 +1072,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
           </div>
 
           <div className="space-y-2">
-            <label className={labelCls}>Category <span className="ml-1 text-[11px] text-muted-foreground font-normal">(select all that apply)</span></label>
+            <label className={labelCls}>Category <span className="ml-1 text-xs text-muted-foreground font-normal">(select all that apply)</span></label>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {MEDIUM_CATEGORIES.map((cat) => (
                 <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
@@ -1099,7 +1100,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className={labelCls}>Description <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span></label>
+            <label className={labelCls}>Description <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span></label>
             <textarea ref={descRef} value={description}
               onChange={(e) => { setDescription(e.target.value); growDesc(); }}
               rows={3} placeholder="Describe the work — context, materials, process…"
@@ -1121,7 +1122,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
                   <div key={i} className="relative group/sup">
                     <img src={src} alt={`Supporting ${i + 1}`} className="w-20 h-20 object-cover border border-border bg-muted" />
                     <button type="button" onClick={() => removeSupportingImage(i)}
-                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-black text-white flex items-center justify-center opacity-0 group-hover/sup:opacity-100 transition-opacity"
+                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/80 text-white flex items-center justify-center"
                       aria-label="Remove">
                       <X className="w-3 h-3" />
                     </button>
@@ -1176,7 +1177,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
       {mode === "sale" && (
         <div className="border border-border p-4 text-xs text-muted-foreground">
-          <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide mr-2">Original</span>
+          <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide mr-2">Original</span>
           Being transferred to the buyer.
         </div>
       )}
@@ -1187,7 +1188,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
         return (
           <div key={ed.id} className="border border-border p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide">{typeLabel}</span>
+              <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5 uppercase tracking-wide">{typeLabel}</span>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={ed.listed}
@@ -1308,9 +1309,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
             )}
           </div>
         )}
-        <div className="max-w-2xl">
-          {error && <p className="text-sm text-destructive mt-6">{error}</p>}
-          <div className="flex items-center gap-3 pt-8">
+        <div className="sticky bottom-0 z-10 border-t border-black bg-background px-5 py-3 mt-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button type="submit" disabled={!canSubmit() || uploading}
               className="px-6 py-2.5 bg-black text-white text-sm hover:opacity-80 transition-opacity disabled:opacity-40">
               {uploading ? "Saving…" : "Save work"}
@@ -1320,6 +1320,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
               Cancel
             </button>
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
       </form>
     );
@@ -1344,14 +1345,15 @@ export function NewWorkClient({ profileId, mode }: Props) {
                   placeholder="buyer@example.com" className={inputCls} />
               </div>
               <div className="space-y-1.5">
-                <label className={labelCls}>Sale price <span className="ml-1 text-[11px] text-muted-foreground font-normal">(NZD, optional)</span></label>
+                <label className={labelCls}>Sale price <span className="ml-1 text-xs text-muted-foreground font-normal">(NZD, optional)</span></label>
                 <input type="text" inputMode="decimal" value={salePrice} onChange={(e) => setSalePrice(e.target.value)}
                   placeholder="e.g. 1200" className={inputCls} />
               </div>
               <div className="space-y-1.5">
-                <label className={labelCls}>Private notes <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span></label>
+                <label className={labelCls}>Private notes <span className="ml-1 text-xs text-muted-foreground font-normal">(optional)</span></label>
                 <textarea value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)}
-                  rows={2} placeholder="e.g. Sold at group exhibition, Nov 2024" className={`${inputCls} resize-none`} />
+                  rows={2} placeholder="e.g. Sold at group exhibition, Nov 2024" className={`${inputCls} resize-none overflow-hidden`}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
               </div>
             </div>
             <div className="border-t border-border pt-4 space-y-2">

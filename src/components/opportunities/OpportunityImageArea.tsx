@@ -130,16 +130,16 @@ export function OpportunityImageArea({
 
       {/* Overlays — desktop only. v2: flush ribbons, mono */}
       {fundingLabel && (
-        <div className="absolute right-0 top-0 hidden max-w-[65%] truncate bg-black px-2.5 py-1.5 font-mono text-[11px] font-semibold leading-none text-white md:block">
+        <div className="absolute right-0 top-0 hidden max-w-[65%] truncate bg-black px-2.5 py-1.5 font-mono text-xs font-semibold leading-none text-white md:block">
           {fundingLabel.split(" (")[0]}
         </div>
       )}
       {preOpen ? (
-        <div className="absolute left-0 top-0 z-10 hidden border border-border bg-white px-2.5 py-1.5 font-mono text-[10px] font-semibold leading-none tracking-[0.04em] text-black md:block">
+        <div className="absolute left-0 top-0 z-10 hidden border border-border bg-white px-2.5 py-1.5 font-mono text-xs font-semibold leading-none tracking-[0.04em] text-black md:block">
           Not yet open
         </div>
       ) : closing && (
-        <div className={`absolute left-0 top-0 z-10 hidden px-2.5 py-1.5 font-mono text-[10px] font-semibold leading-none tracking-[0.04em] text-white md:block ${urgent ? "bg-[color:var(--urgent)]" : "bg-black"}`}>
+        <div className={`absolute left-0 top-0 z-10 hidden px-2.5 py-1.5 font-mono text-xs font-semibold leading-none tracking-[0.04em] text-white md:block ${urgent ? "bg-[color:var(--urgent)]" : "bg-black"}`}>
           {urgent ? "Closes today" : "Closing soon"}
         </div>
       )}

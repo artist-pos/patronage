@@ -65,7 +65,7 @@ export function ArtistSpotlightHero({ artist }: Props) {
           {(artist.medium ?? []).length > 0 && (
             <div className="flex flex-wrap gap-1">
               {(artist.medium ?? []).slice(0, 5).map((m) => (
-                <span key={m} className="border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)]">
+                <span key={m} className="border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)]">
                   {m}
                 </span>
               ))}
@@ -80,7 +80,7 @@ export function ArtistSpotlightHero({ artist }: Props) {
           )}
 
           {/* CTA */}
-          <div className="mt-auto border-t border-border pt-4 font-mono text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+          <div className="mt-auto border-t border-border pt-4 font-mono text-xs text-muted-foreground transition-colors group-hover:text-foreground">
             View profile →
           </div>
         </div>

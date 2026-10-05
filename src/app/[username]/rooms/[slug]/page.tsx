@@ -102,7 +102,7 @@ export default async function PrivateRoomPage({ params }: Props) {
       <div className="px-6 py-8 border-b border-border">
         <div className="max-w-[1600px] mx-auto flex items-start justify-between gap-8">
           <div className="space-y-1">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Private Online Exhibition</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Private Online Exhibition</p>
             <h1 className="text-xl font-semibold">{room.title}</h1>
             {room.description && (
               <p className="text-sm text-muted-foreground mt-1">{room.description}</p>

@@ -50,12 +50,12 @@ function SecondaryBadges({ badges }: { badges: BadgeSet }) {
 
 /* v2 square bordered mono tag */
 const TAG_CLS =
-  "border border-border px-1.5 py-0.5 font-mono text-[10px] leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
+  "border border-border px-1.5 py-0.5 font-mono text-xs leading-relaxed text-[color:var(--fg-muted)] whitespace-nowrap";
 
 /* Green commission-availability status — the artist's status colour */
 function CommissionsDot() {
   return (
-    <span className="flex items-center gap-1 whitespace-nowrap font-mono text-[10px] text-[color:var(--success)]">
+    <span className="flex items-center gap-1 whitespace-nowrap font-mono text-xs text-[color:var(--success)]">
       <span className="h-[5px] w-[5px] rounded-full bg-success" />
       open for commissions
     </span>
@@ -100,7 +100,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
           {(location || artist.open_for_commissions) && (
             <div className="mt-1 flex items-center gap-2.5">
               {location && (
-                <span className="truncate font-mono text-[11px] text-muted-foreground">
+                <span className="truncate font-mono text-xs text-muted-foreground">
                   {location}
                 </span>
               )}
@@ -157,7 +157,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
             )}
           </p>
           <div className="flex items-center gap-2.5">
-            <p className="truncate font-mono text-[11px] text-muted-foreground">@{artist.username}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">@{artist.username}</p>
             {artist.open_for_commissions && <CommissionsDot />}
           </div>
           {badges && <SecondaryBadges badges={badges} />}
@@ -192,7 +192,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
 
         {/* Location */}
         {location && (
-          <span className="hidden shrink-0 whitespace-nowrap font-mono text-[11px] text-muted-foreground md:block">
+          <span className="hidden shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground md:block">
             {location}
           </span>
         )}
@@ -245,7 +245,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
               )}
               {badges && <SecondaryBadges badges={badges} />}
               {location && (
-                <span className="font-mono text-[11px] text-muted-foreground">{location}</span>
+                <span className="font-mono text-xs text-muted-foreground">{location}</span>
               )}
             </div>
           </div>
@@ -330,7 +330,7 @@ export function ArtistCard({ artist, view = "gallery", compact = false, badges, 
             )}
             {badges && <SecondaryBadges badges={badges} />}
             {location && (
-              <span className="truncate font-mono text-[11px] text-muted-foreground">{location}</span>
+              <span className="truncate font-mono text-xs text-muted-foreground">{location}</span>
             )}
           </div>
         </div>

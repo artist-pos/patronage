@@ -191,15 +191,15 @@ export function CollaboratorsPanel({ opportunityId, initialCollaborators, isOwne
 
       {/* Role permissions table */}
       <div className="space-y-3">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Role permissions</p>
+        <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Role permissions</p>
         <div className="border border-black/10 overflow-hidden">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-black/10 bg-stone-50">
-                <th className="text-left py-2.5 px-4 font-medium text-stone-400 uppercase tracking-wide text-[10px]">Capability</th>
-                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-[10px]">Owner</th>
-                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-[10px]">Editor</th>
-                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-[10px]">Viewer</th>
+                <th className="text-left py-2.5 px-4 font-medium text-stone-400 uppercase tracking-wide text-xs">Capability</th>
+                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-xs">Owner</th>
+                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-xs">Editor</th>
+                <th className="py-2.5 px-4 text-center font-medium text-stone-400 uppercase tracking-wide text-xs">Viewer</th>
               </tr>
             </thead>
             <tbody>

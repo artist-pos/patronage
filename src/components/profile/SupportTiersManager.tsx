@@ -299,7 +299,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                   />
                   {/* Tier image */}
                   <div className="space-y-2">
-                    <p className="text-[11px] text-muted-foreground">Tier image (optional)</p>
+                    <p className="text-xs text-muted-foreground">Tier image (optional)</p>
                     {editImageUrl && (
                       <div className="relative w-24 h-24">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -328,7 +328,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
                       disabled={imageUploading}
-                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                     >
                       {imageUploading ? "Uploading…" : editImageUrl ? "Replace image" : "Upload image"}
                     </button>
@@ -354,19 +354,19 @@ export function SupportTiersManager({ initialTiers }: Props) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium">{tier.title}</p>
                       {tier.tier_type && (
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground border border-border px-1.5 py-0.5">
+                        <span className="text-xs uppercase tracking-widest text-muted-foreground border border-border px-1.5 py-0.5">
                           {TIER_TYPE_LABELS[tier.tier_type]}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       NZD {tier.price.toLocaleString("en-NZ")}
                       {tier.description ? `: ${tier.description}` : ""}
                       {!tier.is_active && " · Hidden"}
                     </p>
                     {/* Intent count badge */}
                     {intents !== null && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {(intentsByTier[tier.id] ?? []).length} interested
                       </p>
                     )}
@@ -378,18 +378,18 @@ export function SupportTiersManager({ initialTiers }: Props) {
                             <div className="flex-1 min-w-0">
                               {i.profile ? (
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[11px] font-medium text-foreground">{i.profile.full_name ?? i.profile.username}</span>
-                                  <span className="text-[11px] text-muted-foreground">·</span>
-                                  <span className="text-[11px] text-muted-foreground font-mono">{i.email}</span>
+                                  <span className="text-xs font-medium text-foreground">{i.profile.full_name ?? i.profile.username}</span>
+                                  <span className="text-xs text-muted-foreground">·</span>
+                                  <span className="text-xs text-muted-foreground font-mono">{i.email}</span>
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-muted-foreground font-mono">{i.email}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{i.email}</span>
                               )}
                             </div>
                             {i.profile && (
                               <a
                                 href={`/${i.profile.username}`}
-                                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
                               >
                                 View profile →
                               </a>
@@ -399,7 +399,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 shrink-0 text-[11px]">
+                  <div className="flex items-center gap-3 shrink-0 text-xs">
                     <button onClick={() => startEdit(tier)} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
                       <Pencil className="w-3 h-3" />Edit
                     </button>
@@ -467,12 +467,12 @@ export function SupportTiersManager({ initialTiers }: Props) {
       {/* Preset grid — grouped by category */}
       {!showForm && (
         <div className="space-y-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">Quick start</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Quick start</p>
           {PRESET_GROUPS.map(group => (
             <div key={group.type} className="space-y-2">
               <div>
                 <p className="text-xs font-medium">{group.label}</p>
-                <p className="text-[11px] text-muted-foreground">Best for: {group.bestFor}</p>
+                <p className="text-xs text-muted-foreground">Best for: {group.bestFor}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {group.presets.map(preset => {
@@ -486,8 +486,8 @@ export function SupportTiersManager({ initialTiers }: Props) {
                       className="text-left border border-border p-3 hover:border-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed space-y-1"
                     >
                       <p className="text-xs font-medium">{preset.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{preset.description}</p>
-                      <p className="text-[11px] text-muted-foreground">{preset.priceLabel}</p>
+                      <p className="text-xs text-muted-foreground">{preset.description}</p>
+                      <p className="text-xs text-muted-foreground">{preset.priceLabel}</p>
                     </button>
                   );
                 })}
@@ -500,9 +500,9 @@ export function SupportTiersManager({ initialTiers }: Props) {
       {/* Custom add form */}
       {showForm ? (
         <form onSubmit={handleCreate} className="space-y-3 border border-border p-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">New Tier</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">New Tier</p>
           <TierForm form={form} setForm={setForm} inputCls={inputCls} />
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
           <div className="flex items-center gap-3">
             <button
               type="submit"
@@ -570,7 +570,7 @@ function TierForm({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2 space-y-1">
-        <label className="text-[11px] text-muted-foreground">Title</label>
+        <label className="text-xs text-muted-foreground">Title</label>
         <input
           type="text"
           value={form.title}
@@ -581,7 +581,7 @@ function TierForm({
         />
       </div>
       <div className="space-y-1">
-        <label className="text-[11px] text-muted-foreground">Type</label>
+        <label className="text-xs text-muted-foreground">Type</label>
         <select
           value={form.tier_type}
           onChange={e => setForm(f => ({ ...f, tier_type: e.target.value as SupportTierType | "" }))}
@@ -595,7 +595,7 @@ function TierForm({
         </select>
       </div>
       <div className="space-y-1">
-        <label className="text-[11px] text-muted-foreground">Price (NZD)</label>
+        <label className="text-xs text-muted-foreground">Price (NZD)</label>
         <input
           type="number"
           value={form.price}
@@ -608,7 +608,7 @@ function TierForm({
         />
       </div>
       <div className="col-span-2 space-y-1">
-        <label className="text-[11px] text-muted-foreground">Description</label>
+        <label className="text-xs text-muted-foreground">Description</label>
         <input
           type="text"
           value={form.description}
@@ -634,8 +634,8 @@ function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRe
   const commission = priceMajor * 0.1;
   const takeHome = priceMajor - commission;
   return (
-    <div className="col-span-2 border border-stone-200 px-3 py-2.5 space-y-1 text-[11px]">
-      <p className="font-medium uppercase tracking-widest text-[10px] text-stone-500">
+    <div className="col-span-2 border border-stone-200 px-3 py-2.5 space-y-1 text-xs">
+      <p className="font-medium uppercase tracking-widest text-xs text-stone-500">
         Your take-home{isRecurring ? " / month" : ""}
       </p>
       <div className="flex justify-between">
@@ -650,7 +650,7 @@ function PayoutBreakdown({ priceMajor, isRecurring }: { priceMajor: number; isRe
         <span className="font-medium">You receive</span>
         <span className="font-mono font-medium">NZD {takeHome.toFixed(2)}</span>
       </div>
-      <p className="text-[10px] text-muted-foreground pt-1 leading-relaxed">
+      <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
         Card processing fee (2.9% + 30c) is added to the supporter&rsquo;s total at checkout. It doesn&rsquo;t come out of your share.
       </p>
     </div>

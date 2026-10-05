@@ -54,7 +54,7 @@ export function MediumInput({ defaultValue = [] }: Props) {
               }`}
             >
               {active && (
-                <span className="absolute top-1.5 right-1.5 text-[10px] leading-none">✓</span>
+                <span className="absolute top-1.5 right-1.5 text-xs leading-none">✓</span>
               )}
               {m}
             </button>

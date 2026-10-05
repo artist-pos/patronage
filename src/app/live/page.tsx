@@ -87,12 +87,12 @@ export default async function LivePage() {
             )}
             <div className="flex-1 px-6 py-5 flex flex-col justify-center gap-2 bg-white">
               <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-[10px] font-medium text-red-600 uppercase tracking-wider">
+                <span className="flex items-center gap-1 text-xs font-medium text-red-600 uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
                   Featured
                 </span>
                 {featured.opportunity_type && (
-                  <span className="text-[10px] bg-stone-100 text-stone-600 rounded-full px-2 py-0.5">
+                  <span className="text-xs bg-stone-100 text-stone-600 rounded-full px-2 py-0.5">
                     {featured.opportunity_type}
                   </span>
                 )}

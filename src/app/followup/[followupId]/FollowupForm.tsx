@@ -41,7 +41,8 @@ export function FollowupForm({ followupId }: Props) {
           name="further_opportunities"
           rows={3}
           placeholder="e.g. Shortlisted for Creative NZ Toi Uru Kahikatea, applied for three residencies…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 
@@ -54,7 +55,8 @@ export function FollowupForm({ followupId }: Props) {
           name="exhibitions"
           rows={3}
           placeholder="e.g. Group show at Objectspace, Auckland; solo exhibition at regional gallery…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 
@@ -67,7 +69,8 @@ export function FollowupForm({ followupId }: Props) {
           name="press_coverage"
           rows={3}
           placeholder="e.g. Feature in Pantograph Punch, interview on RNZ…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 
@@ -96,7 +99,8 @@ export function FollowupForm({ followupId }: Props) {
           name="community_projects"
           rows={3}
           placeholder="e.g. Youth arts workshop, mural commission for local council…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 
@@ -109,7 +113,8 @@ export function FollowupForm({ followupId }: Props) {
           name="testimonial"
           rows={4}
           placeholder="e.g. This residency gave me time and space to develop a body of work I wouldn't otherwise have been able to create…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 
@@ -135,7 +140,8 @@ export function FollowupForm({ followupId }: Props) {
           name="additional_notes"
           rows={3}
           placeholder="Any other notes or context…"
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none"
+          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
+          onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
         />
       </div>
 

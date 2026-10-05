@@ -99,7 +99,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
                 type="button"
                 onClick={() => handleDelete(grant.id)}
                 aria-label="Remove grant"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -150,7 +150,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
       {/* Add form */}
       {showForm ? (
         <div className="border border-black p-4 space-y-3">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Add grant</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Add grant</p>
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium">Grant / award title *</label>
@@ -218,7 +218,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
             />
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
 
           <div className="flex items-center gap-2">
             <button
@@ -250,7 +250,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
       )}
 
       {error && !showForm && (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-sm text-destructive" role="alert">{error}</p>
       )}
     </div>
   );

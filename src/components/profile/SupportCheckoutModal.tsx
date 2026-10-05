@@ -172,7 +172,7 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
                 : "Pay via Stripe"}
           </button>
 
-          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
             The processing fee covers third-party card costs (Stripe) so {artistName} receives the full support amount.
           </p>
         </form>

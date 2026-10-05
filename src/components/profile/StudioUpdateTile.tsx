@@ -47,7 +47,7 @@ export function StudioUpdateTile({ u }: { u: ProjectUpdateWithArtist }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">
               {u.content_type}
             </span>
           </div>
@@ -55,7 +55,7 @@ export function StudioUpdateTile({ u }: { u: ProjectUpdateWithArtist }) {
       </div>
       {u.caption && (
         <div className="px-2 py-1.5 border-t border-border min-w-0 overflow-hidden">
-          <p className="text-[10px] text-muted-foreground line-clamp-2">{u.caption}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{u.caption}</p>
         </div>
       )}
     </Link>

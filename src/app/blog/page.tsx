@@ -93,7 +93,7 @@ export default async function BlogPage() {
                       style={{ background: "linear-gradient(145deg,#333,#555)" }}
                     />
                     <span className="text-xs font-medium">{author}</span>
-                    <span className="text-[11px] text-[color:var(--fg-subtle)]">
+                    <span className="text-xs text-[color:var(--fg-subtle)]">
                       · {readTime(text)} · {formatDate(post.published_at ?? post.created_at)}
                     </span>
                   </div>

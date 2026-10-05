@@ -130,7 +130,7 @@ function CheckoutForm({
         </button>
       </div>
 
-      <p className="text-[11px] text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center">
         Secured by Stripe · You&apos;ll receive a verified certificate of authenticity after purchase.
       </p>
     </form>

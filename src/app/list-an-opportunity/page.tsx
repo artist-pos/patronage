@@ -9,12 +9,12 @@ export const metadata: Metadata = {
     "Three ways to get an opportunity in front of artists in Aotearoa and Australia: a free listing, a managed application pipeline, or a tip about a listing you found somewhere else.",
 };
 
-const NUM = "font-mono text-[11px] tracking-[0.08em] text-[color:var(--fg-subtle)]";
+const NUM = "font-mono text-xs tracking-[0.08em] text-[color:var(--fg-subtle)]";
 
 function Price({ children, free }: { children: React.ReactNode; free?: boolean }) {
   return (
     <span
-      className={`font-mono text-[11px] uppercase tracking-[0.08em] ${
+      className={`font-mono text-xs uppercase tracking-[0.08em] ${
         free ? "text-[color:var(--success)]" : "text-[color:var(--fg-muted)]"
       }`}
     >

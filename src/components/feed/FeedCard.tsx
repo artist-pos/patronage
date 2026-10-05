@@ -379,7 +379,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           <Link href={href} prefetch={false} className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="flex items-center gap-1.5 border border-border bg-background/90 px-3 py-1.5">
               <ExternalLink className="h-3 w-3" />
-              <span className="font-mono text-[11px]">{u.embed_provider ?? "View embed"}</span>
+              <span className="font-mono text-xs">{u.embed_provider ?? "View embed"}</span>
             </div>
           </Link>
           <iframe
@@ -443,7 +443,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); }}
               onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
-              className="mb-3 block cursor-pointer font-mono text-[11px] text-[color:var(--fg-muted)] underline underline-offset-2 transition-colors hover:text-foreground"
+              className="mb-3 block cursor-pointer font-mono text-xs text-[color:var(--fg-muted)] underline underline-offset-2 transition-colors hover:text-foreground"
             >
               Read article →
             </span>

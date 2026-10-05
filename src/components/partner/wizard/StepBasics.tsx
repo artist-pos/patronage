@@ -469,7 +469,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             placeholder="One-line summary (max 160 characters)"
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
           />
-          <p className="text-[11px] text-stone-400 text-right">{(opp.caption ?? "").length}/160</p>
+          <p className="text-xs text-stone-400 text-right">{(opp.caption ?? "").length}/160</p>
         </div>
 
         {/* Description */}
@@ -742,7 +742,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
     {/* Live preview */}
     <div className="lg:sticky lg:top-[57px] space-y-2">
-      <p className="text-[11px] font-medium uppercase tracking-widest text-stone-400">Preview</p>
+      <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Preview</p>
       <BasicsPreview opp={opp} />
     </div>
     </div>
@@ -772,12 +772,12 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           {opp.type && (
-            <span className="text-[10px] font-medium uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-0.5">
+            <span className="text-xs font-medium uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-0.5">
               {opp.type}
             </span>
           )}
           {opp.country && (
-            <span className="text-[10px] text-stone-400">{opp.country}{opp.city ? ` · ${opp.city}` : ""}</span>
+            <span className="text-xs text-stone-400">{opp.country}{opp.city ? ` · ${opp.city}` : ""}</span>
           )}
         </div>
 
@@ -794,7 +794,7 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
           <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{opp.caption}</p>
         )}
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-400 pt-1 border-t border-black/10">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-400 pt-1 border-t border-black/10">
           {opp.deadline && (
             <span>Closes {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
           )}
@@ -804,7 +804,7 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
         {(opp.sub_categories ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1">
             {(opp.sub_categories ?? []).slice(0, 4).map((d) => (
-              <span key={d} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5">{d}</span>
+              <span key={d} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5">{d}</span>
             ))}
           </div>
         )}

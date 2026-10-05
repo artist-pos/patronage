@@ -143,7 +143,7 @@ function SortableStubCard({
       {/* Fields */}
       <div className="flex-1 min-w-0 space-y-2">
         {stub.uploadError && (
-          <p className="text-xs text-destructive">{stub.uploadError}</p>
+          <p className="text-sm text-destructive">{stub.uploadError}</p>
         )}
         <input
           type="text"
@@ -446,8 +446,9 @@ export function SeriesCreatorClient({ profileId }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="A few sentences about this series…"
-            rows={3}
-            className="w-full text-sm border border-border focus:border-foreground focus:outline-none p-2 bg-transparent resize-none"
+            rows={2}
+            className="w-full text-sm border border-border focus:border-foreground focus:outline-none p-2 bg-transparent resize-none overflow-hidden"
+            onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
         </div>
       </div>
@@ -481,7 +482,7 @@ export function SeriesCreatorClient({ profileId }: Props) {
           onDrop={handleArtworkDrop}
         >
           <p className="text-xs text-muted-foreground">Drop artwork images here or click to upload</p>
-          <p className="text-[10px] text-stone-400 mt-1">Multiple files supported</p>
+          <p className="text-xs text-stone-400 mt-1">Multiple files supported</p>
           <input
             ref={artworkInputRef}
             type="file"
@@ -502,7 +503,7 @@ export function SeriesCreatorClient({ profileId }: Props) {
         </button>
       </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <button
         type="button"

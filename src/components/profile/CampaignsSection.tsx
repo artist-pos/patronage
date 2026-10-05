@@ -89,7 +89,7 @@ export function CampaignsSection({ campaigns, username }: Props) {
                 {href && (
                   <Link
                     href={href}
-                    className="text-[10px] font-medium border border-black px-2 py-1 hover:bg-foreground hover:text-background transition-colors self-start mt-auto"
+                    className="text-xs font-medium border border-black px-2 py-1 hover:bg-foreground hover:text-background transition-colors self-start mt-auto"
                   >
                     View →
                   </Link>

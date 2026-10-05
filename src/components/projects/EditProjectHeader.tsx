@@ -67,9 +67,10 @@ export function EditProjectHeader({ projectId, initialTitle, initialDescription 
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        rows={3}
-        className="w-full text-base leading-relaxed text-muted-foreground border border-border px-3 py-2 focus:outline-none focus:border-black resize-none placeholder:text-muted-foreground"
+        rows={2}
+        className="w-full text-base leading-relaxed text-muted-foreground border border-border px-3 py-2 focus:outline-none focus:border-black resize-none overflow-hidden placeholder:text-muted-foreground"
         placeholder="Description (optional) — what is this project about?"
+        onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center gap-2">

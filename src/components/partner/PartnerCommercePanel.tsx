@@ -94,7 +94,7 @@ export function PartnerCommercePanel({
                   PRICING_CURRENCY,
                 )}
               </button>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Includes a {formatCents(
                   grossUpForStripe(PIPELINE_ACTIVATION_PRICE_CENTS).stripeFeeCents,
                   PRICING_CURRENCY,
@@ -131,7 +131,7 @@ export function PartnerCommercePanel({
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Includes a 2.9% + 30c card processing fee.
           </p>
         </div>

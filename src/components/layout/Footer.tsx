@@ -50,7 +50,7 @@ const COLUMNS: FooterColumn[] = [
 /* v2: column labels in the mono interface voice */
 function ColumnLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
+    <div className="font-mono text-xs uppercase tracking-[0.08em] text-[color:var(--fg-subtle)]">
       {children}
     </div>
   );
@@ -155,7 +155,7 @@ export function Footer() {
         </div>
 
         {/* ── Bottom bar — mono voice ── */}
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border py-5 font-mono text-[11px] text-[color:var(--fg-subtle)]">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border py-5 font-mono text-xs text-[color:var(--fg-subtle)]">
           <span>
             © {new Date().getFullYear()} Patronage{" "}
             <span className="text-border">·</span>{" "}
