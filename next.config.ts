@@ -61,6 +61,7 @@ const nextConfig: NextConfig = {
       },
       // Unified workspace (Oct 2026 — Phase 12 UX overhaul)
       { source: "/partner/dashboard", destination: "/studio", permanent: true },
+      { source: "/settings", destination: "/studio/account", permanent: true },
       // Studio renames (Oct 2026 — Phase 1 UX overhaul)
       { source: "/studio/campaigns", destination: "/studio/qr-codes", permanent: true },
       { source: "/studio/campaigns/:path*", destination: "/studio/qr-codes/:path*", permanent: true },
