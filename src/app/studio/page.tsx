@@ -253,7 +253,6 @@ async function PatronHome() {
           { href: "/opportunities", label: "Opportunities", description: "Browse grants, residencies, and open calls" },
           { href: "/messages", label: "Messages", description: "Conversations with artists and partners" },
           { href: "/dashboard?tab=subscriptions", label: "My Support", description: "Artists and tiers you support" },
-          { href: "/settings", label: "Settings", description: "Profile, preferences, and account" },
           { href: "/artists", label: "Artists", description: "Discover artists on Patronage" },
         ].map((item) => (
           <Link
@@ -302,7 +301,6 @@ function PartnerHome() {
           { href: "/partner/roster", label: "Your Artists", description: "Artists associated with your organisation" },
           { href: "/messages", label: "Messages", description: "Conversations with artists and patrons" },
           { href: "/list-an-opportunity", label: "List an Opportunity", description: "Publish a new call, grant, or residency" },
-          { href: "/settings", label: "Settings", description: "Profile, preferences, and account" },
           { href: "/artists", label: "Artists", description: "Discover artists on Patronage" },
         ].map((item) => (
           <Link

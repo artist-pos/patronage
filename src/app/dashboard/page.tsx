@@ -46,10 +46,6 @@ const NAV_LINKS = [
   { id: "messages",   label: "Messages",   href: "/messages"             },
 ] as const;
 
-const SECONDARY_LINKS = [
-  { id: "settings", label: "Settings", href: "/settings" },
-] as const;
-
 const OPP_FILTERS = ["all", "saved", "closing", "applied", "expired"] as const;
 type OppFilter = typeof OPP_FILTERS[number];
 
@@ -256,23 +252,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             ))}
           </div>
 
-          <div className="border-t border-border" />
-
-          {/* Secondary */}
-          <div className="space-y-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
-              Settings
-            </p>
-            {SECONDARY_LINKS.map(({ id, label, href }) => (
-              <Link
-                key={id}
-                href={href}
-                className="flex items-center px-3 py-2 text-sm rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
         </nav>
 
         {/* Content */}

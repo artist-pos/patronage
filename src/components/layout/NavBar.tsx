@@ -59,9 +59,6 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                   )}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">Settings</Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => signOut()}>
                 Sign Out
@@ -133,9 +130,6 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                 >
                   Messages
                   {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
-                </Link>
-                <Link href="/settings" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  Settings
                 </Link>
                 <div className="border-t border-border pt-3">
                   <form action={signOut}>
