@@ -64,7 +64,7 @@ export function TerminateAccountButton() {
             variant="outline"
             className="border-black text-destructive hover:bg-destructive/5"
           >
-            Terminate Account
+            Close account
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent className="border border-black max-h-[90vh] overflow-y-auto">

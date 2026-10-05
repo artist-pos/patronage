@@ -77,7 +77,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
 
   async function handleStartProject(grant: Grant) {
     if (grant.project_id) {
-      router.push("/studio?section=projects");
+      router.push("/studio/feed?ft=projects");
       return;
     }
     setStartingProject(grant.id);
@@ -85,7 +85,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
     setStartingProject(null);
     if (result.error) { setError(result.error); return; }
     setGrants(prev => prev.map(g => g.id === grant.id ? { ...g, project_id: result.projectId ?? null } : g));
-    router.push("/studio?section=projects");
+    router.push("/studio/feed?ft=projects");
   }
 
   return (
@@ -125,7 +125,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
                 {grant.project_id ? (
                   <button
                     type="button"
-                    onClick={() => router.push("/studio?section=projects")}
+                    onClick={() => router.push("/studio/feed?ft=projects")}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                   >
                     <ExternalLink className="w-3 h-3" />

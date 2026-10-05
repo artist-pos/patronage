@@ -30,7 +30,7 @@ If you'd like to take ownership of the listing, the link below lets you claim it
 
 ${vars.claimUrl}
 
-One other thing: Patronage has a pipeline tool that lets creatives apply directly through the platform. You'd receive applications in a structured dashboard. Shortlist, request assets, download files, instead of managing submissions through email or a form. Happy to set that up at no cost while we're in early access.
+One other thing: Patronage has an open call tool that lets creatives apply directly through the platform. You'd receive applications in a structured dashboard. Shortlist, request assets, download files, instead of managing submissions through email or a form. Happy to set that up at no cost while we're in early access.
 
 Blake
 Patronage · patronage.nz`;

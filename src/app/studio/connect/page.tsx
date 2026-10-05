@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { ConnectForm } from "./ConnectForm";
 import type { Metadata } from "next";
 
@@ -20,14 +19,13 @@ export default async function ConnectPage() {
     .single();
 
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
-    redirect("/dashboard");
+    redirect("/studio");
   }
 
   const status = profile.stripe_connect_status as string | null;
 
   return (
-    <StudioPageShell username={profile.username} activeSection="earnings">
-      <div className="max-w-lg space-y-8">
+    <div className="max-w-lg space-y-8">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold tracking-tight">Connect your bank</h2>
           <p className="text-sm text-muted-foreground">
@@ -78,7 +76,6 @@ export default async function ConnectPage() {
         <p className="text-xs text-muted-foreground">
           Patronage uses <strong>Stripe Connect Express</strong> — your banking details are held by Stripe, not Patronage.
         </p>
-      </div>
-    </StudioPageShell>
+    </div>
   );
 }

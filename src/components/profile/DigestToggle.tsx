@@ -34,7 +34,7 @@ export function DigestToggle({ initial, autoSync }: Props) {
     } else {
       setToast(next ? "Subscribed to weekly digest." : "Unsubscribed from weekly digest.");
     }
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   return (

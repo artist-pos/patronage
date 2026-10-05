@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { deleteSeries } from "@/app/studio/series/actions";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 interface SeriesCard {
   id: string;
@@ -20,9 +21,9 @@ export function SeriesTab({ series: initialSeries }: Props) {
   const [series, setSeries] = useState(initialSeries);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SeriesCard | null>(null);
 
-  async function handleDelete(id: string, title: string) {
-    if (!confirm(`Remove the series "${title}"? The individual artworks won't be deleted.`)) return;
+  async function handleDelete(id: string) {
     setDeleting(id);
     const result = await deleteSeries(id);
     if (result.error) {
@@ -31,6 +32,7 @@ export function SeriesTab({ series: initialSeries }: Props) {
       setSeries(prev => prev.filter(s => s.id !== id));
     }
     setDeleting(null);
+    setDeleteTarget(null);
   }
 
   return (
@@ -89,7 +91,7 @@ export function SeriesTab({ series: initialSeries }: Props) {
                   Edit
                 </Link>
                 <button
-                  onClick={() => handleDelete(s.id, s.title)}
+                  onClick={() => setDeleteTarget(s)}
                   disabled={deleting === s.id}
                   className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-40"
                 >
@@ -100,6 +102,17 @@ export function SeriesTab({ series: initialSeries }: Props) {
           ))}
         </div>
       )}
+
+      <ConfirmationModal
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Remove series?"
+        description={`Remove "${deleteTarget?.title ?? ""}"? The individual artworks won’t be deleted.`}
+        confirmLabel="Remove series"
+        destructive
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget.id); }}
+        isPending={deleting !== null}
+      />
     </div>
   );
 }

@@ -80,7 +80,7 @@ function DirectTransferModal({
         <h3 className="text-base font-semibold text-stone-900 mb-1">Transfer ownership</h3>
         <p className="text-sm text-stone-500 mb-5">
           Transfer <span className="font-medium text-stone-700">{artwork.title ?? "Untitled"}</span> to a new owner.
-          A provenance certificate will be emailed to them.
+          A certificate of authenticity will be emailed to them.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -455,9 +455,9 @@ function TransferCertificate({
 
   return (
     <Document
-      title={`Provenance Certificate — ${workTitle}`}
+      title={`Certificate of Authenticity — ${workTitle}`}
       author="Patronage"
-      subject="Artwork Provenance Certificate"
+      subject="Artwork Certificate of Authenticity"
     >
       {/* ── PAGE 1: The Certificate ─────────────────────────────────────────── */}
       <Page size="A4" orientation={pageOrientation} wrap={false} style={[styles.page, t.body]}>
@@ -476,7 +476,7 @@ function TransferCertificate({
           </View>
         </View>
 
-        <Text style={[styles.certHeading, t.heading]}>CERTIFICATE OF PROVENANCE</Text>
+        <Text style={[styles.certHeading, t.heading]}>CERTIFICATE OF AUTHENTICITY</Text>
         <View style={[styles.hr, t.primaryRule]} />
 
         {/* Artwork image — preserves aspect ratio via objectFit:contain */}
@@ -696,7 +696,7 @@ function buildCertificateEmailHtml({
     <tr><td>
       <p style="margin:0 0 32px;font-size:15px;line-height:1.7;">
         ${esc(artistName)} has registered you as the owner of <strong>${esc(workTitle)}</strong>.
-        Your Certificate of Provenance is attached as a PDF — keep it on record.
+        Your Certificate of Authenticity is attached as a PDF — keep it on record.
       </p>
 
       <p style="margin:0 0 8px;font-size:13px;color:#555;">
@@ -952,7 +952,7 @@ export async function sendTransferCertificate(data: TransferCertificateData): Pr
   const html = buildCertificateEmailHtml({
     workTitle, artistName, patronName, ledgerId, verificationUrl, isNewAccount, claimUrl,
   });
-  const subject = `Provenance Certificate — ${workTitle}`;
+  const subject = `Certificate of Authenticity — ${workTitle}`;
   const resend = new Resend(process.env.RESEND_API_KEY!);
 
   await Promise.all([

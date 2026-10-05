@@ -25,8 +25,9 @@ interface NavBarProps {
 
 export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifications, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
-  const isPartner = role === "partner" || role === "admin";
   const [open, setOpen] = useState(false);
+
+  const workspaceLabel = isArtist ? "Studio" : "Dashboard";
 
   return (
     <>
@@ -47,21 +48,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                   <Link href={`/${username}`}>Profile</Link>
                 </DropdownMenuItem>
               )}
-              {isArtist && (
-                <DropdownMenuItem asChild>
-                  <Link href="/studio">Studio</Link>
-                </DropdownMenuItem>
-              )}
-              {!isArtist && (
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard">Dashboard</Link>
-                </DropdownMenuItem>
-              )}
-              {!isArtist && (
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/collection">Collection</Link>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem asChild>
+                <Link href="/studio">{workspaceLabel}</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/messages" className="flex items-center gap-2">
                   Messages
@@ -70,11 +59,6 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                   )}
                 </Link>
               </DropdownMenuItem>
-              {isPartner && (
-                <DropdownMenuItem asChild>
-                  <Link href="/partner/dashboard">Partner Dashboard</Link>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem asChild>
                 <Link href="/settings">Settings</Link>
               </DropdownMenuItem>
@@ -121,8 +105,6 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
       {/* ── Mobile drawer ─────────────────────────────── */}
       {open && (
         <div className="sm:hidden absolute top-full right-0 bg-background border border-border shadow-lg z-50 px-6 py-4 flex flex-col gap-4 text-sm min-w-[200px]">
-          {/* Signed-out: the bottom nav already covers navigation — the
-              drawer only needs the auth actions */}
           {isLoggedIn && NAV_LINKS.map((l) => (
             <Link
               key={l.href}
@@ -141,21 +123,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                     Profile
                   </Link>
                 )}
-                {isArtist && (
-                  <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    Studio
-                  </Link>
-                )}
-                {!isArtist && (
-                  <Link href="/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    Dashboard
-                  </Link>
-                )}
-                {!isArtist && (
-                  <Link href="/dashboard/collection" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    Collection
-                  </Link>
-                )}
+                <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  {workspaceLabel}
+                </Link>
                 <Link
                   href="/messages"
                   onClick={() => setOpen(false)}
@@ -164,11 +134,6 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                   Messages
                   {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
                 </Link>
-                {isPartner && (
-                  <Link href="/partner/dashboard" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    Partner Dashboard
-                  </Link>
-                )}
                 <Link href="/settings" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                   Settings
                 </Link>

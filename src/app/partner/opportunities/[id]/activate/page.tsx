@@ -27,12 +27,12 @@ export default function ActivatePage({ params }: Props) {
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="w-full max-w-md space-y-8">
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Pipeline activation</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Activate your pipeline</h1>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Publishing fee</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Publish your open call</h1>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Your listing has been submitted for review. To activate the full application pipeline,
-            a one-off payment of <strong>$200 NZD</strong> is required.
-            Your first pipeline round is free — this applies from your second listing onwards.
+            Your listing has been submitted for review. To publish the full application workflow,
+            a one-off publishing fee of <strong>$200 NZD</strong> is required.
+            Your first open call is free — this applies from your second listing onwards.
           </p>
         </div>
 
@@ -40,7 +40,7 @@ export default function ActivatePage({ params }: Props) {
           <div className="space-y-2">
             {[
               "Custom application questions",
-              "Kanban, Table, and Triage pipeline views",
+              "Kanban, Table, and Triage views",
               "Committee scoring and rubric builder",
               "Staged artist notifications",
               "Production asset delivery",
@@ -53,7 +53,7 @@ export default function ActivatePage({ params }: Props) {
             ))}
           </div>
           <div className="border-t border-black/10 pt-4 flex items-baseline justify-between">
-            <span className="text-sm text-stone-500">Pipeline activation</span>
+            <span className="text-sm text-stone-500">Publishing fee</span>
             <span className="text-lg font-semibold">$200 NZD</span>
           </div>
           <p className="text-[11px] text-stone-400">+ 2.9% + 30c card processing fee (Stripe)</p>

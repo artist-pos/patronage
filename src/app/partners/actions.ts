@@ -335,9 +335,9 @@ export async function submitOpportunityAction(
     lineItems.push({
       amountCents: PIPELINE_ACTIVATION_PRICE_CENTS,
       currency: PRICING_CURRENCY,
-      productName: `Pipeline activation: ${title}`,
+      productName: `Publishing fee: ${title}`,
       productDescription:
-        "Activates Patronage's pipeline submission flow for this opportunity.",
+        "Publishes your open call on Patronage with the full application pipeline.",
     });
   }
 

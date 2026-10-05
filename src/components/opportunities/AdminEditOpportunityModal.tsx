@@ -102,7 +102,7 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
       }, 1200);
     } catch (err) {
       setToast(err instanceof Error ? err.message : "Save failed");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setSaving(false);
     }

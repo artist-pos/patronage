@@ -24,7 +24,7 @@ export function ShareTrigger({ payload, variant = "icon", className }: Props) {
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
           aria-label="Share"
-          className={className ?? "w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"}
+          className={className ?? "w-11 h-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"}
         >
           <Share2 className="w-4 h-4 text-stone-500" />
         </button>
@@ -32,7 +32,7 @@ export function ShareTrigger({ payload, variant = "icon", className }: Props) {
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
-          className={className ?? "flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 hover:bg-muted transition-colors"}
+          className={className ?? "flex items-center gap-1.5 text-sm border border-border px-3 py-2 min-h-[44px] hover:bg-muted transition-colors"}
         >
           <Share2 className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline">Share</span>

@@ -25,7 +25,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
 
   function showToast(msg: string) {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   function handleClose() {
@@ -70,9 +70,9 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
       // (In practice the patron pays, but the artist initiates and is redirected
       // to a confirmation page; the checkout URL is shared via the message card.)
       handleClose();
-      showToast("Transfer offer sent — patron will receive a payment link.");
+      showToast("Offer sent — patron will receive a payment link.");
     } else {
-      showToast("Gift transfer offer sent");
+      showToast("Gift offer sent");
       handleClose();
     }
   }
@@ -89,7 +89,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
         className="text-xs border-black"
         onClick={() => setOpen(true)}
       >
-        Transfer Artwork →
+        Sell or Give to Someone →
       </Button>
 
       {toast && (
@@ -106,7 +106,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
           <div className="bg-background border border-black w-full max-w-md mx-4 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-widest">
-                {step === "select" ? "Select Work to Transfer" : "Set Sale Price"}
+                {step === "select" ? "Select Work" : "Set Sale Price"}
               </h2>
               <button onClick={handleClose} className="text-xs text-muted-foreground hover:text-foreground">
                 ✕
@@ -170,7 +170,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                   </p>
                   <div className="flex gap-2">
                     <div className="flex-1 space-y-1">
-                      <label className="text-[11px] text-muted-foreground">Price (leave blank for gift)</label>
+                      <label className="text-sm text-muted-foreground">Price (leave blank for gift)</label>
                       <input
                         type="text"
                         value={priceText}
@@ -181,7 +181,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11px] text-muted-foreground">Currency</label>
+                      <label className="text-sm text-muted-foreground">Currency</label>
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value as "NZD" | "AUD")}
@@ -194,7 +194,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                   </div>
 
                   {priceMajor > 0 && (
-                    <div className="border border-border px-3 py-2 space-y-1 text-[11px]">
+                    <div className="border border-border px-3 py-2 space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Sale price</span>
                         <span className="font-mono">{currency} {priceMajor.toFixed(2)}</span>
@@ -207,14 +207,14 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                         <span className="font-medium">Your take-home</span>
                         <span className="font-mono font-medium">{currency} {takeHome.toFixed(2)}</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground pt-0.5">
+                      <p className="text-sm text-muted-foreground pt-0.5">
                         Card processing fee (2.9% + 30c) added to patron&rsquo;s total at checkout.
                       </p>
                     </div>
                   )}
 
                   {priceMajor === 0 && priceText === "" && (
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       This will be recorded as a gift on the provenance ledger.
                     </p>
                   )}
@@ -227,7 +227,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                       ? "Sending…"
                       : priceMajor > 0
                       ? `Send Offer — ${currency} ${priceMajor.toFixed(2)}`
-                      : "Send Gift Transfer"}
+                      : "Send as Gift"}
                   </Button>
                 </div>
               </>

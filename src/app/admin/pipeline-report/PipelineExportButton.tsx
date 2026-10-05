@@ -94,7 +94,7 @@ export function PipelineExportButton({ report }: { report: PipelineReport }) {
       onClick={exportCSV}
       className="text-xs border border-black px-4 py-2 hover:bg-muted transition-colors cursor-pointer"
     >
-      Export all pipeline data ↓
+      Export all open call data ↓
     </button>
   );
 }

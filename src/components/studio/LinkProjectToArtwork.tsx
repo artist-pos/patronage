@@ -49,7 +49,7 @@ export function LinkProjectToArtwork({ artworkId, projects }: Props) {
           {projects.length === 0 ? (
             <p className="text-sm text-stone-500">
               No unlinked projects available. Create one from the{" "}
-              <a href="/studio?section=feed&ft=projects" className="underline underline-offset-2 hover:text-stone-800">
+              <a href="/studio/feed?ft=projects" className="underline underline-offset-2 hover:text-stone-800">
                 Studio Feed
               </a>
               , or all your existing projects are already linked to other works.

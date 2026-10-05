@@ -29,7 +29,7 @@ export default async function OnboardingPartnerPage({ searchParams }: Props) {
   ]);
 
   if (!profile?.role) redirect("/onboarding/role");
-  if (profile.role !== "partner") redirect("/dashboard");
+  if (profile.role !== "partner") redirect("/studio");
 
   const seeded = profile as Profile & {
     city_id?: string | null;

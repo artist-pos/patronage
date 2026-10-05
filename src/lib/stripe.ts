@@ -3,7 +3,7 @@ import type { CommerceSurface } from "@/lib/commerce-fee";
 
 /**
  * Single Stripe client used by every commerce surface (resale, primary
- * sale, pipeline entry fees, featured listings, support tiers). Throws on
+ * sale, publishing fees, featured listings, support tiers). Throws on
  * missing env so misconfigurations fail at boot rather than at first
  * checkout. Environment variables required:
  *

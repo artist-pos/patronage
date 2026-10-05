@@ -679,7 +679,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
             {/* Bio */}
             <div className="space-y-1.5 border-t border-border pt-5">
               <div className="flex items-center justify-between gap-3">
-                <label className="text-xs font-medium">Bio</label>
+                <label className="text-sm font-medium">Bio</label>
                 {missingKeys.has("bio") && (
                   <button
                     type="button"
@@ -791,8 +791,8 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
               ) : (
                 <div className="border border-dashed border-border px-4 py-3 space-y-1">
                   <p className="t-body-sm">No professional CV uploaded.</p>
-                  <a href="/settings?tab=cv-press" target="_blank" className="t-mono-sm underline underline-offset-2">
-                    Upload one in Settings →
+                  <a href="/studio/profile" target="_blank" className="t-mono-sm underline underline-offset-2">
+                    Upload one in Studio →
                   </a>
                 </div>
               )}
@@ -1111,7 +1111,7 @@ export function ApplyModal({ opportunity, artistProfile, artistWorks, availableW
           )}
 
           {error && (
-            <p className="border-l-2 border-[color:var(--urgent)] pl-3 text-xs text-[color:var(--urgent)]">
+            <p className="border-l-2 border-[color:var(--urgent)] pl-3 text-sm text-[color:var(--urgent)]">
               {error}
             </p>
           )}

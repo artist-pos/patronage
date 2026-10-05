@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   DndContext,
   closestCenter,
@@ -36,6 +37,7 @@ import {
   removeFromArtistProfile,
 } from "@/app/profile/artwork-delete-actions";
 import { formatPrice } from "@/lib/format-price";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -402,6 +404,10 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
   const [items, setItems] = useState<MergedItem[]>(() => [...seriesItems, ...works].sort(byPosition));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    item: MergedItem;
+    action: "delete" | "unlist" | "archive" | "requestDeletion";
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -455,13 +461,8 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
       else patch(item.id, { hide_from_archive: !item.hide_from_archive });
       setBusy(null);
     },
-    onDelete: async (item) => {
-      if (!confirm("Permanently delete this work? This cannot be undone.")) return;
-      setBusy(item.id);
-      const result = await deletePortfolioWork(item.id);
-      if (result.error) showError(result.error);
-      else setItems(prev => prev.filter(i => i.id !== item.id));
-      setBusy(null);
+    onDelete: (item) => {
+      setConfirmAction({ item, action: "delete" });
     },
     onToggleHideListing: async (item) => {
       setBusy(item.id);
@@ -470,21 +471,11 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
       else patch(item.id, { hide_available: !item.hide_available });
       setBusy(null);
     },
-    onUnlist: async (item) => {
-      if (!confirm("Remove this work from your available listings? It will move to Archival, not be deleted.")) return;
-      setBusy(item.id);
-      const result = await unlistWork(item.id);
-      if (result.error) showError(result.error);
-      else patch(item.id, { is_available: false, status: "archival" });
-      setBusy(null);
+    onUnlist: (item) => {
+      setConfirmAction({ item, action: "unlist" });
     },
-    onArchive: async (item) => {
-      if (!confirm("Archive this work? It will move to Archival and be hidden from your profile, but provenance records are preserved.")) return;
-      setBusy(item.id);
-      const result = await archiveWork(item.id);
-      if (result.error) showError(result.error);
-      else patch(item.id, { is_available: false, hide_from_archive: true, status: "archival" });
-      setBusy(null);
+    onArchive: (item) => {
+      setConfirmAction({ item, action: "archive" });
     },
     onRemoveFromProfile: async (item) => {
       setBusy(item.id);
@@ -493,15 +484,58 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
       else patch(item.id, { hidden_from_artist: true });
       setBusy(null);
     },
-    onRequestDeletion: async (item) => {
-      if (!confirm("Send a deletion request to the collector? They'll need to approve before the work is removed.")) return;
-      setBusy(item.id);
-      const result = await requestArtworkDeletion(item.id);
-      if (result.error) { showError(result.error); setBusy(null); return; }
-      if (result.conversationId) router.push(`/messages/${result.conversationId}`);
-      setBusy(null);
+    onRequestDeletion: (item) => {
+      setConfirmAction({ item, action: "requestDeletion" });
     },
   };
+
+  const CONFIRM_CONFIG: Record<string, { title: string; description: string; label: string }> = {
+    delete: {
+      title: "Delete work?",
+      description: "This work will be permanently deleted. This cannot be undone.",
+      label: "Delete work",
+    },
+    unlist: {
+      title: "Remove listing?",
+      description: "This work will be removed from your available listings and moved to Archival. It will not be deleted.",
+      label: "Remove listing",
+    },
+    archive: {
+      title: "Archive work?",
+      description: "This work will move to Archival and be hidden from your profile, but provenance records are preserved.",
+      label: "Archive work",
+    },
+    requestDeletion: {
+      title: "Request deletion?",
+      description: "A deletion request will be sent to the collector. They will need to approve it before the work is removed.",
+      label: "Send request",
+    },
+  };
+
+  async function executeConfirmedAction() {
+    if (!confirmAction) return;
+    const { item, action } = confirmAction;
+    setBusy(item.id);
+    if (action === "delete") {
+      const result = await deletePortfolioWork(item.id);
+      if (result.error) showError(result.error);
+      else setItems(prev => prev.filter(i => i.id !== item.id));
+    } else if (action === "unlist") {
+      const result = await unlistWork(item.id);
+      if (result.error) showError(result.error);
+      else patch(item.id, { is_available: false, status: "archival" });
+    } else if (action === "archive") {
+      const result = await archiveWork(item.id);
+      if (result.error) showError(result.error);
+      else patch(item.id, { is_available: false, hide_from_archive: true, status: "archival" });
+    } else if (action === "requestDeletion") {
+      const result = await requestArtworkDeletion(item.id);
+      if (result.error) { showError(result.error); setBusy(null); setConfirmAction(null); return; }
+      if (result.conversationId) router.push(`/messages/${result.conversationId}`);
+    }
+    setBusy(null);
+    setConfirmAction(null);
+  }
 
   return (
     <div className="space-y-3">
@@ -515,7 +549,12 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
       </div>
 
       {displayed.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8">No works match this filter.</p>
+        <EmptyState
+          title="No works match this filter"
+          description="Try a different filter, or add a new work to get started."
+          actionLabel="Upload a work"
+          actionHref="/studio/works/new"
+        />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={displayed.map(i => i.id)} strategy={view === "grid" ? rectSortingStrategy : verticalListSortingStrategy}>
@@ -536,6 +575,19 @@ export function WorksManager({ works, seriesItems, engagementMap = {}, filter, v
             )}
           </SortableContext>
         </DndContext>
+      )}
+
+      {confirmAction && (
+        <ConfirmationModal
+          open
+          onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+          title={CONFIRM_CONFIG[confirmAction.action].title}
+          description={CONFIRM_CONFIG[confirmAction.action].description}
+          confirmLabel={CONFIRM_CONFIG[confirmAction.action].label}
+          destructive={confirmAction.action === "delete"}
+          onConfirm={executeConfirmedAction}
+          isPending={busy !== null}
+        />
       )}
     </div>
   );

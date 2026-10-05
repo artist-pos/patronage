@@ -130,7 +130,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
     : null;
 
   const TABS: { id: TabId; label: string }[] = [
-    { id: "pipeline", label: `Pipeline${localApps.length > 0 ? ` ${localApps.length}` : ""}` },
+    { id: "pipeline", label: `Applications${localApps.length > 0 ? ` ${localApps.length}` : ""}` },
     { id: "setup", label: "Setup" },
     { id: "analytics", label: "Analytics" },
     { id: "impact", label: `Impact${followups.length > 0 ? ` ${followups.length}` : ""}` },
@@ -160,12 +160,12 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
   const CONFIRM_COPY: Record<string, { title: string; body: string; cta: string; destructive?: boolean }> = {
     close_capacity: {
       title: "Close applications?",
-      body: "Applications will close immediately. Existing submissions are preserved and your pipeline continues normally. Applicants will see the listing as closed.",
+      body: "Applications will close immediately. Existing submissions are preserved and your review workflow continues normally. Applicants will see the listing as closed.",
       cta: "Close applications",
     },
     close_round: {
       title: "End this round?",
-      body: "This ends the open round and closes applications. Your pipeline and all submissions remain accessible. Applicants will see the listing as closed.",
+      body: "This ends the open round and closes applications. Your review workflow and all submissions remain accessible. Applicants will see the listing as closed.",
       cta: "End round",
     },
     delist: {
@@ -188,7 +188,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
 
           {/* Top bar */}
           <div className="h-11 flex items-center justify-between gap-4">
-            <Link href="/partner/dashboard" className="flex items-center gap-1 text-xs text-stone-400 hover:text-foreground transition-colors">
+            <Link href="/studio" className="flex items-center gap-1 text-xs text-stone-400 hover:text-foreground transition-colors">
               ‹ Partner Dashboard
             </Link>
             <div className="flex items-center gap-2">

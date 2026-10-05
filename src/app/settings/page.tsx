@@ -9,15 +9,10 @@ import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
-import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
-import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
-import { GrantsSection } from "@/components/profile/GrantsSection";
 import { DigestToggle } from "@/components/profile/DigestToggle";
-import { PrivateSupporterToggle } from "@/components/profile/PrivateSupporterToggle";
-import { CollectivesManager } from "@/components/profile/CollectivesManager";
+import { PrivacySection } from "@/components/profile/PrivacySection";
 import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import type { Metadata } from "next";
-import type { ExhibitionEntry, BibliographyEntry, CollectiveMember } from "@/types/database";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -25,29 +20,25 @@ interface PageProps {
   searchParams: Promise<{ tab?: string; welcome?: string }>;
 }
 
-// Tabs visible per role
-const ARTIST_TABS  = ["profile", "cv-press", "collectives", "account"] as const;
-const PATRON_TABS  = ["profile", "account"] as const;
-const PARTNER_TABS = ["profile", "account"] as const;
-
-type Tab = typeof ARTIST_TABS[number];
-
-function tabsForRole(role: string): readonly Tab[] {
-  if (role === "artist" || role === "owner") return ARTIST_TABS;
-  if (role === "patron") return PATRON_TABS;
-  return PARTNER_TABS;
-}
+// CV & Press and Groups now live exclusively in /studio/profile
+const SETTINGS_TABS = ["profile", "account"] as const;
+type Tab = typeof SETTINGS_TABS[number];
 
 const TAB_LABELS: Record<Tab, string> = {
-  "profile":    "Profile",
-  "cv-press":   "CV & Press",
-  "collectives":"Collectives",
-  "account":    "Account",
+  "profile": "Profile",
+  "account": "Account",
 };
 
 export default async function SettingsPage({ searchParams }: PageProps) {
-  const { supabase, user } = await getServerUser();
+  const { user } = await getServerUser();
   if (!user) redirect("/auth/login");
+
+  const params = await searchParams;
+
+  // Redirect old CV/Press and Groups bookmarks to /studio/profile
+  if (params.tab === "cv-press" || params.tab === "collectives") {
+    redirect("/studio/profile");
+  }
 
   // The location taxonomy does not depend on the profile, so it loads beside it.
   const [profile, cities, boards, artsOrgs] = await Promise.all([
@@ -62,23 +53,11 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const isArtist  = role === "artist" || role === "owner";
   const isPartner = role === "partner";
 
-  const params = await searchParams;
-  const tabs = tabsForRole(role);
+  const tabs = SETTINGS_TABS;
   const rawTab = params.tab ?? "profile";
   const activeTab: Tab = (tabs as readonly string[]).includes(rawTab)
     ? rawTab as Tab
     : "profile";
-
-  // Collectives — only for artists
-  const { data: membershipsRaw } =
-    isArtist && activeTab === "collectives"
-      ? await supabase
-          .from("collective_members")
-          .select("*, collective:collectives(*)")
-          .eq("user_id", user.id)
-          .order("joined_at", { ascending: true })
-      : { data: null };
-  const initialMemberships = (membershipsRaw ?? []) as CollectiveMember[];
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
@@ -156,7 +135,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                   <div className="space-y-3">
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">Profile Picture</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
                       </p>
                     </div>
@@ -165,7 +144,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                   <div className="space-y-3">
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">Featured Image</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Displayed as the background of your directory card. Landscape works best.
                       </p>
                     </div>
@@ -195,7 +174,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                 <section className="space-y-4 border-t border-border pt-10">
                   <div className="space-y-1">
                     <h2 className="text-base font-semibold">Opportunities</h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Post an open call, commission, grant, or other opportunity for artists. Listings appear on your public profile.
                     </p>
                   </div>
@@ -208,90 +187,26 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                 <section className="space-y-4 border-t border-border pt-10">
                   <div className="space-y-1">
                     <h2 className="text-base font-semibold">Professional CV</h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Shared privately with partners when you apply for roles through Patronage.
                     </p>
                   </div>
                   <PortfolioUploader profileId={user.id} mode="professional-cv" />
                 </section>
               )}
+
+              {/* Artist — link to Studio for CV editing */}
+              {isArtist && (
+                <section className="border-t border-border pt-10">
+                  <p className="text-sm text-muted-foreground">
+                    Edit your CV, press, exhibitions, and group affiliations in your{" "}
+                    <Link href="/studio/profile" className="underline underline-offset-2 text-foreground hover:text-muted-foreground transition-colors">
+                      Studio
+                    </Link>.
+                  </p>
+                </section>
+              )}
             </>
-          )}
-
-          {/* ── CV & Press (artist only) ── */}
-          {activeTab === "cv-press" && isArtist && (
-            <>
-              <section className="space-y-4">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">CV</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Upload a PDF of your CV. It will be publicly linked from your profile.
-                  </p>
-                </div>
-                <PortfolioUploader profileId={user.id} mode="cv" />
-              </section>
-
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Professional CV</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Not shown publicly — shared privately with partners when you apply for roles through Patronage.
-                  </p>
-                </div>
-                <PortfolioUploader profileId={user.id} mode="professional-cv" />
-              </section>
-
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Exhibition History</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Solo and group exhibitions. Displayed on your public profile, grouped by type.
-                  </p>
-                </div>
-                <ExhibitionEditor
-                  profileId={user.id}
-                  initial={(profile.exhibition_history ?? []) as ExhibitionEntry[]}
-                />
-              </section>
-
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Grants Received</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Grants, awards, or funding you have received. These appear as trust signals on your profile.
-                  </p>
-                </div>
-                <GrantsSection
-                  initialGrants={(profile as unknown as { received_grants?: string[] }).received_grants ?? []}
-                />
-              </section>
-
-              <section className="space-y-4 border-t border-border pt-10">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold">Media & Press</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Reviews, interviews, and features. Displayed as bibliographic citations on your profile.
-                  </p>
-                </div>
-                <BibliographyEditor
-                  profileId={user.id}
-                  initial={(profile.press_bibliography ?? []) as BibliographyEntry[]}
-                />
-              </section>
-            </>
-          )}
-
-          {/* ── Collectives (artist only) ── */}
-          {activeTab === "collectives" && isArtist && (
-            <section className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-base font-semibold">Collectives & Groups</h2>
-                <p className="text-xs text-muted-foreground">
-                  Create or join artist collectives. Expand a collective to manage members — search for artists by name or username to add them.
-                </p>
-              </div>
-              <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />
-            </section>
           )}
 
           {/* ── Account ── */}
@@ -300,7 +215,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
               <section className="space-y-4 max-w-lg">
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold">Email Preferences</h2>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {isArtist
                       ? "You are subscribed to the weekly digest by default. Toggle off to unsubscribe."
                       : "Opt in to receive a weekly digest of new and closing-soon opportunities."}
@@ -312,24 +227,33 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                 />
               </section>
 
-              {/* Patron — private supporter mode (migration 170) */}
+              {/* Patron — privacy settings (Phase 10: simplified master toggle) */}
               {role === "patron" && (
                 <section className="space-y-4 border-t border-border pt-10 max-w-lg">
                   <div className="space-y-1">
-                    <h2 className="text-base font-semibold">Profile Privacy</h2>
-                    <p className="text-xs text-muted-foreground">
-                      Control how you appear on your public profile.
+                    <h2 className="text-base font-semibold">Privacy</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Control what visitors see on your public profile.
                     </p>
                   </div>
-                  <PrivateSupporterToggle initial={profile.private_supporter ?? false} />
+                  <PrivacySection
+                    initial={{
+                      collection_public: profile.collection_public ?? true,
+                      show_taste: profile.show_taste ?? true,
+                      show_follows: profile.show_follows ?? true,
+                      show_location: profile.show_location ?? true,
+                      show_previously_collected: profile.show_previously_collected ?? true,
+                      show_supporting: profile.show_supporting ?? true,
+                    }}
+                  />
                 </section>
               )}
 
               <section className="space-y-4 border-t border-black pt-10 max-w-lg">
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold text-destructive">Danger Zone</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Terminating your account is permanent. Your profile and all data will be deleted immediately and cannot be recovered.
+                  <p className="text-sm text-muted-foreground">
+                    Closing your account is permanent. Your profile and all data will be deleted immediately and cannot be recovered.
                   </p>
                 </div>
                 <TerminateAccountButton />

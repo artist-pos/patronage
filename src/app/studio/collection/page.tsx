@@ -6,7 +6,6 @@ import { CollectionGrid } from "@/components/collection/CollectionGrid";
 import { CollectionGroupsManager } from "@/components/collection/CollectionGroupsManager";
 import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
 import { EmbedConfigurator } from "@/components/collection/EmbedConfigurator";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { DEFAULT_EMBED_CONFIG } from "@/types/database";
 import type { CollectionGroup, PatronEmbedConfig } from "@/types/database";
 import type { Metadata } from "next";
@@ -38,8 +37,7 @@ export default async function StudioCollectionPage() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
   return (
-    <StudioPageShell username={username} activeSection="collection">
-      <div className="space-y-12">
+    <div className="space-y-12">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-1">
@@ -92,7 +90,6 @@ export default async function StudioCollectionPage() {
             <CollectionGrid entries={entries} />
           )}
         </div>
-      </div>
-    </StudioPageShell>
+    </div>
   );
 }

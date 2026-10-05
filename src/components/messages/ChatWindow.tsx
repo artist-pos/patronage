@@ -48,7 +48,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
 
   function showToast(msg: string) {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   // Realtime subscription for new messages

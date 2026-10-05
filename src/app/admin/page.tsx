@@ -266,10 +266,10 @@ export default async function AdminPage() {
             value={`${oppEngagement.clickThroughRate}%`}
             sub="clicks ÷ views"
           />
-          <Stat label="Pipeline apps (all time)" value={oppEngagement.pipelineAppsAllTime} />
-          <Stat label="Pipeline apps (last 30d)" value={oppEngagement.pipelineAppsLast30} />
+          <Stat label="Open call apps (all time)" value={oppEngagement.pipelineAppsAllTime} />
+          <Stat label="Open call apps (last 30d)" value={oppEngagement.pipelineAppsLast30} />
           <Stat
-            label="Pipeline completion"
+            label="Open call completion"
             value={`${oppEngagement.pipelineCompletionRate}%`}
             sub="submitted ÷ started"
           />
@@ -285,7 +285,7 @@ export default async function AdminPage() {
           <Stat label="Active listers" value={partnerHealth.activeListers} />
           <Stat label="Repeat listers" value={partnerHealth.repeatListers} />
           <Stat
-            label="Pipeline adoption"
+            label="Open call adoption"
             value={`${partnerHealth.pipelineAdoptionRate}%`}
             sub="of partner listings"
           />

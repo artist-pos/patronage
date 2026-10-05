@@ -36,7 +36,7 @@ export default async function JoinPage({ searchParams }: Props) {
           <div className="space-y-2">
             <h1 className="text-xl font-semibold tracking-tight">You&apos;ve been invited</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You&apos;ve been invited to join a collective on Patronage. Sign up or log in to accept.
+              You&apos;ve been invited to join a group on Patronage. Sign up or log in to accept.
             </p>
           </div>
           <div className="flex flex-col gap-3">
@@ -68,8 +68,8 @@ export default async function JoinPage({ searchParams }: Props) {
         <div className="max-w-sm w-full space-y-4 text-center">
           <h1 className="text-xl font-semibold tracking-tight">Invitation unavailable</h1>
           <p className="text-sm text-muted-foreground">{result.error}</p>
-          <Link href="/studio?section=profile" className="inline-block text-sm underline underline-offset-2">
-            View your collectives →
+          <Link href="/studio/profile" className="inline-block text-sm underline underline-offset-2">
+            View your groups →
           </Link>
         </div>
       </div>
@@ -77,5 +77,5 @@ export default async function JoinPage({ searchParams }: Props) {
   }
 
   // Success — redirect to profile settings collectives tab
-  redirect("/studio?section=profile");
+  redirect("/studio/profile");
 }

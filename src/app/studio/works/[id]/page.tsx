@@ -2,7 +2,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { WorkPageClient } from "./WorkPageClient";
 import { listDocPhotosWithUrls } from "@/lib/artwork-documentation";
 import type { DocPhotoType } from "@/lib/artwork-documentation";
@@ -123,10 +122,10 @@ export default async function WorkEditorPage({ params }: PageProps) {
   const displayTitle = work.title ?? work.caption ?? "Untitled";
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection="works">
+    <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/studio?section=works" className="hover:text-foreground transition-colors">
+        <Link href="/studio/works" className="hover:text-foreground transition-colors">
           Works
         </Link>
         <span>/</span>
@@ -204,6 +203,6 @@ export default async function WorkEditorPage({ params }: PageProps) {
         linkedProjectUpdates={linkedProjectUpdates}
         unlinkableProjects={unlinkableProjects}
       />
-    </StudioPageShell>
+    </>
   );
 }

@@ -83,7 +83,7 @@ function AdminQueueEditForm({ opp, onDone }: { opp: Opportunity; onDone: () => v
     try {
       await updateQueueOpportunity(opp.id, buildUpdatePayload(formData));
       setToast("Saved");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     } catch {
       setToast("Save failed");
       setTimeout(() => setToast(null), 4000);

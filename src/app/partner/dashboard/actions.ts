@@ -265,7 +265,7 @@ export async function updateApplicationStatus(
         if (opp.pipeline_config && notifDefaults?.selected === "hold") {
           const content = {
             subject: `You've been selected for ${opp.title}`,
-            html: `<p>Congratulations ${artistName}, you've been selected for <strong>${opp.title}</strong>. <a href="${siteUrl}/studio?section=campaigns">Create your campaign page →</a></p>`,
+            html: `<p>Congratulations ${artistName}, you've been selected for <strong>${opp.title}</strong>. <a href="${siteUrl}/studio/qr-codes">Create your QR code page →</a></p>`,
           };
           await supabase.from("notification_queue").insert({
             opportunity_id: opp.id,
@@ -281,7 +281,7 @@ export async function updateApplicationStatus(
             artistEmail,
             artistName,
             opportunityTitle: opp.title,
-            studioUrl: `${siteUrl}/studio?section=campaigns`,
+            studioUrl: `${siteUrl}/studio/qr-codes`,
             customMessage: selectionMessage,
           }).catch(console.error);
         }

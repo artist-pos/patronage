@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Project, ProjectUpdateWithArtist } from "@/types/database";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Props {
   projects: Project[];
@@ -16,15 +17,12 @@ export function ProjectsSection({ projects, updates, isOwner }: Props) {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
             Projects
           </h2>
-          <p className="text-sm text-muted-foreground">
-            No projects yet.{" "}
-            <Link
-              href="/studio"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
-            >
-              Create your first project →
-            </Link>
-          </p>
+          <EmptyState
+            title="No projects yet"
+            description="Group your studio updates into projects — exhibitions, commissions, or ongoing bodies of work. Projects appear on your public profile."
+            actionLabel="Create your first project"
+            actionHref="/studio/feed?ft=projects"
+          />
         </section>
       );
     }

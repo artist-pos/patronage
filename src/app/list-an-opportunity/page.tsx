@@ -116,7 +116,7 @@ export default async function ListAnOpportunityPage() {
               <Price free>First round free</Price>
             )}
           </div>
-          <h2 className="t-title mb-3">Pipeline</h2>
+          <h2 className="t-title mb-3">Open call</h2>
           <p className="t-body-sm mb-5 max-w-[460px]">
             Everything in a free listing, and artists apply here rather than by email.
             Their portfolio, CV, and practice statement attach themselves, so you review
@@ -126,7 +126,7 @@ export default async function ListAnOpportunityPage() {
             href={user ? "/partner/opportunities/new?type=pipeline" : "/partner/list-pipeline"}
             className="btn btn-primary"
           >
-            {pipelineFirstRoundUsed ? "Set up a pipeline →" : "Start your first round free →"}
+            {pipelineFirstRoundUsed ? "Set up an open call →" : "Start your first round free →"}
           </Link>
           <p className="t-caption mt-3">
             {pipelineFirstRoundUsed

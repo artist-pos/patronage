@@ -31,7 +31,7 @@ export default async function NewOpportunityWizardPage({ params, searchParams }:
     getPartnerDocuments(id),
   ]);
 
-  if (!oppResult.data) redirect("/partner/dashboard");
+  if (!oppResult.data) redirect("/studio");
 
   const opp = oppResult.data as Opportunity;
   const isPipeline = typeParam === "pipeline" || opp.routing_type === "pipeline";

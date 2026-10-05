@@ -57,7 +57,7 @@ export function UploadHighResButton({ applicationId }: Props) {
         setTimeout(() => setToast(null), 4000);
       } else {
         setToast("Uploaded successfully!");
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), 5000);
       }
     } finally {
       setUploading(false);

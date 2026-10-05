@@ -94,6 +94,7 @@ export function WizardShell({
   const [template, setTemplate] = useState<TemplateKey | null>(
     (initialOpp.pipeline_config?.template as TemplateKey | undefined) ?? null
   );
+  const [blankTemplate, setBlankTemplate] = useState(false);
   const [criteria, setCriteria] = useState<LocalCriterion[]>(initialCriteria);
   const [documents, setDocuments] = useState<PartnerDocument[]>(initialDocuments);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -296,7 +297,7 @@ export function WizardShell({
     if (step > minStep) setStep((s) => s - 1);
   }
 
-  const nextDisabled = (step === 1 && !template) || (step === maxStep && (!allRequired || submitting));
+  const nextDisabled = (step === 1 && !template && !blankTemplate) || (step === maxStep && (!allRequired || submitting));
   const isLastStep = step === maxStep;
 
   return (
@@ -319,10 +320,20 @@ export function WizardShell({
         {step === 1 && isPipeline && (
           <StepTemplate
             selectedTemplate={template}
+            isBlank={blankTemplate}
             onChange={(key, qs) => {
               setTemplate(key);
+              setBlankTemplate(false);
               const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
               const newConfig: PipelineConfig = { ...prevConfig, questions: qs, template: key as PipelineConfig["template"] };
+              setOpp((prev) => ({ ...prev, pipeline_config: newConfig }));
+              queueSave({ pipeline_config: newConfig });
+            }}
+            onStartFromScratch={() => {
+              setTemplate(null);
+              setBlankTemplate(true);
+              const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
+              const newConfig: PipelineConfig = { ...prevConfig, questions: [], template: undefined as PipelineConfig["template"] };
               setOpp((prev) => ({ ...prev, pipeline_config: newConfig }));
               queueSave({ pipeline_config: newConfig });
             }}

@@ -15,11 +15,11 @@ export interface CompletionProfile {
 }
 
 const REQUIRED_FIELDS: CompletionField[] = [
-  { key: "avatar",      label: "profile photo", href: "/studio?section=profile" },
-  { key: "full_name",   label: "display name",  href: "/studio?section=profile" },
-  { key: "bio",         label: "bio",           href: "/studio?section=profile" },
-  { key: "disciplines", label: "discipline",    href: "/studio?section=profile" },
-  { key: "city",        label: "city",          href: "/studio?section=profile" },
+  { key: "avatar",      label: "profile photo", href: "/studio/profile" },
+  { key: "full_name",   label: "display name",  href: "/studio/profile" },
+  { key: "bio",         label: "bio",           href: "/studio/profile" },
+  { key: "disciplines", label: "discipline",    href: "/studio/profile" },
+  { key: "city",        label: "city",          href: "/studio/profile" },
 ];
 
 export function getMissingFields(profile: CompletionProfile): CompletionField[] {

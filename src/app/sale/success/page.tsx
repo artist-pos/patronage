@@ -90,7 +90,7 @@ export default async function SaleSuccessPage({ searchParams }: Props) {
         {summary?.paid && (
           <div className="space-y-3">
             <p className="text-sm">
-              The ownership ledger has been updated. Your provenance certificate
+              The ownership ledger has been updated. Your certificate of authenticity
               is on its way.
             </p>
             <div className="flex flex-wrap gap-3">

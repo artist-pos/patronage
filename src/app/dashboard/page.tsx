@@ -2,12 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
-import { getMyWrittenNotes } from "@/lib/notes";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import { ProvenanceBanner } from "@/components/dashboard/ProvenanceBanner";
 import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscriptionButton";
-import { ManageNotesList } from "@/components/profile/ManageNotesList";
 import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 
@@ -24,7 +22,7 @@ interface PageProps {
   }>;
 }
 
-const TABS = ["overview", "opportunities", "subscriptions"] as const;
+const TABS = ["opportunities", "subscriptions"] as const;
 type Tab = typeof TABS[number];
 
 // Legacy tab aliases — old URLs still resolve correctly
@@ -34,14 +32,10 @@ const LEGACY_TAB_ALIASES: Record<string, Tab> = {
   applied:          "opportunities",
   applications:     "opportunities",
   expired:          "opportunities",
-  analytics:        "overview",
-  "campaign-reports": "overview",
-  notes:            "overview",
 };
 
 // ── Sidebar structure ─────────────────────────────────────────────────────────
 const PRIMARY_TABS = [
-  { id: "overview",      label: "Overview"      },
   { id: "opportunities", label: "Opportunities" },
   { id: "subscriptions", label: "My Support"    },
 ] as const;
@@ -59,51 +53,6 @@ const SECONDARY_LINKS = [
 const OPP_FILTERS = ["all", "saved", "closing", "applied", "expired"] as const;
 type OppFilter = typeof OPP_FILTERS[number];
 
-// ── Period options ────────────────────────────────────────────────────────────
-const PERIODS = [
-  { label: "7d",       param: "7d"  },
-  { label: "30d",      param: "30d" },
-  { label: "90d",      param: "90d" },
-  { label: "All time", param: "all" },
-] as const;
-type PeriodParam = typeof PERIODS[number]["param"];
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({
-  label, value, description, period, prevValue, allTime,
-}: {
-  label: string; value: number; description: string;
-  period?: string; prevValue?: number; allTime?: boolean;
-}) {
-  const diff = !allTime && prevValue !== undefined ? value - prevValue : null;
-  const contextLine =
-    diff !== null
-      ? diff > 0 ? `↑ ${diff} more than last period`
-        : diff < 0 ? `↓ ${Math.abs(diff)} fewer than last period`
-        : "About the same as last period"
-      : value === 0 ? "Nothing tracked yet — check back soon."
-      : null;
-
-  return (
-    <div className="border border-black p-5 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-3xl font-bold tabular-nums">{value.toLocaleString()}</p>
-        {diff !== null && diff !== 0 && (
-          <span className={`text-xs tabular-nums mt-1.5 ${diff > 0 ? "text-green-600" : "text-muted-foreground"}`}>
-            {diff > 0 ? "+" : "−"}{Math.abs(diff).toLocaleString()}
-          </span>
-        )}
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-widest">{label}</p>
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        {description}
-        {period && <span className="ml-1 opacity-60">· {period}</span>}
-      </p>
-      {contextLine && <p className="text-[11px] text-gray-400">{contextLine}</p>}
-    </div>
-  );
-}
-
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const supabase = await createClient();
@@ -114,7 +63,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const rawTab = params.tab ?? "overview";
   // Resolve legacy tab aliases (closing, saved, applied, applications, expired → opportunities)
   const resolvedTab = LEGACY_TAB_ALIASES[rawTab] ?? rawTab;
-  const activeTab: Tab = (TABS as readonly string[]).includes(resolvedTab) ? resolvedTab as Tab : "overview";
+
+  // Redirect bare /dashboard (or any unknown tab) to the unified workspace; keep ?tab= subpages working
+  if (!(TABS as readonly string[]).includes(resolvedTab)) {
+    redirect("/studio");
+  }
+
+  const activeTab = resolvedTab as Tab;
 
   // Carry forward legacy tab as the opportunities sub-filter
   const legacyOppFilter: OppFilter | undefined =
@@ -127,10 +82,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     ? rawOppFilter as OppFilter
     : "all";
 
-  const rawPeriod = params.period ?? "30d";
-  const activePeriod: PeriodParam = PERIODS.some((p) => p.param === rawPeriod)
-    ? (rawPeriod as PeriodParam)
-    : "30d";
   // ── Profile ───────────────────────────────────────────────────────────────
   const { data: userProfile } = await supabase
     .from("profiles")
@@ -140,20 +91,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const isArtist = userProfile?.role === "artist" || userProfile?.role === "owner" || userProfile?.role === "admin";
   if (isArtist) redirect("/studio");
+
   const isPatron = userProfile?.role === "patron" || userProfile?.role === "partner";
 
-  // Compute days for analytics period (including "all time" from account creation)
-  const analyticsDays = (() => {
-    if (activePeriod === "7d") return 7;
-    if (activePeriod === "30d") return 30;
-    if (activePeriod === "90d") return 90;
-    // All time: days since account was created (minimum 30)
-    const created = userProfile?.created_at ? new Date(userProfile.created_at) : new Date();
-    return Math.max(30, Math.ceil((Date.now() - created.getTime()) / (24 * 60 * 60 * 1000)));
-  })();
-
   // ── Core data (always needed) ─────────────────────────────────────────────
-  const [saved, applicationsData, draftsData, provenanceData, myNotes] = await Promise.all([
+  const [saved, applicationsData, draftsData, provenanceData] = await Promise.all([
     getSavedOpportunities(),
     supabase
       .from("opportunity_applications")
@@ -173,7 +115,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           .eq("status", "pending")
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    getMyWrittenNotes(user.id),
   ]);
 
   const { closingSoon, saved: savedList, applied, expired } = categorizeSaved(saved);
@@ -216,31 +157,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false });
     subscriptions = (data ?? []) as unknown as SubscriptionRow[];
   }
-
-  // ── Overview: profile views ───────────────────────────────────────────────
-  let profileViews30 = 0;
-  if (activeTab === "overview" && isArtist) {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const { count } = await supabase
-      .from("profile_view_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("profile_id", user.id)
-      .gte("viewed_at", thirtyDaysAgo);
-    profileViews30 = count ?? 0;
-  }
-
-  // ── Needs Attention ───────────────────────────────────────────────────────
-  const twoDaysFromNow = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const closingIn48h = closingSoon.filter((item) => {
-    if (!item.opportunity?.deadline) return false;
-    return new Date(item.opportunity.deadline) <= twoDaysFromNow;
-  });
-  const closingThisWeek = closingSoon.filter((item) => {
-    if (!item.opportunity?.deadline) return false;
-    return new Date(item.opportunity.deadline) <= sevenDaysFromNow;
-  });
-  const needsAssetUpload = applications.filter((a: any) => a.status === "approved_pending_assets");
 
   // ── Opportunity filter lists ──────────────────────────────────────────────
   const oppFilterList =
@@ -361,126 +277,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-10">
-
-          {/* ── Overview ── */}
-          {activeTab === "overview" && (
-            <div className="space-y-10">
-
-              {/* Stat cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="border border-border p-4 space-y-1.5">
-                  <p className="text-2xl font-bold tabular-nums">{savedList.length}</p>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest">Saved</p>
-                  <p className="text-[11px] text-muted-foreground">Active saved opportunities</p>
-                </div>
-                <div className="border border-border p-4 space-y-1.5">
-                  <p className="text-2xl font-bold tabular-nums">{closingThisWeek.length}</p>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest">Closing Soon</p>
-                  <p className="text-[11px] text-muted-foreground">Deadlines within 7 days</p>
-                </div>
-                <div className="border border-border p-4 space-y-1.5">
-                  <p className="text-2xl font-bold tabular-nums">{applications.length}</p>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest">Applications</p>
-                  <p className="text-[11px] text-muted-foreground">Active pipeline applications</p>
-                </div>
-                {isArtist && (
-                  <div className="border border-border p-4 space-y-1.5">
-                    <p className="text-2xl font-bold tabular-nums">{profileViews30}</p>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest">Profile Views</p>
-                    <p className="text-[11px] text-muted-foreground">Last 30 days</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Needs attention — always shown */}
-              <section className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Needs Attention
-                </p>
-                {provenanceLinks.length === 0 && needsAssetUpload.length === 0 && closingIn48h.length === 0 ? (
-                  <p className="text-sm text-muted-foreground border border-dashed border-border px-4 py-3">
-                    Nothing needs attention right now.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {provenanceLinks.length > 0 && (
-                      <div className="flex items-center justify-between border border-amber-200 bg-amber-50 px-4 py-3">
-                        <p className="text-sm">
-                          <span className="font-medium">{provenanceLinks.length} provenance transfer{provenanceLinks.length !== 1 ? "s" : ""}</span>
-                          {" "}awaiting your approval
-                        </p>
-                        <Link href="/messages" className="text-xs underline underline-offset-2 shrink-0 ml-4">
-                          Review →
-                        </Link>
-                      </div>
-                    )}
-                    {needsAssetUpload.length > 0 && (
-                      <div className="flex items-center justify-between border border-blue-200 bg-blue-50 px-4 py-3">
-                        <p className="text-sm">
-                          <span className="font-medium">{needsAssetUpload.length} application{needsAssetUpload.length !== 1 ? "s" : ""}</span>
-                          {" "}require a high-res asset upload
-                        </p>
-                        <Link href="/dashboard?tab=applications" className="text-xs underline underline-offset-2 shrink-0 ml-4">
-                          Upload →
-                        </Link>
-                      </div>
-                    )}
-                    {closingIn48h.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between border border-red-200 bg-red-50 px-4 py-3">
-                        <p className="text-sm">
-                          <span className="font-medium">{item.opportunity?.title}</span>
-                          {" "}closes within 48 hours
-                        </p>
-                        {item.opportunity?.slug && (
-                          <Link href={`/opportunities/${item.opportunity.slug}`} className="text-xs underline underline-offset-2 shrink-0 ml-4">
-                            View →
-                          </Link>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* Closing soon preview */}
-              {closingSoon.length > 0 && (
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      Closing Soon
-                    </p>
-                    <Link href="/dashboard?tab=closing" className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
-                      View all →
-                    </Link>
-                  </div>
-                  <div className="border-t border-black">
-                    {closingSoon.slice(0, 3).map((item) => (
-                      <OpportunityCard key={item.id} opp={item.opportunity} view="list" />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {closingSoon.length === 0 && savedList.length === 0 && applications.length === 0 && (
-                <div className="py-12 text-center space-y-3">
-                  <p className="text-sm text-muted-foreground">Nothing saved yet — browse opportunities to get started.</p>
-                  <Link href="/opportunities" className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors">
-                    Browse Opportunities →
-                  </Link>
-                </div>
-              )}
-
-              {/* Notes */}
-              {myNotes.length > 0 && (
-                <section className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Your Notes
-                  </p>
-                  <ManageNotesList initialNotes={myNotes} />
-                </section>
-              )}
-            </div>
-          )}
 
           {/* ── Opportunities ── */}
           {activeTab === "opportunities" && (

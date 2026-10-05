@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { CampaignConfigPanel } from "@/components/campaigns/CampaignConfigPanel";
 import type { Metadata } from "next";
 
@@ -24,7 +23,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     .single();
 
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
-    redirect("/dashboard");
+    redirect("/studio");
   }
 
   const [{ data: campaign }, { data: filesData }, { data: worksData }] = await Promise.all([
@@ -58,7 +57,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       .limit(100),
   ]);
 
-  if (!campaign) redirect("/studio?section=campaigns");
+  if (!campaign) redirect("/studio/qr-codes");
 
   const files = (filesData ?? []) as Array<{
     id: string; file_url: string; file_name: string;
@@ -89,11 +88,11 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   const landingUrl = `${SITE_URL}/live/${c.slug}/${profile.username}`;
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection="campaigns">
+    <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
-          Campaigns
+        <Link href="/studio/qr-codes" className="hover:text-foreground transition-colors">
+          QR Codes
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium truncate">{c.title}</span>
@@ -128,6 +127,6 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         bio={(profile as { bio?: string | null }).bio ?? null}
         featuredImageUrl={(profile as { featured_image_url?: string | null }).featured_image_url ?? null}
       />
-    </StudioPageShell>
+    </>
   );
 }

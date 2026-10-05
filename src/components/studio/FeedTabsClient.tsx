@@ -26,7 +26,7 @@ export function FeedTabsClient({
 
   function switchTab(t: FeedTab) {
     setTab(t);
-    window.history.replaceState(null, "", `/studio?section=feed&ft=${t}`);
+    window.history.replaceState(null, "", `/studio/feed?ft=${t}`);
   }
 
   return (

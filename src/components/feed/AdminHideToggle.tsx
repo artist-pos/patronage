@@ -46,7 +46,7 @@ export function AdminHideToggle({ updateId, initialHidden, onDark = false }: Pro
     } catch {
       setHidden(!next);
       setFailed(true);
-      setTimeout(() => setFailed(false), 3000);
+      setTimeout(() => setFailed(false), 5000);
     } finally {
       setSaving(false);
     }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { saveCertificateNote } from "./actions";
 
 const CertificatePdfModal = dynamic(
@@ -54,7 +55,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
     } else {
       setWork(prev => ({ ...prev, certificate_note: note.trim() || null }));
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 5000);
       if (!note.trim()) setExpanded(false);
     }
   }
@@ -99,7 +100,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
             {!work.dimensions && "Missing dimensions"}
             {" · "}
             <Link
-              href={`/studio/artworks/${work.id}`}
+              href={`/studio/works/${work.id}`}
               className="underline underline-offset-2 hover:text-stone-700 transition-colors"
             >
               Manage details
@@ -158,7 +159,7 @@ function ProvenanceRow({ work: initial }: { work: TransferredWork }) {
       {expanded && (
         <div className="px-4 pb-4 border-t border-stone-100 pt-4 space-y-3 bg-stone-50">
           <p className="text-xs text-stone-500">
-            This statement appears on the provenance certificate as an artist note about the work.
+            This statement appears on the certificate of authenticity as an artist note about the work.
           </p>
           <textarea
             value={note}
@@ -208,17 +209,12 @@ export function ProvenanceList({ works }: Props) {
       </div>
 
       {works.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-stone-200 rounded-xl space-y-3">
-          <p className="text-sm text-stone-500">
-            Works you transfer to collectors will appear here with their provenance records.
-          </p>
-          <Link
-            href="/studio/works/new?mode=sale"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
-          >
-            Log a past sale →
-          </Link>
-        </div>
+        <EmptyState
+          title="No provenance records yet"
+          description="When you transfer a work to a collector, it appears here with its certificate of authenticity and ownership history."
+          actionLabel="Log a past sale"
+          actionHref="/studio/works/new?mode=sale"
+        />
       ) : (
         <div className="space-y-3">
           {works.map(w => (

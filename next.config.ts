@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
         destination: "/works",
         permanent: true,
       },
+      // Unified workspace (Oct 2026 — Phase 12 UX overhaul)
+      { source: "/partner/dashboard", destination: "/studio", permanent: true },
+      // Studio renames (Oct 2026 — Phase 1 UX overhaul)
+      { source: "/studio/campaigns", destination: "/studio/qr-codes", permanent: true },
+      { source: "/studio/campaigns/:path*", destination: "/studio/qr-codes/:path*", permanent: true },
+      { source: "/studio/rooms", destination: "/studio/exhibitions", permanent: true },
+      { source: "/studio/artworks/:path*", destination: "/studio/works/:path*", permanent: true },
     ];
   },
   async headers() {

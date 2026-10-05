@@ -453,6 +453,38 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
+  const viewerIsArtist = viewerRole === "artist" || viewerRole === "owner";
+
+  // ── Messaging relationship check — artists may only message users they
+  // have a relationship with (follower, applied-to, or saved-opportunity).
+  // Non-artist roles can always message.
+  let canMessageProfile = canMessage; // default: logged in + not self
+  if (canMessage && viewerIsArtist) {
+    // Run the three relationship checks concurrently
+    const [followRes, appliedRes, savedRes] = await Promise.all([
+      supabase
+        .from("follows")
+        .select("id")
+        .eq("follower_id", profile.id)
+        .eq("following_id", user!.id)
+        .maybeSingle(),
+      supabase
+        .from("opportunity_applications")
+        .select("id, opportunities!inner(profile_id)")
+        .eq("artist_id", user!.id)
+        .eq("opportunities.profile_id", profile.id)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("saved_opportunities")
+        .select("id, opportunities!inner(profile_id)")
+        .eq("user_id", user!.id)
+        .eq("opportunities.profile_id", profile.id)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    canMessageProfile = !!(followRes.data || appliedRes.data || savedRes.data);
+  }
 
   // ── Partner trust signals (partner profiles only) ──────────────────────────
   // Application rows aren't publicly readable under RLS, but aggregate counts
@@ -914,7 +946,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                         initialIsFollowing={alreadyFollowing}
                         isAuthenticated={!!user}
                       />
-                      <MessageButton otherUserId={profile.id} />
+                      {canMessageProfile ? (
+                        <MessageButton otherUserId={profile.id} />
+                      ) : (user && viewerIsArtist) ? (
+                        <span className="text-xs text-muted-foreground max-w-[220px] leading-snug">
+                          Message {displayName} once they follow you — share your profile link to connect.
+                        </span>
+                      ) : null}
                     </>
                   )}
                   {showSupport && (
@@ -1082,7 +1120,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           profile={profile}
           displayName={displayName}
           isOwner={isOwner}
-          canMessage={canMessage}
+          canMessage={canMessageProfile}
+          messageHint={user && viewerIsArtist && !canMessageProfile
+            ? `Message ${displayName} once they follow you — share your profile link to connect.`
+            : undefined}
           verified={!!(profile.bio && profile.avatar_url) && profile.account_status !== "shadow"}
           unclaimed={profile.account_status === "shadow"}
           activeOpps={profileOpportunities}
@@ -1099,7 +1140,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           profile={profile}
           displayName={displayName}
           isOwner={isOwner}
-          canMessage={canMessage}
+          canMessage={canMessageProfile}
+          messageHint={user && viewerIsArtist && !canMessageProfile
+            ? `Message ${displayName} once they follow you — share your profile link to connect.`
+            : undefined}
           isAuthenticated={!!user}
           alreadyFollowing={alreadyFollowing}
           followingArtists={followingArtists}

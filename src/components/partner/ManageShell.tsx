@@ -63,7 +63,7 @@ export function ManageShell({ opp, isPipeline, opportunityId, children }: Props)
       <div className="sticky top-0 z-20 bg-background border-b border-black">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/partner/dashboard" className="text-xs text-stone-400 hover:text-foreground shrink-0">
+            <Link href="/studio" className="text-xs text-stone-400 hover:text-foreground shrink-0">
               ← Dashboard
             </Link>
             <span className="text-stone-300 shrink-0">·</span>

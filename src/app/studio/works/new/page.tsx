@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { NewWorkClient } from "./NewWorkClient";
 import type { Metadata } from "next";
 
@@ -31,7 +30,7 @@ export default async function NewWorkPage({ searchParams }: PageProps) {
   const isSale = workMode === "sale";
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection={isSale ? "provenance" : "works"}>
+    <>
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         {isSale ? (
           <>
@@ -43,7 +42,7 @@ export default async function NewWorkPage({ searchParams }: PageProps) {
           </>
         ) : (
           <>
-            <Link href="/studio?section=works" className="hover:text-foreground transition-colors">
+            <Link href="/studio/works" className="hover:text-foreground transition-colors">
               Works
             </Link>
             <span>/</span>
@@ -55,6 +54,6 @@ export default async function NewWorkPage({ searchParams }: PageProps) {
       <h1 className="text-xl font-semibold mb-8">{isSale ? "Log a sale" : "Add a work"}</h1>
 
       <NewWorkClient profileId={user.id} mode={workMode} />
-    </StudioPageShell>
+    </>
   );
 }

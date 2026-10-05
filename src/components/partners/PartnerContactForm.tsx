@@ -6,7 +6,7 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
-const INTERESTS = ["Activations", "Art strategy", "Pipeline", "Listing", "Other"] as const;
+const INTERESTS = ["Activations", "Art strategy", "Open call", "Listing", "Other"] as const;
 
 const LABEL = "mb-[3px] block font-mono text-[9px] uppercase text-[color:var(--fg-subtle)]";
 const INPUT =

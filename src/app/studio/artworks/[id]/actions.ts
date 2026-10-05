@@ -44,7 +44,7 @@ export async function updateAcquisitionMode(
     .eq("id", artworkId);
   if (error) return { error: error.message };
 
-  revalidatePath(`/studio/artworks/${artworkId}`);
+  revalidatePath(`/studio/works/${artworkId}`);
   return {};
 }
 
@@ -95,7 +95,7 @@ export async function uploadDocumentationPhoto(form: FormData): Promise<{ error?
     return { error: insertError.message };
   }
 
-  revalidatePath(`/studio/artworks/${artworkId}`);
+  revalidatePath(`/studio/works/${artworkId}`);
   return {};
 }
 
@@ -114,7 +114,7 @@ export async function deleteDocumentationPhoto(photoId: string): Promise<{ error
   await admin.storage.from(BUCKET).remove([photo.storage_path]);
   await admin.from("artwork_documentation_photos").delete().eq("id", photoId);
 
-  revalidatePath(`/studio/artworks/${photo.artwork_id}`);
+  revalidatePath(`/studio/works/${photo.artwork_id}`);
   return {};
 }
 
@@ -170,7 +170,7 @@ export async function updateArtworkDetails(data: {
     .eq("id", data.artworkId);
   if (error) return { error: error.message };
 
-  revalidatePath(`/studio/artworks/${data.artworkId}`);
+  revalidatePath(`/studio/works/${data.artworkId}`);
   revalidatePath(`/studio/provenance`);
   return {};
 }
@@ -214,7 +214,7 @@ export async function addPriorHistoryEntry(data: {
     });
   if (error) return { error: error.message };
 
-  revalidatePath(`/studio/artworks/${data.artworkId}`);
+  revalidatePath(`/studio/works/${data.artworkId}`);
   return {};
 }
 
@@ -231,6 +231,6 @@ export async function deletePriorHistoryEntry(id: string): Promise<{ error?: str
   if ("error" in gate) return { error: gate.error };
 
   await admin.from("artwork_prior_history").delete().eq("id", id);
-  revalidatePath(`/studio/artworks/${entry.artwork_id}`);
+  revalidatePath(`/studio/works/${entry.artwork_id}`);
   return {};
 }

@@ -107,7 +107,7 @@ export function CertificatePreview({
         </div>
 
         <p className="px-4 text-[11px] tracking-[0.18em] mb-2" style={{ ...headingStyle, color: primaryColor }}>
-          CERTIFICATE OF PROVENANCE
+          CERTIFICATE OF AUTHENTICITY
         </p>
         <div className="mx-4 mb-3 border-b" style={{ borderColor: primaryColor }} />
 

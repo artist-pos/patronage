@@ -33,7 +33,7 @@ export default function TermsPage() {
           </Item>
           <Item label="Partners">
             Can submit opportunities for review and browse the verified artist directory.
-            Partners may list standard, featured, or pipeline-enabled opportunities and manage
+            Partners may list standard, featured, or open call opportunities and manage
             applications through the partner dashboard.
           </Item>
         </ul>
@@ -76,7 +76,7 @@ export default function TermsPage() {
           you pay the listed sticker price plus a card processing fee (2.9% + NZ$0.30, passed
           through at cost). Patronage retains a 10% platform commission from the seller&rsquo;s
           proceeds. On resales, a 5% royalty is collected and remitted to the original artist.
-          A verified provenance certificate is issued to the buyer on completion.
+          A verified certificate of authenticity is issued to the buyer on completion.
         </p>
 
         <p className="mt-3">
@@ -88,7 +88,7 @@ export default function TermsPage() {
 
         <p className="mt-3">
           <strong>Partner listings.</strong> Standard listings are free. Featured placements
-          and Pipeline activations carry published fees payable via Stripe, with card
+          and open call publishing carry published fees payable via Stripe, with card
           processing costs disclosed at checkout.
         </p>
 
@@ -139,7 +139,7 @@ export default function TermsPage() {
             hello@patronage.nz
           </a>{" "}
           within 14 days of purchase. Refunds on completed artwork transfers may not be
-          possible where the provenance certificate has already been issued.
+          possible where the certificate of authenticity has already been issued.
         </p>
       </Section>
 
@@ -197,10 +197,10 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="10. Collective Accounts">
+      <Section title="10. Group Accounts">
         <p>
-          Artists can create collective accounts to represent a group practice. The admin of
-          a collective account is responsible for all content and activity posted under that
+          Artists can create group accounts to represent a group practice. The admin of
+          a group account is responsible for all content and activity posted under that
           account.
         </p>
       </Section>

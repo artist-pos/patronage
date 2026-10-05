@@ -113,7 +113,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
           </p>
           <button
             type="button"
-            onClick={() => router.push("/studio?section=campaigns")}
+            onClick={() => router.push("/studio/qr-codes")}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
             Back to Studio →

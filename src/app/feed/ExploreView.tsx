@@ -289,7 +289,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
                   <div className="flex items-center gap-3">
                     {isAdmin && (
                       <Link
-                        href="/studio?section=feed"
+                        href="/studio/feed"
                         className="shrink-0 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
                       >
                         Manage feed →

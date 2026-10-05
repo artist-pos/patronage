@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { formatCents } from "@/lib/commerce-fee";
 import { PaymentsSection } from "@/components/studio/PaymentsSection";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default async function EarningsPage() {
     .single();
 
   if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
-    redirect("/dashboard");
+    redirect("/studio");
   }
 
   const admin = createAdminClient();
@@ -94,8 +94,7 @@ export default async function EarningsPage() {
   const connectEnabled = profileRow.stripe_connect_status === "enabled";
 
   return (
-    <StudioPageShell username={profileRow.username} activeSection="earnings">
-      <div className="space-y-10 max-w-3xl">
+    <div className="space-y-10 max-w-3xl">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold tracking-tight">Earnings</h2>
@@ -156,7 +155,12 @@ export default async function EarningsPage() {
             Sales
           </h3>
           {(primarySales ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sales yet.</p>
+            <EmptyState
+              title="No sales yet"
+              description="When a collector purchases one of your works, it will appear here with payout details."
+              actionLabel="List a work for sale"
+              actionHref="/studio/works/new?mode=list"
+            />
           ) : (
             <div className="border border-stone-100 rounded-lg divide-y divide-stone-100 overflow-hidden">
               <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
@@ -270,7 +274,12 @@ export default async function EarningsPage() {
             Support
           </h3>
           {(supportPayments ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No support payments yet.</p>
+            <EmptyState
+              title="No support payments yet"
+              description="Set up support tiers so patrons can back your practice. One-off and recurring payments appear here."
+              actionLabel="Set up support tiers"
+              actionHref="/studio/support"
+            />
           ) : (
             <div className="border border-stone-100 rounded-lg divide-y divide-stone-100 overflow-hidden">
               <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-widest text-stone-400 bg-stone-50">
@@ -318,8 +327,7 @@ export default async function EarningsPage() {
             </div>
           )}
         </section>
-      </div>
-    </StudioPageShell>
+    </div>
   );
 }
 

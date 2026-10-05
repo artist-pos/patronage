@@ -325,6 +325,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
   );
   const [focusedEditionId, setFocusedEditionId] = useState<string | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
+  const [forSale, setForSale] = useState(mode === "list");
 
   // ── Sale mode ─────────────────────────────────────────────────────────────
   const [buyerName, setBuyerName] = useState("");
@@ -422,6 +423,13 @@ export function NewWorkClient({ profileId, mode }: Props) {
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
+  }
+
+  function handleForSaleToggle(on: boolean) {
+    setForSale(on);
+    if (on && editions.length === 0) {
+      setEditions([blankEdition("original", true)]);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -820,7 +828,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
     </section>
   );
 
-  const metaForm = (
+  const metaForm = mode === "sale" ? (
     <div className="space-y-8">
       {/* ── Primary media ── */}
       {primaryMediaSection}
@@ -889,6 +897,250 @@ export function NewWorkClient({ profileId, mode }: Props) {
             className={`${inputCls} resize-none overflow-hidden`} style={{ minHeight: "76px" }} />
         </div>
       </section>
+    </div>
+  ) : (
+    <div className="space-y-6">
+      {/* ── 1. Photo-first: large image drop zone ── */}
+      {contentType === "image" && (
+        <div className="space-y-3">
+          {!imagePreview ? (
+            <label className="flex flex-col items-center justify-center w-full min-h-[280px] border-2 border-dashed border-stone-300 cursor-pointer hover:border-stone-400 hover:bg-muted/40 transition-colors gap-3 rounded-lg">
+              <ImageIcon className="w-10 h-10 text-stone-300" />
+              <span className="text-base text-muted-foreground">Tap to add your work</span>
+              <span className="text-xs text-muted-foreground">JPEG, PNG, WebP</span>
+              <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={(e) => { setImageFile(e.target.files?.[0] ?? null); setError(null); }} />
+            </label>
+          ) : (
+            <div className="relative group">
+              <img src={imagePreview} alt="" className="w-full max-h-[400px] object-contain bg-muted rounded-lg" />
+              <label className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/70 text-white text-xs cursor-pointer hover:bg-black/90 transition-colors rounded">
+                Change image
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                  onChange={(e) => { setImageFile(e.target.files?.[0] ?? null); setError(null); }} />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Non-image content type inputs */}
+      {contentType === "video" && (
+        <div className="space-y-3">
+          <label className="flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed border-stone-300 cursor-pointer hover:border-stone-400 hover:bg-muted/40 transition-colors gap-3 rounded-lg">
+            <Play className="w-10 h-10 text-stone-300" />
+            {videoFile
+              ? <span className="text-base font-medium text-foreground">{videoFile.name}</span>
+              : <><span className="text-base text-muted-foreground">Tap to add a video</span>
+                  <span className="text-xs text-muted-foreground">MP4, MOV, WebM</span></>}
+            <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
+              onChange={(e) => { setVideoFile(e.target.files?.[0] ?? null); setVideoEmbedUrl(""); }} />
+          </label>
+          <p className="text-xs text-muted-foreground text-center">— or paste a YouTube / Vimeo URL —</p>
+          <input type="url" value={videoEmbedUrl}
+            onChange={(e) => { setVideoEmbedUrl(e.target.value); setVideoFile(null); }}
+            placeholder="https://youtube.com/watch?v=…"
+            disabled={!!videoFile}
+            className={`${inputCls} disabled:opacity-40`} />
+          {videoEmbedUrl && detectProvider(videoEmbedUrl) && (
+            <p className="text-xs text-muted-foreground">Detected: {detectProvider(videoEmbedUrl)}</p>
+          )}
+        </div>
+      )}
+      {contentType === "audio" && (
+        <div className="space-y-3">
+          <label className="flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed border-stone-300 cursor-pointer hover:border-stone-400 hover:bg-muted/40 transition-colors gap-3 rounded-lg">
+            <Music className="w-10 h-10 text-stone-300" />
+            {audioFile
+              ? <span className="text-base font-medium text-foreground">{audioFile.name}</span>
+              : <><span className="text-base text-muted-foreground">Tap to add audio</span>
+                  <span className="text-xs text-muted-foreground">MP3, WAV, FLAC, AAC, OGG</span></>}
+            <input ref={audioInputRef} type="file" accept="audio/*" className="hidden"
+              onChange={(e) => { setAudioFile(e.target.files?.[0] ?? null); setAudioEmbedUrl(""); }} />
+          </label>
+          <p className="text-xs text-muted-foreground text-center">— or paste a SoundCloud / Bandcamp URL —</p>
+          <input type="url" value={audioEmbedUrl}
+            onChange={(e) => { setAudioEmbedUrl(e.target.value); setAudioFile(null); }}
+            placeholder="https://soundcloud.com/…"
+            disabled={!!audioFile}
+            className={`${inputCls} disabled:opacity-40`} />
+          {audioEmbedUrl && detectProvider(audioEmbedUrl) && (
+            <p className="text-xs text-muted-foreground">Detected: {detectProvider(audioEmbedUrl)}</p>
+          )}
+        </div>
+      )}
+      {contentType === "text" && (
+        <textarea
+          value={textContent}
+          onChange={(e) => setTextContent(e.target.value)}
+          placeholder="Write your poem, prose, or artist statement…"
+          rows={8}
+          className={`${inputCls} resize-none`}
+        />
+      )}
+      {contentType === "embed" && (
+        <div className="space-y-2">
+          <input type="url" value={embedUrl}
+            onChange={(e) => setEmbedUrl(e.target.value)}
+            placeholder="https://…"
+            className={inputCls} />
+          {embedUrl && detectProvider(embedUrl) && (
+            <p className="text-xs text-muted-foreground">Detected: {detectProvider(embedUrl)}</p>
+          )}
+        </div>
+      )}
+
+      {/* ── 2. Content type picker ── */}
+      <div className="flex gap-1">
+        {TYPE_OPTIONS.map(({ type, label, icon }) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => handleTypeChange(type)}
+            className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 text-[11px] border transition-colors ${
+              contentType === type
+                ? "border-black bg-black text-white"
+                : "border-border text-muted-foreground hover:border-black hover:text-foreground"
+            }`}
+          >
+            {icon}
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Gallery thumbnail for non-image types */}
+      {contentType !== "image" && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Gallery thumbnail</p>
+          <p className="text-xs text-muted-foreground">
+            Optional — shown in the works grid and artist profile. Recommended for all non-image works.
+          </p>
+          <label className="flex items-center gap-3 cursor-pointer w-fit">
+            <span className="text-sm border border-black px-3 py-1.5 hover:bg-muted/40 transition-colors whitespace-nowrap">
+              {thumbnailFile ? thumbnailFile.name : "Browse…"}
+            </span>
+            {!thumbnailFile && <span className="text-xs text-muted-foreground">No file chosen</span>}
+            <input ref={thumbnailInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+              onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)} />
+          </label>
+          {thumbnailPreview && <img src={thumbnailPreview} alt="" className="max-h-40 max-w-full object-contain bg-muted" />}
+        </div>
+      )}
+
+      {/* ── 3. Title field ── */}
+      <div className="space-y-1.5">
+        <label className={labelCls}>Title</label>
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+          placeholder="Untitled" className={`${inputCls} !text-base`} />
+      </div>
+
+      {/* ── 4. For sale toggle ── */}
+      <button type="button" onClick={() => handleForSaleToggle(!forSale)}
+        className="flex items-center gap-3 cursor-pointer py-1">
+        <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+          style={{ backgroundColor: forSale ? "black" : "#d6d3d1" }}>
+          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${forSale ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
+        </span>
+        <span className="text-sm font-medium">Is it for sale?</span>
+      </button>
+
+      {/* ── 5. Add more detail (collapsed) ── */}
+      <details className="group">
+        <summary className="text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground list-none flex items-center gap-1.5">
+          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+          Add more detail
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Year</label>
+              <input type="number" value={year} onChange={(e) => setYear(e.target.value)}
+                min={1500} max={new Date().getFullYear() + 1} className={inputCls} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Dimensions <span className="font-normal text-muted-foreground">(mm)</span></label>
+              <div className="flex items-center gap-2">
+                <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)}
+                  placeholder="W" className={`${inputCls} flex-1`} />
+                <span className="text-muted-foreground text-sm">×</span>
+                <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)}
+                  placeholder="H" className={`${inputCls} flex-1`} />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className={labelCls}>Category <span className="ml-1 text-[11px] text-muted-foreground font-normal">(select all that apply)</span></label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {MEDIUM_CATEGORIES.map((cat) => (
+                <label key={cat} className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={mediumCategory.includes(cat)}
+                    onChange={() => toggleCategory(cat)} className="accent-black" />
+                  <span className="text-xs">{cat}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Surface / Substrate</label>
+              <select value={surface} onChange={(e) => setSurface(e.target.value)} className={inputCls}>
+                <option value="">— none —</option>
+                {SURFACE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Medium / Material</label>
+              <input type="text" value={medium} onChange={(e) => setMedium(e.target.value)}
+                placeholder="e.g. Oil on canvas" className={inputCls} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Description <span className="ml-1 text-[11px] text-muted-foreground font-normal">(optional)</span></label>
+            <textarea ref={descRef} value={description}
+              onChange={(e) => { setDescription(e.target.value); growDesc(); }}
+              rows={3} placeholder="Describe the work — context, materials, process…"
+              className={`${inputCls} resize-none overflow-hidden`} style={{ minHeight: "76px" }} />
+          </div>
+
+          {/* Supporting images */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Supporting images</p>
+              <span className="text-xs text-muted-foreground">{supportingImages.length}/{MAX_SUPPORTING}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Verso, scale shots, installation views, details — optional.
+            </p>
+            {supportingPreviews.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {supportingPreviews.map((src, i) => (
+                  <div key={i} className="relative group/sup">
+                    <img src={src} alt={`Supporting ${i + 1}`} className="w-20 h-20 object-cover border border-border bg-muted" />
+                    <button type="button" onClick={() => removeSupportingImage(i)}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-black text-white flex items-center justify-center opacity-0 group-hover/sup:opacity-100 transition-opacity"
+                      aria-label="Remove">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {supportingImages.length < MAX_SUPPORTING && (
+              <label className="flex items-center gap-3 cursor-pointer w-fit">
+                <span className="text-sm border border-black px-3 py-1.5 hover:bg-muted/40 transition-colors whitespace-nowrap">
+                  + Add images
+                </span>
+                <input ref={supportingInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only"
+                  onChange={(e) => addSupportingImages(e.target.files)} />
+              </label>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 
@@ -1037,23 +1289,25 @@ export function NewWorkClient({ profileId, mode }: Props) {
     return (
       <form onSubmit={handleSubmit}>
         <div className="max-w-2xl">{metaForm}</div>
-        <div className="flex flex-col lg:flex-row lg:items-start gap-12 mt-8">
-          <div className="flex-1 min-w-0 max-w-2xl">
-            {editionsSection}
-          </div>
-
-          {calcOpen && (
-            <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-[72px]">
-              <PricingCalculator
-                currency={focusedEd?.currency ?? "NZD"}
-                focusedLabel={focusedLabel}
-                onUsePrice={(net) => {
-                  if (focusedEd && !focusedEd.poa) updateEdition(focusedEd.id, "netReceive", net.toFixed(2));
-                }}
-              />
+        {forSale && (
+          <div className="flex flex-col lg:flex-row lg:items-start gap-12 mt-8">
+            <div className="flex-1 min-w-0 max-w-2xl">
+              {editionsSection}
             </div>
-          )}
-        </div>
+
+            {calcOpen && (
+              <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-[72px]">
+                <PricingCalculator
+                  currency={focusedEd?.currency ?? "NZD"}
+                  focusedLabel={focusedLabel}
+                  onUsePrice={(net) => {
+                    if (focusedEd && !focusedEd.poa) updateEdition(focusedEd.id, "netReceive", net.toFixed(2));
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
         <div className="max-w-2xl">
           {error && <p className="text-sm text-destructive mt-6">{error}</p>}
           <div className="flex items-center gap-3 pt-8">

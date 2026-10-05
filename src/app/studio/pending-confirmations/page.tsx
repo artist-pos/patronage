@@ -6,7 +6,6 @@ import { findMatchingStubsForName } from "@/lib/artist-stub";
 import { getPendingConfirmationsForArtist } from "@/lib/pending-confirmations";
 import { PendingConfirmationsList } from "@/components/studio/PendingConfirmationsList";
 import { StubMatchSuggestions } from "@/components/studio/StubMatchSuggestions";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -28,15 +27,15 @@ export default async function PendingConfirmationsPage() {
   ]);
 
   return (
-    <StudioPageShell username={profile?.username ?? ""} activeSection="works">
+    <>
       <div className="mb-8 space-y-2">
         <Link
-          href="/studio?section=works"
+          href="/studio/works"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Back to works
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Pending confirmations</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Someone says they own your work</h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
           Other people on Patronage have registered works they say you made.
           Confirm the ones that are yours, decline anything you don&rsquo;t
@@ -59,6 +58,6 @@ export default async function PendingConfirmationsPage() {
       ) : (
         <PendingConfirmationsList confirmations={confirmations} />
       )}
-    </StudioPageShell>
+    </>
   );
 }

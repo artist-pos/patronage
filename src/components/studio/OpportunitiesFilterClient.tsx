@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { SavedWithOpportunity } from "@/lib/saved-opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type OppFilter = "all" | "saved" | "closing" | "applied" | "expired";
 
@@ -31,7 +31,7 @@ export function OpportunitiesFilterClient({
 
   function switchFilter(f: OppFilter) {
     setFilter(f);
-    window.history.replaceState(null, "", `/studio?section=opportunities&of=${f}`);
+    window.history.replaceState(null, "", `/studio/opportunities?of=${f}`);
   }
 
   const oppCounts = {
@@ -75,7 +75,7 @@ export function OpportunitiesFilterClient({
       {/* Applications panel */}
       {(filter === "applied" || (filter === "all" && applications.length > 0)) && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pipeline Applications</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Open Call Applications</p>
           <ApplicationsTab
             initialApplications={applications}
             userId={userId}
@@ -88,20 +88,24 @@ export function OpportunitiesFilterClient({
 
       {/* Saved list */}
       {list.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-border">
-          <p className="text-sm text-muted-foreground">
-            {filter === "saved" && "No saved opportunities. Browse and save ones you're interested in."}
-            {filter === "closing" && "No saved opportunities closing soon."}
-            {filter === "applied" && "No saved opportunities marked as applied."}
-            {filter === "expired" && "No expired saved opportunities."}
-            {filter === "all" && "No saved opportunities yet."}
-          </p>
-          {(filter === "all" || filter === "saved") && (
-            <Link href="/opportunities" className="inline-block mt-3 text-sm underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
-              Browse opportunities →
-            </Link>
-          )}
-        </div>
+        <EmptyState
+          title={
+            filter === "saved" ? "No saved opportunities"
+            : filter === "closing" ? "Nothing closing soon"
+            : filter === "applied" ? "No applications tracked"
+            : filter === "expired" ? "No expired opportunities"
+            : "Your opportunity tracker"
+          }
+          description={
+            filter === "saved" ? "Browse grants, residencies, and open calls — then save the ones you want to come back to."
+            : filter === "closing" ? "Opportunities with upcoming deadlines will appear here once you save some."
+            : filter === "applied" ? "Mark saved opportunities as applied to keep track of your submissions."
+            : filter === "expired" ? "Past-deadline opportunities you saved will appear here for reference."
+            : "Save opportunities you're interested in and track your applications — all in one place."
+          }
+          actionLabel={(filter === "all" || filter === "saved") ? "Browse opportunities" : undefined}
+          actionHref={(filter === "all" || filter === "saved") ? "/opportunities" : undefined}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {list.map((saved) => (

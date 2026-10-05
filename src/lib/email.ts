@@ -305,7 +305,7 @@ export async function sendProvenanceInvite(
 /**
  * Sent to every buyer after a successful Stripe payment (primary sale or resale).
  * For shadow/guest accounts includes a claim CTA; for logged-in buyers links
- * straight to the provenance certificate.
+ * straight to the certificate of authenticity.
  */
 export async function sendPurchaseConfirmation({
   toEmail,
@@ -350,7 +350,7 @@ export async function sendPurchaseConfirmation({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
     <tr><td>
       <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
-      <p style="color:#888;font-size:13px;margin:0 0 32px;">Certificate of provenance</p>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Certificate of authenticity</p>
 
       <p style="margin:0 0 24px;font-size:15px;">${greeting}</p>
 
@@ -360,11 +360,11 @@ export async function sendPurchaseConfirmation({
       <p style="margin:0 0 24px;font-size:13px;color:#555;">by ${esc(artistName)}</p>
 
       <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.5;">
-        Your certificate of provenance is ready. It records the full ownership history of this work on the Patronage ledger.
+        Your certificate of authenticity is ready. It records the full ownership history of this work on the Patronage ledger.
       </p>
 
       <a href="${provenanceUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;margin-bottom:24px;">
-        View provenance certificate →
+        View certificate of authenticity →
       </a>
 
       ${guestSection}
@@ -443,7 +443,7 @@ export async function notifyOpportunitySubmission(params: {
 
   const addOns: string[] = [];
   if (isFeatured) addOns.push("Featured placement ($75 NZD)");
-  if (isPipeline) addOns.push("Patronage Pipeline");
+  if (isPipeline) addOns.push("Open Call");
   const addOnHtml = addOns.length
     ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Add-ons requested:</strong> ${addOns.map(esc).join(", ")}</p>`
     : "";
@@ -1192,7 +1192,7 @@ export async function sendCollectiveInvitation({
   <table width="100%" cellpadding="0" cellspacing="0">
     <tr><td style="padding:40px 24px;max-width:560px;margin:0 auto;">
 
-      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Collective Invitation</p>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Group Invitation</p>
 
       <p style="margin:0 0 16px;font-size:15px;">
         <strong>${inviterName}</strong> has invited you to join
@@ -1397,7 +1397,7 @@ export async function sendCampaignSaleNotificationEmail(opts: {
     <tr><td>
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New sale via ${esc(opts.campaignTitle)}</p>
       <p style="margin:0 0 16px;font-size:15px;"><strong>${esc(opts.buyerName)}</strong> purchased <strong>${item}</strong> for <strong>${amount}</strong>.</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a provenance certificate. Check your earnings for payout details.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a certificate of authenticity. Check your earnings for payout details.</p>
       <a href="${SITE_URL}/studio/earnings" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View earnings →</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
     </td></tr>
@@ -1448,7 +1448,7 @@ export async function sendCampaignPurchaseReceiptEmail(opts: {
         <tr><td style="padding:6px 0;font-size:13px;color:#555;">Artist</td><td style="padding:6px 0;font-size:13px;">${esc(opts.artistName)}</td></tr>
         <tr><td style="padding:6px 0;font-size:13px;color:#555;">Amount paid</td><td style="padding:6px 0;font-size:14px;font-weight:600;">${amount}</td></tr>
       </table>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;">A certificate of provenance has been sent separately.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">A certificate of authenticity has been sent separately.</p>
       <a href="${profileUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View ${esc(opts.artistName)}'s profile →</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;">
         Questions? <a href="mailto:hello@patronage.nz" style="color:#888;">hello@patronage.nz</a> ·
@@ -1485,7 +1485,7 @@ export async function sendPrimaryArtistSaleNotificationEmail(opts: {
     <tr><td>
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · New sale</p>
       <p style="margin:0 0 16px;font-size:15px;"><strong>${buyer}</strong> purchased <strong>${esc(opts.workTitle)}</strong> for <strong>${amount}</strong>.</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a provenance certificate. Your payout will be processed automatically once Stripe settles the payment.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">The buyer has been sent a certificate of authenticity. Your payout will be processed automatically once Stripe settles the payment.</p>
       <a href="${SITE_URL}/studio/earnings" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View earnings →</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
     </td></tr>

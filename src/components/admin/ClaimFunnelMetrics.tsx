@@ -59,13 +59,13 @@ export function ClaimFunnelMetrics({ data }: { data: FunnelData }) {
               pctLabel={pct(claimed, opened)}
             />
             <FunnelCard
-              label="Pipeline activated"
+              label="Open call activated"
               value={pipelineActivated}
               pctLabel={pct(pipelineActivated, claimed)}
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-3">
-            Percentages show conversion from previous step: opened/sent → claimed/opened → pipeline/claimed.
+            Percentages show conversion from previous step: opened/sent → claimed/opened → open call/claimed.
           </p>
         </div>
       )}

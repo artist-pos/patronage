@@ -164,7 +164,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
     if (result.error) {
       setToast("Error: " + result.error);
       setToastIsUndo(false);
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     } else {
       setStatus(newStatus);
       setUndoStatus(previousStatus);
@@ -180,7 +180,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
     const result = await getSignedAssetUrl(application.id);
     setLoadingDownload(false);
     if (result.url) { setSignedUrl(result.url); window.open(result.url, "_blank"); }
-    else { setToast("Error: " + result.error); setTimeout(() => setToast(null), 3000); }
+    else { setToast("Error: " + result.error); setTimeout(() => setToast(null), 5000); }
   }
 
   // Normalised questions

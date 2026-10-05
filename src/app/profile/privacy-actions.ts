@@ -65,6 +65,51 @@ export async function updateProfilePrivacy(
   return {};
 }
 
+/**
+ * Bulk-update multiple profile privacy fields at once — used by the master
+ * public/private toggle to flip all show_* fields in a single round-trip.
+ */
+export async function updateProfilePrivacyBulk(
+  fields: Partial<Record<
+    | "collection_public"
+    | "show_taste"
+    | "show_follows"
+    | "show_location"
+    | "show_previously_collected"
+    | "show_supporting",
+    boolean
+  >>
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Only allow known privacy fields
+  const allowed = new Set([
+    "collection_public",
+    "show_taste",
+    "show_follows",
+    "show_location",
+    "show_previously_collected",
+    "show_supporting",
+  ]);
+  const patch: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (allowed.has(key) && typeof value === "boolean") {
+      patch[key] = value;
+    }
+  }
+  if (Object.keys(patch).length === 0) return { error: "No valid fields" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(patch)
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function updateDigestSubscription(
   subscribed: boolean
 ): Promise<{ error?: string }> {

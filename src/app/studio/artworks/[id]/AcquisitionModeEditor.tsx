@@ -47,7 +47,7 @@ export function AcquisitionModeEditor({ artworkId, initialMode }: Props) {
       setError(result.error);
     } else {
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 5000);
       router.refresh();
     }
   }
@@ -63,7 +63,7 @@ export function AcquisitionModeEditor({ artworkId, initialMode }: Props) {
         aria-expanded={open}
       >
         <div>
-          <p className="text-sm font-medium text-stone-900">Acquisition mode</p>
+          <p className="text-sm font-medium text-stone-900">How this work is acquired</p>
           <p className="text-xs text-stone-500 mt-0.5">
             Controls the single CTA button shown on the public artwork page.{" "}
             <span className="text-stone-700">Currently: {currentLabel}</span>

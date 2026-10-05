@@ -150,7 +150,7 @@ export function BulkClaimPanel({ opps, onClose, onDone }: Props) {
                         template === t ? "border-black bg-black text-white" : "border-border hover:border-black"
                       }`}
                     >
-                      {t === "claim_only" ? "Claim only" : "Claim + Pipeline pitch"}
+                      {t === "claim_only" ? "Claim only" : "Claim + Open call pitch"}
                     </button>
                   ))}
                 </div>

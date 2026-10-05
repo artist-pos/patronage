@@ -962,7 +962,7 @@ export function ApplyForm({
           <div className="space-y-4 border-t border-border pt-5">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
-                <label className="text-xs font-medium">Bio</label>
+                <label className="text-sm font-medium">Bio</label>
                 <span className="t-mono-sm text-[color:var(--fg-subtle)]">
                   {bioSaving ? "Saving…" : bioSaved ? "Saved ✓" : "Saved to your profile"}
                 </span>
@@ -977,7 +977,7 @@ export function ApplyForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Bio for {opportunity.organiser} <span className="font-normal text-muted-foreground">(optional)</span></label>
+              <label className="text-sm font-medium">Bio for {opportunity.organiser} <span className="font-normal text-muted-foreground">(optional)</span></label>
               <AutoGrowTextarea
                 value={answers[APPLICATION_BIO_KEY] ?? ""}
                 onChange={(e) => setAnswers((prev) => ({ ...prev, [APPLICATION_BIO_KEY]: e.target.value }))}
@@ -1107,7 +1107,7 @@ export function ApplyForm({
               {missingKeys.has("full_name") && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3">
-                    <label className="text-xs font-medium">Display name</label>
+                    <label className="text-sm font-medium">Display name</label>
                     {(fullNameSaving || fullNameSaved) && (
                       <span className="t-mono-sm text-[color:var(--fg-subtle)]">{fullNameSaving ? "Saving…" : "Saved ✓"}</span>
                     )}
@@ -1125,7 +1125,7 @@ export function ApplyForm({
               {missingKeys.has("city") && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3">
-                    <label className="text-xs font-medium">City</label>
+                    <label className="text-sm font-medium">City</label>
                     {(citySaving || citySaved) && (
                       <span className="t-mono-sm text-[color:var(--fg-subtle)]">{citySaving ? "Saving…" : "Saved ✓"}</span>
                     )}
@@ -1194,8 +1194,8 @@ export function ApplyForm({
               ) : (
                 <div className="border border-dashed border-border px-4 py-3 space-y-1">
                   <p className="t-body-sm">No professional CV uploaded.</p>
-                  <a href="/settings?tab=cv-press" target="_blank" className="t-mono-sm underline underline-offset-2">
-                    Upload one in Settings →
+                  <a href="/studio/profile" target="_blank" className="t-mono-sm underline underline-offset-2">
+                    Upload one in Studio →
                   </a>
                 </div>
               )}
@@ -1205,7 +1205,7 @@ export function ApplyForm({
               {showPortfolioPicker && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-medium">Select works to include</p>
+                    <p className="text-sm font-medium">Select works to include</p>
                     <div className="flex items-center gap-2" aria-live="polite">
                       <div className="flex gap-1" aria-hidden>
                         {Array.from({ length: portfolioPickCount }).map((_, i) => (
@@ -1539,7 +1539,7 @@ export function ApplyForm({
           )}
 
           {error && (
-            <p className="border-l-2 border-[color:var(--urgent)] pl-3 text-xs text-[color:var(--urgent)]">{error}</p>
+            <p className="border-l-2 border-[color:var(--urgent)] pl-3 text-sm text-[color:var(--urgent)]">{error}</p>
           )}
 
           {opportunity.routing_type === "pipeline" && (

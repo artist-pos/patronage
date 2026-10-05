@@ -6,7 +6,6 @@ import { getMissingFields, isProfileComplete } from "@/lib/profile-completion";
 import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { ProvenanceList } from "./ProvenanceList";
 import { SectionLockGate } from "@/components/studio/SectionLockGate";
-import { StudioPageShell } from "../StudioPageShell";
 import type { TransferredWork } from "./ProvenanceList";
 import type { Metadata } from "next";
 
@@ -26,7 +25,7 @@ export default async function StudioProvenancePage() {
     .single();
 
   if (!profileRow || (profileRow.role !== "artist" && profileRow.role !== "owner")) {
-    redirect("/dashboard");
+    redirect("/studio");
   }
 
   const completionProfile = await fetchCompletionProfile(user.id);
@@ -35,17 +34,15 @@ export default async function StudioProvenancePage() {
   if (!profileComplete) {
     const missingFields = completionProfile ? getMissingFields(completionProfile) : [];
     return (
-      <StudioPageShell username={profileRow.username} activeSection="provenance">
-        <div className="space-y-8">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold tracking-tight">Provenance</h2>
-            <p className="text-sm text-muted-foreground">
-              Manage certificates of ownership for works you have transferred to collectors.
-            </p>
-          </div>
-          <SectionLockGate featureName="Provenance" missingFields={missingFields} />
+      <div className="space-y-8">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold tracking-tight">Provenance</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage certificates of ownership for works you have transferred to collectors.
+          </p>
         </div>
-      </StudioPageShell>
+        <SectionLockGate featureName="Provenance" missingFields={missingFields} />
+      </div>
     );
   }
 
@@ -136,8 +133,7 @@ export default async function StudioProvenancePage() {
     !!provenanceSettings?.provenance_template_theme;
 
   return (
-    <StudioPageShell username={profileRow.username} activeSection="provenance">
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold tracking-tight">Provenance</h2>
           <p className="text-sm text-muted-foreground">
@@ -156,7 +152,7 @@ export default async function StudioProvenancePage() {
             <p className={`text-xs ${hasSettings ? "text-stone-500" : "text-amber-700"}`}>
               {hasSettings
                 ? "Your logo, signature, and theme are set. Update them any time."
-                : "Add your logo and signature to personalise the provenance certificates sent to buyers."}
+                : "Add your logo and signature to personalise the certificates of authenticity sent to buyers."}
             </p>
           </div>
           <Link
@@ -174,6 +170,5 @@ export default async function StudioProvenancePage() {
         {/* Works list */}
         <ProvenanceList works={works} />
       </div>
-    </StudioPageShell>
   );
 }

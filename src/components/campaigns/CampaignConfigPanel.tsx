@@ -311,7 +311,7 @@ export function CampaignConfigPanel({
 
   function showToast(msg: string) {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   function toggleWorkSelected(workId: string) {
@@ -656,7 +656,7 @@ export function CampaignConfigPanel({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium">Venue contact</label>
-                <p className="text-[11px] text-muted-foreground">For café or venue displays — enquiries are sent to this person as well as you.</p>
+                <p className="text-sm text-muted-foreground">For café or venue displays — enquiries are sent to this person as well as you.</p>
               </div>
               <input
                 type="text"
@@ -1078,7 +1078,7 @@ export function CampaignConfigPanel({
       <section className="space-y-4 border-t border-border pt-8">
         <div className="space-y-1">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Artist statement</h2>
-          <p className="text-[11px] text-muted-foreground">A short statement about this body of work. Shown below the commerce buttons on your storefront.</p>
+          <p className="text-sm text-muted-foreground">A short statement about this body of work. Shown below the commerce buttons on your storefront.</p>
         </div>
         <textarea
           value={artistStatement}
@@ -1091,7 +1091,7 @@ export function CampaignConfigPanel({
         <div className="space-y-3 pt-2 border-t border-border">
           <div className="space-y-1">
             <label className="text-xs font-medium">Shipping (optional)</label>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Set flat-rate postage for buyers who can&apos;t take the work in person.
               Stripe will present both options at checkout and collect the buyer&apos;s address.
               Leave blank if not offering postage.
@@ -1099,7 +1099,7 @@ export function CampaignConfigPanel({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">NZ delivery (NZD)</label>
+              <label className="text-sm text-muted-foreground">NZ delivery (NZD)</label>
               <input
                 type="number"
                 value={shippingNzDollars}
@@ -1111,7 +1111,7 @@ export function CampaignConfigPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">International (NZD)</label>
+              <label className="text-sm text-muted-foreground">International (NZD)</label>
               <input
                 type="number"
                 value={shippingIntlDollars}
@@ -1139,7 +1139,7 @@ export function CampaignConfigPanel({
         <section className="space-y-5 border-t border-border pt-8">
           <div className="space-y-1">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400">Production Files</h2>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Upload print-ready files for your partner. Max 10 MB per file.
               For larger files, email directly to{" "}
               <a href="mailto:hello@patronage.nz" className="underline underline-offset-2">hello@patronage.nz</a>{" "}

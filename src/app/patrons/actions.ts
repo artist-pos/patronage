@@ -11,6 +11,10 @@ interface SupportInput {
   /** Required for anonymous supporters; ignored when the user is logged in. */
   supporterEmail?: string;
   supporterName?: string;
+  /** When true, sets the supporter's profile to private_supporter mode so their
+   *  identity is masked on their public profile. Phase 10 privacy simplification
+   *  surfaces this at the moment of support rather than in settings. */
+  privateSupporter?: boolean;
 }
 
 /**
@@ -89,6 +93,15 @@ export async function initiateSupportCheckout(
     .single();
   if (insertError || !subscription) {
     return { error: insertError?.message ?? "Couldn't create support record." };
+  }
+
+  // Phase 10: if the supporter opted into private mode, flip their profile flag
+  // now so it takes effect regardless of whether checkout completes.
+  if (input.privateSupporter && user?.id) {
+    await admin
+      .from("profiles")
+      .update({ private_supporter: true })
+      .eq("id", user.id);
   }
 
   // Mint the Stripe Price lazily and cache it on the tier. Recurring uses

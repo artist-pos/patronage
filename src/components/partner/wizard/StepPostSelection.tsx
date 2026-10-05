@@ -120,7 +120,7 @@ export function StepPostSelection({
       {/* Pipeline stages */}
       <div className="space-y-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Pipeline stages</h3>
+          <h3 className="text-sm font-semibold">Review stages</h3>
           <p className="text-xs text-stone-500">
             Choose which stages this opportunity uses and what they&apos;re called. A simple job with one round of review might just need New → Selected → Not Selected — you don&apos;t have to use all six.
           </p>
@@ -156,7 +156,7 @@ export function StepPostSelection({
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Email notifications</h3>
           <p className="text-xs text-stone-500">
-            Choose the default behaviour when you change an application&apos;s status. You can override per-notification in the pipeline view.
+            Choose the default behaviour when you change an application&apos;s status. You can override per-notification in the applications view.
           </p>
         </div>
         <div className="space-y-3">

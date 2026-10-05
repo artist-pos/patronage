@@ -78,7 +78,7 @@ export function SaveButton({ opportunityId, initialSaved, saveCount = 0, showCou
         onClick={handleToggle}
         disabled={pending}
         title={saved ? "Remove from saved" : "Save opportunity"}
-        className={`flex items-center gap-1 text-xs transition-colors disabled:opacity-50 ${
+        className={`flex items-center gap-1 p-2 min-h-[44px] min-w-[44px] justify-center text-sm transition-colors disabled:opacity-50 ${
           saved
             ? "text-foreground"
             : "text-muted-foreground hover:text-foreground"

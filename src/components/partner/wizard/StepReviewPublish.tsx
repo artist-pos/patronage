@@ -90,10 +90,34 @@ export function StepReviewPublish({ opp, criteria, isPipeline, submitError }: Pr
 
       {/* Pipeline payment note */}
       {isPipeline && !opp.pipeline_paid_at && (
-        <div className="border border-black/10 bg-stone-50 p-4 text-sm text-stone-600 space-y-1">
-          <p className="font-medium">Payment required</p>
-          <p className="text-xs">
-            After submitting, you&apos;ll be taken to the payment page. Your listing goes live once reviewed and payment is confirmed ($200 NZD, or free for your first pipeline listing).
+        <div className="border border-black p-5 space-y-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Publishing fee</p>
+            <p className="font-semibold">Activate your open call</p>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              "Custom application questions",
+              "Kanban, Table, and Triage views",
+              "Committee scoring and rubric builder",
+              "Staged artist notifications",
+              "Production asset delivery",
+              "6 and 12-month impact reporting",
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-2 text-sm">
+                <span className="text-stone-300 shrink-0 mt-0.5">–</span>
+                <span className="text-stone-600">{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-black/10 pt-3 flex items-baseline justify-between">
+            <span className="text-sm text-stone-500">One-off publishing fee</span>
+            <span className="text-lg font-semibold">$200 NZD</span>
+          </div>
+          <p className="text-[11px] text-stone-400">
+            Your first open call listing is free. Payment page follows after submitting.
           </p>
         </div>
       )}
@@ -102,7 +126,7 @@ export function StepReviewPublish({ opp, criteria, isPipeline, submitError }: Pr
 
       <p className="text-xs text-stone-400">
         {isPipeline && !opp.pipeline_paid_at
-          ? "After submitting, you'll be taken to the payment page to activate your pipeline."
+          ? "After submitting, you’ll be redirected to complete payment. Your listing goes live once reviewed and payment is confirmed."
           : "Once submitted, your listing will be reviewed within two business days."}
       </p>
     </div>

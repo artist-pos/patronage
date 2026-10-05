@@ -50,7 +50,7 @@ export function WorksTabsClient({
   function syncUrl(next: { filter?: WorksFilter; view?: "list" | "grid" }) {
     const f = next.filter ?? filter;
     const v = next.view ?? view;
-    window.history.replaceState(null, "", `/studio?section=works&wf=${f}&view=${v}`);
+    window.history.replaceState(null, "", `/studio/works?wf=${f}&view=${v}`);
   }
   function changeFilter(f: WorksFilter) { setFilter(f); syncUrl({ filter: f }); }
   function changeView(v: "list" | "grid") { setView(v); syncUrl({ view: v }); }

@@ -106,7 +106,7 @@ export default async function ResaleSuccessPage({ searchParams }: Props) {
         {resaleSummary?.paid && (
           <div className="space-y-3">
             <p className="text-sm">
-              Your provenance certificate has been emailed to you. The
+              Your certificate of authenticity has been emailed to you. The
               ownership ledger has been updated.
             </p>
             <div className="flex flex-wrap gap-3">

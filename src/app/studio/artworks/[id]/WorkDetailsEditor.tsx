@@ -106,7 +106,7 @@ export function WorkDetailsEditor({ artworkId, initial }: Props) {
       setError(result.error);
     } else {
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 5000);
       router.refresh();
     }
   }

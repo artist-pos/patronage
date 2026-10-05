@@ -10,6 +10,7 @@ import {
 } from "@/app/studio/works/edition-actions";
 import { pricingFromNet, pricingFromListed } from "@/lib/pricing";
 import { PricingBreakdownBox } from "@/components/studio/PricingBreakdownBox";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 const TYPE_LABELS: Record<EditionType, string> = {
   original: "Original",
@@ -258,6 +259,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
   const [calcOpen, setCalcOpen] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Edition | null>(null);
 
   function showError(msg: string) {
     setError(msg);
@@ -373,12 +375,12 @@ export function EditionsSection({ workId, initialEditions }: Props) {
   }
 
   async function handleDelete(edition: Edition) {
-    if (!confirm(`Delete "${edition.label}"? This cannot be undone.`)) return;
     markBusy(edition.id, true);
     const result = await deleteEdition(edition.id, workId);
-    if (result.error) { showError(result.error); markBusy(edition.id, false); return; }
+    if (result.error) { showError(result.error); markBusy(edition.id, false); setDeleteTarget(null); return; }
     setEditions((prev) => prev.filter((e) => e.id !== edition.id));
     if (expandedId === edition.id) setExpandedId(null);
+    setDeleteTarget(null);
   }
 
   const canDelete = editions.length > 1;
@@ -476,7 +478,7 @@ export function EditionsSection({ workId, initialEditions }: Props) {
                       onChange={(u) => setDraft(edition.id, u)}
                       onSave={() => handleSaveExisting(draft)}
                       onCancel={() => { setExpandedId(null); clearDraft(edition.id); }}
-                      onDelete={canDelete ? () => handleDelete(edition) : undefined}
+                      onDelete={canDelete ? () => setDeleteTarget(edition) : undefined}
                       busy={isBusy}
                     />
                   </div>
@@ -677,6 +679,17 @@ export function EditionsSection({ workId, initialEditions }: Props) {
           />
         </div>
       )}
+
+      <ConfirmationModal
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete edition?"
+        description={`Delete "${deleteTarget?.label ?? ""}"? This cannot be undone.`}
+        confirmLabel="Delete edition"
+        destructive
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        isPending={busy.size > 0}
+      />
     </div>
   );
 }

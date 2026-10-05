@@ -148,6 +148,8 @@ interface PartnerProps {
   displayName: string;
   isOwner: boolean;
   canMessage: boolean;
+  /** Shown when the artist can't message — explains how to unlock messaging. */
+  messageHint?: string;
   verified: boolean;
   /** An admin-made profile nobody has claimed yet. It has not partnered with
    *  Patronage, so anything that says it has is left off. */
@@ -171,7 +173,7 @@ interface PartnerProps {
 }
 
 export function PartnerProfileView({
-  profile, displayName, isOwner, canMessage, verified, unclaimed = false,
+  profile, displayName, isOwner, canMessage, messageHint, verified, unclaimed = false,
   activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
   regionLink, regionArtists = [],
 }: PartnerProps) {
@@ -281,6 +283,11 @@ export function PartnerProfileView({
             )}
             {canMessage && !regionLink && (
               <MessageButton otherUserId={profile.id} label="Enquire about a programme" variant="solid" />
+            )}
+            {!canMessage && messageHint && !regionLink && (
+              <span className="text-xs text-muted-foreground max-w-[220px] leading-snug">
+                {messageHint}
+              </span>
             )}
             {profile.organisation_type === "charity"
               && profile.donation_enabled
@@ -493,6 +500,8 @@ interface PatronProps {
   displayName: string;
   isOwner: boolean;
   canMessage: boolean;
+  /** Shown when the artist can't message — explains how to unlock messaging. */
+  messageHint?: string;
   isAuthenticated: boolean;
   alreadyFollowing: boolean;
   followingArtists: ArtistTileData[];
@@ -504,7 +513,7 @@ interface PatronProps {
 }
 
 export function PatronProfileView({
-  profile, displayName, isOwner, canMessage, isAuthenticated, alreadyFollowing,
+  profile, displayName, isOwner, canMessage, messageHint, isAuthenticated, alreadyFollowing,
   followingArtists, collectedWorks, showCollection, privateSupporter = false,
 }: PatronProps) {
   const cover = !privateSupporter && profile.featured_image_url
@@ -600,6 +609,11 @@ export function PatronProfileView({
               />
             )}
             {canMessage && <MessageButton otherUserId={profile.id} />}
+            {!canMessage && messageHint && (
+              <span className="text-xs text-muted-foreground max-w-[220px] leading-snug">
+                {messageHint}
+              </span>
+            )}
             {!privateSupporter && (
               <div className="ml-1 flex items-center gap-1.5">
                 <IconLinks profile={profile} />

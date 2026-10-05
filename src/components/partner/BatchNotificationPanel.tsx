@@ -57,7 +57,7 @@ export function BatchNotificationPanel({ opportunityId, onClose }: Props) {
     setItems((prev) => prev.filter((i) => !selected.has(i.id as string)));
     setSelected(new Set());
     setToast(`${result.sent} notification${result.sent !== 1 ? "s" : ""} sent.`);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   async function handleCancel(id: string) {

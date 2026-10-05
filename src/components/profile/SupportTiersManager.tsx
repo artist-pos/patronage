@@ -12,6 +12,9 @@ import {
 import type { SupportIntentWithProfile } from "@/app/profile/support-tier-actions";
 import type { SupportTier, SupportTierType } from "@/types/database";
 import { uploadImage } from "@/lib/upload-image";
+import { SaveConfirmation } from "@/components/ui/SaveConfirmation";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Props {
   initialTiers: SupportTier[];
@@ -101,6 +104,8 @@ export function SupportTiersManager({ initialTiers }: Props) {
   const [showIntents, setShowIntents] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   function applyPreset(type: SupportTierType, preset: { title: string; price: number; description: string }) {
     setForm({ title: preset.title, price: String(preset.price), description: preset.description, tier_type: type });
@@ -204,11 +209,11 @@ export function SupportTiersManager({ initialTiers }: Props) {
   }
 
   async function handleDelete(tierId: string) {
-    if (!confirm("Delete this tier? Any captured interest will also be deleted.")) return;
     setBusy(tierId);
     const result = await deleteSupportTier(tierId);
     if (!result.error) setTiers(prev => prev.filter(t => t.id !== tierId));
     setBusy(null);
+    setDeleteTarget(null);
   }
 
   async function handleToggleActive(tier: SupportTier) {
@@ -403,7 +408,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                       {tier.is_active ? "Hide" : "Show"}
                     </button>
                     <span className="text-border">·</span>
-                    <button onClick={() => handleDelete(tier.id)} disabled={busy === tier.id} className="text-destructive hover:opacity-70 transition-opacity disabled:opacity-40">
+                    <button onClick={() => setDeleteTarget(tier.id)} disabled={busy === tier.id} className="text-destructive hover:opacity-70 transition-opacity disabled:opacity-40">
                       Delete
                     </button>
                   </div>
@@ -415,7 +420,10 @@ export function SupportTiersManager({ initialTiers }: Props) {
       )}
 
       {tiers.length === 0 && !showForm && (
-        <p className="text-sm text-muted-foreground">No tiers yet. Choose a starting point below or create a custom tier.</p>
+        <EmptyState
+          title="No support tiers yet"
+          description="Create tiers so patrons can back your practice — one-off or recurring. Choose a starting point below or build a custom tier."
+        />
       )}
 
       {/* Supporter list controls */}
@@ -531,8 +539,20 @@ export function SupportTiersManager({ initialTiers }: Props) {
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
-        {saved && <span className="text-xs text-muted-foreground">Changes saved.</span>}
+        <SaveConfirmation message="Support settings saved" visible={saved} />
       </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmationModal
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete tier?"
+        description="This tier and any captured interest from supporters will be permanently deleted."
+        confirmLabel="Delete tier"
+        destructive
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); }}
+        isPending={busy !== null}
+      />
     </div>
   );
 }

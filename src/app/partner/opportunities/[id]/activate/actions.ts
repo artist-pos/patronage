@@ -29,7 +29,7 @@ export async function initiatePipelineActivation(
     .maybeSingle();
   if (!opp) return { error: "Opportunity not found." };
   if (opp.profile_id !== user.id) return { error: "Only the listing partner can activate." };
-  if (opp.pipeline_paid_at) return { error: "Pipeline access is already active for this listing." };
+  if (opp.pipeline_paid_at) return { error: "Open call access is already active for this listing." };
 
   const { data: payment, error: insertError } = await admin
     .from("pipeline_entry_payments")
@@ -57,9 +57,9 @@ export async function initiatePipelineActivation(
         {
           amountCents: PIPELINE_ACTIVATION_PRICE_CENTS,
           currency: PRICING_CURRENCY,
-          productName: `Pipeline activation — ${opp.title}`,
+          productName: `Publishing fee — ${opp.title}`,
           productDescription:
-            "Activates Patronage's pipeline submission flow for this opportunity.",
+            "Publishes your open call on Patronage with the full application workflow.",
         },
         {
           amountCents: stripeFeeCents,

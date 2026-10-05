@@ -16,7 +16,7 @@ import type { Metadata } from "next";
 export const maxDuration = 60;
 
 export const metadata: Metadata = {
-  title: "Artists",
+  title: "Your Artists",
   robots: { index: false, follow: false },
 };
 
@@ -202,7 +202,7 @@ export default async function PartnerRosterPage() {
     <div className="mx-auto max-w-[1600px] space-y-12 px-6 py-12">
       <header className="space-y-2">
         <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.02em]">
-          Artists
+          Your Artists
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           {keepsRoster
@@ -361,7 +361,7 @@ export default async function PartnerRosterPage() {
 
       <div className="border-t border-border pt-6">
         <Link
-          href="/partner/dashboard"
+          href="/studio"
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           ← Dashboard

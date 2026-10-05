@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { NewCampaignForm } from "@/components/campaigns/NewCampaignForm";
 import type { Metadata } from "next";
 
@@ -20,17 +19,17 @@ export default async function NewCampaignPage() {
   const profile = profileResult.data;
 
   if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
-    redirect("/dashboard");
+    redirect("/studio");
   }
 
   const projects = (projectsResult.data ?? []) as { id: string; title: string }[];
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection="campaigns">
+    <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/studio?section=campaigns" className="hover:text-foreground transition-colors">
-          Campaigns
+        <Link href="/studio/qr-codes" className="hover:text-foreground transition-colors">
+          QR Codes
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">New campaign</span>
@@ -44,6 +43,6 @@ export default async function NewCampaignPage() {
       </div>
 
       <NewCampaignForm username={profile.username ?? ""} projects={projects} />
-    </StudioPageShell>
+    </>
   );
 }

@@ -9,9 +9,10 @@ import { EditionsSection } from "@/components/studio/EditionsSection";
 import { ArtworkProvenancePanel } from "@/app/studio/artworks/[id]/ArtworkProvenancePanel";
 import { DocumentationPhotosEditor } from "@/app/studio/artworks/[id]/DocumentationPhotosEditor";
 import { PriorHistoryEditor } from "@/app/studio/artworks/[id]/PriorHistoryEditor";
-import { ProcessThread } from "@/components/studio/ProcessThread";
+import { AcquisitionModeEditor } from "@/app/studio/artworks/[id]/AcquisitionModeEditor";
 import Link from "next/link";
 import { publishWorkToForSale } from "@/app/studio/works/edition-actions";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import type { EditableWork } from "@/components/dashboard/ArtworkEditor";
 import type { Edition } from "@/types/database";
 import type { PriorHistoryEntry } from "@/lib/artwork-prior-history";
@@ -68,6 +69,109 @@ function SectionDivider({ title, defaultOpen = true, children }: {
   );
 }
 
+function AdvancedFieldsSection({
+  work,
+  profileId,
+  pendingClaims,
+  ledgerEntries,
+  docPhotos,
+  priorHistory,
+}: {
+  work: Props["work"];
+  profileId: string;
+  pendingClaims: Props["pendingClaims"];
+  ledgerEntries: Props["ledgerEntries"];
+  docPhotos: Props["docPhotos"];
+  priorHistory: Props["priorHistory"];
+}) {
+  // Auto-expand when the work already has data in any advanced field
+  const hasAdvancedData =
+    work.certificate_note !== null ||
+    work.acquisition_mode !== "enquire_first" ||
+    pendingClaims.length > 0 ||
+    ledgerEntries.length > 0 ||
+    docPhotos.length > 0 ||
+    priorHistory.length > 0;
+
+  return (
+    <details className="group" open={hasAdvancedData || undefined}>
+      <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <svg
+            className="w-4 h-4 transition-transform group-open:rotate-90"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+          Add more detail
+        </span>
+      </summary>
+      <div className="pt-6 space-y-8">
+        {/* Acquisition mode */}
+        {work.is_available && (
+          <AcquisitionModeEditor
+            artworkId={work.id}
+            initialMode={work.acquisition_mode}
+          />
+        )}
+
+        {/* Provenance */}
+        <SectionDivider title="Provenance">
+          <ArtworkProvenancePanel
+            artwork={{
+              id: work.id,
+              title: work.title ?? work.caption ?? "Untitled",
+              url: work.url ?? null,
+              certificate_note: work.certificate_note,
+              ledger_id: work.ledger_id,
+              is_available: work.is_available,
+              current_owner_id: work.current_owner_id,
+              creator_id: work.creator_id,
+            }}
+            pendingClaims={pendingClaims}
+            ledgerEntries={ledgerEntries}
+          />
+        </SectionDivider>
+
+        {/* Documentation photos */}
+        <SectionDivider title="Documentation Photos" defaultOpen={false}>
+          <DocumentationPhotosEditor
+            artworkId={work.id}
+            initialPhotos={docPhotos}
+          />
+        </SectionDivider>
+
+        {/* Prior history */}
+        <SectionDivider title="Prior History" defaultOpen={false}>
+          <PriorHistoryEditor
+            artworkId={work.id}
+            initialEntries={priorHistory}
+          />
+        </SectionDivider>
+
+        {/* Transfer link */}
+        {work.is_available && (
+          <section className="border-t border-border pt-6">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+              Transfer
+            </h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Once this work has been sold, record the transfer to update provenance.
+            </p>
+            <Link
+              href="/studio/provenance"
+              className="text-sm border border-border px-4 py-2 hover:bg-muted/40 transition-colors inline-block"
+            >
+              Manage provenance →
+            </Link>
+          </section>
+        )}
+      </div>
+    </details>
+  );
+}
+
 export function WorkPageClient({
   profileId,
   work: initialWork,
@@ -84,6 +188,7 @@ export function WorkPageClient({
   const [work, setWork] = useState(initialWork);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   function showError(msg: string) {
     setError(msg);
@@ -115,11 +220,10 @@ export function WorkPageClient({
   }
 
   async function handleDelete() {
-    if (!confirm("Permanently delete this work? This cannot be undone.")) return;
     setBusy(true);
     const result = await deletePortfolioWork(work.id);
-    if (result.error) { showError(result.error); setBusy(false); return; }
-    router.push("/studio?section=works&wt=archival");
+    if (result.error) { showError(result.error); setBusy(false); setShowDeleteConfirm(false); return; }
+    router.push("/studio/works?wt=archival");
   }
 
   return (
@@ -198,68 +302,39 @@ export function WorkPageClient({
         )}
       </section>
 
-      {/* ── Provenance ───────────────────────────────────────────────── */}
-      <SectionDivider title="Provenance">
-        <ArtworkProvenancePanel
-          artwork={{
-            id: work.id,
-            title: work.title ?? work.caption ?? "Untitled",
-            url: work.url ?? null,
-            certificate_note: work.certificate_note,
-            ledger_id: work.ledger_id,
-            is_available: work.is_available,
-            current_owner_id: work.current_owner_id,
-            creator_id: work.creator_id,
-          }}
+      {/* ── Add more detail ─────────────────────────────────────────── */}
+      <section className="border-t border-border pt-6">
+        <AdvancedFieldsSection
+          work={work}
+          profileId={profileId}
           pendingClaims={pendingClaims}
           ledgerEntries={ledgerEntries}
+          docPhotos={docPhotos}
+          priorHistory={priorHistory}
         />
-      </SectionDivider>
-
-      {/* ── Documentation Photos ─────────────────────────────────────── */}
-      <SectionDivider title="Documentation Photos" defaultOpen={false}>
-        <DocumentationPhotosEditor
-          artworkId={work.id}
-          initialPhotos={docPhotos}
-        />
-      </SectionDivider>
-
-      {/* ── Prior History ────────────────────────────────────────────── */}
-      <SectionDivider title="Prior History" defaultOpen={false}>
-        <PriorHistoryEditor
-          artworkId={work.id}
-          initialEntries={priorHistory}
-        />
-      </SectionDivider>
-
-      {/* ── Transfer ─────────────────────────────────────────────────── */}
-      {work.is_available && (
-        <section className="border-t border-border pt-6">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-            Transfer
-          </h2>
-          <p className="text-xs text-muted-foreground mb-3">
-            Once this work has been sold, record the transfer to update provenance.
-          </p>
-          <Link
-            href="/studio/provenance"
-            className="text-sm border border-border px-4 py-2 hover:bg-muted/40 transition-colors inline-block"
-          >
-            Manage provenance →
-          </Link>
-        </section>
-      )}
+      </section>
 
       {/* ── Actions ──────────────────────────────────────────────────── */}
       <SectionDivider title="Actions" defaultOpen={false}>
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={busy}
           className="text-sm text-destructive border border-destructive/30 px-4 py-2 hover:bg-destructive/10 transition-colors disabled:opacity-40"
         >
           Delete work
         </button>
       </SectionDivider>
+
+      <ConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete work?"
+        description="This work will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete work"
+        destructive
+        onConfirm={handleDelete}
+        isPending={busy}
+      />
     </div>
   );
 }

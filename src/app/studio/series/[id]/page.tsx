@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { SeriesEditorClient } from "./SeriesEditorClient";
 import type { Metadata } from "next";
 
@@ -43,13 +42,11 @@ export default async function EditSeriesPage({ params }: PageProps) {
   });
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection="works">
-      <SeriesEditorClient
+    <SeriesEditorClient
         profileId={user.id}
         artistUsername={profile.username ?? ""}
         series={series}
         initialArtworks={artworks}
       />
-    </StudioPageShell>
   );
 }

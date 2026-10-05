@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
-import { StudioPageShell } from "@/app/studio/StudioPageShell";
 import { SeriesCreatorClient } from "./SeriesCreatorClient";
 import type { Metadata } from "next";
 
@@ -21,8 +20,6 @@ export default async function NewSeriesPage() {
   }
 
   return (
-    <StudioPageShell username={profile.username ?? ""} activeSection="works">
-      <SeriesCreatorClient profileId={user.id} />
-    </StudioPageShell>
+    <SeriesCreatorClient profileId={user.id} />
   );
 }

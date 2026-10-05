@@ -39,14 +39,14 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
   const pipelineTier = pipelineFirstRoundUsed
     ? {
         id: "pipeline" as const,
-        label: "Pipeline",
+        label: "Open Call",
         price: "$200 NZD",
         popular: true,
         body: "Artists apply with their Patronage profile: portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
       }
     : {
         id: "pipeline" as const,
-        label: "Pipeline",
+        label: "Open Call",
         price: "First round free",
         popular: true,
         body: "Artists apply with their Patronage profile: portfolio, CV, artist statement. Dashboard, custom questions, status tracking.",
@@ -92,7 +92,7 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
   const rightHeader = pipelineSelected && pipelineConfigActive
     ? { title: "Application setup", desc: "Configure how artists apply. Defaults for your opportunity type are pre-filled, so customise as needed." }
     : pipelineSelected
-    ? { title: "Pipeline", desc: "Manage the full application lifecycle through Patronage. Artists apply with their profile. No emails, no spreadsheets." }
+    ? { title: "Open Call", desc: "Manage the full application lifecycle through Patronage. Artists apply with their profile. No emails, no spreadsheets." }
     : { title: "Activations", desc: "Partner with us to commission artists for surfaces you already own: hoardings, vehicles, packaging, screens. Turn existing budgets into public art with full impact reporting." };
 
   return (
@@ -213,11 +213,11 @@ export function PartnerTierSelector({ isLoggedIn, partnerName, activationTypes, 
                 <h3 className="text-base font-semibold">
                   {selectedTier === "standard" && "Standard listing"}
                   {selectedTier === "featured" && "Featured listing"}
-                  {selectedTier === "pipeline" && "Pipeline opportunity"}
+                  {selectedTier === "pipeline" && "Open call opportunity"}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {selectedTier === "pipeline"
-                    ? "Fill in the details below, then configure your application pipeline."
+                    ? "Fill in the details below, then configure your application form."
                     : "Fill in the details below. We review every submission within two business days."}
                 </p>
               </div>

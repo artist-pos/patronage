@@ -156,7 +156,7 @@ export function PartnerEditForm({ opp }: Props) {
     try {
       await updateOpportunityPartner(opp.id, buildUpdatePayload());
       setToast("Saved");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
       router.refresh();
     } catch (err) {
       setToast(err instanceof Error ? err.message : "Save failed");

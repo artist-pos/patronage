@@ -186,7 +186,7 @@ export function ProvenanceSettingsForm({
       setSaveError(result.error);
     } else {
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 5000);
     }
   }
 

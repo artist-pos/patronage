@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCollection } from "@/lib/collection";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { CollectionGrid } from "@/components/collection/CollectionGrid";
 import { CollectionGroupsManager } from "@/components/collection/CollectionGroupsManager";
 import { CopyEmbedButton } from "@/components/collection/CopyEmbedButton";
@@ -25,7 +26,7 @@ export default async function CollectionPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role === "partner") redirect("/dashboard");
+  if (profile?.role === "partner") redirect("/studio");
 
   const username = profile?.username ?? "";
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -74,21 +75,12 @@ export default async function CollectionPage() {
         <div className="space-y-4">
           <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">All works</h2>
           {entries.length === 0 ? (
-            <div className="border border-dashed border-stone-200 rounded-xl px-8 py-16 text-center space-y-3">
-              <p className="text-base font-medium">No works in your collection yet</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Add works you own — paintings, prints, photographs, sculptures. Each
-                record stays private until you choose to publish it.
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/dashboard/collection/upload"
-                  className="inline-block bg-foreground text-background text-sm rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
-                >
-                  Add your first work
-                </Link>
-              </div>
-            </div>
+            <EmptyState
+              title="Your collection starts here"
+              description="Add works you own — paintings, prints, photographs, sculptures. Each record stays private until you choose to publish it."
+              actionLabel="Add your first work"
+              actionHref="/dashboard/collection/upload"
+            />
           ) : (
             <CollectionGrid entries={entries} />
           )}

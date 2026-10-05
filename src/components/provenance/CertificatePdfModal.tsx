@@ -114,7 +114,7 @@ export function CertificatePdfModal({ pdfUrl, filename = "provenance-certificate
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Provenance certificate"
+      aria-label="Certificate of authenticity"
     >
       <div
         className="bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"

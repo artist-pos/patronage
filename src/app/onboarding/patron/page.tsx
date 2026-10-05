@@ -28,7 +28,7 @@ export default async function OnboardingPatronPage({ searchParams }: Props) {
   ]);
 
   if (!profile?.role) redirect("/onboarding/role");
-  if (profile.role !== "patron") redirect("/dashboard");
+  if (profile.role !== "patron") redirect("/studio");
 
   const seeded = profile as Profile & {
     city_id?: string | null;

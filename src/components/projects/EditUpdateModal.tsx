@@ -51,13 +51,13 @@ export function EditUpdateModal({
     setSaving(false);
     if (result.error) {
       setToast(`Error: ${result.error}`);
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
       return;
     }
     setToast("Saved");
     setOpen(false);
     router.refresh();
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   return (

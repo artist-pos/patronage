@@ -565,7 +565,7 @@ export async function reorderCollection(
  * the upload form. Public read; small result set; case-insensitive.
  */
 /**
- * Re-sends (or sends for the first time) the provenance certificate for a
+ * Re-sends (or sends for the first time) the certificate of authenticity for a
  * collected artwork. Includes the collector's uploaded source documents as
  * additional reference photos so they appear in the PDF alongside the
  * artist's documentation photos.

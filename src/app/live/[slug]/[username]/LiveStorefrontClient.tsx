@@ -324,7 +324,7 @@ export function LiveStorefrontClient({
       {purchased && (
         <div className="mx-6 mt-6 border border-border p-4 space-y-1 animate-in fade-in duration-300">
           <p className="text-sm font-medium">Purchase confirmed.</p>
-          <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way. Check your email to claim your account.</p>
+          <p className="text-xs text-muted-foreground">Your certificate of authenticity is on its way. Check your email to claim your account.</p>
         </div>
       )}
 
@@ -381,7 +381,7 @@ export function LiveStorefrontClient({
                 return (
                   <div className="border border-border p-4 space-y-1 animate-in fade-in duration-200">
                     <p className="text-sm font-medium">Done — check your inbox.</p>
-                    <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way to {purchaseEmail}.</p>
+                    <p className="text-xs text-muted-foreground">Your certificate of authenticity is on its way to {purchaseEmail}.</p>
                   </div>
                 );
               }
@@ -391,8 +391,8 @@ export function LiveStorefrontClient({
                   <div className="border border-border p-4 space-y-3 animate-in fade-in duration-200">
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {isFree
-                        ? "Claim this work for free. You'll receive a Patronage provenance certificate by email."
-                        : "Purchase includes a Patronage provenance certificate — full ownership history and artist verification."}
+                        ? "Claim this work for free. You'll receive a Patronage certificate of authenticity by email."
+                        : "Purchase includes a Patronage certificate of authenticity — full ownership history and artist verification."}
                     </p>
                     <form onSubmit={e => handlePurchaseSubmit(e, currentWorkId, priceCents, isFree)} className="space-y-2">
                       <input type="text" value={purchaseName} onChange={e => setPurchaseName(e.target.value)} required placeholder="Your name"
@@ -410,7 +410,7 @@ export function LiveStorefrontClient({
                       </button>
                     </form>
                     <p className="text-[10px] text-muted-foreground text-center">
-                      {isFree ? "No payment required · You'll receive a certificate of provenance by email" : "Secure checkout via Stripe"}
+                      {isFree ? "No payment required · You'll receive a certificate of authenticity by email" : "Secure checkout via Stripe"}
                     </p>
                   </div>
                 );
@@ -465,7 +465,7 @@ export function LiveStorefrontClient({
                 </div>
                 {selectedPrint && !purchaseDone && (
                   <form onSubmit={e => handlePurchaseSubmit(e, displayWork?.id ?? works[0]?.id ?? "", selectedPrint.priceCents, false, selectedPrint.size)} className="space-y-2 pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">Purchase includes a Patronage provenance certificate.</p>
+                    <p className="text-xs text-muted-foreground">Purchase includes a Patronage certificate of authenticity.</p>
                     <input type="text" value={purchaseName} onChange={e => setPurchaseName(e.target.value)} required placeholder="Your name"
                       className="w-full border border-border px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted-foreground bg-[#FAFAF9]" />
                     <input type="email" value={purchaseEmail} onChange={e => setPurchaseEmail(e.target.value)} required placeholder="Email address"
@@ -481,7 +481,7 @@ export function LiveStorefrontClient({
                 {purchaseDone && selectedPrint && (
                   <div className="pt-2 border-t border-border space-y-1">
                     <p className="text-sm font-medium">Done — check your inbox.</p>
-                    <p className="text-xs text-muted-foreground">Your certificate of provenance is on its way to {purchaseEmail}.</p>
+                    <p className="text-xs text-muted-foreground">Your certificate of authenticity is on its way to {purchaseEmail}.</p>
                   </div>
                 )}
               </div>

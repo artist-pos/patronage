@@ -78,7 +78,7 @@ export default async function AdminFollowupsPage() {
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">
-          No follow-ups yet. They are scheduled automatically when artists are selected for pipeline opportunities.
+          No follow-ups yet. They are scheduled automatically when artists are selected for open call opportunities.
         </p>
       ) : (
         <div className="border border-black overflow-hidden">

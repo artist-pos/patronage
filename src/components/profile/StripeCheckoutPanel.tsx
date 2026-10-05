@@ -131,7 +131,7 @@ function CheckoutForm({
       </div>
 
       <p className="text-[11px] text-muted-foreground text-center">
-        Secured by Stripe · You&apos;ll receive a verified provenance certificate after purchase.
+        Secured by Stripe · You&apos;ll receive a verified certificate of authenticity after purchase.
       </p>
     </form>
   );

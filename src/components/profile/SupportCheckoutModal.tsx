@@ -23,6 +23,7 @@ interface Props {
 export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose }: Props) {
   const [email, setEmail] = useState(prefilledEmail ?? "");
   const [name, setName] = useState("");
+  const [keepPrivate, setKeepPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -40,6 +41,7 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
         tierId: tier.id,
         supporterEmail: email,
         supporterName: name,
+        privateSupporter: keepPrivate,
       });
       if (result.error) {
         setError(result.error);
@@ -103,6 +105,37 @@ export function SupportCheckoutModal({ tier, artistName, prefilledEmail, onClose
             placeholder="Your name (optional)"
             className="w-full text-sm border border-border px-3 py-2 bg-background focus:outline-none focus:border-black"
           />
+
+          {/* Private support checkbox — surfaces private_supporter at the
+              moment of action rather than buried in settings (Phase 10). */}
+          {prefilledEmail && (
+            <label className="flex items-start gap-2.5 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={keepPrivate}
+                onChange={(e) => setKeepPrivate(e.target.checked)}
+                className="sr-only peer"
+              />
+              <span
+                className={[
+                  "mt-0.5 flex items-center justify-center w-4 h-4 rounded border transition-colors shrink-0",
+                  keepPrivate
+                    ? "bg-black border-black"
+                    : "border-stone-300 group-hover:border-stone-400",
+                ].join(" ")}
+                aria-hidden="true"
+              >
+                {keepPrivate && (
+                  <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </span>
+              <span className="text-xs text-muted-foreground leading-snug">
+                Keep my support private — your name won&apos;t appear publicly on this artist&apos;s supporters list.
+              </span>
+            </label>
+          )}
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 

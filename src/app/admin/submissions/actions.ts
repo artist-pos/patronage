@@ -25,7 +25,7 @@ export async function approveSubmission(submissionId: string) {
   // the partner is routed to /activate when they submit, but that doesn't block
   // the row from sitting in this queue unpaid, so enforce it here too.
   if (opp?.routing_type === "pipeline" && !opp.pipeline_paid_at) {
-    throw new Error("This pipeline listing hasn't paid the activation fee yet — it can't be published until payment is confirmed.");
+    throw new Error("This open call listing hasn't paid the activation fee yet — it can't be published until payment is confirmed.");
   }
 
   const updates: Record<string, unknown> = { status: "published", is_active: true };

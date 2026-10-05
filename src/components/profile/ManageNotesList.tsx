@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { deleteMyNote } from "@/actions/notes";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { NoteIWrote } from "@/lib/notes";
 
 function formatDate(iso: string) {
@@ -27,7 +28,12 @@ export function ManageNotesList({ initialNotes }: { initialNotes: NoteIWrote[] }
 
   if (notes.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">You haven't left any notes yet.</p>
+      <EmptyState
+        title="No notes yet"
+        description="Leave notes on studio updates across Patronage — encouragement, feedback, or questions for the artist."
+        actionLabel="Browse the feed"
+        actionHref="/feed"
+      />
     );
   }
 

@@ -61,7 +61,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
 
   function showToast(msg: string) {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   async function toggleExpand(collectiveId: string) {

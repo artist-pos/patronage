@@ -4,7 +4,7 @@ import { getPipelineReport } from "@/lib/admin";
 import { PipelineExportButton } from "./PipelineExportButton";
 import { AGE_BRACKETS } from "@/lib/constants/demographics";
 
-export const metadata: Metadata = { title: "Pipeline Report — Patronage Admin" };
+export const metadata: Metadata = { title: "Open Call Report — Patronage Admin" };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -71,9 +71,9 @@ export default async function PipelineReportPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight">Pipeline Report</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Open Call Report</h1>
           <p className="text-sm text-muted-foreground">
-            Cross-round aggregate — all pipeline opportunities · {year} ·{" "}
+            Cross-round aggregate — all open call opportunities · {year} ·{" "}
             generated {new Date().toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
@@ -84,7 +84,7 @@ export default async function PipelineReportPage() {
       <Section title="Summary">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat
-            label="Pipeline opportunities"
+            label="Open call opportunities"
             value={report.totalPipelineOpportunities}
             sub={`${report.totalPipelineOpportunitiesThisYear} this year`}
           />
@@ -124,7 +124,7 @@ export default async function PipelineReportPage() {
 
       {/* ── Engagement funnel ────────────────────────────────────────────── */}
       {report.totalViews > 0 && (
-        <Section title="Engagement Funnel (all pipeline opportunities)">
+        <Section title="Engagement Funnel (all open call opportunities)">
           <div className="space-y-2">
             {[
               { label: "Total views", count: report.totalViews, pct: null },
@@ -274,7 +274,7 @@ export default async function PipelineReportPage() {
 
       {/* ── Follow-up outcomes ───────────────────────────────────────────── */}
       {report.followupsSent > 0 && (
-        <Section title="Follow-up Outcomes (all pipeline rounds)">
+        <Section title="Follow-up Outcomes (all open call rounds)">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Stat label="Follow-ups sent" value={report.followupsSent} />
             <Stat label="Responses received" value={report.followupsCompleted} sub={report.followupsSent > 0 ? `${Math.round((report.followupsCompleted / report.followupsSent) * 100)}% response rate` : undefined} />
@@ -313,7 +313,7 @@ export default async function PipelineReportPage() {
       )}
 
       {report.totalApplications === 0 && (
-        <p className="text-sm text-muted-foreground py-12 text-center">No pipeline applications yet.</p>
+        <p className="text-sm text-muted-foreground py-12 text-center">No open call applications yet.</p>
       )}
     </div>
   );

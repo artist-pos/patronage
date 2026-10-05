@@ -122,7 +122,7 @@ export default async function ImpactPage() {
           <Stat
             label="Funded via Patronage"
             value={metrics.artistsFundedThroughPatronage}
-            sub="verified pipeline approvals"
+            sub="verified open call approvals"
           />
         </div>
 
@@ -144,12 +144,12 @@ export default async function ImpactPage() {
           <Stat
             label="Artists with first opportunity via Patronage"
             value={metrics.artistsFundedThroughPatronage}
-            sub="unique verified pipeline recipients"
+            sub="unique verified open call recipients"
           />
           <Stat
             label="Repeat success artists"
             value={metrics.repeatSuccessCount}
-            sub="2 or more pipeline approvals"
+            sub="2 or more open call approvals"
           />
           <Stat
             label="Avg days to first opportunity"

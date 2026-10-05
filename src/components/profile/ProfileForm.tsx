@@ -56,9 +56,9 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
           className="border-black"
         />
         {state.fieldErrors?.username && (
-          <p className="text-xs text-destructive">{state.fieldErrors.username}</p>
+          <p className="text-sm text-destructive">{state.fieldErrors.username}</p>
         )}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Your public URL will be patronage.nz/<strong>username</strong>
         </p>
       </div>
@@ -121,7 +121,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Optional. Only they can see it, and it does not appear on your
               profile or change which regional page you show on.
             </p>
@@ -145,9 +145,9 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
             ))}
           </select>
           {state.fieldErrors?.country && (
-            <p className="text-xs text-destructive">{state.fieldErrors.country}</p>
+            <p className="text-sm text-destructive">{state.fieldErrors.country}</p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Where you&rsquo;re based. Choose Global if you&rsquo;re outside NZ and Australia.
           </p>
         </div>
@@ -174,7 +174,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
         {isArtist ? (
           <>
             <Label>Disciplines</Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Select all that apply to your practice.
             </p>
             <DisciplineInput
@@ -229,7 +229,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
             />
             Open for commissions
           </label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Shows a green status on your profile and lets patrons filter the
             artist directory for artists taking commissions.
           </p>
@@ -253,7 +253,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
       <div className="space-y-5 border-t border-border pt-6">
         <div className="space-y-1">
           <p className="text-sm font-medium">Demographics</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             This information is never shown on your public profile. It is used only for anonymised, aggregate reporting to help arts organisations understand who they are reaching.
           </p>
         </div>
@@ -273,9 +273,9 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
             className="border-black"
           />
           {state.fieldErrors?.year_of_birth && (
-            <p className="text-xs text-destructive">{state.fieldErrors.year_of_birth}</p>
+            <p className="text-sm text-destructive">{state.fieldErrors.year_of_birth}</p>
           )}
-          <p className="text-xs text-muted-foreground">Used only for anonymised, aggregate age-bracket reporting.</p>
+          <p className="text-sm text-muted-foreground">Used only for anonymised, aggregate age-bracket reporting.</p>
         </div>
 
         <div className="space-y-2">
@@ -299,7 +299,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs }: Props) 
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground">Self-identified. Used only for anonymised, aggregate reporting. Never shown on your public profile.</p>
+          <p className="text-sm text-muted-foreground">Self-identified. Used only for anonymised, aggregate reporting. Never shown on your public profile.</p>
         </div>
       </div>
 

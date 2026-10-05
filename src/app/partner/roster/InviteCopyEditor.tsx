@@ -54,7 +54,7 @@ export function InviteCopyEditor({ initial, defaults }: Props) {
         return;
       }
       setToast("Saved.");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     });
   }
 

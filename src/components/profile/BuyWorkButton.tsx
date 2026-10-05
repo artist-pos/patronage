@@ -146,7 +146,7 @@ export function BuyWorkButton({
                   <div className="text-4xl">✓</div>
                   <h2 className="text-xl font-semibold">Purchase complete</h2>
                   <p className="text-sm text-muted-foreground">
-                    Check your email for a receipt and provenance certificate link.
+                    Check your email for a receipt and certificate of authenticity link.
                   </p>
                   <button
                     type="button"
@@ -280,7 +280,7 @@ export function BuyWorkButton({
                   </div>
 
                   <p className="text-[11px] text-muted-foreground text-center">
-                    You&apos;ll receive a verified provenance certificate after purchase.
+                    You&apos;ll receive a verified certificate of authenticity after purchase.
                   </p>
                 </>
               )}

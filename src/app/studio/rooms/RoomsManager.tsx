@@ -172,13 +172,13 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
       )}
 
       {rooms.length === 0 && !showCreate && (
-        <p className="text-sm text-muted-foreground">No viewing rooms yet. Create one to share a curated selection of works.</p>
+        <p className="text-sm text-muted-foreground">No online exhibitions yet. Create one to share a curated selection of works.</p>
       )}
 
       {/* Create form */}
       {showCreate ? (
         <form onSubmit={handleCreate} className="space-y-5 border border-border p-5">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">New Viewing Room</p>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">New Online Exhibition</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
@@ -283,7 +283,7 @@ export function RoomsManager({ initialRooms, availableArtworks, username, siteUr
           onClick={() => setShowCreate(true)}
           className="text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
         >
-          + Create viewing room
+          + Create online exhibition
         </button>
       )}
     </div>

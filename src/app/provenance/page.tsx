@@ -26,7 +26,7 @@ export default function ProvenanceLandingPage() {
         <ProvenanceLookup />
 
         <p className="text-xs text-stone-400 mt-12 leading-relaxed">
-          Patronage provenance certificates record an artwork’s creation and
+          Patronage certificates of authenticity record an artwork’s creation and
           every subsequent transfer of ownership. Each certificate carries a
           unique ledger ID in the format <span className="font-mono">PTRN-YYYY-XXXX-XXXX</span>.
         </p>

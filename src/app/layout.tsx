@@ -10,6 +10,8 @@ import { Footer } from "@/components/layout/Footer";
 import { MobileTabBarServer } from "@/components/layout/MobileTabBarServer";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
+import { ViewAsBar } from "@/components/layout/ViewAsBar";
+import { getEffectiveRole } from "@/lib/view-as";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -122,13 +124,15 @@ const siteSchema = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
   modal,
 }: Readonly<{
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+  const { actualRole, isViewingAs, viewAsRole } = await getEffectiveRole();
+
   return (
     <html lang="en">
       <head>
@@ -139,6 +143,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <PostHogProvider>
+          {actualRole === "owner" && <ViewAsBar currentViewAs={isViewingAs ? viewAsRole : null} />}
           <Header />
           <VerifyEmailBanner />
           <main className="flex-1">{children}</main>

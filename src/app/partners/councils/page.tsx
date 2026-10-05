@@ -55,7 +55,7 @@ const faqSchema = {
       name: "Can Patronage manage the application process for our own open calls?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Pipeline is the platform we use to manage applications, panel review, notifications and file delivery for any arts opportunity -- council or otherwise. Many councils run their own open calls through Pipeline.",
+        text: "Yes. Our open call tools manage applications, panel review, notifications and file delivery for any arts opportunity -- council or otherwise. Many councils run their own open calls through Patronage.",
       },
     },
     {

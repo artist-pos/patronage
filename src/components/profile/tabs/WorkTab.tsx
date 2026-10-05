@@ -163,7 +163,7 @@ export function WorkTab({
                   + Add work
                 </Link>
                 <Link
-                  href="/studio?section=works"
+                  href="/studio/works"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   Manage in Studio →
@@ -346,7 +346,7 @@ export function WorkTab({
                   {isOwner && (
                     <div className="flex justify-end">
                       <Link
-                        href="/studio?section=works"
+                        href="/studio/works"
                         className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                       >
                         Manage in Studio →

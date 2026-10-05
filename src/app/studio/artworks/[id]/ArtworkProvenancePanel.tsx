@@ -73,7 +73,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
       setNoteError(error.message);
     } else {
       setNoteSaved(true);
-      setTimeout(() => setNoteSaved(false), 3000);
+      setTimeout(() => setNoteSaved(false), 5000);
     }
   }
 
@@ -120,7 +120,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
         <div>
           <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Certificate statement</h2>
           <p className="text-xs text-stone-400 mt-1">
-            Appears on the provenance certificate as an artist statement or note about this work.
+            Appears on the certificate of authenticity as an artist statement or note about this work.
           </p>
         </div>
         <textarea
@@ -149,7 +149,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
           <div>
             <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Transfer ownership</h2>
             <p className="text-xs text-stone-400 mt-1">
-              Register a new owner. A provenance certificate will be emailed to them.
+              Register a new owner. A certificate of authenticity will be emailed to them.
             </p>
           </div>
           {artwork.ledger_id && (
@@ -169,7 +169,7 @@ export function ArtworkProvenancePanel({ artwork, pendingClaims: initialClaims, 
             <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            This work has been transferred. The provenance certificate has been sent.
+            This work has been transferred. The certificate of authenticity has been sent.
           </div>
         ) : showTransfer ? (
           <form onSubmit={handleTransfer} className="space-y-4 bg-stone-50 border border-stone-200 rounded-xl p-5">

@@ -67,7 +67,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
       {isOwner && (
         <div className="flex justify-end items-center gap-4">
           <a
-            href="/studio?section=support"
+            href="/studio/support"
             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             Manage tiers →
@@ -85,13 +85,13 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
         <div className="space-y-4">
           {isOwner ? (
             <p className="text-sm text-muted-foreground">
-              No support tiers yet.{" "}
-              <a href="/studio?section=support" className="underline underline-offset-2 hover:text-foreground">
+              No ways to support set up yet.{" "}
+              <a href="/studio/support" className="underline underline-offset-2 hover:text-foreground">
                 Add tiers in your profile settings →
               </a>
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">Support tiers coming soon.</p>
+            <p className="text-sm text-muted-foreground">Ways to support coming soon.</p>
           )}
         </div>
       ) : (
@@ -125,7 +125,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
             <div className="mt-auto pt-4">
               {isOwner ? (
                 <a
-                  href="/studio?section=support"
+                  href="/studio/support"
                   className="inline-block border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
                 >
                   Configure →

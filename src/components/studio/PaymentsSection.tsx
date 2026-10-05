@@ -36,7 +36,7 @@ export function PaymentsSection({ profileId, initialGstRegistered = false, initi
       setError(dbError.message);
     } else {
       setToast("Saved");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     }
   }
 

@@ -147,7 +147,7 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
       if (result.error) {
         setIsPublic(!next);
         setError(result.error);
-        setTimeout(() => setError(null), 3000);
+        setTimeout(() => setError(null), 5000);
       }
     });
   }
@@ -158,7 +158,7 @@ function CollectionTile({ entry, selectMode, isSelected, onToggleSelected }: Til
       const result = await removeFromCollection(entry.membership.id);
       if (result.error) {
         setError(result.error);
-        setTimeout(() => setError(null), 3000);
+        setTimeout(() => setError(null), 5000);
       }
     });
   }

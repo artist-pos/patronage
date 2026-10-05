@@ -38,7 +38,7 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
 
   if (!profile?.role) redirect("/onboarding/role");
   const isArtist = profile.role === "artist" || profile.role === "owner";
-  if (!isArtist) redirect("/dashboard");
+  if (!isArtist) redirect("/studio");
 
   // Already answered — this step is not a place to come back to.
   // signup=1 rides along so the client still captures signup_completed.

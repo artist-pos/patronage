@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/upload-image";
 import { updateWorkMetadata, setPrimaryWorkImageUrl } from "@/app/dashboard/works/actions";
 import { linkProjectToArtwork, unlinkProjectFromArtwork } from "@/actions/projects";
+import { SaveConfirmation } from "@/components/ui/SaveConfirmation";
 import type { WorkImage } from "@/types/database";
 
 export interface EditableWork {
@@ -143,6 +144,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
   // UI
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [projectBusy, setProjectBusy] = useState(false);
@@ -302,6 +304,9 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
   // ── Save metadata ────────────────────────────────────────────────────────
 
+  // Clear saved indicator when the user edits any field
+  function clearSaved() { setSaved(false); }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -324,6 +329,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
       dimensions: dimensions || null,
       description: description || null,
     });
+    setSaved(true);
     setSaving(false);
   }
 
@@ -427,7 +433,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
             )}
 
             {images.length > 0 && (
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Drag to reorder · first image is shown as primary
               </p>
             )}
@@ -463,11 +469,11 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
           <div className="grid grid-cols-2 gap-3">
             {/* Title — full width */}
             <div className="col-span-2 space-y-1">
-              <label className="text-[11px] text-muted-foreground">Title</label>
+              <label className="text-sm text-muted-foreground">Title</label>
               <input
                 type="text"
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={e => { setTitle(e.target.value); clearSaved(); }}
                 placeholder={work.caption ?? "Untitled"}
                 className={inputCls}
               />
@@ -475,11 +481,11 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
             {/* Year */}
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Year</label>
+              <label className="text-sm text-muted-foreground">Year</label>
               <input
                 type="number"
                 value={year}
-                onChange={e => setYear(e.target.value)}
+                onChange={e => { setYear(e.target.value); clearSaved(); }}
                 placeholder={String(new Date().getFullYear())}
                 className={inputCls}
               />
@@ -487,11 +493,11 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
             {/* Medium */}
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Medium</label>
+              <label className="text-sm text-muted-foreground">Medium</label>
               <input
                 type="text"
                 value={medium}
-                onChange={e => setMedium(e.target.value)}
+                onChange={e => { setMedium(e.target.value); clearSaved(); }}
                 placeholder="Oil on canvas"
                 className={inputCls}
               />
@@ -499,11 +505,11 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
             {/* Dimensions — half width */}
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Dimensions</label>
+              <label className="text-sm text-muted-foreground">Dimensions</label>
               <input
                 type="text"
                 value={dimensions}
-                onChange={e => setDimensions(e.target.value)}
+                onChange={e => { setDimensions(e.target.value); clearSaved(); }}
                 placeholder="60 × 90 cm"
                 className={inputCls}
               />
@@ -512,10 +518,10 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Description</label>
+            <label className="text-sm text-muted-foreground">Description</label>
             <textarea
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={e => { setDescription(e.target.value); clearSaved(); }}
               placeholder="Notes about this work — materials, context, edition details…"
               rows={6}
               className={`${inputCls} resize-none`}
@@ -525,7 +531,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
           {/* Project Thread */}
           {(linkedProject !== undefined) && (
             <div className="space-y-1 pt-2 border-t border-border">
-              <label className="text-[11px] text-muted-foreground">Project Thread</label>
+              <label className="text-sm text-muted-foreground">Project Thread</label>
               {linkedProject ? (
                 <div className="flex items-center justify-between gap-3 text-sm border border-border px-3 py-2 bg-background">
                   <span className="truncate">{linkedProject.title}</span>
@@ -548,7 +554,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
                   {(unlinkableProjects?.length ?? 0) === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       No unlinked projects — create one in{" "}
-                      <a href="/studio?section=feed&ft=projects" className="underline underline-offset-2 hover:text-foreground">
+                      <a href="/studio/feed?ft=projects" className="underline underline-offset-2 hover:text-foreground">
                         Studio Feed
                       </a>
                       .
@@ -600,6 +606,7 @@ export function ArtworkEditor({ work, profileId, onCancel, onSaved, onThumbnailC
           >
             {saving ? "Saving…" : "Save Changes"}
           </button>
+          <SaveConfirmation message="Work saved" visible={saved} />
           <button
             onClick={onCancel}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-2"

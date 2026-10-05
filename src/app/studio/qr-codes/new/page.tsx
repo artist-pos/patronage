@@ -1,0 +1,47 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { NewCampaignForm } from "@/components/campaigns/NewCampaignForm";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "New QR Code — Studio" };
+
+export default async function NewQrCodePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const [profileResult, projectsResult] = await Promise.all([
+    supabase.from("profiles").select("role, username").eq("id", user.id).single(),
+    supabase.from("projects").select("id, title").eq("artist_id", user.id).order("created_at", { ascending: false }),
+  ]);
+
+  const profile = profileResult.data;
+
+  if (!profile || (profile.role !== "artist" && profile.role !== "owner")) {
+    redirect("/studio");
+  }
+
+  const projects = (projectsResult.data ?? []) as { id: string; title: string }[];
+
+  return (
+    <>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+        <Link href="/studio/qr-codes" className="hover:text-foreground transition-colors">
+          QR Codes
+        </Link>
+        <span>/</span>
+        <span className="text-foreground font-medium">New QR code</span>
+      </div>
+
+      <div className="space-y-1 mb-8">
+        <h1 className="text-xl font-semibold tracking-tight">Create a QR code</h1>
+        <p className="text-sm text-muted-foreground">
+          Generate a QR code and storefront for your next show, fair, or pop-up.
+        </p>
+      </div>
+
+      <NewCampaignForm username={profile.username ?? ""} projects={projects} />
+    </>
+  );
+}

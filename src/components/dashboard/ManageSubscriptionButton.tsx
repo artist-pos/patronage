@@ -26,11 +26,11 @@ export function ManageSubscriptionButton() {
       <button
         onClick={handleClick}
         disabled={loading}
-        className="text-xs border border-stone-200 rounded-lg px-3 py-1.5 hover:bg-stone-50 transition-colors disabled:opacity-50"
+        className="text-sm border border-stone-200 rounded-lg px-3 py-2 hover:bg-stone-50 transition-colors disabled:opacity-50"
       >
         {loading ? "Opening…" : "Manage →"}
       </button>
-      {error && <p className="text-[11px] text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   );
 }

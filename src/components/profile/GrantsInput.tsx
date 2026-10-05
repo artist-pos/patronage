@@ -41,7 +41,7 @@ export function GrantsInput({ initialGrants, onSave }: Props) {
       setTimeout(() => setToast(null), 2000);
     } catch {
       setToast("Save failed");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setSaving(false);
     }

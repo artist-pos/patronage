@@ -22,7 +22,7 @@ export function OrgJoinLink({ url }: Props) {
     }
     setCopied(true);
     trackEvent("org_link_copied");
-    setTimeout(() => setCopied(false), 3000);
+    setTimeout(() => setCopied(false), 5000);
   }
 
   return (

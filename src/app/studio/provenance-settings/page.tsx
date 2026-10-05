@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ProvenanceSettingsForm } from "./ProvenanceSettingsForm";
-import { StudioPageShell } from "../StudioPageShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -40,8 +39,7 @@ export default async function ProvenanceSettingsPage() {
   }
 
   return (
-    <StudioPageShell username={profile?.username ?? ""} activeSection="provenance">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">Certificate settings</h2>
           <p className="text-sm text-muted-foreground">
@@ -60,7 +58,6 @@ export default async function ProvenanceSettingsPage() {
           initialFontPair={(profile?.provenance_font_pair as "classic") ?? "classic"}
           initialOrientation={(profile?.provenance_orientation as "portrait" | "landscape") ?? "portrait"}
         />
-      </div>
-    </StudioPageShell>
+    </div>
   );
 }

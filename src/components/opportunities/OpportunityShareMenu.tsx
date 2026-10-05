@@ -95,7 +95,7 @@ export function OpportunityShareMenu({
     }
     trackEvent("opportunity_send_to_friend_copy_link", { opportunity_id: opportunityId });
     setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
+    setTimeout(() => setCopied(false), 5000);
   }
 
   const item = "flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm transition-colors hover:bg-[color:var(--tint)]";

@@ -11,14 +11,14 @@ const NAV = [
   { href: "/admin/digest", label: "Digest" },
   { href: "/admin/impact", label: "Impact" },
   { href: "/admin/followups", label: "Follow-ups" },
-  { href: "/admin/pipeline-report", label: "Pipeline Report" },
+  { href: "/admin/pipeline-report", label: "Open Call Report" },
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/outreach", label: "Outreach" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/claim-tokens", label: "Claim Tokens" },
   { href: "/admin/orphaned-users", label: "Orphaned Users" },
   { href: "/admin/social", label: "Social" },
-  { href: "/partner/dashboard", label: "Pipelines" },
+  { href: "/partner/dashboard", label: "Open Calls" },
 ];
 
 export default async function AdminLayout({

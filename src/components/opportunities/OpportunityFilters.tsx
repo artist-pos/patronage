@@ -73,7 +73,7 @@ export function OpportunityFilters() {
   }, [mobileOpen]);
 
   const typeRowCls = (active: boolean) =>
-    `block w-full border px-3 py-2 text-left font-mono text-xs transition-colors ${
+    `block w-full border px-3 py-2.5 min-h-[44px] text-left font-mono text-sm transition-colors ${
       active
         ? "border-foreground bg-foreground text-white"
         : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
@@ -167,7 +167,7 @@ export function OpportunityFilters() {
       <button
         type="button"
         onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
-        className={`w-full border px-3 py-2 text-left font-mono text-xs transition-colors ${
+        className={`w-full border px-3 py-2.5 min-h-[44px] text-left font-mono text-sm transition-colors ${
           currentFreeEntry
             ? "border-foreground bg-foreground text-white"
             : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -198,7 +198,7 @@ export function OpportunityFilters() {
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="flex items-center gap-2 border border-border px-3.5 py-2 font-mono text-xs text-foreground transition-colors hover:border-foreground"
+          className="flex items-center gap-2 border border-border px-3.5 py-2.5 min-h-[44px] font-mono text-sm text-foreground transition-colors hover:border-foreground"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filters &amp; sort
@@ -227,9 +227,9 @@ export function OpportunityFilters() {
                   type="button"
                   onClick={() => setMobileOpen(false)}
                   aria-label="Close"
-                  className="p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                  className="p-2.5 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
               {panel}

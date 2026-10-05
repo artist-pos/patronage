@@ -231,7 +231,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
 
   function flash(msg: string) {
     setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(null), 3000);
+    setTimeout(() => setSuccessMsg(null), 5000);
   }
 
   // --- Hero ---
@@ -415,7 +415,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
     <div className="max-w-2xl space-y-8">
       {/* Breadcrumb */}
       <div className="space-y-0.5">
-        <Link href="/studio?section=works&wt=series" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <Link href="/studio/works?wt=series" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           ← Works / Series
         </Link>
         <h1 className="text-xl font-semibold">Edit Series</h1>

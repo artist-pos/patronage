@@ -63,7 +63,7 @@ export function PartnerCommercePanel({
     <section className="border border-stone-200 rounded-xl p-6 space-y-6">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-widest text-stone-500">
-          Pipeline & promotion
+          Open call & promotion
         </h2>
         <p className="text-xs text-muted-foreground mt-1">
           Optional partner add-ons. External-link listings remain free.
@@ -72,7 +72,7 @@ export function PartnerCommercePanel({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="border border-stone-100 rounded-lg p-4 space-y-2">
-          <p className="text-sm font-medium">Pipeline activation</p>
+          <p className="text-sm font-medium">Publishing fee</p>
           <p className="text-xs text-muted-foreground">
             Use Patronage&rsquo;s submission flow instead of an external
             application link.

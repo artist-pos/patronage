@@ -9,6 +9,7 @@ import { PartnerCommercePanel } from "@/components/partner/PartnerCommercePanel"
 import { ManageFormSection } from "@/components/partner/ManageFormSection";
 import { ManageRubricSection } from "@/components/partner/ManageRubricSection";
 import { ManagePostSelectionSection } from "@/components/partner/ManagePostSelectionSection";
+import { InviteArtistsPanel } from "@/components/partner/InviteArtistsPanel";
 import { getCollaborators } from "@/app/partner/opportunities/[id]/collaborators/actions";
 import { getRubricCriteria, getPartnerDocuments } from "@/app/partner/opportunities/[id]/new/actions";
 import type { Opportunity, RubricCriterion, PartnerDocument } from "@/types/database";
@@ -42,7 +43,7 @@ export default async function ManagePage({ params }: Props) {
       .eq("opportunity_id", id)
       .eq("profile_id", user.id)
       .maybeSingle();
-    if (!collab) redirect("/partner/dashboard");
+    if (!collab) redirect("/studio");
   }
 
   const canManageCollaborators = isOwner || !!adminUser;
@@ -106,11 +107,22 @@ export default async function ManagePage({ params }: Props) {
       {/* Commerce */}
       {isOwner && (
         <section id="commerce" className="scroll-mt-20 space-y-4">
-          <SectionHeader label="Commerce" desc="Paid placement and pipeline billing." />
+          <SectionHeader label="Commerce" desc="Paid placement and open call billing." />
           <PartnerCommercePanel
             opportunityId={id}
             pipelinePaidAt={opp.pipeline_paid_at ?? null}
             featuredUntil={opp.featured_until ?? null}
+          />
+        </section>
+      )}
+
+      {/* Invite artists */}
+      {isPipeline && (
+        <section id="invite" className="scroll-mt-20 space-y-4">
+          <SectionHeader label="Invite artists to apply" desc="Share a link or search for artists on Patronage to invite them." />
+          <InviteArtistsPanel
+            opportunityId={id}
+            opportunityTitle={opp.title ?? "Untitled opportunity"}
           />
         </section>
       )}

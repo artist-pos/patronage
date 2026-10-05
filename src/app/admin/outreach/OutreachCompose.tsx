@@ -315,7 +315,7 @@ export function OutreachCompose() {
       setScheduledAt("");
       setScheduling(false);
       setToast(scheduling ? "Email scheduled." : "Email sent.");
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 5000);
     });
   }
 

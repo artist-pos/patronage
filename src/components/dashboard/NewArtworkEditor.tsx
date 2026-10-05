@@ -304,7 +304,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
         </p>
         <button
           onClick={onCancel}
-          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ✕ Close
         </button>
@@ -316,7 +316,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           <button
             key={type}
             onClick={() => handleTabChange(type)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm transition-colors ${
               tab === type
                 ? "bg-black text-white"
                 : "text-muted-foreground hover:text-foreground"
@@ -346,7 +346,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                     <img src={imagePreview} alt="" className="w-full h-full object-contain" />
                   </div>
                   <label htmlFor="new-work-image"
-                    className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
+                    className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
                     Change image
                   </label>
                 </div>
@@ -355,10 +355,10 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                   className="flex flex-col items-center justify-center border border-dashed border-border cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground"
                   style={{ aspectRatio: "4/3" }}>
                   <span className="text-sm">+ Upload image</span>
-                  <span className="text-[10px] mt-1">JPEG, PNG, WebP</span>
+                  <span className="text-sm mt-1">JPEG, PNG, WebP</span>
                 </label>
               )}
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Additional gallery images can be added after saving via the Edit button.
               </p>
             </>
@@ -378,20 +378,20 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                 {audioFile ? (
                   <>
                     <Music className="w-5 h-5 mb-2" />
-                    <span className="text-[11px] text-center px-2 truncate max-w-full">{audioFile.name}</span>
-                    <span className="text-[10px] text-muted-foreground mt-1">Click to change</span>
+                    <span className="text-sm text-center px-2 truncate max-w-full">{audioFile.name}</span>
+                    <span className="text-sm text-muted-foreground mt-1">Click to change</span>
                   </>
                 ) : (
                   <>
                     <Music className="w-5 h-5 mb-2" />
                     <span className="text-sm">+ Upload audio</span>
-                    <span className="text-[10px] mt-1">MP3, WAV, FLAC, AAC · 50 MB max</span>
+                    <span className="text-sm mt-1">MP3, WAV, FLAC, AAC · 50 MB max</span>
                   </>
                 )}
               </label>
 
               <div className="space-y-2">
-                <p className="text-[10px] text-muted-foreground">Cover art (optional)</p>
+                <p className="text-sm text-muted-foreground">Cover art (optional)</p>
                 <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp"
                   onChange={handleCoverFileChange} className="hidden" id="new-work-cover" />
                 {coverPreview ? (
@@ -401,13 +401,13 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                       <img src={coverPreview} alt="" className="w-full h-full object-cover" />
                     </div>
                     <label htmlFor="new-work-cover"
-                      className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
+                      className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2">
                       Change cover
                     </label>
                   </div>
                 ) : (
                   <label htmlFor="new-work-cover"
-                    className="inline-block text-[11px] border border-dashed border-border px-3 py-1.5 cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground">
+                    className="inline-block text-sm border border-dashed border-border px-3 py-1.5 cursor-pointer hover:border-black transition-colors text-muted-foreground hover:text-foreground">
                     + Add cover image
                   </label>
                 )}
@@ -429,23 +429,23 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                 {videoFile ? (
                   <>
                     <Play className="w-5 h-5 mb-2" />
-                    <span className="text-[11px] text-center px-2 truncate max-w-full">{videoFile.name}</span>
-                    <span className="text-[10px] text-muted-foreground mt-1">Click to change</span>
+                    <span className="text-sm text-center px-2 truncate max-w-full">{videoFile.name}</span>
+                    <span className="text-sm text-muted-foreground mt-1">Click to change</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-5 h-5 mb-2" />
                     <span className="text-sm">+ Upload video</span>
-                    <span className="text-[10px] mt-1">MP4, WebM, MOV · 200 MB max</span>
+                    <span className="text-sm mt-1">MP4, WebM, MOV · 200 MB max</span>
                   </>
                 )}
               </label>
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground">Or paste a YouTube / Vimeo URL</p>
+                <p className="text-sm text-muted-foreground">Or paste a YouTube / Vimeo URL</p>
                 <input type="url" value={videoUrl}
                   onChange={e => { setVideoUrl(e.target.value); if (videoFile) setVideoFile(null); }}
                   placeholder="https://youtube.com/watch?v=..."
-                  className={`${inputCls} text-[11px]`} />
+                  className={`${inputCls} text-sm`} />
               </div>
             </>
           )}
@@ -474,12 +474,12 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                   placeholder="YouTube, Vimeo, SoundCloud, Spotify…"
                   className={inputCls} />
                 {embedUrl && detectProvider(embedUrl) && (
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Provider detected: {detectProvider(embedUrl)}
                   </p>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Paste the URL of the page (not an embed code). Supports YouTube, Vimeo, SoundCloud, Bandcamp, Spotify.
               </p>
             </>
@@ -492,25 +492,25 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1">
-              <label className="text-[11px] text-muted-foreground">Title</label>
+              <label className="text-sm text-muted-foreground">Title</label>
               <input type="text" value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="Untitled" className={inputCls} />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Year</label>
+              <label className="text-sm text-muted-foreground">Year</label>
               <input type="number" value={year} onChange={e => setYear(e.target.value)}
                 placeholder={String(new Date().getFullYear())} className={inputCls} />
             </div>
             {showMediumDimensions && (
               <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Medium</label>
+                <label className="text-sm text-muted-foreground">Medium</label>
                 <input type="text" value={medium} onChange={e => setMedium(e.target.value)}
                   placeholder="Oil on canvas" className={inputCls} />
               </div>
             )}
             {showMediumDimensions && (
               <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Dimensions</label>
+                <label className="text-sm text-muted-foreground">Dimensions</label>
                 <input type="text" value={dimensions} onChange={e => setDimensions(e.target.value)}
                   placeholder="60 × 90 cm" className={inputCls} />
               </div>
@@ -518,7 +518,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Description</label>
+            <label className="text-sm text-muted-foreground">Description</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -543,19 +543,19 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                 onChange={e => setListForSale(e.target.checked)}
                 className="rounded"
               />
-              <span className="text-[11px] text-muted-foreground">List for sale</span>
+              <span className="text-sm text-muted-foreground">List for sale</span>
             </label>
 
             {listForSale && (
               <div className="space-y-3 pl-5">
                 <div className="flex gap-2">
                   <div className="flex-1 space-y-1">
-                    <label className="text-[11px] text-muted-foreground">Price</label>
+                    <label className="text-sm text-muted-foreground">Price</label>
                     <input type="number" value={price} onChange={e => setPrice(e.target.value)}
                       placeholder="Price on enquiry if blank" className={inputCls} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] text-muted-foreground">Currency</label>
+                    <label className="text-sm text-muted-foreground">Currency</label>
                     <select value={currency} onChange={e => setCurrency(e.target.value as "NZD" | "AUD")}
                       className={inputCls}>
                       <option value="NZD">NZD</option>
@@ -564,7 +564,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                   </div>
                 </div>
                 {price && parseFloat(price) > 0 && (
-                  <div className="border border-stone-200 px-3 py-2 space-y-0.5 text-[11px]">
+                  <div className="border border-stone-200 px-3 py-2 space-y-0.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Listing price</span>
                       <span className="font-mono">{currency} {parseFloat(price).toFixed(2)}</span>
@@ -577,13 +577,13 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                       <span className="font-medium">Your take-home</span>
                       <span className="font-mono font-medium">{currency} {(parseFloat(price) * 0.90).toFixed(2)}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground pt-1 leading-relaxed">
+                    <p className="text-sm text-muted-foreground pt-1 leading-relaxed">
                       Card processing fee (2.9% + 30c) is added to the buyer&rsquo;s total at checkout — separate from your commission.
                     </p>
                   </div>
                 )}
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">Format</label>
+                  <label className="text-sm text-muted-foreground">Format</label>
                   <select value={commerceFormat} onChange={e => setCommerceFormat(e.target.value)}
                     className={inputCls}>
                     <option value="">Select format…</option>
@@ -596,7 +596,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">Listing mode</label>
+                  <label className="text-sm text-muted-foreground">Listing mode</label>
                   <select
                     value={listingMode}
                     onChange={e => setListingMode(e.target.value as "direct_sale" | "enquire_first")}
@@ -605,7 +605,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
                     <option value="direct_sale">Direct sale — show Buy button</option>
                     <option value="enquire_first">Enquire first — hide Buy button, show Enquire only</option>
                   </select>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {listingMode === "enquire_first"
                       ? "Collectors must message you before purchasing. Good for originals or works where you want to vet buyers."
                       : "Collectors can purchase directly without contacting you. Good for prints, editions, and digital works."}
@@ -631,7 +631,7 @@ export function NewArtworkEditor({ profileId, onCancel, onSaved }: Props) {
             Cancel
           </button>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     </div>
   );

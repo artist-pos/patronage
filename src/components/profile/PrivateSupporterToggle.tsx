@@ -24,7 +24,7 @@ export function PrivateSupporterToggle({ initial }: Props) {
     } else {
       setToast(next ? "Your profile is now private." : "Your profile is now public.");
     }
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }
 
   return (

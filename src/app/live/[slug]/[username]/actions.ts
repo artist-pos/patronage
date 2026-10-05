@@ -138,7 +138,7 @@ export async function createCampaignSaleCheckout(opts: {
             product_data: {
               name: opts.workTitle,
               images: opts.workImageUrl ? [opts.workImageUrl] : undefined,
-              description: `Artwork by ${opts.artistUsername} — includes Patronage provenance certificate.`,
+              description: `Artwork by ${opts.artistUsername} — includes Patronage certificate of authenticity.`,
             },
           },
         }],
@@ -163,7 +163,7 @@ export async function createCampaignSaleCheckout(opts: {
           currency: opts.currency.toLowerCase(),
           productName: opts.workTitle,
           productImageUrl: opts.workImageUrl,
-          productDescription: `Artwork by ${opts.artistUsername} — includes Patronage provenance certificate.`,
+          productDescription: `Artwork by ${opts.artistUsername} — includes Patronage certificate of authenticity.`,
         },
       ],
       metadata,

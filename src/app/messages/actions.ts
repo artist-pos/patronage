@@ -3,6 +3,80 @@
 import { createClient } from "@/lib/supabase/server";
 import { notifyMessageRecipient } from "@/lib/email";
 
+/**
+ * Checks whether an artist/owner has a messaging relationship with another user.
+ * Returns true if any of:
+ * 1. The other user follows the artist
+ * 2. The artist has applied to an opportunity owned by the other user
+ * 3. The artist has saved an opportunity owned by the other user
+ */
+async function hasMessagingRelationship(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  artistId: string,
+  otherUserId: string
+): Promise<boolean> {
+  // 1. Follower check (original rule)
+  const followPromise = supabase
+    .from("follows")
+    .select("id")
+    .eq("follower_id", otherUserId)
+    .eq("following_id", artistId)
+    .maybeSingle();
+
+  // 2. Applied-to check: artist applied to an opportunity owned by the other user
+  //    opportunities.profile_id = otherUserId AND opportunity_applications.artist_id = artistId
+  const appliedPromise = supabase
+    .from("opportunity_applications")
+    .select("id, opportunities!inner(profile_id)")
+    .eq("artist_id", artistId)
+    .eq("opportunities.profile_id", otherUserId)
+    .limit(1)
+    .maybeSingle();
+
+  // 3. Saved check: artist saved an opportunity owned by the other user
+  const savedPromise = supabase
+    .from("saved_opportunities")
+    .select("id, opportunities!inner(profile_id)")
+    .eq("user_id", artistId)
+    .eq("opportunities.profile_id", otherUserId)
+    .limit(1)
+    .maybeSingle();
+
+  const [followRes, appliedRes, savedRes] = await Promise.all([
+    followPromise,
+    appliedPromise,
+    savedPromise,
+  ]);
+
+  return !!(followRes.data || appliedRes.data || savedRes.data);
+}
+
+/**
+ * Server action to check if the current user (artist/owner) can initiate a
+ * conversation with the given user. Non-artist roles can always initiate.
+ */
+export async function checkCanInitiateConversation(
+  otherUserId: string
+): Promise<{ canInitiate: boolean }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { canInitiate: false };
+  if (user.id === otherUserId) return { canInitiate: false };
+
+  const { data: senderProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (senderProfile?.role !== "artist" && senderProfile?.role !== "owner") {
+    return { canInitiate: true };
+  }
+
+  const allowed = await hasMessagingRelationship(supabase, user.id, otherUserId);
+  return { canInitiate: allowed };
+}
+
 export async function getOrCreateConversation(
   otherUserId: string
 ): Promise<{ id: string } | { error: string }> {
@@ -19,14 +93,8 @@ export async function getOrCreateConversation(
     .single();
 
   if (senderProfile?.role === "artist" || senderProfile?.role === "owner") {
-    const { data: followRow } = await supabase
-      .from("follows")
-      .select("id")
-      .eq("follower_id", otherUserId)
-      .eq("following_id", user.id)
-      .maybeSingle();
-
-    if (!followRow) return { error: "not_following" };
+    const allowed = await hasMessagingRelationship(supabase, user.id, otherUserId);
+    if (!allowed) return { error: "not_following" };
   }
 
   // Always order UUIDs so participant_a < participant_b (unique pair constraint)
@@ -52,7 +120,7 @@ export async function getOrCreateConversation(
 }
 
 const INQUIRY_DISCLAIMER =
-  "Works can be purchased securely through Patronage — use the Buy button on the artist’s profile to pay via Stripe and receive a verified provenance certificate. " +
+  "Works can be purchased securely through Patronage — use the Buy button on the artist’s profile to pay via Stripe and receive a verified certificate of authenticity. " +
   "If you arrange a sale outside the platform, that transaction is solely between you and the seller. Patronage does not guarantee or take responsibility for off-platform arrangements.";
 
 /**

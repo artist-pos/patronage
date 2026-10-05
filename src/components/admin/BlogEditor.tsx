@@ -161,7 +161,7 @@ export function BlogEditor({ post, userId }: Props) {
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 5000);
   }, []);
 
   // Load admin's own project threads once on mount

@@ -1,28 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
-import { PRIMARY_SECTIONS, SECONDARY_SECTIONS, getSectionHref } from "./sidebar-config";
+import { getSections, sectionFromPathname } from "./sidebar-config";
 
 interface Props {
-  activeSection: string;
+  role: string;
   sectionDots?: Record<string, boolean>;
   sectionCounts?: Record<string, number>;
   lockedSections?: string[];
   children: React.ReactNode;
 }
 
-export function StudioNav({ activeSection, sectionDots, sectionCounts, lockedSections, children }: Props) {
+export function StudioNav({ role, sectionDots, sectionCounts, lockedSections, children }: Props) {
+  const pathname = usePathname();
+  const activeSection = sectionFromPathname(pathname);
   const locked = new Set(lockedSections ?? []);
+  const { primary, secondary } = getSections(role);
 
   return (
     <>
-      {/* Mobile: horizontal scrolling tabs — primary only */}
+      {/* Mobile: horizontal scrolling tabs */}
       <div className="flex lg:hidden gap-0 border-b border-black overflow-x-auto mb-8">
-        {[...PRIMARY_SECTIONS, ...SECONDARY_SECTIONS].map(({ id, label }) => (
+        {[...primary, ...secondary].map(({ id, label, href }) => (
           <Link
             key={id}
-            href={getSectionHref(id)}
+            href={href}
             className={`flex items-center gap-1 px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
               activeSection === id
                 ? "font-semibold border-b-2 border-black -mb-px"
@@ -41,10 +45,10 @@ export function StudioNav({ activeSection, sectionDots, sectionCounts, lockedSec
 
           {/* Primary */}
           <div className="space-y-0.5">
-            {PRIMARY_SECTIONS.map(({ id, label }) => (
+            {primary.map(({ id, label, href }) => (
               <NavLink
                 key={id}
-                id={id}
+                href={href}
                 label={label}
                 active={activeSection === id}
                 locked={locked.has(id)}
@@ -56,15 +60,15 @@ export function StudioNav({ activeSection, sectionDots, sectionCounts, lockedSec
 
           <div className="border-t border-border" />
 
-          {/* Secondary — settings & tools */}
+          {/* Secondary */}
           <div className="space-y-0.5">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
               Settings & tools
             </p>
-            {SECONDARY_SECTIONS.map(({ id, label }) => (
+            {secondary.map(({ id, label, href }) => (
               <NavLink
                 key={id}
-                id={id}
+                href={href}
                 label={label}
                 active={activeSection === id}
                 locked={locked.has(id)}
@@ -85,14 +89,14 @@ export function StudioNav({ activeSection, sectionDots, sectionCounts, lockedSec
 }
 
 function NavLink({
-  id, label, active, locked, dot, count,
+  href, label, active, locked, dot, count,
 }: {
-  id: string; label: string; active: boolean;
+  href: string; label: string; active: boolean;
   locked: boolean; dot?: boolean; count?: number;
 }) {
   return (
     <Link
-      href={getSectionHref(id)}
+      href={href}
       className={`flex items-center justify-between px-3 py-2 text-sm rounded-sm transition-colors ${
         active
           ? "bg-muted font-medium text-foreground"

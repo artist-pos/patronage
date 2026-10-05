@@ -28,21 +28,21 @@ export function CampaignDeleteButton({ campaignId }: Props) {
   if (confirming) {
     return (
       <span className="flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">Delete campaign?</span>
+        <span className="text-sm text-muted-foreground">Delete campaign?</span>
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="text-[11px] text-red-600 hover:text-red-700 font-medium disabled:opacity-40 transition-colors"
+          className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-40 transition-colors"
         >
           {deleting ? "Deleting…" : "Confirm"}
         </button>
         <button
           onClick={() => { setConfirming(false); setError(null); }}
-          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           Cancel
         </button>
-        {error && <span className="text-[11px] text-red-600">{error}</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </span>
     );
   }
@@ -50,7 +50,7 @@ export function CampaignDeleteButton({ campaignId }: Props) {
   return (
     <button
       onClick={() => setConfirming(true)}
-      className="text-[11px] text-muted-foreground hover:text-red-600 transition-colors"
+      className="text-sm text-muted-foreground hover:text-red-600 transition-colors"
     >
       Delete
     </button>
