@@ -6,6 +6,7 @@ import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
 import { getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
 import { fetchCompletionProfile } from "@/lib/profile-completion.server";
 import { ProfileCompletionBanner } from "@/components/profile/ProfileCompletionBanner";
+import { getEffectiveRole } from "@/lib/view-as";
 import { StudioNav } from "./StudioNav";
 import type { Metadata } from "next";
 
@@ -40,7 +41,8 @@ export default async function StudioLayout({
 
   if (!profileRow) redirect("/onboarding/role");
 
-  const role = profileRow.role;
+  const { effectiveRole } = await getEffectiveRole();
+  const role = effectiveRole ?? profileRow.role;
   const isArtist = role === "artist" || role === "owner" || role === "admin";
   const labels = WORKSPACE_LABELS[role] ?? WORKSPACE_LABELS.patron;
 

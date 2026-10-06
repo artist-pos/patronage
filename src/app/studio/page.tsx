@@ -12,6 +12,7 @@ import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { FollowersTab } from "@/components/analytics/FollowersTab";
 import { ProfileViewsChartWrapper } from "@/components/analytics/ProfileViewsChartWrapper";
 import { AnalyticsExpandable } from "@/components/analytics/AnalyticsExpandable";
+import { getEffectiveRole } from "@/lib/view-as";
 import { LEGACY_SECTION_ALIASES } from "./sidebar-config";
 
 const SECTION_TO_ROUTE: Record<string, string> = {
@@ -67,7 +68,8 @@ export default async function StudioHomePage({ searchParams }: PageProps) {
   const profile = await getProfileById(user.id);
   if (!profile) redirect("/onboarding/role");
 
-  const role = profile.role;
+  const { effectiveRole } = await getEffectiveRole();
+  const role = effectiveRole ?? profile.role;
   const isArtist = role === "artist" || role === "owner" || role === "admin";
 
   if (isArtist) {
