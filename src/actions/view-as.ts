@@ -17,8 +17,8 @@ export async function setViewAs(role: ViewAsRole | null): Promise<{ error?: stri
   if (!user) return { error: "Not authenticated" };
 
   const profile = await getProfileById(user.id);
-  if (!profile || profile.role !== "owner") {
-    return { error: "Only owner accounts can use View As" };
+  if (!profile || (profile.role !== "owner" && profile.role !== "admin")) {
+    return { error: "Only owner and admin accounts can use View As" };
   }
 
   const cookieStore = await cookies();

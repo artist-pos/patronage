@@ -143,7 +143,7 @@ export default async function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <PostHogProvider>
-          {actualRole === "owner" && <ViewAsBar currentViewAs={isViewingAs ? viewAsRole : null} />}
+          {(actualRole === "owner" || actualRole === "admin") && <ViewAsBar currentViewAs={isViewingAs ? viewAsRole : null} />}
           <Header />
           <VerifyEmailBanner />
           <main className="flex-1">{children}</main>

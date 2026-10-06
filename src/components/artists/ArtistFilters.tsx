@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { track } from "@vercel/analytics";
 import { trackEvent } from "@/lib/analytics";
+import { ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,11 +22,13 @@ export function ArtistFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const currentCountry = searchParams.get("country") as CountryEnum | null;
   const currentStage = searchParams.get("stage") as CareerStageEnum | null;
   const currentDiscipline = searchParams.get("discipline") as DisciplineEnum | null;
   const commissionsOnly = searchParams.get("commissions") === "1";
+  const hasActiveSecondaryFilters = !!(currentCountry || currentStage || commissionsOnly);
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -70,8 +73,20 @@ export function ArtistFilters() {
         ))}
       </div>
 
-      {/* Secondary filters */}
-      <div className="flex items-center justify-between gap-3 py-3.5">
+      {/* Mobile filter toggle */}
+      <button
+        className="sm:hidden flex items-center gap-1.5 py-3 font-mono text-xs text-muted-foreground"
+        onClick={() => setFiltersOpen((o) => !o)}
+      >
+        Filters
+        {hasActiveSecondaryFilters && (
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
+        )}
+        <ChevronDown className={`h-3 w-3 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {/* Secondary filters — always visible on desktop, toggle on mobile */}
+      <div className={`${filtersOpen ? "flex" : "hidden sm:flex"} items-center justify-between gap-3 py-3.5`}>
         <div className="flex flex-wrap items-center gap-2">
           <Select
             value={currentCountry ?? "all"}

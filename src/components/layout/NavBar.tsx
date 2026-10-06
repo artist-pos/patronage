@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,8 +27,12 @@ interface NavBarProps {
 export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifications, signOut, role }: NavBarProps) {
   const isArtist = role === "artist" || role === "owner";
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   const workspaceLabel = isArtist ? "Studio" : "Dashboard";
+
+  // Close drawer on navigation
+  useEffect(() => setOpen(false), [pathname]);
 
   return (
     <>
@@ -84,73 +89,79 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
       </div>
 
       {/* ── Mobile icons row (notifications + hamburger) ─────── */}
-      <div className="sm:hidden flex items-center gap-3">
+      <div className="sm:hidden flex items-center gap-2">
         {isLoggedIn && userId && (
           <NotificationBell userId={userId} initialUnreadCount={unreadNotifications} />
         )}
-      <button
-        className="flex flex-col gap-1.5 p-1 shrink-0"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Toggle menu"
-      >
-        <span className={`block w-5 h-px bg-foreground transition-transform origin-center ${open ? "translate-y-[7px] rotate-45" : ""}`} />
-        <span className={`block w-5 h-px bg-foreground transition-opacity ${open ? "opacity-0" : ""}`} />
-        <span className={`block w-5 h-px bg-foreground transition-transform origin-center ${open ? "-translate-y-[7px] -rotate-45" : ""}`} />
-      </button>
+        <button
+          className="flex flex-col items-center justify-center gap-[5px] w-10 h-10 shrink-0"
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          <span className={`block w-5 h-px bg-foreground transition-transform origin-center ${open ? "translate-y-[7px] rotate-45" : ""}`} />
+          <span className={`block w-5 h-px bg-foreground transition-opacity ${open ? "opacity-0" : ""}`} />
+          <span className={`block w-5 h-px bg-foreground transition-transform origin-center ${open ? "-translate-y-[7px] -rotate-45" : ""}`} />
+        </button>
       </div>
 
-      {/* ── Mobile drawer ─────────────────────────────── */}
+      {/* ── Mobile drawer — full-width panel with backdrop ───── */}
       {open && (
-        <div className="sm:hidden absolute top-full right-0 bg-background border border-border shadow-lg z-50 px-6 py-4 flex flex-col gap-4 text-sm min-w-[200px]">
-          {isLoggedIn && NAV_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {l.label}
-            </Link>
-          ))}
-          <div className={isLoggedIn ? "border-t border-border pt-4 flex flex-col gap-3" : "flex flex-col gap-3"}>
-            {isLoggedIn ? (
-              <>
-                {username && (
-                  <Link href={`/${username}`} onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    Profile
+        <>
+          <div
+            className="sm:hidden fixed inset-0 top-[52px] z-40 bg-black/40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="sm:hidden fixed inset-x-0 top-[52px] z-50 bg-background border-b border-border px-6 py-5 flex flex-col gap-4 text-sm max-h-[calc(100vh-52px)] overflow-y-auto">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="text-foreground font-medium hover:text-muted-foreground transition-colors"
+              >
+                {l.label}
+              </Link>
+            ))}
+            <div className="border-t border-border pt-4 flex flex-col gap-3">
+              {isLoggedIn ? (
+                <>
+                  {username && (
+                    <Link href={`/${username}`} onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                      Profile
+                    </Link>
+                  )}
+                  <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {workspaceLabel}
                   </Link>
-                )}
-                <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  {workspaceLabel}
-                </Link>
-                <Link
-                  href="/messages"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Messages
-                  {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
-                </Link>
-                <div className="border-t border-border pt-3">
-                  <form action={signOut}>
-                    <button type="submit" className="text-muted-foreground hover:text-foreground transition-colors">
-                      Sign out
-                    </button>
-                  </form>
-                </div>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                  Sign in
-                </Link>
-                <Link href="/auth/signup" onClick={() => setOpen(false)} className="bg-brand text-white text-center text-[13px] font-medium px-4 py-2 hover:opacity-85 transition-opacity">
-                  Get started
-                </Link>
-              </>
-            )}
+                  <Link
+                    href="/messages"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Messages
+                    {unreadCount > 0 && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
+                  </Link>
+                  <div className="border-t border-border pt-3">
+                    <form action={signOut}>
+                      <button type="submit" className="text-muted-foreground hover:text-foreground transition-colors">
+                        Sign out
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Sign in
+                  </Link>
+                  <Link href="/auth/signup" onClick={() => setOpen(false)} className="bg-brand text-white text-center text-[13px] font-medium px-4 py-2 hover:opacity-85 transition-opacity">
+                    Get started
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

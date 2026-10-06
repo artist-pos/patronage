@@ -30,8 +30,8 @@ export const getEffectiveRole = cache(async (): Promise<{
   const profile = await getProfileById(user.id);
   const actualRole = profile?.role ?? null;
 
-  // Only owners can use View As
-  if (actualRole !== "owner") {
+  // Only owners and admins can use View As
+  if (actualRole !== "owner" && actualRole !== "admin") {
     return { effectiveRole: actualRole, actualRole, isViewingAs: false, viewAsRole: null };
   }
 

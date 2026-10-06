@@ -10,8 +10,22 @@ interface Props {
   role: string | null;
 }
 
-/* Mockup icon set (Mobile Home.dc.html) — square linecaps, 20px viewBox.
-   Active tab = filled civic teal; inactive = fg-muted stroke. */
+/* ── Icons ── */
+
+function HomeIcon({ active }: { active: boolean }) {
+  if (active) {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--brand)">
+        <path d="M10 2.5 L2 9.5 L5 9.5 L5 17.5 L8.5 17.5 L8.5 12.5 L11.5 12.5 L11.5 17.5 L15 17.5 L15 9.5 L18 9.5 Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--fg-muted)" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+      <path d="M10 3 L3 9.5 L5.5 9.5 L5.5 17 L8.5 17 L8.5 12 L11.5 12 L11.5 17 L14.5 17 L14.5 9.5 L17 9.5 Z" />
+    </svg>
+  );
+}
 
 function MasonryIcon({ active }: { active: boolean }) {
   if (active) {
@@ -78,13 +92,6 @@ function PersonIcon({ active }: { active: boolean }) {
   );
 }
 
-/**
- * Mobile bottom nav — straight from the mobile mockup: four icon-only items
- * (explore masonry / opportunities magnifier / artists person / black "+"
- * square), frosted white bar, hides on scroll down and returns on scroll up.
- * The "+" opens an action sheet (New update / New work) for artists and
- * routes everyone else to sign-up.
- */
 export function MobileTabBar({ isLoggedIn, username, role }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -93,7 +100,6 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const lastY = useRef(0);
 
-  // Hide on scroll down (past 80px), reappear on scroll up — per the mockup
   useEffect(() => {
     function onScroll() {
       const y = window.scrollY;
@@ -104,9 +110,9 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close the sheet on navigation
   useEffect(() => setSheetOpen(false), [pathname]);
 
+  const homeActive = pathname === "/";
   const exploreActive = pathname === "/feed" || pathname.startsWith("/feed/") || pathname === "/works";
   const oppsActive = pathname === "/opportunities" || pathname.startsWith("/opportunities/");
   const artistsActive =
@@ -115,43 +121,52 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
   function onPlus() {
     if (isArtist) {
       setSheetOpen(true);
-    } else if (isLoggedIn) {
-      router.push("/opportunities");
-    } else {
+    } else if (!isLoggedIn) {
       router.push("/auth/signup");
     }
   }
 
+  const labelCls = (active: boolean) =>
+    `text-[10px] leading-tight ${active ? "text-[color:var(--brand)] font-semibold" : "text-[color:var(--fg-muted)]"}`;
+
   return (
     <>
-      {/* Spacer — reserves the bar's height (incl. safe area) in normal flow */}
-      <div aria-hidden className="h-[calc(48px+env(safe-area-inset-bottom))] sm:hidden" />
+      <div aria-hidden className="h-[calc(56px+env(safe-area-inset-bottom))] sm:hidden" />
 
       <nav
         aria-label="Mobile navigation"
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/92 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 backdrop-blur-[16px] transition-transform duration-200 sm:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/92 pb-[calc(8px+env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-[16px] transition-transform duration-200 sm:hidden ${
           hidden ? "translate-y-full" : "translate-y-0"
         }`}
       >
-        {/* px pulls the outer icons in from the curved screen edges */}
-        <div className="mx-auto flex max-w-sm items-center justify-around px-8">
-          <Link href="/feed" aria-label="Explore" className="px-3.5 py-1">
+        <div className="mx-auto flex max-w-md items-center justify-around px-4">
+          <Link href="/" aria-label="Home" className="flex flex-col items-center gap-0.5 px-2 py-1">
+            <HomeIcon active={homeActive} />
+            <span className={labelCls(homeActive)}>Home</span>
+          </Link>
+          <Link href="/feed" aria-label="Explore" className="flex flex-col items-center gap-0.5 px-2 py-1">
             <MasonryIcon active={exploreActive} />
+            <span className={labelCls(exploreActive)}>Explore</span>
           </Link>
-          <Link href="/opportunities" aria-label="Opportunities" className="px-3.5 py-1">
+          <Link href="/opportunities" aria-label="Opportunities" className="flex flex-col items-center gap-0.5 px-2 py-1">
             <SearchIcon active={oppsActive} />
+            <span className={labelCls(oppsActive)}>Find</span>
           </Link>
-          <Link href="/artists" aria-label="Artists" className="px-3.5 py-1">
+          <Link href="/artists" aria-label="Artists" className="flex flex-col items-center gap-0.5 px-2 py-1">
             <PersonIcon active={artistsActive} />
+            <span className={labelCls(artistsActive)}>Artists</span>
           </Link>
-          <button type="button" aria-label="Post" onClick={onPlus} className="px-3.5 py-1">
-            <span className="flex h-7 w-7 items-center justify-center bg-foreground">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="square">
-                <line x1="6" y1="1" x2="6" y2="11" />
-                <line x1="1" y1="6" x2="11" y2="6" />
-              </svg>
-            </span>
-          </button>
+          {(isArtist || !isLoggedIn) && (
+            <button type="button" aria-label="Post" onClick={onPlus} className="flex flex-col items-center gap-0.5 px-2 py-1">
+              <span className="flex h-5 w-5 items-center justify-center bg-foreground">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="square">
+                  <line x1="5" y1="1" x2="5" y2="9" />
+                  <line x1="1" y1="5" x2="9" y2="5" />
+                </svg>
+              </span>
+              <span className="text-[10px] leading-tight text-[color:var(--fg-muted)]">Post</span>
+            </button>
+          )}
         </div>
       </nav>
 
