@@ -15,6 +15,12 @@ import {
   regionFullName,
 } from "@/lib/regions";
 import { RegionView } from "@/components/artists/RegionView";
+import {
+  formatDeadline,
+  getRegionalHubCounts,
+  hubLinksForRegion,
+  regionPageFaqs,
+} from "@/lib/regional-hubs";
 
 // Revalidate every 24 hours — new artists joining won't require a full rebuild
 export const revalidate = 86400;
@@ -90,13 +96,26 @@ export async function generateMetadata({
     if (!region) return { title: "Artists" };
 
     const cities = await getCitiesForRegion(region.id);
-    const { artists } = await getRegionalPageData(region, cities);
+    const [{ artists, opportunities }, hubCounts] = await Promise.all([
+      getRegionalPageData(region, cities),
+      getRegionalHubCounts(),
+    ]);
     const fullName = regionFullName(region);
-    const h1 = `Artists in ${region.name}`;
-    const description =
+    // Searchers weigh two things up here: who works in the region, and what
+    // they could apply for. Both belong in the title, not just the page.
+    const h1 = `${region.name} artists, open calls and grants`;
+    const live = hubLinksForRegion(hubCounts, region.slug).reduce((n, l) => n + l.count, 0);
+    const next = opportunities.find((o) => o.deadline);
+    const artistPart =
       artists.length > 0
-        ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} based in ${fullName}. Browse portfolios, available works, and open opportunities in the region.`
-        : `Artists based in ${fullName} on Patronage. Browse portfolios, available works, and open opportunities in the region.`;
+        ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} based in ${fullName}`
+        : `Artists based in ${fullName}`;
+    const description =
+      live > 0
+        ? `${artistPart}, and ${live} live open call${live !== 1 ? "s" : ""}, grants, residencies and prizes${
+            next?.deadline ? `, next closing ${formatDeadline(next.deadline)}` : ""
+          }. Browse portfolios, deadlines and how to apply.`
+        : `${artistPart}. Browse portfolios and available works, and see opportunities as they open in the region.`;
 
     return {
       title: h1,
@@ -205,6 +224,16 @@ export default async function ArtistCategoryPage({
 
     const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
     const pageUrl = `${base}/artists/${slug}`;
+    const hubCounts = await getRegionalHubCounts();
+    const hubLinks = hubLinksForRegion(hubCounts, region.slug);
+    const faqs = regionPageFaqs({
+      regionName: region.name,
+      regionFullName: regionFullName(region),
+      artistCount: regionData.artists.length,
+      disciplines: regionData.disciplines,
+      hubLinks,
+      nextClosing: regionData.opportunities.find((o) => o.deadline) ?? null,
+    });
     // Capped rather than every artist in the region: it's a representative
     // sample for crawlers, not a duplicate of the page's own listing.
     const listedArtists = regionData.artists.slice(0, 24);
@@ -222,8 +251,12 @@ export default async function ArtistCategoryPage({
           "@type": "CollectionPage",
           "@id": pageUrl,
           url: pageUrl,
-          name: `Artists in ${region.name}`,
-          about: { "@type": "Place", name: regionFullName(region) },
+          name: `${region.name} artists, open calls and grants`,
+          about: {
+            "@type": "Place",
+            name: regionFullName(region),
+            containedInPlace: { "@type": "Country", name: "New Zealand" },
+          },
           mainEntity: {
             "@type": "ItemList",
             numberOfItems: regionData.artists.length,
@@ -234,6 +267,31 @@ export default async function ArtistCategoryPage({
               name: a.full_name ?? a.username,
             })),
           },
+        },
+        // What is open in the region, as its own list: the page answers
+        // "open calls in <region>" as much as "artists in <region>".
+        ...(regionData.opportunities.length > 0
+          ? [
+              {
+                "@type": "ItemList",
+                name: `Open opportunities in ${region.name}`,
+                numberOfItems: regionData.opportunities.length,
+                itemListElement: regionData.opportunities.map((o, i) => ({
+                  "@type": "ListItem",
+                  position: i + 1,
+                  url: `${base}/opportunities/${o.slug ?? o.id}`,
+                  name: o.title,
+                })),
+              },
+            ]
+          : []),
+        {
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
         },
       ],
     };
@@ -250,6 +308,8 @@ export default async function ArtistCategoryPage({
           worksCountMap={regionWorksCount}
           collectedSet={regionCollected}
           cities={cities}
+          hubLinks={hubLinks}
+          faqs={faqs}
         />
       </>
     );

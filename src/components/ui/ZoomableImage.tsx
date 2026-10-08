@@ -128,7 +128,10 @@ export function ZoomableImage({ src, alt, className = "", style, maxScale = 4 }:
     <div
       ref={containerRef}
       className={`zoom-surface relative overflow-hidden flex items-center justify-center select-none ${className}`}
-      style={{ cursor: scale > 1 ? "grab" : "zoom-in", ...style }}
+      // At 1x a vertical swipe belongs to the page: with `touch-action: none` the
+      // image swallowed every swipe, so a phone could not scroll past a work
+      // that fills the screen. Once zoomed in, the image owns all gestures again.
+      style={{ cursor: scale > 1 ? "grab" : "zoom-in", touchAction: scale > 1 ? "none" : "pan-y", ...style }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

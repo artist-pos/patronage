@@ -112,6 +112,10 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
 
   useEffect(() => setSheetOpen(false), [pathname]);
 
+  // A work page is the artwork and its buy or enquire actions; the bar only
+  // sits on top of them, so it steps aside there.
+  const onWorkPage = /^\/[^/]+\/works\/[^/]+/.test(pathname);
+
   const homeActive = pathname === "/";
   const exploreActive = pathname === "/feed" || pathname.startsWith("/feed/") || pathname === "/works";
   const oppsActive = pathname === "/opportunities" || pathname.startsWith("/opportunities/");
@@ -131,12 +135,13 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
 
   return (
     <>
-      <div aria-hidden className="h-[calc(56px+env(safe-area-inset-bottom))] sm:hidden" />
+      {!onWorkPage && <div aria-hidden className="h-[calc(56px+env(safe-area-inset-bottom))] sm:hidden" />}
 
       <nav
         aria-label="Mobile navigation"
+        aria-hidden={onWorkPage || undefined}
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/92 pb-[calc(8px+env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-[16px] transition-transform duration-200 sm:hidden ${
-          hidden ? "translate-y-full" : "translate-y-0"
+          hidden || onWorkPage ? "translate-y-full" : "translate-y-0"
         }`}
       >
         <div className="mx-auto flex max-w-md items-center justify-around px-4">

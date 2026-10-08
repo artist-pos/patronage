@@ -9,6 +9,7 @@ import { regionalTownLabel } from "@/lib/region-location";
 import { regionFullName } from "@/lib/regions";
 import type { City, Region } from "@/types/database";
 import type { RegionalPageData } from "@/lib/regions";
+import type { Faq, RegionalHubType } from "@/lib/regional-hubs";
 
 interface Props {
   region: Region;
@@ -19,6 +20,9 @@ interface Props {
   /** The region's towns, so an artist's town reads as the taxonomy name rather
    *  than whatever they typed. */
   cities: City[];
+  /** Hubs with something live in them, for the "open calls in X" links. */
+  hubLinks: { typeSlug: RegionalHubType; label: string; count: number }[];
+  faqs: Faq[];
 }
 
 /**
@@ -27,7 +31,7 @@ interface Props {
  * Written to be worth landing on from a search for "artists in Waikato": who
  * works here, what they make, and what is open nearby.
  */
-export function RegionView({ region, data, worksCountMap, collectedSet, cities }: Props) {
+export function RegionView({ region, data, worksCountMap, collectedSet, cities, hubLinks, faqs }: Props) {
   const { anchorOrg, artists, opportunities } = data;
   const fullName = regionFullName(region);
 
@@ -55,7 +59,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
         </nav>
 
         <h1 className="text-[30px] font-semibold leading-[1.1] tracking-[-0.02em]">
-          Artists in {region.name}
+          Artists, open calls and grants in {region.name}
         </h1>
         {region.name_maori && region.name_maori !== region.name && (
           <p className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
@@ -65,7 +69,11 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
 
         <p className="max-w-2xl text-sm text-muted-foreground">
           {artists.length > 0
-            ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} working in ${fullName}. Browse portfolios and available works.`
+            ? `${artists.length} artist${artists.length !== 1 ? "s" : ""} working in ${fullName}${
+                hubLinks.length > 0
+                  ? `, and ${hubLinks.reduce((n, l) => n + l.count, 0)} live opportunities for them`
+                  : ""
+              }. Browse portfolios and available works.`
             : `No one has listed ${fullName} as their base yet. If you work here, you could be the first.`}
         </p>
       </header>
@@ -167,8 +175,34 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities }
             </Link>
           </div>
           <MasonryGrid opportunities={opportunities} view="gallery" />
+          {hubLinks.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {hubLinks.map((l) => (
+                <Link
+                  key={l.typeSlug}
+                  href={`/opportunities/${l.typeSlug}/${region.slug}`}
+                  className="bg-stone-100 px-3 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-200"
+                >
+                  {l.label} in {region.name} ({l.count})
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       )}
+
+      {/* ── Questions, answered from the live data and repeated as FAQPage markup ── */}
+      <section className="max-w-3xl space-y-5">
+        <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          Questions
+        </h2>
+        {faqs.map((f) => (
+          <div key={f.q} className="space-y-1">
+            <h3 className="text-sm font-semibold">{f.q}</h3>
+            <p className="text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+          </div>
+        ))}
+      </section>
 
       {/* ── CTAs ── */}
       <section className="grid grid-cols-1 gap-[2px] bg-feed-bg sm:grid-cols-2">

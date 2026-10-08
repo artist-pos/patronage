@@ -129,7 +129,7 @@ export default async function PartnersPage() {
                 commission them to do it.
               </p>
               <p className="t-body mt-3 text-[color:var(--fg-muted)]">
-                For arts organisations, councils and community groups running open calls, residencies
+                For arts organisations, art societies, councils and community groups running open calls, residencies
                 and commissions, our open call tools manage the application process from brief to delivery.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -257,7 +257,7 @@ export default async function PartnersPage() {
       <section id="pipeline" className="scroll-mt-16 bg-feed-bg">
         <LegacyAnchors ids={["tiers", "pricing", "platform"]} />
         <div className="mx-auto max-w-[1600px] px-6 py-20 sm:px-12 lg:py-28">
-          <p className="t-section-label mb-3">Open calls · For arts organisations, councils and community groups</p>
+          <p className="t-section-label mb-3">Open calls · For arts organisations, art societies, councils and community groups</p>
           <h2 className="t-display max-w-[640px] text-[36px] sm:text-[44px]">One place for the whole opportunity.</h2>
           <p className="t-body mt-4 max-w-[560px] text-[color:var(--fg-muted)]">
             An open call is how you run an opportunity on Patronage. Manage applications, artists and

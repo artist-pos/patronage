@@ -19,7 +19,6 @@ import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
 import { OpportunityShareMenu } from "@/components/opportunities/OpportunityShareMenu";
-import { OpportunitySignupBanner } from "@/components/opportunities/OpportunitySignupBanner";
 import {
   ClosedOpportunityRecovery,
   type RecoverySuggestion,
@@ -381,31 +380,6 @@ async function UserCTA({
   }
 
   return null;
-}
-
-// ─── Island 4: Signup banner ──────────────────────────────────────────────────
-// Signed-in readers already get notifications, so the banner is theirs to not
-// see. Auth needs cookies(), hence its own Suspense boundary — the rest of the
-// page stays statically pre-rendered.
-
-async function SignupBannerIsland({
-  opp,
-  placement,
-}: {
-  opp: Opportunity;
-  placement: "detail" | "closed_recovery";
-}) {
-  const { user } = await getServerUser();
-  if (user) return null;
-
-  return (
-    <OpportunitySignupBanner
-      opportunityId={opp.id}
-      returnTo={`/opportunities/${opp.slug ?? opp.id}`}
-      disciplines={opp.sub_categories}
-      placement={placement}
-    />
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -929,14 +903,6 @@ export default async function OpportunityPage({ params }: Props) {
           suggestions={recoverySuggestions}
         />
       )}
-
-      {/* ── Signup prompt — signed-out readers only ──────────────────────── */}
-      <Suspense fallback={null}>
-        <SignupBannerIsland
-          opp={opp}
-          placement={isClosed && recoverySuggestions.length > 0 ? "closed_recovery" : "detail"}
-        />
-      </Suspense>
 
       {/* ── Back link + source attribution — STATIC ─────────────────────── */}
       <div className="mt-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-border pt-5">

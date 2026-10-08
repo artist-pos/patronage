@@ -42,10 +42,11 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Fixed-height image viewport — prevents layout shift when switching
-          images. The artwork itself is pinch / double-tap zoomable. */}
-      <div className="relative bg-background overflow-hidden h-[60vh] sm:h-[600px]">
+          images. The artwork itself is pinch / double-tap zoomable. On a phone
+          it stops short of the full screen so the title sits just below it. */}
+      <div className="relative bg-background overflow-hidden h-[48dvh] sm:h-[600px]">
         <ZoomableImage
           key={activeUrl}
           src={activeUrl}
@@ -73,9 +74,9 @@ export function WorkDetailViewer({ primaryUrl, galleryImages, caption }: Props) 
         )}
       </div>
 
-      {/* Caption area — always rendered at fixed min-height to prevent layout shift */}
+      {/* Caption area — fixed min-height on larger screens to prevent layout shift */}
       <div
-        className="min-h-[2.5rem] transition-opacity duration-300"
+        className="sm:min-h-[2.5rem] transition-opacity duration-300"
         style={{ opacity: captionOpacity }}
       >
         {activeCaption && (

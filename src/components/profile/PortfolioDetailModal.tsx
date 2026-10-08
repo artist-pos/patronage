@@ -143,12 +143,12 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
       <div
         className="
           w-full max-w-4xl border border-black bg-background overflow-hidden
-          flex flex-col max-h-[90vh] overflow-y-auto
+          flex flex-col max-h-[90dvh] overflow-y-auto overscroll-contain
           sm:grid sm:grid-cols-[1fr_260px] sm:h-[70vh] sm:max-h-none sm:overflow-hidden
         "
       >
         {/* ── Media panel ── */}
-        <div className="relative overflow-hidden bg-muted group h-[50vh] shrink-0 sm:h-auto">
+        <div className="relative overflow-hidden bg-muted group h-[42dvh] shrink-0 sm:h-auto">
           {/* Mobile-only close button */}
           <button
             onClick={onClose}
@@ -219,7 +219,7 @@ export function PortfolioDetailModal({ img, onClose, onPrev, onNext, hasPrev, ha
               src={img.url}
               alt={img.caption ?? "Portfolio work"}
               fill
-              className="object-cover sm:object-contain"
+              className="object-contain"
             />
           )}
 

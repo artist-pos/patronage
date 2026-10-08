@@ -298,8 +298,11 @@ export function ProfileAvailableGrid({
               background: "#fff",
               maxWidth: 900,
               width: "90vw",
-              maxHeight: "90vh",
+              // dvh, not vh: on a phone 90vh is taller than the visible screen
+              // once the browser toolbar shows, which cut off the buy actions.
+              maxHeight: "90dvh",
               overflowY: "auto",
+              overscrollBehavior: "contain",
               display: "flex",
               flexDirection: "column",
             }}
@@ -317,7 +320,8 @@ export function ProfileAvailableGrid({
               <ZoomableImage
                 src={lightboxArtwork.url}
                 alt={lightboxArtwork.title ?? lightboxArtwork.caption ?? ""}
-                style={{ height: "60vh", background: "#FAFAF9" }}
+                className="h-[40dvh] sm:h-[60vh] shrink-0"
+                style={{ background: "#FAFAF9" }}
               />
 
               {/* Details */}

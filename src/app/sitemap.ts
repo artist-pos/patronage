@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { HUB_CONTENT, HUB_COUNTRY_MAP, HUB_TYPE_LABEL } from "@/lib/hub-content";
 import { getRegions } from "@/lib/regions";
+import { MIN_INDEXABLE_LISTINGS, REGIONAL_HUB_TYPES, getRegionalHubCounts } from "@/lib/regional-hubs";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
@@ -10,8 +11,11 @@ const CATEGORY_SLUGS = [
 ];
 
 // Hub type + country combinations, e.g. /opportunities/grants/new-zealand
+// Only the pairs that have editorial content: the others 404.
 const HUB_COUNTRY_SLUGS = Object.keys(HUB_TYPE_LABEL).flatMap((type) =>
-  Object.keys(HUB_COUNTRY_MAP).map((country) => ({ type, country }))
+  Object.keys(HUB_COUNTRY_MAP)
+    .filter((country) => HUB_CONTENT[`${type}/${country}`])
+    .map((country) => ({ type, country }))
 );
 
 // Static routes and the regional pages. Dynamic content lives in named
@@ -25,7 +29,19 @@ const HUB_COUNTRY_SLUGS = Object.keys(HUB_TYPE_LABEL).flatMap((type) =>
 // stamping every URL with "now" on each request teaches crawlers to ignore the
 // field. The sub-sitemaps carry real dates.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const regions = await getRegions();
+  const [regions, hubCounts] = await Promise.all([getRegions(), getRegionalHubCounts()]);
+
+  // Type x region pages, only where there is enough live to be worth a result
+  // (the pages themselves carry noindex below the same threshold).
+  const regionalHubs = REGIONAL_HUB_TYPES.flatMap((type) =>
+    regions
+      .filter((r) => (hubCounts[type]?.[r.slug] ?? 0) >= MIN_INDEXABLE_LISTINGS)
+      .map((r) => ({
+        url: `${BASE_URL}/opportunities/${type}/${r.slug}`,
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      }))
+  );
 
   return [
     // ── Core browse surfaces ──────────────────────────────────────────────────
@@ -92,5 +108,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.8,
     })),
+
+    // ── Opportunity hub pages (type × region) ─────────────────────────────────
+    ...regionalHubs,
   ];
 }
