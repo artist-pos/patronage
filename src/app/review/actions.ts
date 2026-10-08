@@ -20,17 +20,21 @@ export async function saveScores(
   const { supabase, user } = await getServerUser();
   if (!user) return { error: "Please sign in again." };
 
+  // Reviewers can't read these rows under RLS, so the lookups use the admin client.
+  // Access is decided just below (owner, admin or editor collaborator), and nothing
+  // from these rows is returned to the caller.
+  const admin = createAdminClient();
   const [{ data: profile }, { data: opp }, { data: app }] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).single(),
-    supabase.from("opportunities").select("id, profile_id, pipeline_config").eq("id", opportunityId).single(),
-    supabase.from("opportunity_applications").select("id").eq("id", applicationId).eq("opportunity_id", opportunityId).maybeSingle(),
+    admin.from("opportunities").select("id, profile_id, pipeline_config").eq("id", opportunityId).single(),
+    admin.from("opportunity_applications").select("id").eq("id", applicationId).eq("opportunity_id", opportunityId).maybeSingle(),
   ]);
   if (!opp || !app) return { error: "Application not found." };
 
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
   const isOwner = isAdmin || opp.profile_id === user.id;
   if (!isOwner) {
-    const { data: collab } = await supabase
+    const { data: collab } = await admin
       .from("opportunity_collaborators")
       .select("role")
       .eq("opportunity_id", opportunityId)
@@ -38,8 +42,6 @@ export async function saveScores(
       .maybeSingle();
     if (!collab || collab.role !== "editor") return { error: "You have view-only access, so you can't score." };
   }
-
-  const admin = createAdminClient();
 
   // Someone who has stepped back from an application can't score it.
   const { data: stepped } = await admin

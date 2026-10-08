@@ -168,11 +168,13 @@ export async function PartnerDashboard() {
     : { data: [] };
   const publicStatus = new Map(((appCounts ?? []) as Array<{ id: string; status: string }>).map((a) => [a.id, a.status]));
   const unpublishedByOpp = new Map<string, number>();
+  const sentByOpp = new Map<string, number>();
   const decisionStatus = new Map(((decisionRows ?? []) as Array<{ application_id: string; status: string }>).map((d) => [d.application_id, d.status]));
   if (decisionRows) {
     for (const row of (appCounts ?? []) as Array<{ id: string; opportunity_id: string; status: string }>) {
       row.status = decisionStatus.get(row.id) ?? "pending";
       const told = publicStatus.get(row.id) ?? "pending";
+      if (told !== "pending") sentByOpp.set(row.opportunity_id, (sentByOpp.get(row.opportunity_id) ?? 0) + 1);
       if (row.status !== "pending" && told !== row.status) unpublishedByOpp.set(row.opportunity_id, (unpublishedByOpp.get(row.opportunity_id) ?? 0) + 1);
     }
   }
@@ -248,6 +250,7 @@ export async function PartnerDashboard() {
         undecided: c?.pending ?? 0,
         unpublished: unpublishedByOpp.get(opp.id) ?? 0,
         reviewers: 1,
+        sent: sentByOpp.get(opp.id) ?? 0,
       });
       const isCollab = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== user.id;
       return { opp, step, isCollab };

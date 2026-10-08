@@ -21,6 +21,8 @@ export interface NextStepInput {
   unpublished: number;
   /** Other people helping to review. */
   reviewers: number;
+  /** Results already sent to artists. */
+  sent?: number;
 }
 
 export interface NextStep {
@@ -65,6 +67,23 @@ export function nextStep(i: NextStepInput): NextStep {
         detail: `You can start now. Nothing is sent to artists until you choose to send it.${closing}`,
         action: { label: "Start reviewing", target: "review" },
         alternative: i.reviewers === 0 ? { label: "Invite someone to help", target: "team" } : { label: "Close applications", target: "close" },
+      };
+    }
+    if (i.unpublished > 0) {
+      return {
+        stage: 2, priority: 80,
+        headline: i.sent ? "You have more results to send." : "You've decided on everyone so far. Ready to tell the artists?",
+        detail: `${plural(i.unpublished, "artist hasn't", "artists haven't")} heard yet. You'll see exactly who gets which email before anything is sent.${closing}`,
+        action: { label: "Check and send results", target: "results" },
+        alternative: { label: "Close applications first", target: "close" },
+      };
+    }
+    if (i.sent) {
+      return {
+        stage: 2, priority: 30,
+        headline: "Results sent. Your call is still open.",
+        detail: `${plural(i.sent, "artist has", "artists have")} been told.${closing} Close applications when you are ready to wrap up.`,
+        action: { label: "Close applications", target: "close" },
       };
     }
     return {

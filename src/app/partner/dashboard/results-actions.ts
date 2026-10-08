@@ -42,6 +42,9 @@ export interface ResultsPreview {
   applicationsOpen: boolean;
   deadline: string | null;
   everPublished: boolean;
+  /** How many result emails have gone out so far, and when the first batch was sent. */
+  sentCount: number;
+  firstSentAt: string | null;
   messages: ResultsMessages;
   samples: Record<string, { subject: string; html: string }>;
 }
@@ -201,6 +204,10 @@ export async function getResultsPreview(opportunityId: string): Promise<ResultsP
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const { count: sentCount } = await admin
+    .from("notification_ledger")
+    .select("application_id", { count: "exact", head: true })
+    .in("application_id", rows.map((r) => r.id as string));
   return {
     title: opp.title as string,
     groups,
@@ -209,6 +216,8 @@ export async function getResultsPreview(opportunityId: string): Promise<ResultsP
     applicationsOpen: opp.is_active !== false && (!opp.deadline || (opp.deadline as string) >= today),
     deadline: (opp.deadline as string | null) ?? null,
     everPublished: !!opp.results_published_at,
+    sentCount: sentCount ?? 0,
+    firstSentAt: (opp.results_published_at as string | null) ?? null,
     messages,
     samples,
   };

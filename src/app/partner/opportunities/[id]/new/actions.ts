@@ -70,7 +70,8 @@ export async function saveRubricCriteria(
     .eq("locked", false);
 
   // Locked criteria belong to scoring that has started. They are never rewritten here.
-  const open = criteria.filter((c) => !c.locked);
+  // Blank rows (the empty starter row left untouched) are not criteria.
+  const open = criteria.filter((c) => !c.locked && c.label.trim() !== "");
   if (open.length === 0) return {};
 
   const rows = open.map((c, i) => ({

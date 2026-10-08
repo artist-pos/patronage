@@ -62,6 +62,19 @@ const DEFAULT_POST_SELECTION: PostSelectionConfig = {
   doc_fields: [],
 };
 
+/** Opportunity type that matches each starting template. */
+const TEMPLATE_TYPE: Record<string, Opportunity["type"]> = {
+  mural_commission: "Public Art",
+  public_art_commission: "Public Art",
+  residency: "Residency",
+  open_call: "Open Call",
+  job_employment: "Job / Employment",
+  commission: "Commission",
+  grant: "Grant",
+  prize: "Prize",
+  display: "Display",
+};
+
 export function WizardShell({
   opp: initialOpp,
   initialStep,
@@ -147,22 +160,35 @@ export function WizardShell({
     }
   }, [anonymous, hydrated, isPipeline, opp, template]);
 
+  // Changes made inside the debounce window are merged, not replaced, so editing two
+  // fields quickly (a dropdown, then the next field) saves both.
+  const pendingPatch = useRef<Parameters<typeof updateOpportunityPartner>[1]>({});
+
+  const flushSave = useCallback(async () => {
+    clearTimeout(saveTimer.current);
+    const patch = pendingPatch.current;
+    pendingPatch.current = {};
+    if (anonymous || Object.keys(patch).length === 0) return;
+    try {
+      await updateOpportunityPartner(opp.id, patch);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("idle");
+    }
+  }, [opp.id, anonymous]);
+
   const queueSave = useCallback(
     (patch: Parameters<typeof updateOpportunityPartner>[1]) => {
       if (anonymous) return; // persistence handled by the localStorage effect
       setSaveStatus("saving");
+      pendingPatch.current = { ...pendingPatch.current, ...patch };
       clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(async () => {
-        try {
-          await updateOpportunityPartner(opp.id, patch);
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        } catch {
-          setSaveStatus("idle");
-        }
+      saveTimer.current = setTimeout(() => {
+        void flushSave();
       }, 800);
     },
-    [opp.id, anonymous]
+    [anonymous, flushSave]
   );
 
   function handleBasicsChange(patch: BasicsPatch) {
@@ -230,6 +256,7 @@ export function WizardShell({
   );
 
   async function handleNext() {
+    await flushSave();
     if (step === 4 && isPipeline) {
       await saveRubricCriteria(opp.id, criteria);
     }
@@ -299,8 +326,10 @@ export function WizardShell({
               setBlankTemplate(false);
               const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
               const newConfig: PipelineConfig = { ...prevConfig, questions: qs, template: key as PipelineConfig["template"] };
-              setOpp((prev) => ({ ...prev, pipeline_config: newConfig }));
-              queueSave({ pipeline_config: newConfig });
+              // The template decides the call type too, so the next step doesn't open on "Grant".
+              const type = TEMPLATE_TYPE[key];
+              setOpp((prev) => ({ ...prev, pipeline_config: newConfig, ...(type ? { type } : {}) }));
+              queueSave({ pipeline_config: newConfig, ...(type ? { type } : {}) } as Parameters<typeof updateOpportunityPartner>[1]);
             }}
             onStartFromScratch={() => {
               setTemplate(null);

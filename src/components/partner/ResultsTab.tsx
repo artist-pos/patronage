@@ -125,11 +125,19 @@ export function ResultsTab({ opportunityId, onPublished }: Props) {
         </p>
       )}
 
+      {preview.sentCount > 0 && (
+        <p role="status" className="border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {preview.sentCount} result{preview.sentCount === 1 ? "" : "s"} sent{preview.firstSentAt ? ` on ${new Date(preview.firstSentAt).toLocaleDateString("en-NZ", { day: "numeric", month: "long" })}` : ""}. Each artist has been emailed once.
+        </p>
+      )}
+
       {nothingDue ? (
         <div className="border border-black/10 p-8 text-center space-y-1">
-          <p className="text-sm font-medium">Nothing to send</p>
+          <p className="text-sm font-medium">{preview.sentCount > 0 ? "Nothing more to send" : "Nothing to send"}</p>
           <p className="text-sm text-stone-500">
-            Mark applications as Shortlisted, Selected or Not selected on the Applications tab. They will appear here ready to send.
+            {preview.sentCount > 0
+              ? "Mark more applications as Shortlisted, Selected or Not selected on the Applications tab and they will appear here ready to send."
+              : "Mark applications as Shortlisted, Selected or Not selected on the Applications tab. They will appear here ready to send."}
           </p>
         </div>
       ) : (

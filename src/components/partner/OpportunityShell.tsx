@@ -221,6 +221,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
 
   // Decisions made on the board that artists have not been told about yet.
   const unpublished = localApps.filter((a) => a.status !== "pending" && (a.released_status ?? null) !== a.status).length;
+  const sent = localApps.filter((a) => (a.released_status ?? null) !== null).length;
   const reviewerCount = collaborators.filter((c) => c.role === "editor").length;
 
   const next = nextStep({
@@ -232,6 +233,7 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
     undecided: counts.pending ?? 0,
     unpublished,
     reviewers: reviewerCount,
+    sent,
   });
 
   function goTo(target: NextTarget) {
