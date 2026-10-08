@@ -104,6 +104,7 @@ const siteSchema = {
       },
       description:
         "Free professional infrastructure for NZ and Australian artists: portfolio, CV, and opportunity directory.",
+      sameAs: ["https://www.instagram.com/patronage.nz/"],
     },
     {
       "@type": "WebSite",

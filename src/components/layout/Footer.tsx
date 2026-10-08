@@ -39,9 +39,11 @@ const COLUMNS: FooterColumn[] = [
   {
     label: "More",
     links: [
+      { text: "About", href: "/about" },
       { text: "Resources", href: "/resources" },
       { text: "Blog", href: "/blog" },
       { text: "Report a bug", href: "/report-bug" },
+      { text: "Instagram", href: "https://www.instagram.com/patronage.nz/", external: true },
       { text: "Contact", href: "mailto:hello@patronage.nz", external: true },
     ],
   },
@@ -78,7 +80,11 @@ function FooterAnchor({ link }: { link: FooterLink }) {
     "block text-[13px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors";
   if (link.external) {
     return (
-      <a href={link.href} className={className}>
+      <a
+        href={link.href}
+        className={className}
+        {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
         {link.text}
       </a>
     );

@@ -39,8 +39,6 @@ const PRIVATE_PATHS = [
   // Development pages.
   "/dev/",
   "/design-system",
-  // Draft, unlinked until rewritten.
-  "/about",
 ];
 
 const PUBLIC_API = ["/api/public/opportunities", "/api/public/artists"];
