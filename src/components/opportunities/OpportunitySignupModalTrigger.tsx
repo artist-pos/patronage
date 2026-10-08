@@ -10,6 +10,23 @@ const SignupPromptModal = dynamic(() => import("@/components/auth/SignupPromptMo
 
 const POST_SIGNUP_DESTINATION = "/opportunities?tab=for-you";
 
+// Measurement only: how many times this browser has been shown the modal, and
+// whether it has dismissed it before. The 7-day suppression was removed on
+// 30 Sep, so without this there is no way to see how often the same person is
+// asked again. Nothing here changes whether the modal shows.
+const VIEWS_KEY = "patronage_opp_signup_modal_views";
+const DISMISSED_BEFORE_KEY = "patronage_opp_signup_modal_dismissed_before";
+
+function nextViewStats(): { view_number: string; dismissed_before: string } {
+  try {
+    const n = (Number(localStorage.getItem(VIEWS_KEY)) || 0) + 1;
+    localStorage.setItem(VIEWS_KEY, String(n));
+    return { view_number: String(n), dismissed_before: String(localStorage.getItem(DISMISSED_BEFORE_KEY) === "1") };
+  } catch {
+    return { view_number: "unknown", dismissed_before: "unknown" };
+  }
+}
+
 /**
  * An invisible sentinel sits inline in the opportunities grid at a fixed
  * scroll depth (wherever the caller places this component — MasonryGrid
@@ -31,7 +48,7 @@ export function OpportunitySignupModalTrigger() {
         if (entries[0].isIntersecting && !shownRef.current) {
           shownRef.current = true;
           setOpen(true);
-          trackEvent("opportunities_signup_modal_view", {});
+          trackEvent("opportunities_signup_modal_view", nextViewStats());
           observer.disconnect();
         }
       },
@@ -43,6 +60,11 @@ export function OpportunitySignupModalTrigger() {
 
   function close() {
     setOpen(false);
+    try {
+      localStorage.setItem(DISMISSED_BEFORE_KEY, "1");
+    } catch {
+      // Best-effort: never block closing the modal.
+    }
   }
 
   return (

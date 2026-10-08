@@ -175,7 +175,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           // immediately and the address is proved afterwards from the
           // banner. Captured separately from signup_completed, which fires
           // once the role step has written the profile.
-          posthog.capture("signup_submitted", { role: role ?? "" });
+          posthog.capture("signup_submitted", { role: role ?? "", source: analyticsSource ?? "" });
           rememberSignupSource(analyticsSource, role);
           if (analyticsSource) {
             trackEvent("signup_form_submitted", { source: analyticsSource, method: "password" });
