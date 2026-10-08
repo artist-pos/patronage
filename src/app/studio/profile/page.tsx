@@ -6,13 +6,14 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 import { ExhibitionEditor } from "@/components/profile/ExhibitionEditor";
+import { EducationEditor } from "@/components/profile/EducationEditor";
 import { BibliographyEditor } from "@/components/profile/BibliographyEditor";
 import { GrantsSection } from "@/components/profile/GrantsSection";
 import { StructuredGrantsManager } from "@/components/profile/StructuredGrantsManager";
 import { PortfolioUploader } from "@/components/profile/PortfolioUploader";
 import { CollectivesManager } from "@/components/profile/CollectivesManager";
 import type { Metadata } from "next";
-import type { ExhibitionEntry, BibliographyEntry, CollectiveMember, Grant } from "@/types/database";
+import type { ExhibitionEntry, EducationEntry, BibliographyEntry, CollectiveMember, Grant } from "@/types/database";
 
 export const metadata: Metadata = { title: "Profile & CV — Studio" };
 
@@ -105,6 +106,20 @@ export default async function StudioProfilePage() {
           </p>
         </div>
         <PortfolioUploader profileId={user.id} mode="professional-cv" />
+      </section>
+
+      {/* Education */}
+      <section className="space-y-4 border-t border-border pt-10">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">Education</h2>
+          <p className="text-sm text-muted-foreground">
+            Where you have studied, from school to art school. Shown on the CV tab of your profile.
+          </p>
+        </div>
+        <EducationEditor
+          profileId={user.id}
+          initial={(fullProfile.education ?? []) as EducationEntry[]}
+        />
       </section>
 
       {/* Exhibition History */}

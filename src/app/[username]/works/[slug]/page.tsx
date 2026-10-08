@@ -132,6 +132,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { profile, work } = result;
   const artistName = profile.full_name ?? profile.username;
   const title = work.title ?? work.caption ?? "Untitled";
+  // Under 18: opens from its link, but stays out of search and link previews.
+  if (profile.is_minor) {
+    return { title: `${title}, ${artistName}`, robots: { index: false, follow: false } };
+  }
   return {
     title: `${title}, ${artistName}`,
     description: work.description ? work.description.slice(0, 155) : `${title} by ${artistName}.`,

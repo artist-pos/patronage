@@ -90,6 +90,7 @@ export default async function PartnerRosterPage() {
           .select("id, username, full_name, city, local_board_id")
           .eq("region_id", profile.region_id)
           .eq("is_active", true)
+          .eq("is_minor", false)
           .in("role", ["artist", "owner"])
           .order("full_name", { ascending: true })
           .limit(300)
@@ -207,7 +208,9 @@ export default async function PartnerRosterPage() {
         <p className="max-w-2xl text-sm text-muted-foreground">
           {keepsRoster
             ? isAlumni
-              ? "Everyone who has been through your programme, with the years. Each person confirms before they appear on your page."
+              ? category?.value === "school"
+                ? "Your students and alumni, with the years. Each person confirms before they appear on your page. Anyone under 18 is never named publicly."
+                : "Everyone who has been through your programme, with the years. Each person confirms before they appear on your page."
               : category?.hasMembers
                 ? "Your members. Each one confirms before they appear on your page."
                 : "The artists you represent. Each one confirms before they appear on your page."

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
 import { getCitiesWithRegions, getLocalBoards } from "@/lib/regions";
+import { createPublicClient } from "@/lib/supabase/public";
 import { ProfileStepForm } from "./ProfileStepForm";
 import type { DisciplineEnum, Profile } from "@/types/database";
 
@@ -40,13 +41,27 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
   const isArtist = profile.role === "artist" || profile.role === "owner";
   if (!isArtist) redirect("/studio");
 
+  // Anyone who arrives through a school's invitation gives their year of birth:
+  // a school's students are often under 18, and how their profile is listed
+  // depends on it.
+  const invitedBy = (profile as Profile & { invited_by_org_id?: string | null }).invited_by_org_id ?? null;
+  let requireAge = false;
+  if (invitedBy) {
+    const { data: org } = await createPublicClient()
+      .from("profiles")
+      .select("org_category")
+      .eq("id", invitedBy)
+      .maybeSingle();
+    requireAge = (org as { org_category?: string | null } | null)?.org_category === "school";
+  }
+
   // Already answered — this step is not a place to come back to.
   // signup=1 rides along so the client still captures signup_completed.
   // Popup signups seed disciplines and name but not location, so they land
   // here to fill that in before continuing.
   const profileAny = profile as Profile & { city_id?: string | null };
   const hasLocation = !!(profileAny.city_id || profile.country);
-  if (profile.disciplines?.length && profile.full_name?.trim() && hasLocation) {
+  if (profile.disciplines?.length && profile.full_name?.trim() && hasLocation && (!requireAge || profile.year_of_birth)) {
     const dest = resume ?? "/opportunities?tab=for-you";
     redirect(signup === "1" ? `${dest}${dest.includes("?") ? "&" : "?"}signup=1` : dest);
   }
@@ -80,6 +95,8 @@ export default async function OnboardingProfilePage({ searchParams }: Props) {
           defaultRegionId={seeded.region_id ?? null}
           defaultDisciplines={(profile.disciplines ?? []) as DisciplineEnum[]}
           next={resume}
+          requireAge={requireAge}
+          defaultYearOfBirth={profile.year_of_birth ?? null}
         />
       </div>
     </div>

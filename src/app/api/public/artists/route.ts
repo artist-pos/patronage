@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     )
     .eq("is_active", true)
     .in("role", ["artist", "owner"])
+    .eq("is_minor", false)
     .order("created_at", { ascending: false });
 
   if (country)    query = query.eq("country", country);

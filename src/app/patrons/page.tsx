@@ -71,7 +71,7 @@ const SECTION_HEADING =
   "text-xs font-medium uppercase tracking-widest text-stone-400";
 
 const WORKS_SELECT =
-  "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, hide_available, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id(id, username, full_name, avatar_url)";
+  "id, url, thumb_url, title, caption, description, year, dimensions, ledger_id, price_cents, is_poa, price_currency, medium, hide_price, hide_available, listing_mode, acquisition_mode, location_text, show_location_publicly, created_at, profile:profiles!profile_id!inner(id, username, full_name, avatar_url)";
 
 export default async function SupportPage() {
   const supabase = await createClient();
@@ -100,6 +100,7 @@ export default async function SupportPage() {
       const { data: rows } = await supabase
         .from("artworks")
         .select(WORKS_SELECT)
+        .eq("profile.is_minor", false)
         .eq("is_available", true)
         .eq("hide_available", false)
         .eq("hide_price", false)

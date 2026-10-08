@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canKeepRoster, defaultRelationship, orgCategory } from "@/lib/org-categories";
+import { anyMinor } from "@/lib/minor";
 
 /**
  * An organisation's roster: the artists it represents, or who have been through
@@ -58,7 +59,7 @@ async function requireRosterOrg(): Promise<{ caller?: Caller; error?: string }> 
   if (!canKeepRoster(p.org_category)) {
     const label = orgCategory(p.org_category)?.label ?? "Your organisation type";
     return {
-      error: `${label} does not keep an artist list. Galleries list represented artists, residencies list participants, art societies list members.`,
+      error: `${label} does not keep an artist list. Galleries list represented artists, residencies list participants, art societies list members, schools list students.`,
     };
   }
 
@@ -183,11 +184,16 @@ function normaliseYears(
 async function notifyArtist(caller: Caller, artistId: string, rosterId: string) {
   const admin = createAdminClient();
   const claim =
-    caller.relationship === "represented"
+    caller.category === "school"
+      ? `${caller.name} would like to list you as a student`
+      : caller.relationship === "represented"
       ? `${caller.name} would like to list you as a represented artist`
       : caller.relationship === "member"
         ? `${caller.name} would like to list you as a member`
         : `${caller.name} would like to list you as a past participant`;
+
+  // Messaging is closed to under-18s. The invitation waits in their settings.
+  if (await anyMinor([artistId])) return;
 
   const [a, b] = [caller.id, artistId].sort();
   const { data: existing } = await admin
@@ -298,6 +304,7 @@ export async function searchArtists(
     .from("profiles")
     .select("id, username, full_name, avatar_url, city")
     .in("role", ["artist", "owner"])
+    .eq("is_minor", false)
     .eq("is_active", true)
     .or(`username.ilike.%${q}%,full_name.ilike.%${q}%`)
     .limit(8);

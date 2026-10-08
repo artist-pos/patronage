@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       .from("profiles")
       .select("id, username, full_name, avatar_url, medium, country, career_stage")
       .in("role", ["artist", "owner"])
+      .eq("is_minor", false)
       .eq("is_active", true)
       .or(`full_name.ilike.${p},username.ilike.${p},bio.ilike.${p}`)
       .limit(5),

@@ -22,6 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const update = await getUpdateById(id);
   if (!update) return { title: "Update not found" };
   const name = update.artist_full_name ?? update.artist_username;
+  const author = await getProfileById(update.artist_id);
+  if (author?.is_minor) return { title: `${name} — Studio Update`, robots: { index: false, follow: false } };
   const ogImages = update.image_url
     ? [{ url: update.image_url, alt: update.caption ?? name }]
     : [];

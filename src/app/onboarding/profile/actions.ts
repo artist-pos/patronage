@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { validLocalBoardId } from "@/lib/local-boards";
 import { trackEvent } from "@/actions/trackEvent";
+import { parseAgeFields } from "@/lib/age";
 import type { DisciplineEnum } from "@/types/database";
 
 const VALID_DISCIPLINES: DisciplineEnum[] = [
@@ -15,6 +16,7 @@ const VALID_DISCIPLINES: DisciplineEnum[] = [
 
 export interface ProfileStepState {
   error?: string;
+  fieldErrors?: { year_of_birth?: string };
 }
 
 /**
@@ -77,9 +79,30 @@ export async function saveOnboardingProfile(
   // weekly scorer skips the account entirely, so this one cannot be optional.
   if (disciplines.length === 0) return { error: "Choose at least one discipline." };
 
+  // A school's invitation makes the year of birth required. Decided here, from
+  // the account's own record, not from anything the form says.
+  const { data: self } = await supabase
+    .from("profiles")
+    .select("invited_by_org_id")
+    .eq("id", user.id)
+    .single();
+  const invitedBy = (self as { invited_by_org_id?: string | null } | null)?.invited_by_org_id ?? null;
+  let requireAge = false;
+  if (invitedBy) {
+    const { data: org } = await supabase.from("profiles").select("org_category").eq("id", invitedBy).maybeSingle();
+    requireAge = (org as { org_category?: string | null } | null)?.org_category === "school";
+  }
+  const ageSubmitted = formData.has("year_of_birth");
+  const age = parseAgeFields(formData);
+  if (age.error) return { fieldErrors: { year_of_birth: age.error } };
+  if (requireAge && !age.yearOfBirth) {
+    return { fieldErrors: { year_of_birth: "Add your year of birth to continue." } };
+  }
+
   const { data: updated, error } = await supabase
     .from("profiles")
     .update({
+      ...(ageSubmitted ? { year_of_birth: age.yearOfBirth, age_confirmed_adult: age.confirmedAdult } : {}),
       ...(nameSubmitted ? { full_name: fullName } : {}),
       username,
       country,

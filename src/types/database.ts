@@ -374,6 +374,7 @@ export interface Profile {
   instagram_handle: string | null;
   banner_focus_y: number;
   exhibition_history: ExhibitionEntry[];
+  education?: EducationEntry[];
   press_bibliography: BibliographyEntry[];
   is_active: boolean;
   is_patronage_supported: boolean;
@@ -430,6 +431,11 @@ export interface Profile {
   disciplines: DisciplineEnum[] | null;
   // Demographic fields — internal only, never shown on public profile
   year_of_birth: number | null;
+  /** Migration 202. Derived: under 18 (or possibly 17 and unconfirmed). Kept off
+   *  every public list and out of search; the profile opens from its own link. */
+  is_minor?: boolean;
+  /** Set by the person in the year current year - year_of_birth = 18. */
+  age_confirmed_adult?: boolean;
   identity_tags: string[];
   // Provenance branding (migration 098)
   provenance_logo_url: string | null;
@@ -983,6 +989,15 @@ export interface ProvenanceLink {
 
 export interface ProfileWithImage extends Profile {
   primary_image_url: string | null;
+}
+
+/** One line of someone's education, for the CV tab (migration 203). */
+export interface EducationEntry {
+  level: "Secondary" | "Tertiary" | "Short course";
+  institution: string;
+  course: string;
+  start_year: number | null;
+  end_year: number | null;
 }
 
 export interface ExhibitionEntry {

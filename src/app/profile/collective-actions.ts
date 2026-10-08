@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendCollectiveInvitation } from "@/lib/email";
+import { anyMinor } from "@/lib/minor";
 
 type CollectiveMemberRow = {
   id: string;
@@ -77,6 +78,12 @@ export async function addCollectiveMember(collectiveId: string, memberId: string
   // Send DM notification to the invited artist
   const collectiveName = collective?.name ?? "a collective";
   const inviterName = inviterProfile?.full_name ?? inviterProfile?.username ?? "Someone";
+
+  // Messaging is closed to under-18s. The invitation waits in their settings.
+  if (await anyMinor([memberId])) {
+    revalidatePath("/studio");
+    return {};
+  }
 
   const [a, b] = [user.id, memberId].sort();
   const { data: existingConv } = await admin

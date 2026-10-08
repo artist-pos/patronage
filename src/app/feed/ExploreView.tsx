@@ -100,7 +100,8 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
     wantExtras
       ? supabase
           .from("artworks")
-          .select("id, url, thumb_url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id(id, username, full_name)")
+          .select("id, url, thumb_url, title, year, edition, price_cents, price_currency, is_poa, hide_price, profile:profiles!profile_id!inner(id, username, full_name)")
+          .eq("profile.is_minor", false)
           .eq("is_available", true)
           .eq("hide_available", false)
           .not("url", "is", null)

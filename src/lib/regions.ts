@@ -204,6 +204,7 @@ export async function getRegionalPageData(
     .eq("is_active", true)
     .eq("region_id", region.id)
     .in("role", ["artist", "owner"])
+    .eq("is_minor", false)
     .order("created_at", { ascending: false })
     .limit(60);
 

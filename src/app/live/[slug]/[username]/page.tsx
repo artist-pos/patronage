@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("full_name, username")
+    .select("full_name, username, is_minor")
     .eq("username", username)
     .single();
   const { data: campaign } = await admin
@@ -26,6 +26,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${title} — ${name}`,
     description: `View ${name}'s campaign on Patronage.`,
+    // Under 18: opens from its link, stays out of search.
+    ...(profile?.is_minor && { robots: { index: false, follow: false } }),
   };
 }
 

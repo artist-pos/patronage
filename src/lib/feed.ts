@@ -24,7 +24,7 @@ const UPDATE_SELECT = `
   update_tag,
   admin_hidden,
   created_at,
-  profiles!project_updates_artist_id_fkey (
+  profiles!project_updates_artist_id_fkey!inner (
     username,
     full_name,
     avatar_url
@@ -78,6 +78,8 @@ export async function getLatestUpdates(
   let query = supabase
     .from("project_updates")
     .select(UPDATE_SELECT)
+    // Under-18s stay off every public list; their own profile still shows their updates.
+    .eq("profiles.is_minor", false)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

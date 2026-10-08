@@ -11,7 +11,8 @@ export async function GET() {
     .from("profiles")
     .select("username, created_at")
     .eq("is_active", true)
-    .in("role", ["artist", "owner"]);
+    .in("role", ["artist", "owner"])
+    .eq("is_minor", false);
 
   const urls = (profiles ?? []).map((p) => ({
     loc: `${BASE_URL}/${p.username}`,

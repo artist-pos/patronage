@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { anyMinor } from "@/lib/minor";
 
 export interface TagNotificationPayload {
   type: "blog_post";
@@ -13,6 +14,8 @@ export async function sendTagNotificationDM(
   payload: TagNotificationPayload
 ): Promise<{ error?: string }> {
   if (senderUserId === recipientUserId) return {};
+  // Messaging is closed to under-18s.
+  if (await anyMinor([recipientUserId])) return {};
 
   const admin = createAdminClient();
 

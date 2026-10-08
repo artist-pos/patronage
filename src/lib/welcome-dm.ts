@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { anyMinor } from "@/lib/minor";
 
 const PATRONAGE_USERNAME = "patronagenz";
 
@@ -51,6 +52,8 @@ export async function sendWelcomeDm(newUserId: string, role: string): Promise<vo
 
   const patronageId = patronageProfile.id;
   if (patronageId === newUserId) return; // safety check
+  // The welcome says "reply here"; messaging is closed to under-18s.
+  if (await anyMinor([newUserId])) return;
 
   const message = WELCOME_MESSAGES[role] ?? WELCOME_MESSAGES.patron;
 

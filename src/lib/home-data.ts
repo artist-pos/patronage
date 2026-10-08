@@ -25,6 +25,7 @@ export const getCachedHomeData = unstable_cache(
           .select("id, username, full_name, bio, avatar_url, featured_image_url, medium, career_stage, country, role, created_at, is_active")
           .eq("is_active", true)
           .in("role", ["artist", "owner"])
+          .eq("is_minor", false)
           .order("created_at", { ascending: false })
           .limit(16),
         supabase
@@ -54,12 +55,14 @@ export const getCachedHomeData = unstable_cache(
           .from("profiles")
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
-          .in("role", ["artist", "owner"]),
+          .in("role", ["artist", "owner"])
+          .eq("is_minor", false),
         // Admin-set spotlight — the same artist fronting /artists
         supabase
           .from("profiles")
           .select("id, username, full_name, bio, avatar_url, featured_image_url, medium, career_stage, country, role, created_at, is_active")
           .gte("spotlight_until", today)
+          .eq("is_minor", false)
           .order("spotlight_until", { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -145,6 +148,7 @@ export const getCachedVerifiedHandles = unstable_cache(
       .select("id, username")
       .eq("is_active", true)
       .in("role", ["artist", "owner"])
+      .eq("is_minor", false)
       .not("bio", "is", null)
       .neq("bio", "")
       .not("avatar_url", "is", null)

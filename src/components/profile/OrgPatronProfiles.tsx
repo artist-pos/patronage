@@ -442,9 +442,9 @@ export function PartnerProfileView({
         <div className="border-b border-border bg-feed-bg">
           <div className={`${INNER} py-9`}>
             <div className="mb-[18px] flex items-baseline justify-between">
-              <h2 className={SECTION_LABEL}>{rosterHeading(roster.relationship)}</h2>
+              <h2 className={SECTION_LABEL}>{rosterHeading(roster.relationship, profile.org_category)}</h2>
               <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
-                {roster.artists.length} {roster.relationship === "member" ? "member" : "artist"}{roster.artists.length !== 1 ? "s" : ""}
+                {roster.artists.length} {roster.relationship === "member" ? "member" : profile.org_category === "school" ? "student" : "artist"}{roster.artists.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-[2px] sm:grid-cols-3 lg:grid-cols-6">

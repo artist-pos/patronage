@@ -76,6 +76,16 @@ export async function generateMetadata({ params }: Props) {
     };
   }
 
+  // Under 18: the page opens from its own link, but it is kept out of search
+  // and carries nothing a link preview or crawler could lift.
+  if (profile.is_minor) {
+    return {
+      title: displayName,
+      description: "A profile on Patronage.",
+      robots: { index: false, follow: false },
+    };
+  }
+
   // Discipline labels for title
   const disciplineLabels = profile.disciplines?.length
     ? profile.disciplines.map((d) => DISCIPLINE_LABELS[d] ?? d)
@@ -449,7 +459,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     // because representation renders in the header, above the tabs.
     isArtistProfile
       ? getArtistAffiliations(profile.id)
-      : Promise.resolve({ representation: [], participation: [], membership: [] }),
+      : Promise.resolve({ representation: [], participation: [], membership: [], education: [] }),
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
@@ -485,6 +495,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     ]);
     canMessageProfile = !!(followRes.data || appliedRes.data || savedRes.data);
   }
+  // Messaging is closed to under-18s; their page keeps no message or enquire button.
+  if (profile.is_minor) canMessageProfile = false;
 
   // ── Partner trust signals (partner profiles only) ──────────────────────────
   // Application rows aren't publicly readable under RLS, but aggregate counts
@@ -547,6 +559,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             .eq("region_id", profile.region_id!)
             .eq("is_active", true)
             .in("role", ["artist", "owner"])
+            .eq("is_minor", false)
             .limit(60)
         : Promise.resolve({ data: [] }),
       isRegionalArtsBody ? getCitiesForRegion(profile.region_id!) : Promise.resolve([]),
@@ -1213,6 +1226,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   displayName={displayName}
                   isOwner={isOwner}
                   participation={affiliations.participation}
+                  education={profile.education ?? []}
+                  schools={affiliations.education}
                 />
                 {profile.open_for_commissions && (
                   <aside className="mb-8 space-y-3 bg-[color:var(--tint)] p-5 lg:mt-14">
@@ -1225,7 +1240,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                         {profile.commission_info}
                       </p>
                     )}
-                    {!isOwner && <MessageButton otherUserId={profile.id} label="Enquire" variant="solid" />}
+                    {!isOwner && !profile.is_minor && <MessageButton otherUserId={profile.id} label="Enquire" variant="solid" />}
                     {isOwner && (
                       <p className="text-xs text-muted-foreground">
                         Patrons see an Enquire button here.

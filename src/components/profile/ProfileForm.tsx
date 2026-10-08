@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { upsertProfileAction, updateProfileAction, type ProfileFormState } from "@/app/onboarding/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import type { Profile, DisciplineEnum, CityWithRegion, LocalBoard } from "@/type
 import type { ArtsOrganisation } from "@/lib/regions";
 import { IDENTITY_TAGS } from "@/lib/constants/demographics";
 import { SELECTABLE_COUNTRIES as COUNTRIES } from "@/lib/constants/countries";
+import { ageBand } from "@/lib/age";
 
 const STAGES = ["Emerging", "Mid-Career", "Established", "Open"] as const;
 
@@ -38,6 +39,13 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
   const currentYear = new Date().getFullYear();
   const minYear = 1920;
   const maxYear = currentYear - 10;
+
+  // The year someone turns 18 is ambiguous (17 or 18 depending on the month),
+  // so that one year asks. Under 18 is told how their profile is shown.
+  const savedYear = (profile as Profile & { year_of_birth?: number | null })?.year_of_birth ?? null;
+  const [yearInput, setYearInput] = useState(savedYear ? String(savedYear) : "");
+  const band = ageBand(parseInt(yearInput, 10) || null);
+  const savedConfirmed = (profile as Profile & { age_confirmed_adult?: boolean })?.age_confirmed_adult ?? false;
 
   return (
     <form action={action} className="space-y-6">
@@ -273,7 +281,8 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
             type="number"
             min={minYear}
             max={maxYear}
-            defaultValue={(profile as Profile & { year_of_birth?: number | null })?.year_of_birth ?? ""}
+            value={yearInput}
+            onChange={(e) => setYearInput(e.target.value)}
             placeholder={`e.g. ${currentYear - 30}`}
             className="border-black"
           />
@@ -282,6 +291,26 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
           )}
           <p className="text-sm text-muted-foreground">Used only for anonymised, aggregate age-bracket reporting.</p>
         </div>
+
+        {band === "ask" && (
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Have you turned 18?</legend>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="age_confirmed_adult" value="yes" defaultChecked={savedConfirmed} className="border-black" />
+              Yes
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="age_confirmed_adult" value="no" defaultChecked={!savedConfirmed} className="border-black" />
+              Not yet
+            </label>
+          </fieldset>
+        )}
+        {(band === "minor" || band === "ask") && (
+          <p className="text-sm text-muted-foreground border border-border p-3">
+            Under 18? Your profile stays off search engines and out of Patronage&rsquo;s lists and directories. Anyone you
+            send your link to can still open it.
+          </p>
+        )}
 
         <div className="space-y-2">
           <Label>

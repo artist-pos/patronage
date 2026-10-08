@@ -16,6 +16,7 @@ export type OrgCategory =
   | "gallery"
   | "residency"
   | "art_society"
+  | "school"
   | "council"
   | "developer"
   | "corporate";
@@ -119,6 +120,19 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     rosterNoun: "member",
   },
   {
+    value: "school",
+    label: "School / Art school",
+    hint: "Secondary schools, art schools and universities. Students and alumni join your list with their own consent. Under-18s are never shown publicly.",
+    // Participation, like a residency: a dated record of who was here, not a
+    // claim on anyone's work. Reuses the participant relationship.
+    relationship: "participation",
+    anchorsRegion: false,
+    representsArtists: false,
+    hasAlumni: true,
+    hasMembers: false,
+    rosterNoun: "student",
+  },
+  {
     value: "council",
     label: "Council / Government",
     hint: "Councils and government bodies commissioning public art and running arts programmes.",
@@ -212,6 +226,8 @@ export const PARTNER_PAGE_TYPE_TO_CATEGORY: Record<string, OrgCategory> = {
   arts: "regional_arts_org",
   residency: "residency",
   gallery: "gallery",
+  society: "art_society",
+  school: "school",
   council: "council",
   corporate: "corporate",
   assetmanager: "developer",

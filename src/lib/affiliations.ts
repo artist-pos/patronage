@@ -31,9 +31,11 @@ export interface ArtistAffiliations {
   participation: Affiliation[];
   /** Art societies and clubs the artist belongs to. */
   membership: Affiliation[];
+  /** Schools, art schools and universities with a Patronage page, newest first. */
+  education: Affiliation[];
 }
 
-const EMPTY: ArtistAffiliations = { representation: [], participation: [], membership: [] };
+const EMPTY: ArtistAffiliations = { representation: [], participation: [], membership: [], education: [] };
 
 export async function getArtistAffiliations(
   artistId: string
@@ -46,7 +48,7 @@ export async function getArtistAffiliations(
       `start_year, end_year,
        collective:collectives!inner(
          relationship, is_public, org_profile_id,
-         org:profiles!collectives_org_profile_id_fkey(username, full_name, avatar_url)
+         org:profiles!collectives_org_profile_id_fkey(username, full_name, avatar_url, org_category)
        )`
     )
     .eq("user_id", artistId)
@@ -59,7 +61,7 @@ export async function getArtistAffiliations(
     end_year: number | null;
     collective: {
       relationship: string;
-      org: { username: string; full_name: string | null; avatar_url: string | null } | null;
+      org: { username: string; full_name: string | null; avatar_url: string | null; org_category: string | null } | null;
     } | null;
   }>;
 
@@ -68,6 +70,7 @@ export async function getArtistAffiliations(
   const representation: Affiliation[] = [];
   const participation: Affiliation[] = [];
   const membership: Affiliation[] = [];
+  const education: Affiliation[] = [];
 
   for (const row of rows) {
     const org = row.collective?.org;
@@ -85,7 +88,8 @@ export async function getArtistAffiliations(
     if (relationship === "represented" || relationship === "shows_with") {
       representation.push(entry);
     } else if (relationship === "participant") {
-      participation.push(entry);
+      // A school keeps the same dated roster as a residency, but it is education, not a programme.
+      (org.org_category === "school" ? education : participation).push(entry);
     } else if (relationship === "member") {
       membership.push(entry);
     }
@@ -97,8 +101,9 @@ export async function getArtistAffiliations(
   );
 
   membership.sort((a, b) => a.name.localeCompare(b.name));
+  education.sort((a, b) => (b.startYear ?? 0) - (a.startYear ?? 0) || a.name.localeCompare(b.name));
 
-  return { representation, participation, membership };
+  return { representation, participation, membership, education };
 }
 
 /** "2022 to 2023", "2024 to now", or null when no years were recorded. */
@@ -156,10 +161,12 @@ export async function getOrgRoster(orgProfileId: string): Promise<OrgRoster> {
   const { data } = await supabase
     .from("collective_members")
     .select(
-      "start_year, end_year, profiles!collective_members_user_id_fkey(id, username, full_name, avatar_url, medium)"
+      "start_year, end_year, profiles!collective_members_user_id_fkey!inner(id, username, full_name, avatar_url, medium)"
     )
     .eq("collective_id", roster.id)
-    .eq("status", "accepted");
+    .eq("status", "accepted")
+    // A public roster never names an under-18, whatever their school or society.
+    .eq("profiles.is_minor", false);
 
   const rows = (data ?? []) as unknown as Array<{
     start_year: number | null;
@@ -196,7 +203,8 @@ export async function getOrgRoster(orgProfileId: string): Promise<OrgRoster> {
 }
 
 /** What the section on the organisation's page is called. */
-export function rosterHeading(relationship: OrgRoster["relationship"]): string {
+export function rosterHeading(relationship: OrgRoster["relationship"], category?: string | null): string {
+  if (relationship === "participant" && category === "school") return "Students and alumni";
   if (relationship === "participant") return "Artists who have been here";
   if (relationship === "member") return "Members";
   return "Represented artists";

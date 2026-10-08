@@ -658,6 +658,7 @@ export async function searchProfiles(query: string): Promise<
     .from("profiles")
     .select("id, username, full_name, avatar_url")
     .eq("is_active", true)
+    .eq("is_minor", false)
     .or(`username.ilike.%${trimmed}%,full_name.ilike.%${trimmed}%`)
     .limit(8);
 

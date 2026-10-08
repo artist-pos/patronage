@@ -15,10 +15,12 @@ export default async function LivePage() {
     .select(`
       id, slug, title, campaign_type, cover_image_url, location_address, is_featured,
       artist_id,
-      profiles!campaigns_artist_id_fkey(username, full_name, avatar_url, region),
+      profiles!campaigns_artist_id_fkey!inner(username, full_name, avatar_url, region),
       opportunities!campaigns_opportunity_id_fkey(title, type)
     `)
     .eq("status", "live")
+    // Under-18s stay off every public list.
+    .eq("profiles.is_minor", false)
     .order("created_at", { ascending: false });
 
   const campaigns = (rows ?? []).map((row) => {

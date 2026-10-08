@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     .select("id, username, full_name, avatar_url")
     .eq("is_active", true)
     .in("role", ["artist", "owner"])
+    .eq("is_minor", false)
     .or(`full_name.ilike.%${q}%,username.ilike.%${q}%`)
     .order("full_name")
     .limit(10);

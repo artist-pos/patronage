@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseAgeFields } from "@/lib/age";
 import { redirect } from "next/navigation";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { validLocalBoardId } from "@/lib/local-boards";
@@ -86,16 +87,9 @@ export async function upsertProfileAction(
   const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
 
   // Demographic fields (opt-in, private)
-  const yearOfBirthRaw = (formData.get("year_of_birth") as string)?.trim();
-  let year_of_birth: number | null = null;
-  if (yearOfBirthRaw) {
-    const parsed = parseInt(yearOfBirthRaw, 10);
-    const currentYear = new Date().getFullYear();
-    if (isNaN(parsed) || parsed < 1920 || parsed > currentYear - 10) {
-      return { fieldErrors: { year_of_birth: `Year must be between 1920 and ${currentYear - 10}.` } };
-    }
-    year_of_birth = parsed;
-  }
+  const age = parseAgeFields(formData);
+  if (age.error) return { fieldErrors: { year_of_birth: age.error } };
+  const year_of_birth = age.yearOfBirth;
 
   const identity_tags = formData.getAll("identity_tags") as string[];
 
@@ -146,6 +140,7 @@ export async function upsertProfileAction(
     website_url,
     instagram_handle,
     year_of_birth,
+    age_confirmed_adult: age.confirmedAdult,
     identity_tags,
   };
   // Only write disciplines when values are present — omitting it avoids
@@ -226,16 +221,9 @@ export async function updateProfileAction(
   const website_url = (formData.get("website_url") as string)?.trim() || null;
   const instagram_handle = (formData.get("instagram_handle") as string)?.trim().replace(/^@/, "") || null;
 
-  const yearOfBirthRaw = (formData.get("year_of_birth") as string)?.trim();
-  let year_of_birth: number | null = null;
-  if (yearOfBirthRaw) {
-    const parsed = parseInt(yearOfBirthRaw, 10);
-    const currentYear = new Date().getFullYear();
-    if (isNaN(parsed) || parsed < 1920 || parsed > currentYear - 10) {
-      return { fieldErrors: { year_of_birth: `Year must be between 1920 and ${currentYear - 10}.` } };
-    }
-    year_of_birth = parsed;
-  }
+  const age = parseAgeFields(formData);
+  if (age.error) return { fieldErrors: { year_of_birth: age.error } };
+  const year_of_birth = age.yearOfBirth;
 
   const identity_tags = formData.getAll("identity_tags") as string[];
 
@@ -274,6 +262,7 @@ export async function updateProfileAction(
     website_url,
     instagram_handle,
     year_of_birth,
+    age_confirmed_adult: age.confirmedAdult,
     identity_tags,
   };
 

@@ -36,6 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const thread = await getThread(id);
   if (!thread) return { title: "Project not found" };
   const name = thread.project.artist_full_name ?? thread.project.artist_username;
+  const author = await getProfileById(thread.project.artist_id);
+  if (author?.is_minor) return { title: `${thread.project.title} — ${name}`, robots: { index: false, follow: false } };
   return {
     title: `${thread.project.title} — ${name}`,
     description: thread.project.description ?? `Project thread by ${name} on Patronage.`,

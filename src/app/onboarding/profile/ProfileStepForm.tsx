@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { CombinedLocationPicker } from "@/components/profile/CombinedLocationPicker";
 import { DisciplineInput } from "@/components/profile/DisciplineInput";
+import { AgeFields } from "@/components/profile/AgeFields";
 import { saveOnboardingProfile, type ProfileStepState } from "./actions";
 import type { CityWithRegion, DisciplineEnum, LocalBoard } from "@/types/database";
 
@@ -20,6 +21,9 @@ interface Props {
   defaultRegionId: string | null;
   defaultDisciplines: DisciplineEnum[];
   next: string | null;
+  /** True for people arriving through a school invitation. */
+  requireAge?: boolean;
+  defaultYearOfBirth?: number | null;
 }
 
 export function ProfileStepForm({
@@ -34,6 +38,8 @@ export function ProfileStepForm({
   defaultRegionId,
   defaultDisciplines,
   next,
+  requireAge = false,
+  defaultYearOfBirth = null,
 }: Props) {
   const [state, formAction, pending] = useActionState<ProfileStepState, FormData>(
     saveOnboardingProfile,
@@ -106,6 +112,8 @@ export function ProfileStepForm({
         </p>
         <DisciplineInput defaultValue={defaultDisciplines} />
       </div>
+
+      {requireAge && <AgeFields required defaultYear={defaultYearOfBirth} error={state.fieldErrors?.year_of_birth} />}
 
       <label className="flex cursor-pointer items-start gap-2.5">
         <input

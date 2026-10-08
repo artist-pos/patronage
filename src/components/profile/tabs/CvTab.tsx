@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TrackedLink } from "@/components/profile/TrackedLink";
-import type { ExhibitionEntry, BibliographyEntry, ProfileAchievement } from "@/types/database";
+import type { ExhibitionEntry, BibliographyEntry, ProfileAchievement, EducationEntry } from "@/types/database";
 import { affiliationYears, type Affiliation } from "@/lib/affiliations";
 
 interface Props {
@@ -17,15 +17,21 @@ interface Props {
    *  first (186). A dated credit, which is why it belongs here beside the
    *  exhibitions rather than in the header where representation goes. */
   participation?: Affiliation[];
+  /** Education the person entered themselves, and schools with a Patronage page
+   *  they have accepted a place on. Both read as one Education section. */
+  education?: EducationEntry[];
+  schools?: Affiliation[];
 }
 
-export function CvTab({ exhibitions, bibliography, receivedGrants, achievements, cvUrl, profileId, username, isOwner, participation = [] }: Props) {
+export function CvTab({ exhibitions, bibliography, receivedGrants, achievements, cvUrl, profileId, username, isOwner, participation = [], education = [], schools = [] }: Props) {
   const sortedExhibitions = [...exhibitions].sort((a, b) => b.year - a.year);
 
   const hasContent =
     // A residency is CV content on its own. Without this, an artist whose only
     // credit is one would be told they have added nothing.
     participation.length > 0 ||
+    education.length > 0 ||
+    schools.length > 0 ||
     exhibitions.length > 0 ||
     bibliography.length > 0 ||
     receivedGrants.length > 0 ||
@@ -64,6 +70,40 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
             Download CV →
           </TrackedLink>
         </div>
+      )}
+
+      {(education.length > 0 || schools.length > 0) && (
+        <section className="space-y-3">
+          <h3 className="t-section-label">Education</h3>
+          <div className="border-t border-border">
+            {schools.map((org) => (
+              <div key={org.username} className="flex gap-4 border-b border-border py-2.5 text-sm">
+                <span className="w-28 shrink-0 whitespace-nowrap font-mono text-muted-foreground">
+                  {affiliationYears(org) ?? "—"}
+                </span>
+                <Link
+                  href={`/${org.username}`}
+                  className="font-semibold underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
+                >
+                  {org.name}
+                </Link>
+              </div>
+            ))}
+            {[...education]
+              .sort((a, b) => (b.start_year ?? 0) - (a.start_year ?? 0))
+              .map((e, i) => (
+                <div key={i} className="flex gap-4 border-b border-border py-2.5 text-sm">
+                  <span className="w-28 shrink-0 whitespace-nowrap font-mono text-muted-foreground">
+                    {affiliationYears({ startYear: e.start_year, endYear: e.end_year }) ?? "—"}
+                  </span>
+                  <div>
+                    <span className="font-semibold">{e.institution}</span>
+                    {e.course && <span className="text-muted-foreground">, {e.course}</span>}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
       )}
 
       {participation.length > 0 && (

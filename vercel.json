@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/send-application-summary",
       "schedule": "30 19 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-minor-flags",
+      "schedule": "0 12 * * *"
     }
   ]
 }

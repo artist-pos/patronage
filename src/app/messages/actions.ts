@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { MESSAGING_UNAVAILABLE, anyMinor } from "@/lib/minor";
 import { notifyMessageRecipient } from "@/lib/email";
 
 /**
@@ -62,6 +63,7 @@ export async function checkCanInitiateConversation(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { canInitiate: false };
   if (user.id === otherUserId) return { canInitiate: false };
+  if (await anyMinor([user.id, otherUserId])) return { canInitiate: false };
 
   const { data: senderProfile } = await supabase
     .from("profiles")
@@ -84,6 +86,7 @@ export async function getOrCreateConversation(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
   if (user.id === otherUserId) return { error: "cannot_message_self" };
+  if (await anyMinor([user.id, otherUserId])) return { error: MESSAGING_UNAVAILABLE };
 
   // Artists may only message users who follow them
   const { data: senderProfile } = await supabase
@@ -138,6 +141,7 @@ export async function initializeInquiryThread(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "not_authenticated" };
   if (user.id === otherUserId) return { error: "cannot_message_self" };
+  if (await anyMinor([user.id, otherUserId])) return { error: MESSAGING_UNAVAILABLE };
 
   // Always order UUIDs so participant_a < participant_b
   const [a, b] = [user.id, otherUserId].sort();
@@ -207,6 +211,16 @@ export async function sendMessage(
 
   const trimmed = content.trim();
   if (trimmed.length === 0 || trimmed.length > 10000) return { error: "Message must be between 1 and 10,000 characters." };
+
+  // Closed to under-18s both ways, including threads that already exist.
+  const { data: convo } = await supabase
+    .from("conversations")
+    .select("participant_a, participant_b")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (convo && (await anyMinor([convo.participant_a, convo.participant_b]))) {
+    return { error: MESSAGING_UNAVAILABLE };
+  }
 
   const { data: msg, error } = await supabase.from("messages").insert({
     conversation_id: conversationId,

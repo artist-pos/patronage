@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { initializeInquiryThread } from "@/app/messages/actions";
 
@@ -14,12 +14,14 @@ interface Props {
 export function MessageButton({ otherUserId, label = "Message", variant = "default" }: Props) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   function handleClick() {
     startTransition(async () => {
       const result = await initializeInquiryThread(otherUserId, "profile_enquiry");
       if ("error" in result) {
         if (result.error === "not_authenticated") router.push("/auth/login");
+        else if (result.error === "messaging_unavailable") setError("Messaging isn’t available for this account.");
         return;
       }
       router.push(`/messages/${result.id}`);
@@ -27,6 +29,7 @@ export function MessageButton({ otherUserId, label = "Message", variant = "defau
   }
 
   return (
+    <>
     <button
       onClick={handleClick}
       disabled={isPending}
@@ -38,5 +41,7 @@ export function MessageButton({ otherUserId, label = "Message", variant = "defau
     >
       {isPending ? "…" : label}
     </button>
+    {error && <p role="alert" className="text-xs text-muted-foreground">{error}</p>}
+    </>
   );
 }

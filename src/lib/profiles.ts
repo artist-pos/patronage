@@ -35,6 +35,7 @@ export async function getProfiles(
     .select("*")
     .eq("is_active", true)
     .in("role", ["artist", "owner"])
+    .eq("is_minor", false)
     .order("created_at", { ascending: false });
 
   if (filters.country) query = query.eq("country", filters.country);
