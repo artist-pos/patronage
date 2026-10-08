@@ -123,14 +123,19 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
 
   const { data: opp } = await supabase
     .from("opportunities")
-    .select("id, profile_id, status, routing_type, title, organiser, pipeline_paid_at")
+    .select("id, profile_id, status, routing_type, title, organiser")
     .eq("id", id)
     .maybeSingle();
 
   if (!opp) return { error: "Listing not found" };
   if (opp.profile_id !== user.id) return { error: "Not authorised" };
+  if (opp.status !== "draft" && opp.status !== "draft_unclaimed") {
+    return { error: "This listing has already been submitted." };
+  }
   if (!opp.title?.trim()) return { error: "Please add a title before submitting" };
   if (!opp.organiser?.trim()) return { error: "Please add an organiser name before submitting" };
+
+  const isPipeline = opp.routing_type === "pipeline";
 
   const { error: updateError } = await supabase
     .from("opportunities")
@@ -140,23 +145,20 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
 
   if (updateError) return { error: updateError.message };
 
-  revalidatePath("/partner/dashboard");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard");
 
-  // Notify admins
+  // Whether a publishing fee applies is decided at review, so admins hear about
+  // every submission straight away and can see whether it is the organisation's first.
   notifyOpportunitySubmission({
     title: opp.title ?? "",
     organiser: opp.organiser ?? "",
     type: opp.routing_type ?? "external",
     submitterEmail: user.email ?? null,
     isFeatured: false,
-    isPipeline: opp.routing_type === "pipeline",
-    adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/admin/opportunities/${id}`,
+    isPipeline,
+    adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/admin/submissions`,
   }).catch(console.error);
 
-  // Pipeline without a prior payment → send to payment gate
-  if (opp.routing_type === "pipeline" && !opp.pipeline_paid_at) {
-    return { redirectTo: `/partner/opportunities/${id}/activate` };
-  }
-
-  return { redirectTo: "/partner/dashboard" };
+  return { redirectTo: "/dashboard" };
 }

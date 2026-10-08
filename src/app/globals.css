@@ -572,3 +572,32 @@ div[data-figure-row] > figure[data-figure-image] {
   div[data-figure-row] { gap: 8px; }
   div[data-figure-row] > figure[data-figure-image] { width: auto; }
 }
+
+/* ── Comfortable controls ─────────────────────────────────────────────────────
+   Wrap an organiser or reviewer screen in .ams-comfort and every button, field
+   and checkbox inside gets a 44px target and a 16px font (no iOS zoom on focus),
+   plus a strong keyboard focus ring. Opt a control out with .ams-compact. */
+.ams-comfort button:not(.ams-compact),
+.ams-comfort select:not(.ams-compact),
+.ams-comfort input:not([type="checkbox"]):not([type="radio"]):not(.ams-compact),
+.ams-comfort summary {
+  min-height: 44px;
+}
+.ams-comfort button:not(.ams-compact) {
+  min-width: 44px;
+}
+.ams-comfort input:not([type="checkbox"]):not([type="radio"]),
+.ams-comfort textarea,
+.ams-comfort select {
+  font-size: 16px;
+}
+.ams-comfort input[type="checkbox"],
+.ams-comfort input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.ams-comfort :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}

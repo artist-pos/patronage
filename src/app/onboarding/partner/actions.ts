@@ -61,6 +61,6 @@ export async function saveOnboardingPartner(
     role: "partner",
   });
 
-  revalidatePath("/partner/dashboard");
+  revalidatePath("/dashboard");
   redirect(next ?? "/partner/dashboard?welcome=1");
 }

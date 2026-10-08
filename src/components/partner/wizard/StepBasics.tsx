@@ -114,7 +114,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
 
   return (
     <div className="border border-black/30 bg-blue-50/20 p-4 space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
         Autofill from URL, text, or PDF
       </p>
       <div className="flex gap-1.5">
@@ -123,7 +123,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`text-xs px-3 py-1 border leading-none transition-colors ${
+            className={`text-sm px-3 py-1 border leading-none transition-colors ${
               mode === m ? "bg-black text-white border-black" : "border-black/40 hover:border-black"
             }`}
           >
@@ -145,7 +145,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             type="button"
             onClick={() => urlInput.trim() && parse("url", urlInput.trim())}
             disabled={!urlInput.trim()}
-            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
+            className="border border-black px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
           >
             Autofill →
           </button>
@@ -164,7 +164,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             type="button"
             onClick={() => textInput.trim() && parse("text", textInput.trim())}
             disabled={!textInput.trim()}
-            className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
+            className="border border-black px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-40"
           >
             Autofill →
           </button>
@@ -177,7 +177,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             onDrop={(e) => { e.preventDefault(); setFileDragOver(false); const f = e.dataTransfer.files[0]; if (f?.type === "application/pdf") parse("file", f); }}
             onDragOver={(e) => { e.preventDefault(); setFileDragOver(true); }}
             onDragLeave={() => setFileDragOver(false)}
-            className={`border border-dashed border-black/40 p-6 text-center cursor-pointer text-xs text-muted-foreground transition-colors ${fileDragOver ? "bg-muted" : "hover:bg-muted/40"}`}
+            className={`border border-dashed border-black/40 p-6 text-center cursor-pointer text-sm text-muted-foreground transition-colors ${fileDragOver ? "bg-muted" : "hover:bg-muted/40"}`}
           >
             Drop a PDF here, or click to browse
           </div>
@@ -185,7 +185,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             onChange={(e) => { const f = e.target.files?.[0]; if (f) parse("file", f); }} />
         </div>
       )}
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }
@@ -311,8 +311,8 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10 items-start">
     <div className="space-y-8">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Basics</h2>
-        <p className="text-sm text-stone-500">The core details of your opportunity.</p>
+        <h2 className="text-lg font-semibold">About your opportunity</h2>
+        <p className="text-sm text-stone-500">Tell artists what this is, who it is for and when it closes.</p>
       </div>
 
       {/* AI Parser */}
@@ -322,7 +322,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
           <button
             type="button"
             onClick={() => setAutofillSource(null)}
-            className="text-xs text-blue-600 underline underline-offset-2 hover:text-blue-800 ml-4 shrink-0"
+            className="text-sm text-blue-600 underline underline-offset-2 hover:text-blue-800 ml-4 shrink-0"
           >
             Try another
           </button>
@@ -336,7 +336,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
       <div className="space-y-5">
         {/* Title */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Title <span className="text-stone-400">*</span></label>
+          <label className="text-sm font-medium">Title <span className="text-stone-500">*</span></label>
           <input
             type="text"
             value={opp.title ?? ""}
@@ -348,7 +348,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* Organiser */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Organising body <span className="text-stone-400">*</span></label>
+          <label className="text-sm font-medium">Organising body <span className="text-stone-500">*</span></label>
           <OrganiserField
             allowLink={canUploadImage}
             value={opp.organiser ?? ""}
@@ -391,7 +391,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* City */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">City <span className="text-stone-400">optional</span></label>
+          <label className="text-sm font-medium">City <span className="text-stone-500">optional</span></label>
           <input
             type="text"
             value={opp.city ?? ""}
@@ -404,7 +404,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Dates row */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Opens on <span className="text-stone-400">optional</span></label>
+            <label className="text-sm font-medium">Opens on <span className="text-stone-500">optional</span></label>
             <input
               type="date"
               value={opp.opens_at?.slice(0, 10) ?? ""}
@@ -413,7 +413,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Deadline <span className="text-stone-400">optional</span></label>
+            <label className="text-sm font-medium">Deadline <span className="text-stone-500">optional</span></label>
             <input
               type="date"
               value={opp.deadline?.slice(0, 10) ?? ""}
@@ -426,7 +426,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Funding + fee row */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Funding / prize value <span className="text-stone-400">optional</span></label>
+            <label className="text-sm font-medium">Funding / prize value <span className="text-stone-500">optional</span></label>
             <input
               type="text"
               value={opp.funding_range ?? ""}
@@ -436,7 +436,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Entry fee <span className="text-stone-400">optional</span></label>
+            <label className="text-sm font-medium">Entry fee <span className="text-stone-500">optional</span></label>
             <div className="flex gap-2">
               <select
                 value={opp.entry_fee_currency ?? "NZD"}
@@ -460,7 +460,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* Caption */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Short summary <span className="text-stone-400">optional — shown on cards</span></label>
+          <label className="text-sm font-medium">Short summary <span className="text-stone-500">optional — shown on cards</span></label>
           <input
             type="text"
             maxLength={160}
@@ -469,7 +469,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             placeholder="One-line summary (max 160 characters)"
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
           />
-          <p className="text-xs text-stone-400 text-right">{(opp.caption ?? "").length}/160</p>
+          <p className="text-sm text-stone-500 text-right">{(opp.caption ?? "").length}/160</p>
         </div>
 
         {/* Description */}
@@ -492,7 +492,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Application links — free/external listings only; pipeline applications run entirely through Patronage */}
         {isFree && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Application links <span className="text-stone-400">optional</span></label>
+            <label className="text-sm font-medium">Application links <span className="text-stone-500">optional</span></label>
             <ApplicationLinksEditor
               links={opp.application_links ?? []}
               onChange={handleLinksChange}
@@ -502,7 +502,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* Contact email */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Contact email <span className="text-stone-400">optional</span></label>
+          <label className="text-sm font-medium">Contact email <span className="text-stone-500">optional</span></label>
           <input
             type="email"
             value={(opp as unknown as { contact_email?: string | null }).contact_email ?? ""}
@@ -516,7 +516,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
-              Sourced from <span className="text-stone-400">optional</span>
+              Sourced from <span className="text-stone-500">optional</span>
             </label>
             <select
               value={opp.source ?? ""}
@@ -531,7 +531,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
-              Source page URL <span className="text-stone-400">optional</span>
+              Source page URL <span className="text-stone-500">optional</span>
             </label>
             <input
               type="url"
@@ -547,7 +547,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {!canUploadImage ? (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Featured image</label>
-            <p className="text-xs text-stone-400 border border-dashed border-black/20 px-4 py-3">
+            <p className="text-sm text-stone-500 border border-dashed border-black/20 px-4 py-3">
               You can add a featured image once you&rsquo;ve signed in — everything
               you&rsquo;ve entered will be kept.
             </p>
@@ -562,7 +562,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
               <button
                 type="button"
                 onClick={() => onChange({ featured_image_url: null })}
-                className="absolute top-2 right-2 bg-black text-white text-xs px-2 py-1 hover:bg-black/70"
+                className="absolute top-2 right-2 bg-black text-white text-sm px-2 py-1 hover:bg-black/70"
               >
                 Remove
               </button>
@@ -603,7 +603,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Secondary image — powers the detail-page carousel alongside the featured image */}
         {canUploadImage && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">Secondary image <span className="text-stone-400">optional</span></label>
+          <label className="text-sm font-medium">Secondary image <span className="text-stone-500">optional</span></label>
           {opp.secondary_image_url && (
             <div className="relative border border-black bg-[#E5E7EB] overflow-hidden flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -611,7 +611,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
               <button
                 type="button"
                 onClick={() => onChange({ secondary_image_url: null })}
-                className="absolute top-2 right-2 bg-black text-white text-xs px-2 py-1 hover:bg-black/70"
+                className="absolute top-2 right-2 bg-black text-white text-sm px-2 py-1 hover:bg-black/70"
               >
                 Remove
               </button>
@@ -651,14 +651,14 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* Disciplines */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Disciplines <span className="text-stone-400">optional</span></label>
+          <label className="text-sm font-medium">Disciplines <span className="text-stone-500">optional</span></label>
           <div className="flex flex-wrap gap-2">
             {DISCIPLINES.map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => toggleDiscipline(d)}
-                className={`text-xs px-3 py-1.5 border transition-colors ${
+                className={`text-sm px-3 py-1.5 border transition-colors ${
                   (opp.sub_categories ?? []).includes(d)
                     ? "border-black bg-black text-white"
                     : "border-stone-200 hover:border-black"
@@ -672,14 +672,14 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
         {/* Career stage */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Career stage <span className="text-stone-400">optional — leave blank for all</span></label>
+          <label className="text-sm font-medium">Career stage <span className="text-stone-500">optional — leave blank for all</span></label>
           <div className="flex flex-wrap gap-2">
             {CAREER_STAGES.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => toggleStage(s)}
-                className={`text-xs px-3 py-1.5 border transition-colors ${
+                className={`text-sm px-3 py-1.5 border transition-colors ${
                   (opp.career_stage ?? []).includes(s)
                     ? "border-black bg-black text-white"
                     : "border-stone-200 hover:border-black"
@@ -694,20 +694,20 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Tags */}
         <div className="space-y-2">
           <label className="text-sm font-medium">
-            Tags <span className="text-stone-400">optional — identity, themes, focus</span>
+            Tags <span className="text-stone-500">optional — identity, themes, focus</span>
           </label>
-          <p className="text-xs text-stone-400">
+          <p className="text-sm text-stone-500">
             e.g. Māori, Pasifika, Women, LGBTQ+, Disabled artists, Environmental, Collaborative
           </p>
           {(opp.tags ?? []).length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {(opp.tags ?? []).map((t) => (
-                <span key={t} className="inline-flex items-center gap-1 text-xs bg-stone-100 text-stone-700 px-2.5 py-1 rounded-full">
+                <span key={t} className="inline-flex items-center gap-1 text-sm bg-stone-100 text-stone-700 px-2.5 py-1 rounded-full">
                   {t}
                   <button
                     type="button"
                     onClick={() => removeTag(t)}
-                    className="text-stone-400 hover:text-black leading-none"
+                    className="text-stone-500 hover:text-black leading-none"
                     aria-label={`Remove tag ${t}`}
                   >
                     ×
@@ -731,7 +731,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
               type="button"
               onClick={() => addTag(tagInput)}
               disabled={!tagInput.trim()}
-              className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
+              className="border border-black px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-40"
             >
               Add
             </button>
@@ -742,7 +742,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
 
     {/* Live preview */}
     <div className="lg:sticky lg:top-[57px] space-y-2">
-      <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Preview</p>
+      <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Preview</p>
       <BasicsPreview opp={opp} />
     </div>
     </div>
@@ -754,7 +754,7 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
   if (!hasContent) {
     return (
       <div className="border border-dashed border-black/20 p-6 text-center">
-        <p className="text-xs text-stone-400">Card preview will appear as you fill in the details.</p>
+        <p className="text-sm text-stone-500">Card preview will appear as you fill in the details.</p>
       </div>
     );
   }
@@ -772,29 +772,29 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           {opp.type && (
-            <span className="text-xs font-medium uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-0.5">
+            <span className="text-sm font-medium uppercase tracking-widest text-stone-500 bg-stone-100 px-2 py-0.5">
               {opp.type}
             </span>
           )}
           {opp.country && (
-            <span className="text-xs text-stone-400">{opp.country}{opp.city ? ` · ${opp.city}` : ""}</span>
+            <span className="text-sm text-stone-500">{opp.country}{opp.city ? ` · ${opp.city}` : ""}</span>
           )}
         </div>
 
         <div className="space-y-0.5">
           <p className="font-semibold text-sm leading-snug">
-            {opp.title || <span className="text-stone-300">Untitled opportunity</span>}
+            {opp.title || <span className="text-stone-400">Untitled opportunity</span>}
           </p>
           {opp.organiser && (
-            <p className="text-xs text-stone-500">{opp.organiser}</p>
+            <p className="text-sm text-stone-500">{opp.organiser}</p>
           )}
         </div>
 
         {opp.caption && (
-          <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{opp.caption}</p>
+          <p className="text-sm text-stone-500 line-clamp-2 leading-relaxed">{opp.caption}</p>
         )}
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-400 pt-1 border-t border-black/10">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-stone-500 pt-1 border-t border-black/10">
           {opp.deadline && (
             <span>Closes {new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
           )}
@@ -804,7 +804,7 @@ function BasicsPreview({ opp }: { opp: Opportunity }) {
         {(opp.sub_categories ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1">
             {(opp.sub_categories ?? []).slice(0, 4).map((d) => (
-              <span key={d} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5">{d}</span>
+              <span key={d} className="text-sm bg-stone-100 text-stone-600 px-2 py-0.5">{d}</span>
             ))}
           </div>
         )}

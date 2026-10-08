@@ -35,8 +35,8 @@ export function TermsUploader({ opportunityId, termsPdfUrl, onChange }: Props) {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">Terms &amp; conditions <span className="text-stone-400 font-normal">optional</span></h3>
-        <p className="text-xs text-stone-500">
+        <h3 className="text-sm font-semibold">Terms &amp; conditions <span className="text-stone-500 font-normal">optional</span></h3>
+        <p className="text-sm text-stone-500">
           One PDF (multiple pages OK) for artists to read before applying. Shown next to the Apply button once published.
         </p>
       </div>
@@ -44,7 +44,7 @@ export function TermsUploader({ opportunityId, termsPdfUrl, onChange }: Props) {
       {termsPdfUrl ? (
         <div className="flex items-center justify-between border border-black/10 px-3 py-2 text-sm">
           <div className="flex items-center gap-2 min-w-0">
-            <FileText className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+            <FileText className="w-3.5 h-3.5 text-stone-500 shrink-0" />
             <a href={termsPdfUrl} target="_blank" rel="noopener noreferrer" className="truncate underline underline-offset-2">
               View current PDF →
             </a>
@@ -52,7 +52,7 @@ export function TermsUploader({ opportunityId, termsPdfUrl, onChange }: Props) {
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-stone-400 hover:text-foreground transition-colors ml-3 shrink-0"
+            className="text-stone-500 hover:text-foreground transition-colors ml-3 shrink-0"
             aria-label="Remove terms & conditions PDF"
           >
             <X className="w-3.5 h-3.5" />

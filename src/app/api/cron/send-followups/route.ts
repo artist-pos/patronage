@@ -37,10 +37,10 @@ export async function GET(req: NextRequest) {
     // Find applications selected in this window
     const { data: eligibleApps, error: appsError } = await admin
       .from("opportunity_applications")
-      .select("id, artist_id, opportunity_id, selected_at")
+      .select("id, artist_id, opportunity_id, released_at")
       .in("status", ["selected", "approved_pending_assets", "production_ready"])
-      .gte("selected_at", windowStart.toISOString())
-      .lte("selected_at", windowEnd.toISOString());
+      .gte("released_at", windowStart.toISOString())
+      .lte("released_at", windowEnd.toISOString());
 
     if (appsError) {
       results.errors.push(`Fetch ${type}: ${appsError.message}`);

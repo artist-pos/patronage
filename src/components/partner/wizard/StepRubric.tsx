@@ -24,9 +24,9 @@ export function StepRubric({
   return (
     <div className="space-y-10 max-w-2xl">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Scoring &amp; documents</h2>
+        <h2 className="text-lg font-semibold">How will you judge applications?</h2>
         <p className="text-sm text-stone-500">
-          Set up your scoring rubric and upload any briefing material for your review panel. Both are optional.
+          Both parts are optional. You can skip this page and just choose applications yourself.
         </p>
       </div>
 

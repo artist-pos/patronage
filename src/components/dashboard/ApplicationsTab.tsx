@@ -3,12 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { createClient } from "@/lib/supabase/client";
 import { createRealtimeClient } from "@/lib/supabase/client";
-import { computeBadges } from "@/lib/badges";
 import type { OpportunityApplication, OpportunityApplicationDraft, Opportunity, PipelineConfig } from "@/types/database";
-import type { ApplyModalProps } from "@/components/opportunities/ApplyModal";
-import type { AvailableWork } from "@/components/opportunities/ApplyButton";
 import { UploadHighResButton } from "./UploadHighResButton";
 import { sendRejectionReplyAction } from "@/app/dashboard/payment-actions";
 
@@ -17,7 +13,6 @@ const DocumentationSubmitter = dynamic(
   { ssr: false }
 );
 
-const ApplyModal = dynamic(() => import("@/components/opportunities/ApplyModal").then((m) => m.ApplyModal), { ssr: false });
 
 const PaymentRequestModal = dynamic(
   () => import("@/components/dashboard/PaymentRequestModal").then((m) => m.PaymentRequestModal),
@@ -45,22 +40,12 @@ interface DraftWithOpportunity extends OpportunityApplicationDraft {
 
 const STATUS_LABELS: Record<string, { label: string; className: string; description: string }> = {
   pending: { label: "Received", className: "bg-muted text-muted-foreground", description: "Your application has been submitted." },
-  shortlisted: { label: "Under Review", className: "bg-blue-50 text-blue-700 border border-blue-200", description: "The organiser is reviewing applications." },
-  selected: { label: "Shortlisted", className: "bg-amber-50 text-amber-700 border border-amber-200", description: "You've been shortlisted." },
-  approved_pending_assets: { label: "Upload Required", className: "bg-orange-50 text-orange-700 border border-orange-300", description: "Please upload the requested files." },
-  production_ready: { label: "Approved", className: "bg-green-50 text-green-700 border border-green-200", description: "Congratulations — you've been selected." },
+  shortlisted: { label: "Shortlisted", className: "bg-blue-50 text-blue-700 border border-blue-200", description: "The organiser has shortlisted your application. They'll be in touch." },
+  selected: { label: "Selected", className: "bg-green-50 text-green-700 border border-green-200", description: "Congratulations, you've been selected." },
+  approved_pending_assets: { label: "Upload required", className: "bg-orange-50 text-orange-700 border border-orange-300", description: "You've been selected. Please upload the requested files." },
+  production_ready: { label: "Selected · files received", className: "bg-green-50 text-green-700 border border-green-200", description: "Congratulations, you've been selected. Your files have been received." },
   rejected: { label: "Not Selected", className: "bg-muted text-muted-foreground", description: "Not selected this time." },
 };
-
-interface ModalState {
-  opportunity: Opportunity;
-  draft: OpportunityApplicationDraft;
-  artistProfile: ApplyModalProps["artistProfile"];
-  artistWorks: AvailableWork[];
-  availableWorks: AvailableWork[];
-  badges: ApplyModalProps["badges"];
-  professionalCvUrl: string | null;
-}
 
 interface PaymentModalState {
   applicationId: string;
@@ -81,8 +66,6 @@ interface Props {
 export function ApplicationsTab({ initialApplications, userId, initialDrafts = [], artistName, artistGstRegistered = false, artistGstNumber = null }: Props) {
   const [applications, setApplications] = useState(initialApplications);
   const [drafts, setDrafts] = useState(initialDrafts);
-  const [loadingDraftId, setLoadingDraftId] = useState<string | null>(null);
-  const [modalState, setModalState] = useState<ModalState | null>(null);
   const [paymentModal, setPaymentModal] = useState<PaymentModalState | null>(null);
   // Per-application reply state: appId → { text, confirming, sending, sent }
   const [replyState, setReplyState] = useState<Record<string, { text: string; confirming: boolean; sending: boolean; sent: boolean }>>({});
@@ -117,83 +100,6 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
     };
   }, [userId]);
 
-  async function handleContinueDraft(draft: DraftWithOpportunity) {
-    if (!draft.opportunity) return;
-    setLoadingDraftId(draft.opportunity_id);
-
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoadingDraftId(null); return; }
-
-    const isJob = draft.opportunity.type === "Job / Employment";
-    const wantsAvailableWorks =
-      !isJob && (draft.opportunity.pipeline_config?.artist_documents ?? []).includes("available_works");
-
-    const [profileResult, worksResult, artworkBadgeResult, availableWorksResult] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
-      // Portfolio = artworks this artist created AND still owns, not hidden from
-      // archive — same filter as the public Work tab's real query. is_available
-      // alone doesn't work here: sold pieces keep is_available=false too.
-      isJob
-        ? Promise.resolve({ data: [] as AvailableWork[] })
-        : supabase.from("artworks").select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description").eq("profile_id", user.id).eq("creator_id", user.id).eq("current_owner_id", user.id).eq("hide_from_archive", false).order("position", { ascending: true }),
-      isJob
-        ? Promise.resolve({ data: [] as { current_owner_id: string; creator_id: string }[] })
-        : supabase.from("artworks").select("current_owner_id, creator_id").eq("profile_id", user.id),
-      wantsAvailableWorks
-        ? supabase
-            .from("artworks")
-            .select("id, url, thumb_url, title, caption, price_cents, is_poa, price_currency, description")
-            .eq("current_owner_id", user.id)
-            .eq("is_available", true)
-            .order("position", { ascending: true })
-        : Promise.resolve({ data: [] as AvailableWork[] }),
-    ]);
-
-    const profile = profileResult.data;
-    const artistWorks = (worksResult.data ?? []) as AvailableWork[];
-    const artworksBadge = (artworkBadgeResult.data ?? []) as { current_owner_id: string; creator_id: string }[];
-    const availableWorks = (availableWorksResult.data ?? []) as AvailableWork[];
-
-    if (!profile) { setLoadingDraftId(null); return; }
-
-    const badges = computeBadges(
-      { ...profile, received_grants: profile.received_grants ?? [] },
-      artistWorks.length,
-      artworksBadge.some((a) => a.current_owner_id !== a.creator_id)
-    );
-
-    setLoadingDraftId(null);
-    setModalState({
-      opportunity: draft.opportunity,
-      draft: {
-        id: draft.id,
-        opportunity_id: draft.opportunity_id,
-        artist_id: user.id,
-        artwork_id: draft.artwork_id,
-        submitted_image_url: draft.submitted_image_url,
-        custom_answers: draft.custom_answers,
-        updated_at: draft.updated_at,
-        creative_work_id: draft.creative_work_id ?? null,
-        creative_work_ids: draft.creative_work_ids ?? null,
-        work_descriptions: draft.work_descriptions ?? {},
-      },
-      artistProfile: {
-        id: profile.id,
-        full_name: profile.full_name,
-        username: profile.username,
-        bio: profile.bio,
-        avatar_url: profile.avatar_url,
-        medium: profile.medium,
-        exhibition_history: profile.exhibition_history ?? [],
-      },
-      artistWorks,
-      availableWorks,
-      badges,
-      professionalCvUrl: profile.professional_cv_url ?? null,
-    });
-  }
-
   const isEmpty = applications.length === 0 && drafts.length === 0;
 
   if (isEmpty) {
@@ -218,7 +124,6 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Drafts</p>
           {drafts.map((draft) => {
             const opp = draft.opportunity;
-            const isLoading = loadingDraftId === draft.opportunity_id;
             return (
               <div key={draft.id} className="border border-black/40 border-dashed p-4 space-y-2">
                 <div className="flex items-start justify-between gap-4">
@@ -243,14 +148,12 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                   <span>Last saved {new Date(draft.updated_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
                 </div>
                 {opp && (
-                  <button
-                    type="button"
-                    onClick={() => handleContinueDraft(draft)}
-                    disabled={isLoading}
-                    className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                  <Link
+                    href={`/opportunities/${opp.slug ?? opp.id}/apply`}
+                    className="inline-block text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
                   >
-                    {isLoading ? "Loading…" : "Continue application →"}
-                  </button>
+                    Continue application →
+                  </Link>
                 )}
               </div>
             );
@@ -266,7 +169,9 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
           )}
           {applications.map((app) => {
             const opp = app.opportunity;
-            const statusInfo = STATUS_LABELS[app.status] ?? STATUS_LABELS.pending;
+            // `status` on the artist's own row is only ever what has been published to them.
+            const shown = app.status;
+            const statusInfo = STATUS_LABELS[shown] ?? STATUS_LABELS.pending;
             const partnerName = opp?.profiles?.full_name ?? opp?.profiles?.username ?? opp?.organiser ?? "Partner";
 
             return (
@@ -304,12 +209,12 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                   )}
                 </div>
 
-                {app.status === "approved_pending_assets" && (
+                {shown === "approved_pending_assets" && (
                   <UploadHighResButton applicationId={app.id} />
                 )}
 
                 {/* Rejection reason + artist reply */}
-                {app.status === "rejected" && (() => {
+                {shown === "rejected" && (() => {
                   const reason = (app as unknown as { rejection_reason?: string | null }).rejection_reason;
                   const replySentAt = (app as unknown as { rejection_reply_sent_at?: string | null }).rejection_reply_sent_at;
                   const rs = replyState[app.id] ?? { text: "", confirming: false, sending: false, sent: false };
@@ -373,7 +278,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                 })()}
 
                 {/* Payment request — production_ready */}
-                {app.status === "production_ready" && (() => {
+                {shown === "production_ready" && (() => {
                   const invoicePaidAt = (app as unknown as { invoice_paid_at?: string | null }).invoice_paid_at;
                   const invoiceRequestedAt = (app as unknown as { invoice_requested_at?: string | null }).invoice_requested_at;
                   const invoiceAmount = (app as unknown as { invoice_amount?: number | null }).invoice_amount;
@@ -411,7 +316,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                 })()}
 
                 {/* Documentation submission — shown when partner requires it and app is selected/approved */}
-                {(app.status === "selected" || app.status === "approved_pending_assets" || app.status === "production_ready") &&
+                {(shown === "selected" || shown === "approved_pending_assets" || shown === "production_ready") &&
                   opp?.pipeline_config?.post_selection?.requires_documentation &&
                   (opp.pipeline_config.post_selection.doc_fields?.length ?? 0) > 0 && (
                     <div className="mt-3 pt-3 border-t border-stone-100 space-y-2">
@@ -427,25 +332,6 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
             );
           })}
         </div>
-      )}
-
-      {/* Continue-draft modal */}
-      {modalState && (
-        <ApplyModal
-          opportunity={modalState.opportunity}
-          artistProfile={modalState.artistProfile}
-          artistWorks={modalState.artistWorks}
-          availableWorks={modalState.availableWorks}
-          badges={modalState.badges}
-          draft={modalState.draft}
-          isJobOpportunity={modalState.opportunity.type === "Job / Employment"}
-          professionalCvUrl={modalState.professionalCvUrl}
-          onClose={() => setModalState(null)}
-          onSuccess={() => {
-            setModalState(null);
-            setDrafts((prev) => prev.filter((d) => d.opportunity_id !== modalState.draft.opportunity_id));
-          }}
-        />
       )}
 
       {/* Payment request modal */}

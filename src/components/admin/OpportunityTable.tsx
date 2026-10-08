@@ -195,9 +195,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  function act(fn: () => Promise<void>) {
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  function act(fn: () => Promise<void | { error?: string }>) {
+    setActionError(null);
     startTransition(async () => {
-      await fn();
+      const result = await fn();
+      if (result && typeof result === "object" && result.error) setActionError(result.error);
       router.refresh();
     });
   }
@@ -298,6 +302,12 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
 
   return (
     <>
+      {actionError && (
+        <div role="alert" className="mb-3 flex items-start justify-between gap-3 border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError(null)} className="underline shrink-0">Dismiss</button>
+        </div>
+      )}
       {/* Header toolbar */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -799,7 +809,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
             <DialogDescription>
               Permanently delete{" "}
               <strong>&ldquo;{deleteTarget?.title}&rdquo;</strong> by{" "}
-              {deleteTarget?.organiser}? This cannot be undone.
+              {deleteTarget?.organiser}? This cannot be undone. Opportunities that have applications can&apos;t be deleted; archive them instead.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end pt-2">

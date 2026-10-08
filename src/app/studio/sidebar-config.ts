@@ -9,7 +9,7 @@ const ALL_PRIMARY: SidebarItem[] = [
   { id: "feed",          label: "Studio Feed",       href: "/studio/feed" },
   { id: "messages",      label: "Messages",          href: "/messages" },
   { id: "collection",    label: "Collection",        href: "/dashboard/collection" },
-  { id: "calls",         label: "Open Calls",        href: "/opportunities" },
+  { id: "calls",         label: "Open Calls",        href: "/dashboard" },
   { id: "roster",        label: "Your Artists",      href: "/partner/roster" },
   { id: "qr-codes",      label: "QR Codes",          href: "/studio/qr-codes" },
 ];
@@ -33,7 +33,7 @@ const ARTIST_SECONDARY = ["profile", "provenance", "support", "exhibitions", "ea
 const PATRON_PRIMARY  = ["home", "opportunities", "messages", "collection"];
 const PATRON_SECONDARY = ["my-support", "account"];
 
-const PARTNER_PRIMARY  = ["home", "calls", "roster", "messages"];
+const PARTNER_PRIMARY  = ["home", "roster", "messages"];
 const PARTNER_SECONDARY = ["list-opp", "account"];
 
 const OWNER_PRIMARY = [...ARTIST_PRIMARY, "calls", "roster"];
@@ -113,7 +113,11 @@ export function sectionFromPathname(pathname: string): string {
     if (clean.startsWith("/dashboard/collection")) return "collection";
     if (clean.startsWith("/dashboard")) return "my-support";
     if (clean.startsWith("/partner/roster")) return "roster";
-    if (clean.startsWith("/opportunities")) return "calls";
+    if (
+      clean.startsWith("/opportunities") ||
+      clean.startsWith("/dashboard") ||
+      clean.startsWith("/partner/opportunities")
+    ) return "calls";
     if (clean === "/messages" || clean.startsWith("/messages/")) return "messages";
     return "home";
   }

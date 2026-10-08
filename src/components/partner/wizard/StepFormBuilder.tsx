@@ -26,9 +26,9 @@ export function StepFormBuilder({ opportunityId, questions, showBadges, artistDo
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Application form</h2>
+        <h2 className="text-lg font-semibold">What do you want to ask artists?</h2>
         <p className="text-sm text-stone-500">
-          Customise the questions artists answer when applying. The preview updates as you edit.
+          These are the questions artists answer when they apply. Change, add or remove any. The preview on the right shows exactly what they will see.
         </p>
       </div>
 

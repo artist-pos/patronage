@@ -86,7 +86,7 @@ const DEFAULT_CANCEL_PATHS: Record<CheckoutPurpose, string> = {
   support_one_off:    "/",
   support_recurring:  "/",
   pipeline_entry_fee: "/opportunities",
-  featured_listing:   "/partner/dashboard",
+  featured_listing:   "/dashboard",
   partner_submission: "/partner/dashboard?submission=cancelled",
 };
 

@@ -24,13 +24,13 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Preview</p>
-        <p className="text-xs text-stone-400">How artists will see your application form.</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">Preview</p>
+        <p className="text-sm text-stone-500">How artists will see your application form.</p>
       </div>
 
       <div className="border border-black/10 bg-stone-50 p-5 space-y-5">
         {questions.length === 0 && (
-          <p className="text-xs text-stone-400 text-center py-4">
+          <p className="text-sm text-stone-500 text-center py-4">
             Add questions on the left to see a preview.
           </p>
         )}
@@ -39,20 +39,20 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
           <div key={q.id} className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">
               {q.label || `Question ${i + 1}`}
-              {q.required && <span className="text-stone-400 ml-1">*</span>}
+              {q.required && <span className="text-stone-500 ml-1">*</span>}
             </label>
             {q.type === "long_text" && (
-              <div className="w-full border border-black/20 bg-white px-3 py-2 text-xs text-stone-400 min-h-[80px]">
+              <div className="w-full border border-black/20 bg-white px-3 py-2 text-sm text-stone-500 min-h-[80px]">
                 Long answer…
               </div>
             )}
             {q.type === "short_text" && (
-              <div className="w-full border border-black/20 bg-white px-3 py-2 text-xs text-stone-400">
+              <div className="w-full border border-black/20 bg-white px-3 py-2 text-sm text-stone-500">
                 Short answer…
               </div>
             )}
             {q.type === "file_upload" && (
-              <div className="flex items-center gap-2 border border-dashed border-black/20 bg-white px-4 py-3 text-xs text-stone-400">
+              <div className="flex items-center gap-2 border border-dashed border-black/20 bg-white px-4 py-3 text-sm text-stone-500">
                 <FileUp className="w-3.5 h-3.5 shrink-0" />
                 Upload file
               </div>
@@ -62,10 +62,10 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
 
         {autoDocs.length > 0 && (
           <div className="border-t border-black/10 pt-4 space-y-1.5">
-            <p className="text-xs font-medium text-stone-500">Auto-included from their profile:</p>
+            <p className="text-sm font-medium text-stone-500">Auto-included from their profile:</p>
             <ul className="space-y-1">
               {autoDocs.map((d) => (
-                <li key={d.val} className="text-xs text-stone-400 flex items-center gap-1.5">
+                <li key={d.val} className="text-sm text-stone-500 flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-stone-300 shrink-0" />
                   {d.label}
                 </li>
@@ -76,32 +76,32 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
 
         {pickerDocs.length > 0 && (
           <div className="border-t border-black/10 pt-4 space-y-2">
-            <p className="text-xs font-medium text-stone-500">
+            <p className="text-sm font-medium text-stone-500">
               Submit a work
               {showsPortfolio && ` — artist picks up to ${portfolioPickCount} portfolio work${portfolioPickCount !== 1 ? "s" : ""}`}
               {showsPortfolio && showsAvailableWorks && ", plus"}
               {showsAvailableWorks && " one available (for-sale) work"}:
             </p>
             <div className="grid grid-cols-4 gap-1.5">
-              <div className="aspect-square border border-black bg-muted flex items-center justify-center text-[8px] text-stone-400">
+              <div className="aspect-square border border-black bg-muted flex items-center justify-center text-[8px] text-stone-500">
                 None
               </div>
               <div className="aspect-square border border-dashed border-black/30 bg-white flex items-center justify-center">
-                <Upload className="w-3 h-3 text-stone-300" />
+                <Upload className="w-3 h-3 text-stone-400" />
               </div>
               {Array.from({ length: placeholderTileCount }).map((_, i) => (
                 <div key={i} className="aspect-square border border-black/20 bg-stone-100" />
               ))}
             </div>
-            <p className="text-xs text-stone-400">
+            <p className="text-sm text-stone-500">
               {pickerDocs.map((d) => d.label).join(" / ")}
             </p>
             {workDescriptionsEnabled && (
               <div className="space-y-1 pt-1">
-                <p className="text-xs text-stone-400">
+                <p className="text-sm text-stone-500">
                   Required for each work they attach<span className="text-[color:var(--urgent)]">*</span>
                 </p>
-                <div className="border border-black/20 bg-white px-3 py-2 text-xs text-stone-400">
+                <div className="border border-black/20 bg-white px-3 py-2 text-sm text-stone-500">
                   Description of this work…
                 </div>
               </div>
@@ -111,7 +111,7 @@ export function LivePreviewPane({ questions, artistDocs, showBadges, portfolioPi
 
         {showBadges && (
           <div className="border-t border-black/10 pt-4">
-            <p className="text-xs text-stone-400">Reputation badges will be shown alongside submission.</p>
+            <p className="text-sm text-stone-500">Reputation badges will be shown alongside submission.</p>
           </div>
         )}
       </div>

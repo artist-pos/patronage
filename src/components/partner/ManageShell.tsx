@@ -63,16 +63,16 @@ export function ManageShell({ opp, isPipeline, opportunityId, children }: Props)
       <div className="sticky top-0 z-20 bg-background border-b border-black">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/studio" className="text-xs text-stone-400 hover:text-foreground shrink-0">
+            <Link href="/studio" className="text-sm text-stone-500 hover:text-foreground shrink-0">
               ← Dashboard
             </Link>
-            <span className="text-stone-300 shrink-0">·</span>
+            <span className="text-stone-400 shrink-0">·</span>
             <h1 className="text-sm font-semibold truncate">{opp.title || "Untitled listing"}</h1>
-            <span className="text-xs text-stone-400 shrink-0 capitalize">{opp.status}</span>
+            <span className="text-sm text-stone-500 shrink-0 capitalize">{opp.status}</span>
           </div>
           <Link
             href={`/partner/dashboard/${opportunityId}`}
-            className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors shrink-0"
+            className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors shrink-0"
           >
             View applications →
           </Link>

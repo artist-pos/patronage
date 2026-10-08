@@ -191,6 +191,8 @@ export interface Opportunity {
   confidence?: 'high' | 'medium' | 'low' | null;
   // Phase 7.5c — partner-side commerce flags (migration 112)
   pipeline_paid_at?: string | null;
+  /** Set when the organiser archives a finished opportunity (migration 197). The page stays up. */
+  archived_at?: string | null;
   featured_until?: string | null;
 }
 
@@ -361,7 +363,7 @@ export interface Profile {
   bio: string | null;
   country: CountryEnum | null;
   city: string | null;
-  role: "artist" | "admin" | "owner" | "patron" | "partner";
+  role: "artist" | "admin" | "owner" | "patron" | "partner" | "reviewer";
   career_stage: CareerStageEnum | null;
   medium: string[] | null;
   cv_url: string | null;

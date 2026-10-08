@@ -102,7 +102,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
             <span className="text-sm font-medium">Campaign page</span>
             <button
               type="button"
-              className="text-stone-400 hover:text-stone-600 transition-colors"
+              className="text-stone-500 hover:text-stone-600 transition-colors"
               onClick={() => setShowCampaignTip((v) => !v)}
               aria-label="What is a campaign page?"
             >
@@ -110,7 +110,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
             </button>
           </div>
           {showCampaignTip && (
-            <div className="ml-12 text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-lg p-3 max-w-md">
+            <div className="ml-12 text-sm text-stone-500 bg-stone-50 border border-stone-100 rounded-lg p-3 max-w-md">
               A campaign page gives each selected artist a public-facing URL with their work, QR code, and optional storefront. Best suited to public art, exhibitions, and commissions — less relevant for grants or residencies. We set up the campaign scaffold together once artists are selected.
             </div>
           )}
@@ -132,7 +132,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
           </div>
           {config.requires_studio_updates && (
             <div className="ml-12 space-y-2">
-              <p className="text-xs text-stone-500">
+              <p className="text-sm text-stone-500">
                 Artists will receive a reminder on this cadence to post a project update. Not enforced — it's a nudge, not a deadline.
               </p>
               <div className="flex gap-2 flex-wrap">
@@ -141,7 +141,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
                     key={opt.value}
                     type="button"
                     onClick={() => updateConfig({ update_frequency_days: opt.value })}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                       config.update_frequency_days === opt.value
                         ? "bg-black text-white border-black"
                         : "border-stone-200 text-stone-600 hover:border-stone-400"
@@ -171,13 +171,13 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
           </div>
           {config.requires_documentation && (
             <div className="ml-12 space-y-3">
-              <p className="text-xs text-stone-500">
+              <p className="text-sm text-stone-500">
                 Define what you need from selected artists — links, files, text, or uploads.
               </p>
               {config.doc_fields.map((field, idx) => (
                 <div key={field.id} className="border border-stone-100 rounded-lg p-3 space-y-2 bg-white">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-stone-400 w-4">{idx + 1}.</span>
+                    <span className="text-sm text-stone-500 w-4">{idx + 1}.</span>
                     <input
                       type="text"
                       placeholder="Field label e.g. Artist statement"
@@ -188,7 +188,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
                     <button
                       type="button"
                       onClick={() => removeDocField(field.id)}
-                      className="text-stone-300 hover:text-red-400 transition-colors"
+                      className="text-stone-400 hover:text-red-400 transition-colors"
                       aria-label="Remove field"
                     >
                       <Trash2 size={13} />
@@ -198,13 +198,13 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
                     <select
                       value={field.type}
                       onChange={(e) => updateDocField(field.id, { type: e.target.value as PostSelectionDocField["type"] })}
-                      className="text-xs border border-stone-200 rounded px-2 py-1 focus:outline-none focus:border-black bg-white"
+                      className="text-sm border border-stone-200 rounded px-2 py-1 focus:outline-none focus:border-black bg-white"
                     >
                       {DOC_FIELD_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <label className="flex items-center gap-1.5 text-xs text-stone-500 cursor-pointer">
+                    <label className="flex items-center gap-1.5 text-sm text-stone-500 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={field.required}
@@ -220,7 +220,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
                       placeholder="Optional description or instructions"
                       value={field.description ?? ""}
                       onChange={(e) => updateDocField(field.id, { description: e.target.value || undefined })}
-                      className="w-full text-xs border-0 border-b border-stone-100 focus:border-stone-300 focus:outline-none pb-0.5 bg-transparent text-stone-500 placeholder:text-stone-300"
+                      className="w-full text-sm border-0 border-b border-stone-100 focus:border-stone-300 focus:outline-none pb-0.5 bg-transparent text-stone-500 placeholder:text-stone-400"
                     />
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
               <button
                 type="button"
                 onClick={addDocField}
-                className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-black transition-colors"
+                className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-black transition-colors"
               >
                 <Plus size={13} />
                 Add field
@@ -238,7 +238,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
         </div>
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
 
       <button
         type="button"

@@ -8,6 +8,7 @@ import { ProvenanceBanner } from "@/components/dashboard/ProvenanceBanner";
 import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscriptionButton";
 import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
+import { PartnerDashboard } from "@/components/partner/PartnerDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -19,6 +20,8 @@ interface PageProps {
     period?: string;
     /** opportunities sub-filter: all | saved | closing | applied | expired */
     of?: string;
+    /** Admins can look at the organiser dashboard with ?view=partner. */
+    view?: string;
   }>;
 }
 
@@ -56,6 +59,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   if (!user) redirect("/auth/login");
 
   const params = await searchParams;
+
+  // Organisers (and admins looking in) get their listings here.
+  const { data: viewer } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isStaff = viewer?.role === "admin" || viewer?.role === "owner";
+  if (viewer?.role === "reviewer") redirect("/review");
+  if (viewer?.role === "partner" || (isStaff && params.view === "partner")) {
+    return <PartnerDashboard />;
+  }
+
   const rawTab = params.tab ?? "overview";
   // Resolve legacy tab aliases (closing, saved, applied, applications, expired → opportunities)
   const resolvedTab = LEGACY_TAB_ALIASES[rawTab] ?? rawTab;

@@ -38,9 +38,9 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Choose a template</h2>
+        <h2 className="text-lg font-semibold">Where would you like to start?</h2>
         <p className="text-sm text-stone-500">
-          We&rsquo;ll pre-fill sensible application questions based on your opportunity type.
+          Pick the one closest to what you are offering. We fill in sensible questions for artists to answer, and you can change every one of them later.
           You can customise everything in the next step.
         </p>
       </div>
@@ -57,8 +57,8 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
             }`}
           >
             <p className="text-sm font-semibold">{TEMPLATE_LABELS[key]}</p>
-            <p className="text-xs text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
-            <p className="text-xs text-stone-400">
+            <p className="text-sm text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
+            <p className="text-sm text-stone-500">
               {PIPELINE_TEMPLATES[key].length} default question{PIPELINE_TEMPLATES[key].length !== 1 ? "s" : ""}
             </p>
           </button>
@@ -73,7 +73,7 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
           }`}
         >
           <p className="text-sm font-semibold">Start from scratch</p>
-          <p className="text-xs text-stone-500 leading-relaxed">
+          <p className="text-sm text-stone-500 leading-relaxed">
             Begin with a blank form and add your own questions.
           </p>
         </button>
@@ -82,7 +82,7 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
       {/* Other templates */}
       {otherTemplates.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Other templates</p>
+          <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Other templates</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {otherTemplates.map((key) => (
               <button
@@ -94,8 +94,8 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
                 }`}
               >
                 <p className="text-sm font-semibold">{TEMPLATE_LABELS[key]}</p>
-                <p className="text-xs text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
-                <p className="text-xs text-stone-400">
+                <p className="text-sm text-stone-500 leading-relaxed">{TEMPLATE_DESCRIPTIONS[key]}</p>
+                <p className="text-sm text-stone-500">
                   {PIPELINE_TEMPLATES[key].length} default question{PIPELINE_TEMPLATES[key].length !== 1 ? "s" : ""}
                 </p>
               </button>
@@ -105,12 +105,12 @@ export function StepTemplate({ selectedTemplate, onChange, onStartFromScratch, i
       )}
 
       {selectedTemplate && (
-        <p className="text-xs text-stone-400">
+        <p className="text-sm text-stone-500">
           {TEMPLATE_LABELS[selectedTemplate]} selected — continue to set your basics.
         </p>
       )}
       {isBlank && !selectedTemplate && (
-        <p className="text-xs text-stone-400">
+        <p className="text-sm text-stone-500">
           Starting from scratch — continue to set your basics.
         </p>
       )}

@@ -113,7 +113,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
   // Where each role lands after signup. Artists still pass through the profile
   // step first; onboarding honours this afterwards.
   const next =
-    role === "artist" ? "/opportunities?tab=for-you" : role === "patron" ? pathname ?? "/feed" : "/partner/dashboard";
+    role === "artist" ? "/opportunities?tab=for-you" : role === "patron" ? pathname ?? "/feed" : "/dashboard";
 
   const stepNumber = step === "role" ? 1 : step === "about" ? 2 : role === "patron" ? 2 : 3;
   const stepTotal = role === "patron" ? 2 : 3;

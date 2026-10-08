@@ -1,19 +1,58 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import {
-  sendHighResRequest,
-  sendCampaignSelectedNotification,
-  sendShortlistNotification,
-  sendRejectionNotification,
-  buildShortlistEmailContent,
-  buildRejectionEmailContent,
-} from "@/lib/email";
-import { createCampaignForSelection } from "@/lib/campaigns";
-import { ensureLedgerId } from "@/lib/provenance";
+import { sendPaymentConfirmed } from "@/lib/email";
+import { transitionError } from "@/lib/decisions";
 import type { PostSelectionConfig, PipelineConfig } from "@/types/database";
+
+type ApplicationStatus =
+  | "pending"
+  | "shortlisted"
+  | "selected"
+  | "approved_pending_assets"
+  | "production_ready"
+  | "rejected";
+
+// ── Authorisation ─────────────────────────────────────────────────────────────
+
+/** Owner, admin, or an editor collaborator. Viewers are read-only. */
+async function canEditOpportunity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  opportunityId: string,
+  ownerId: string | null,
+  isAdminUser: boolean,
+): Promise<boolean> {
+  if (isAdminUser || ownerId === userId) return true;
+  const { data: collab } = await supabase
+    .from("opportunity_collaborators")
+    .select("role")
+    .eq("opportunity_id", opportunityId)
+    .eq("profile_id", userId)
+    .maybeSingle();
+  return collab?.role === "editor";
+}
+
+async function isAdminRole(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<boolean> {
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).single();
+  return data?.role === "admin" || data?.role === "owner";
+}
+
+async function getArtistContact(admin: ReturnType<typeof createAdminClient>, artistId: string) {
+  const [{ data: authData }, { data: profile }] = await Promise.all([
+    admin.auth.admin.getUserById(artistId),
+    admin.from("profiles").select("full_name, username").eq("id", artistId).single(),
+  ]);
+  return {
+    email: authData?.user?.email ?? null,
+    name: profile?.full_name ?? profile?.username ?? "Artist",
+  };
+}
+
+// ── Post-selection config ─────────────────────────────────────────────────────
 
 export async function savePostSelectionConfig(
   opportunityId: string,
@@ -23,21 +62,14 @@ export async function savePostSelectionConfig(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const [{ data: profileData }, { data: opp }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
+  const [isAdminUser, { data: opp }] = await Promise.all([
+    isAdminRole(supabase, user.id),
     supabase.from("opportunities").select("id, profile_id, pipeline_config").eq("id", opportunityId).single(),
   ]);
 
-  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdminUser) {
-    const { data: collab } = await supabase
-      .from("opportunity_collaborators")
-      .select("role")
-      .eq("opportunity_id", opportunityId)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  if (!(await canEditOpportunity(supabase, user.id, opportunityId, opp.profile_id, isAdminUser))) {
+    return { error: "Not authorised" };
   }
 
   const existing = (opp.pipeline_config ?? {}) as PipelineConfig;
@@ -54,264 +86,102 @@ export async function savePostSelectionConfig(
   return {};
 }
 
+// ── Status changes ────────────────────────────────────────────────────────────
+
+export interface StatusChangeResult {
+  error?: string;
+  /** The status was already this value: nothing changed and nothing was sent. */
+  unchanged?: boolean;
+  /** The status changed, but something around it (usually an email) did not. */
+  warning?: string;
+}
+
 export async function updateApplicationStatus(
   applicationId: string,
-  status: "pending" | "shortlisted" | "selected" | "approved_pending_assets" | "production_ready" | "rejected",
+  status: ApplicationStatus,
   rejectionReason?: string,
   selectionMessage?: string
-): Promise<{ error?: string }> {
+): Promise<StatusChangeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Check if admin/owner (parallel with app fetch)
-  const [{ data: profileData }, { data: app }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
-    supabase
-      .from("opportunity_applications")
-      .select("id, status, artist_id, opportunity_id, selected_at, artwork_id")
-      .eq("id", applicationId)
-      .single(),
+  const admin = createAdminClient();
+  const [isAdminUser, { data: app }] = await Promise.all([
+    isAdminRole(supabase, user.id),
+    // `status` here is what the artist has been told, not the working decision.
+    admin.from("opportunity_applications").select("id, status, opportunity_id").eq("id", applicationId).single(),
   ]);
-
-  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!app) return { error: "Application not found" };
 
-  const oldStatus = (app as { status: string }).status;
-
-  const { data: oppData } = await supabase
+  const { data: opp } = await admin
     .from("opportunities")
-    .select("id, title, organiser, type, profile_id, pipeline_config")
+    .select("id, profile_id")
     .eq("id", app.opportunity_id as string)
     .single();
-
-  const opp = oppData as { id: string; title: string; organiser: string; type: string; profile_id: string | null; pipeline_config?: import("@/types/database").PipelineConfig | null } | null;
   if (!opp) return { error: "Not authorised" };
 
-  if (opp.profile_id !== user.id && !isAdminUser) {
-    // Check editor collaborator access
-    const { data: collab } = await supabase
-      .from("opportunity_collaborators")
-      .select("role")
-      .eq("opportunity_id", app.opportunity_id as string)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  if (!(await canEditOpportunity(supabase, user.id, opp.id as string, opp.profile_id as string | null, isAdminUser))) {
+    return { error: "Not authorised" };
   }
 
-  const updatePayload: Record<string, unknown> = { status };
-  // Record when an application is first selected so we can schedule follow-ups
-  // Do NOT overwrite selected_at if it already exists (even if reverting status)
-  if ((status === "selected" || status === "approved_pending_assets") && !(app as { selected_at?: string | null }).selected_at) {
-    updatePayload.selected_at = new Date().toISOString();
-  }
-  if (status === "rejected" && rejectionReason) {
-    updatePayload.rejection_reason = rejectionReason;
-  }
+  // A published result is final: it can only move forward through the delivery stages.
+  const blocked = transitionError(app.status as string, status);
+  if (blocked) return { error: blocked };
 
-  const { error } = await supabase
-    .from("opportunity_applications")
-    .update(updatePayload)
-    .eq("id", applicationId);
-
-  if (error) return { error: error.message };
-
-  const admin = createAdminClient();
-
-  // Log status change for audit trail (fire-and-forget — table may not exist yet)
-  void admin
-    .from("application_status_log")
-    .insert({
-      application_id: applicationId,
-      old_status: oldStatus,
-      new_status: status,
-      changed_by: user.id,
-    });
-
-  // Shortlist/rejection notifications — queue or send based on pipeline_config.notification_defaults
-  if (status === "shortlisted" || status === "rejected") {
-    const notifDefaults = opp.pipeline_config?.notification_defaults as
-      | { shortlisted?: "send" | "hold"; rejected?: "send" | "hold" }
-      | undefined;
-    const defaultForStatus = notifDefaults?.[status] ?? "send";
-    const isPipelineOpp = !!opp.pipeline_config;
-
-    void (async () => {
-      const [{ data: authData }, { data: artistProfile }] = await Promise.all([
-        admin.auth.admin.getUserById(app.artist_id as string),
-        admin.from("profiles").select("full_name, username").eq("id", app.artist_id as string).single(),
-      ]);
-      const artistEmail = authData?.user?.email;
-      if (!artistEmail) return;
-      const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
-
-      if (isPipelineOpp && defaultForStatus === "hold") {
-        const content = status === "shortlisted"
-          ? buildShortlistEmailContent({ artistName, opportunityTitle: opp.title })
-          : buildRejectionEmailContent({ artistName, opportunityTitle: opp.title, reason: rejectionReason });
-        await supabase.from("notification_queue").insert({
-          opportunity_id: opp.id,
-          application_id: applicationId,
-          recipient_id: app.artist_id,
-          notification_type: status,
-          email_subject: content.subject,
-          email_body: content.html,
-          status: "queued",
-        });
-      } else {
-        if (status === "shortlisted") {
-          sendShortlistNotification({ artistEmail, artistName, opportunityTitle: opp.title }).catch(console.error);
-        } else {
-          sendRejectionNotification({ artistEmail, artistName, opportunityTitle: opp.title, reason: rejectionReason }).catch(console.error);
-        }
-      }
-    })().catch(console.error);
+  const { data: current, error: readError } = await admin
+    .from("application_decisions")
+    .select("status")
+    .eq("application_id", applicationId)
+    .maybeSingle();
+  if (readError) {
+    return {
+      error: readError.code === "PGRST205"
+        ? "Reviewing isn't set up yet. Run migration 199 in Supabase."
+        : readError.message,
+    };
   }
 
-  // Auto-create a verified profile achievement at any advanced status so the
-  // profile shows the win even when a partner skips straight to production_ready.
-  // The upsert is idempotent (unique on profile_id + opportunity_id), so passing
-  // through multiple statuses never duplicates the row.
-  if (status === "selected" || status === "approved_pending_assets" || status === "production_ready") {
-    // Upsert achievement (idempotent — unique index on profile_id + opportunity_id)
-    await admin
-      .from("profile_achievements")
-      .upsert(
-        {
-          profile_id: app.artist_id,
-          opportunity_id: app.opportunity_id,
-          opportunity_title: opp.title,
-          organisation: opp.organiser ?? "",
-          type: opp.type ?? "Grant",
-          year: new Date().getFullYear(),
-          verified: true,
-        },
-        { onConflict: "profile_id,opportunity_id" }
-      );
+  const oldStatus = (current?.status as string | undefined) ?? "pending";
+  // Nothing to do, and above all nothing that could be sent twice.
+  if (oldStatus === status) return { unchanged: true };
 
-    if (status === "selected") {
-      // Upsert a project for this artist+opportunity — active only after migration 052
-      // adds opportunity_id + artwork_id columns and the unique constraint.
-      const { data: project } = await admin
-        .from("projects")
-        .upsert(
-          { artist_id: app.artist_id, title: opp.title },
-          { onConflict: "artist_id", ignoreDuplicates: true }
-        )
-        .select("id")
-        .maybeSingle();
+  const payload = {
+    status,
+    rejection_reason: status === "rejected" ? (rejectionReason?.trim() || null) : null,
+    ...(status === "selected" ? { selection_message: selectionMessage?.trim() || null } : {}),
+    updated_by: user.id,
+    updated_at: new Date().toISOString(),
+  };
 
-      if (project?.id) {
-        await admin.from("project_updates").insert({
-          project_id: project.id,
-          artist_id: app.artist_id,
-          body: `Selected for ${opp.title} (${opp.type})`,
-          content_type: "text",
-        });
-      }
-
-      // Write a 'selected' provenance entry if this application has an artwork attached
-      const artworkId = (app as { artwork_id?: string | null }).artwork_id;
-      if (artworkId) {
-        void ensureLedgerId(artworkId).then((ledgerId) =>
-          admin.from("artwork_provenance_ledger").insert({
-            artwork_id: artworkId,
-            ledger_id: ledgerId,
-            entry_type: "selected",
-            from_owner_id: null,
-            to_owner_id: app.artist_id,
-            transfer_method: "direct",
-            source_opportunity_id: opp.id,
-            notes: `Selected for ${opp.title} (${opp.type ?? ""})`,
-          })
-        ).catch(console.error);
-      }
-
-      // Auto-create campaign if opportunity requires it
-      if (opp.pipeline_config?.post_selection?.requires_campaign) {
-        void (async () => {
-          const { data: artistProfile } = await admin
-            .from("profiles")
-            .select("username")
-            .eq("id", app.artist_id as string)
-            .single();
-          if (artistProfile?.username) {
-            createCampaignForSelection({
-              artistProfileId: app.artist_id as string,
-              artistUsername: artistProfile.username,
-              opportunityId: opp.id,
-              opportunityTitle: opp.title,
-              opportunityType: opp.type,
-              applicationId,
-            }).catch(console.error);
-          }
-        })().catch(console.error);
-      }
-
-      // Notify the artist they've been selected — queue or send based on notification_defaults
-      void (async () => {
-        const [{ data: authData }, { data: artistProfile }] = await Promise.all([
-          admin.auth.admin.getUserById(app.artist_id as string),
-          admin.from("profiles").select("full_name, username").eq("id", app.artist_id as string).single(),
-        ]);
-        const artistEmail = authData?.user?.email;
-        if (!artistEmail) return;
-        const artistName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
-        const notifDefaults = opp.pipeline_config?.notification_defaults as
-          | { selected?: "send" | "hold" }
-          | undefined;
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
-
-        if (opp.pipeline_config && notifDefaults?.selected === "hold") {
-          const content = {
-            subject: `You've been selected for ${opp.title}`,
-            html: `<p>Congratulations ${artistName}, you've been selected for <strong>${opp.title}</strong>. <a href="${siteUrl}/studio/qr-codes">Create your QR code page →</a></p>`,
-          };
-          await supabase.from("notification_queue").insert({
-            opportunity_id: opp.id,
-            application_id: applicationId,
-            recipient_id: app.artist_id,
-            notification_type: "selected",
-            email_subject: content.subject,
-            email_body: content.html,
-            status: "queued",
-          });
-        } else {
-          sendCampaignSelectedNotification({
-            artistEmail,
-            artistName,
-            opportunityTitle: opp.title,
-            studioUrl: `${siteUrl}/studio/qr-codes`,
-            customMessage: selectionMessage,
-          }).catch(console.error);
-        }
-      })().catch(console.error);
-    }
-
-    // Email artist when approved (requesting high-res file)
-    if (status === "approved_pending_assets") {
-      const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
-      const applicantUser = authData?.user ?? null;
-      if (applicantUser?.email) {
-        const { data: artistProfile } = await admin
-          .from("profiles")
-          .select("full_name, username")
-          .eq("id", app.artist_id)
-          .single();
-        const applicantName = artistProfile?.full_name ?? artistProfile?.username ?? "Artist";
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
-        sendHighResRequest(
-          applicantUser.email,
-          applicantName,
-          opp.title,
-          `${siteUrl}/dashboard?tab=applications`
-        ).catch(console.error);
-      }
-    }
+  if (current) {
+    // Conditional on the old status so two simultaneous requests can't both win.
+    const { data: updated, error } = await admin
+      .from("application_decisions")
+      .update(payload)
+      .eq("application_id", applicationId)
+      .eq("status", oldStatus)
+      .select("application_id");
+    if (error) return { error: error.message };
+    if (!updated || updated.length === 0) return { unchanged: true };
+  } else {
+    const { error } = await admin
+      .from("application_decisions")
+      .insert({ application_id: applicationId, opportunity_id: opp.id as string, ...payload });
+    if (error) return error.code === "23505" ? { unchanged: true } : { error: error.message };
   }
 
+  const { error: logError } = await admin.from("application_status_log").insert({
+    application_id: applicationId,
+    old_status: oldStatus,
+    new_status: status,
+    changed_by: user.id,
+  });
+  if (logError) console.error("[status] could not write status log:", logError.message);
+
+  // Nothing here reaches the artist. The achievement, the studio post and every
+  // email wait for the organiser to publish results (see results-actions.ts).
   revalidatePath(`/partner/dashboard/${opp.id}`);
-  revalidatePath("/partner/dashboard");
   return {};
 }
 
@@ -320,17 +190,17 @@ export async function markInvoicePaid(applicationId: string): Promise<{ error?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const [{ data: profileData }, { data: app }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
+  const [isAdminUser, { data: app }] = await Promise.all([
+    isAdminRole(supabase, user.id),
     supabase
       .from("opportunity_applications")
-      .select("id, artist_id, opportunity_id, invoice_amount")
+      .select("id, artist_id, opportunity_id, invoice_amount, invoice_paid_at")
       .eq("id", applicationId)
       .single(),
   ]);
 
-  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!app) return { error: "Not found" };
+  if (app.invoice_paid_at) return {}; // already confirmed; don't email twice
 
   const { data: oppData } = await supabase
     .from("opportunities")
@@ -338,42 +208,35 @@ export async function markInvoicePaid(applicationId: string): Promise<{ error?: 
     .eq("id", app.opportunity_id as string)
     .single();
 
-  if (!oppData || ((oppData.profile_id as string | null) !== user.id && !isAdminUser)) {
-    const { data: collab } = await supabase
-      .from("opportunity_collaborators")
-      .select("role")
-      .eq("opportunity_id", app.opportunity_id as string)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  if (!oppData || !(await canEditOpportunity(supabase, user.id, oppData.id as string, oppData.profile_id as string | null, isAdminUser))) {
+    return { error: "Not authorised" };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("opportunity_applications")
     .update({ invoice_paid_at: new Date().toISOString() })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .is("invoice_paid_at", null)
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!updated || updated.length === 0) return {};
 
-  // Notify artist — fire-and-forget
   const admin = createAdminClient();
-  void (async () => {
-    const { data: authData } = await admin.auth.admin.getUserById(app.artist_id as string);
-    const artistEmail = authData?.user?.email;
-    if (!artistEmail) return;
-    const { data: artistProfile } = await admin
-      .from("profiles")
-      .select("full_name, username")
-      .eq("id", app.artist_id as string)
-      .single();
-    const { sendPaymentConfirmed } = await import("@/lib/email");
-    sendPaymentConfirmed({
-      artistEmail,
-      artistName: artistProfile?.full_name ?? artistProfile?.username ?? "Artist",
-      opportunityTitle: (oppData as { title: string }).title,
-      amount: (app.invoice_amount as number | null) ?? 0,
-    }).catch(console.error);
-  })().catch(console.error);
+  after(async () => {
+    try {
+      const contact = await getArtistContact(admin, app.artist_id as string);
+      if (!contact.email) return;
+      await sendPaymentConfirmed({
+        artistEmail: contact.email,
+        artistName: contact.name,
+        opportunityTitle: (oppData as { title: string }).title,
+        amount: (app.invoice_amount as number | null) ?? 0,
+      });
+    } catch (err) {
+      console.error("[invoice] confirmation email failed:", err);
+    }
+  });
 
   revalidatePath(`/partner/dashboard/${(oppData as { id: string }).id}`);
   return {};
@@ -384,8 +247,8 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const [{ data: profileData }, { data: app }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
+  const [isAdminUser, { data: app }] = await Promise.all([
+    isAdminRole(supabase, user.id),
     supabase
       .from("opportunity_applications")
       .select("highres_asset_url, opportunity_id")
@@ -393,25 +256,16 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
       .single(),
   ]);
 
-  const isAdminUser = profileData?.role === "admin" || profileData?.role === "owner";
   if (!app) return { error: "Not found" };
 
   const { data: oppData } = await supabase
     .from("opportunities")
-    .select("profile_id")
+    .select("id, profile_id")
     .eq("id", app.opportunity_id as string)
     .single();
 
-  const oppProfile = (oppData as { profile_id: string | null }).profile_id;
-  if (!oppData || (oppProfile !== user.id && !isAdminUser)) {
-    // Check collaborator access (editors can download)
-    const { data: collab } = await supabase
-      .from("opportunity_collaborators")
-      .select("role")
-      .eq("opportunity_id", app.opportunity_id as string)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    if (!collab || collab.role !== "editor") return { error: "Not authorised" };
+  if (!oppData || !(await canEditOpportunity(supabase, user.id, oppData.id as string, oppData.profile_id as string | null, isAdminUser))) {
+    return { error: "Not authorised" };
   }
 
   const assetPath = (app.highres_asset_url as string | null)
@@ -429,109 +283,33 @@ export async function getSignedAssetUrl(applicationId: string): Promise<{ url?: 
   return { url: data.signedUrl };
 }
 
-// ── Notification queue ────────────────────────────────────────────────────────
+// ── Applicant emails (loaded on demand, never with the page) ─────────────────
 
-export async function queueNotification(
-  opportunityId: string,
-  applicationId: string,
-  recipientId: string,
-  notificationType: "shortlisted" | "rejected" | "selected" | "approved_pending_assets",
-  emailSubject: string,
-  emailBody: string
-): Promise<{ error?: string }> {
+/** Map of application id → applicant email. Owners, admins and editors only. */
+export async function getApplicantEmails(opportunityId: string): Promise<Record<string, string>> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
+  if (!user) return {};
 
-  const { error } = await supabase
-    .from("notification_queue")
-    .insert({
-      opportunity_id: opportunityId,
-      application_id: applicationId,
-      recipient_id: recipientId,
-      notification_type: notificationType,
-      email_subject: emailSubject,
-      email_body: emailBody,
-      status: "queued",
-    });
+  const [isAdminUser, { data: opp }] = await Promise.all([
+    isAdminRole(supabase, user.id),
+    supabase.from("opportunities").select("id, profile_id").eq("id", opportunityId).single(),
+  ]);
+  if (!opp || !(await canEditOpportunity(supabase, user.id, opportunityId, opp.profile_id, isAdminUser))) return {};
 
-  if (error) return { error: error.message };
-  return {};
-}
-
-export async function getQueuedNotifications(opportunityId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data } = await supabase
-    .from("notification_queue")
-    .select(`
-      id, application_id, recipient_id, notification_type,
-      email_subject, email_body, status, sent_at, created_at,
-      profiles:recipient_id (full_name, username, avatar_url)
-    `)
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "queued")
-    .order("created_at", { ascending: false });
-
-  return data ?? [];
-}
-
-export async function flushNotifications(
-  ids: string[]
-): Promise<{ error?: string; sent: number }> {
-  if (ids.length === 0) return { sent: 0 };
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", sent: 0 };
-
-  const { data: items } = await supabase
-    .from("notification_queue")
-    .select("id, recipient_id, email_subject, email_body")
-    .in("id", ids)
-    .eq("status", "queued");
-
-  if (!items?.length) return { sent: 0 };
+  const { data: apps } = await supabase
+    .from("opportunity_applications")
+    .select("id, artist_id")
+    .eq("opportunity_id", opportunityId);
 
   const admin = createAdminClient();
-  let sent = 0;
-
-  for (const item of items) {
-    try {
-      const { data: authData } = await admin.auth.admin.getUserById(item.recipient_id as string);
-      const email = authData?.user?.email;
-      if (!email) continue;
-
-      const { sendGenericEmail } = await import("@/lib/email");
-      await sendGenericEmail({
-        to: email,
-        subject: item.email_subject as string,
-        html: item.email_body as string,
-      });
-
-      await supabase
-        .from("notification_queue")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
-        .eq("id", item.id as string);
-      sent++;
-    } catch {
-      // continue on individual failure
-    }
-  }
-
-  return { sent };
-}
-
-export async function cancelNotification(id: string): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("notification_queue")
-    .update({ status: "cancelled" })
-    .eq("id", id);
-  if (error) return { error: error.message };
-  return {};
+  const entries = await Promise.all(
+    (apps ?? []).map(async (a) => {
+      const { data } = await admin.auth.admin.getUserById(a.artist_id as string);
+      return [a.id as string, data?.user?.email ?? ""] as const;
+    })
+  );
+  return Object.fromEntries(entries.filter(([, email]) => email));
 }
 
 // ── Opportunity lifecycle actions ─────────────────────────────────────────────
@@ -539,20 +317,32 @@ export async function cancelNotification(id: string): Promise<{ error?: string }
 async function assertOpportunityOwner(opportunityId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" as string, supabase: null, user: null };
+  if (!user) return { error: "Not authenticated" as string, supabase: null, user: null, opp: null };
 
-  const [{ data: profile }, { data: opp }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
-    supabase.from("opportunities").select("id, profile_id, title").eq("id", opportunityId).single(),
+  const [isAdminUser, { data: opp }] = await Promise.all([
+    isAdminRole(supabase, user.id),
+    supabase
+      .from("opportunities")
+      .select("*")
+      .eq("id", opportunityId)
+      .single(),
   ]);
 
-  const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
-  if (!opp) return { error: "Opportunity not found" as string, supabase: null, user: null };
-  if (opp.profile_id !== user.id && !isAdminUser) return { error: "Not authorised" as string, supabase: null, user: null };
+  if (!opp) return { error: "Opportunity not found" as string, supabase: null, user: null, opp: null };
+  if (opp.profile_id !== user.id && !isAdminUser) {
+    return { error: "Not authorised" as string, supabase: null, user: null, opp: null };
+  }
 
   return { error: null, supabase, user, opp };
 }
 
+function revalidateLifecycle(opportunityId: string) {
+  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/opportunities");
+}
+
+/** Stop taking applications. The deadline is left alone so the listing can be reopened. */
 export async function closeOpportunity(
   opportunityId: string,
   _intent: "capacity" | "round_end"
@@ -562,17 +352,40 @@ export async function closeOpportunity(
 
   const { error: updateError } = await supabase
     .from("opportunities")
-    .update({ is_active: false, deadline: new Date().toISOString().split("T")[0] })
+    .update({ is_active: false })
     .eq("id", opportunityId);
 
   if (updateError) return { error: updateError.message };
-  revalidatePath(`/partner/dashboard/${opportunityId}`);
+  revalidateLifecycle(opportunityId);
+  return {};
+}
+
+/** Take applications again. Refuses if the deadline has already passed. */
+export async function reopenOpportunity(opportunityId: string): Promise<{ error?: string }> {
+  const { error, supabase, opp } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase || !opp) return { error: error ?? "Unknown error" };
+
+  if (opp.archived_at) return { error: "Restore this opportunity from the archive first." };
+  if (opp.status !== "published") return { error: "Only published listings can take applications." };
+  const today = new Date().toISOString().split("T")[0];
+  if (opp.deadline && opp.deadline < today) {
+    return { error: "The deadline has passed. Set a new deadline in Manage listing, then reopen." };
+  }
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ is_active: true })
+    .eq("id", opportunityId);
+
+  if (updateError) return { error: updateError.message };
+  revalidateLifecycle(opportunityId);
   return {};
 }
 
 export async function delistOpportunity(opportunityId: string): Promise<{ error?: string }> {
-  const { error, supabase } = await assertOpportunityOwner(opportunityId);
-  if (error || !supabase) return { error: error ?? "Unknown error" };
+  const { error, supabase, opp } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase || !opp) return { error: error ?? "Unknown error" };
+  if (opp.status !== "published") return { error: "Only live listings can be delisted." };
 
   const { error: updateError } = await supabase
     .from("opportunities")
@@ -580,22 +393,58 @@ export async function delistOpportunity(opportunityId: string): Promise<{ error?
     .eq("id", opportunityId);
 
   if (updateError) return { error: updateError.message };
-  revalidatePath(`/partner/dashboard/${opportunityId}`);
-  revalidatePath("/partner/dashboard");
+  revalidateLifecycle(opportunityId);
   return {};
 }
 
 export async function relistOpportunity(opportunityId: string): Promise<{ error?: string }> {
+  const { error, supabase, opp } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase || !opp) return { error: error ?? "Unknown error" };
+  // Only a listing that was live and then delisted can come back. Pending,
+  // rejected and draft listings go through review.
+  if (opp.status !== "unlisted") return { error: "Only delisted listings can be re-published." };
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ status: "published" })
+    .eq("id", opportunityId);
+
+  if (updateError) return { error: updateError.message };
+  revalidateLifecycle(opportunityId);
+  return {};
+}
+
+/** Finish an opportunity without losing it: applications and the page are kept. */
+export async function archiveOpportunity(opportunityId: string): Promise<{ error?: string }> {
+  const { error, supabase, opp } = await assertOpportunityOwner(opportunityId);
+  if (error || !supabase || !opp) return { error: error ?? "Unknown error" };
+
+  const { error: updateError } = await supabase
+    .from("opportunities")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("id", opportunityId);
+
+  if (updateError) {
+    return {
+      error: updateError.message.includes("archived_at")
+        ? "Archiving isn't available yet. Run migration 197 in Supabase."
+        : updateError.message,
+    };
+  }
+  revalidateLifecycle(opportunityId);
+  return {};
+}
+
+export async function unarchiveOpportunity(opportunityId: string): Promise<{ error?: string }> {
   const { error, supabase } = await assertOpportunityOwner(opportunityId);
   if (error || !supabase) return { error: error ?? "Unknown error" };
 
   const { error: updateError } = await supabase
     .from("opportunities")
-    .update({ status: "published", is_active: true })
+    .update({ archived_at: null })
     .eq("id", opportunityId);
 
   if (updateError) return { error: updateError.message };
-  revalidatePath(`/partner/dashboard/${opportunityId}`);
-  revalidatePath("/partner/dashboard");
+  revalidateLifecycle(opportunityId);
   return {};
 }

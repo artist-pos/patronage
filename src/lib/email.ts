@@ -114,6 +114,14 @@ export async function sendApplicationConfirmation(
   });
 }
 
+/** Subject and body for the file request, for sending in a batch with the other outcomes. */
+export function buildHighResRequestEmailContent(params: { artistName: string; opportunityTitle: string; dashboardUrl: string }): { subject: string; html: string } {
+  return {
+    subject: `Action Required: Upload your high-res file for ${params.opportunityTitle}`,
+    html: buildHighResRequestHtml(params),
+  };
+}
+
 /**
  * Notify artist that their high-res upload is needed (approved_pending_assets).
  */
@@ -618,7 +626,7 @@ function buildApplicationConfirmationHtml({
 </html>`;
 }
 
-function buildHighResRequestHtml({
+export function buildHighResRequestHtml({
   artistName,
   opportunityTitle,
   dashboardUrl,
@@ -696,83 +704,6 @@ function buildMessageNotificationHtml({
 }
 
 // ── Pipeline application notifications ───────────────────────────────────────
-
-export async function sendShortlistNotification({
-  artistEmail,
-  artistName,
-  opportunityTitle,
-}: {
-  artistEmail: string;
-  artistName: string;
-  opportunityTitle: string;
-}): Promise<void> {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
-  await getResend().emails.send({
-    from: FROM,
-    to: artistEmail,
-    subject: `Update on your application for ${opportunityTitle}`,
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
-    <tr><td>
-      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
-      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
-      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> is under active review. We&apos;ll be in touch soon.</p>
-      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
-      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
-    </td></tr>
-  </table>
-</body>
-</html>`,
-  });
-}
-
-export async function sendRejectionNotification({
-  artistEmail,
-  artistName,
-  opportunityTitle,
-  reason,
-}: {
-  artistEmail: string;
-  artistName: string;
-  opportunityTitle: string;
-  reason?: string | null;
-}): Promise<void> {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
-  const feedbackBlock = reason
-    ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;">
-        <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Feedback from the organiser</p>
-        <p style="margin:0;white-space:pre-wrap;">${esc(reason)}</p>
-       </div>`
-    : "";
-  await getResend().emails.send({
-    from: FROM,
-    to: artistEmail,
-    subject: `Your application for ${opportunityTitle}`,
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
-    <tr><td>
-      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
-      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
-      <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#555;">Thank you for applying for <strong>${esc(opportunityTitle)}</strong>. Unfortunately you weren&apos;t selected this time.</p>
-      ${feedbackBlock}
-      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
-      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
-    </td></tr>
-  </table>
-</body>
-</html>`,
-  });
-}
 
 export async function sendRejectionReply({
   partnerEmail,
@@ -902,7 +833,7 @@ export async function sendPaymentConfirmed({
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Payment confirmed</p>
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
       <p style="margin:0 0 16px;font-size:14px;color:#555;">The organiser has marked your payment of <strong>NZD ${amount.toFixed(2)}</strong> for <strong>${esc(opportunityTitle)}</strong> as sent. Please allow a few days for it to appear in your account.</p>
-      <a href="${SITE_URL}/dashboard?tab=applications" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
+      <a href="${SITE_URL}/studio/opportunities?of=applied" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard →</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
     </td></tr>
   </table>
@@ -912,46 +843,6 @@ export async function sendPaymentConfirmed({
 }
 
 // ── Campaign notifications ────────────────────────────────────────────────────
-
-/**
- * Notify an artist that they've been selected for a partner campaign.
- * Fired when createCampaignForSelection creates a new campaign row.
- */
-export async function sendCampaignSelectedNotification(params: {
-  artistEmail: string;
-  artistName: string;
-  opportunityTitle: string;
-  studioUrl: string;
-  customMessage?: string;
-}): Promise<void> {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const { artistEmail, artistName, opportunityTitle, studioUrl, customMessage } = params;
-  const customMessageHtml = customMessage?.trim()
-    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${esc(customMessage.trim())}</p>`
-    : "";
-  await getResend().emails.send({
-    from: FROM,
-    to: artistEmail,
-    subject: `You've been selected for ${opportunityTitle}`,
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
-    <tr><td>
-      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Campaign selected</p>
-      <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${esc(artistName)}</strong>!</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#555;">You've been selected for:</p>
-      <blockquote style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #000;background:#f9f9f9;font-size:14px;color:#333;">${esc(opportunityTitle)}</blockquote>
-      ${customMessageHtml}<p style="margin:0 0 24px;font-size:14px;color:#555;">Head to your Studio to create your campaign page — choose your hero artwork, add works, configure pricing, and get your QR code.</p>
-      <a href="${studioUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Create your campaign page →</a>
-      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
-    </td></tr>
-  </table>
-</body>
-</html>`,
-  });
-}
 
 /**
  * Notify the admin (hello@patronage.nz) when an artist submits or publishes a campaign.
@@ -1613,11 +1504,286 @@ export async function sendGenericEmail({
   await getResend().emails.send({ from: FROM, to, subject, html });
 }
 
+/**
+ * Send many outcome emails without tripping Resend's rate limit. Uses the batch
+ * endpoint (up to 100 per call); if a batch is refused, falls back to one at a
+ * time. Returns the addresses that were NOT sent, so the caller can retry them.
+ */
+export async function sendResultEmails(
+  items: Array<{ key: string; to: string; subject: string; html: string }>,
+): Promise<string[]> {
+  const failed: string[] = [];
+  const resend = getResend();
+  for (let i = 0; i < items.length; i += 100) {
+    const chunk = items.slice(i, i + 100);
+    try {
+      const { error } = await resend.batch.send(
+        chunk.map((c) => ({ from: FROM, to: c.to, subject: c.subject, html: c.html })),
+      );
+      if (!error) continue;
+      console.error("[results] batch refused, falling back to single sends:", error.message);
+    } catch (err) {
+      console.error("[results] batch failed, falling back to single sends:", err);
+    }
+    for (const c of chunk) {
+      try {
+        const { error } = await resend.emails.send({ from: FROM, to: c.to, subject: c.subject, html: c.html });
+        if (error) failed.push(c.key);
+      } catch {
+        failed.push(c.key);
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  }
+  return failed;
+}
+
+// ── Organisation-facing pipeline notices ─────────────────────────────────────
+
+function partnerNoticeHtml({
+  heading,
+  body,
+  ctaUrl,
+  ctaLabel,
+}: {
+  heading: string;
+  body: string;
+  ctaUrl: string;
+  ctaLabel: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">${heading}</p>
+      ${body}
+      <a href="${ctaUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">${ctaLabel} &rarr;</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;"><a href="${SITE_URL}" style="color:#888;">Patronage</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+
+/** Invite someone to review an opportunity. The link signs them straight in. */
+export async function sendCollaboratorInvite({
+  to,
+  inviterName,
+  opportunityTitle,
+  role,
+  link,
+}: {
+  to: string;
+  inviterName: string;
+  opportunityTitle: string;
+  role: "viewer" | "editor";
+  link: string;
+}): Promise<void> {
+  const what = role === "editor"
+    ? "review and score the applications"
+    : "view the applications";
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${inviterName} invited you to review ${opportunityTitle}`,
+    html: partnerNoticeHtml({
+      heading: "You're invited to review",
+      body: `<p style="margin:0 0 12px;font-size:15px;"><strong>${escHtml(inviterName)}</strong> has asked you to ${what} for <strong>${escHtml(opportunityTitle)}</strong>.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">You don't need to create an account or choose a password. Use the button below to go straight to the applications. If the link has expired, open it again and we'll send a fresh one.</p>`,
+      ctaUrl: link,
+      ctaLabel: "Start reviewing",
+    }),
+  });
+}
+
+/** One email a day telling the organiser how many applications have arrived. */
+export async function sendPartnerApplicationSummary({
+  partnerEmail,
+  opportunityTitle,
+  count,
+  total,
+  dashboardUrl,
+}: {
+  partnerEmail: string;
+  opportunityTitle: string;
+  count: number;
+  total: number;
+  dashboardUrl: string;
+}): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: partnerEmail,
+    subject: `${count} new application${count === 1 ? "" : "s"} for ${opportunityTitle}`,
+    html: partnerNoticeHtml({
+      heading: "New applications",
+      body: `<p style="margin:0 0 16px;font-size:15px;"><strong>${count}</strong> new application${count === 1 ? " has" : "s have"} arrived for <strong>${escHtml(opportunityTitle)}</strong> since yesterday. That makes <strong>${total}</strong> in all.</p>`,
+      ctaUrl: dashboardUrl,
+      ctaLabel: "Review applications",
+    }),
+  });
+}
+
+/** Tell the organiser whether their listing was approved or declined. */
+export async function sendPartnerListingDecision({
+  partnerEmail,
+  opportunityTitle,
+  approved,
+  reason,
+  url,
+}: {
+  partnerEmail: string;
+  opportunityTitle: string;
+  approved: boolean;
+  reason?: string | null;
+  url: string;
+}): Promise<void> {
+  const reasonBlock = !approved && reason?.trim()
+    ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;white-space:pre-wrap;">${escHtml(reason.trim())}</div>`
+    : "";
+  await getResend().emails.send({
+    from: FROM,
+    to: partnerEmail,
+    subject: approved ? `${opportunityTitle} is now live` : `Update on your listing: ${opportunityTitle}`,
+    html: partnerNoticeHtml({
+      heading: approved ? "Listing approved" : "Listing not approved",
+      body: approved
+        ? `<p style="margin:0 0 24px;font-size:14px;color:#555;"><strong>${escHtml(opportunityTitle)}</strong> has been approved and is now live on Patronage.</p>`
+        : `<p style="margin:0 0 16px;font-size:14px;color:#555;">We weren&apos;t able to publish <strong>${escHtml(opportunityTitle)}</strong> as submitted.</p>${reasonBlock}`,
+      ctaUrl: url,
+      ctaLabel: approved ? "View your dashboard" : "Edit your listing",
+    }),
+  });
+}
+
+/** Ask the organiser to pay the open-call publishing fee. */
+export async function sendPartnerFeeRequest({
+  partnerEmail,
+  opportunityTitle,
+  url,
+}: {
+  partnerEmail: string;
+  opportunityTitle: string;
+  url: string;
+}): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: partnerEmail,
+    subject: `Publishing fee for ${opportunityTitle}`,
+    html: partnerNoticeHtml({
+      heading: "Your listing is ready",
+      body: `<p style="margin:0 0 24px;font-size:14px;color:#555;">We&apos;ve reviewed <strong>${escHtml(opportunityTitle)}</strong>. To publish it with the full application workflow, a one-off publishing fee of <strong>$200 NZD</strong> applies. It goes live as soon as the payment is confirmed.</p>`,
+      ctaUrl: url,
+      ctaLabel: "Pay the publishing fee",
+    }),
+  });
+}
+
+/** Confirm the open-call publishing fee was received. */
+export async function sendPartnerPaymentReceived({
+  partnerEmail,
+  opportunityTitle,
+  url,
+}: {
+  partnerEmail: string;
+  opportunityTitle: string;
+  url: string;
+}): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: partnerEmail,
+    subject: `Payment received for ${opportunityTitle}`,
+    html: partnerNoticeHtml({
+      heading: "Payment received",
+      body: `<p style="margin:0 0 24px;font-size:14px;color:#555;">Thanks. We&apos;ve received the publishing fee for <strong>${escHtml(opportunityTitle)}</strong>. It will go live once it has been reviewed, usually within two business days. We&apos;ll email you when it does.</p>`,
+      ctaUrl: url,
+      ctaLabel: "View your listing",
+    }),
+  });
+}
+
 // ── Email content builders (return HTML without sending, for notification queue) ─
 
-export function buildShortlistEmailContent({ artistName, opportunityTitle }: { artistName: string; opportunityTitle: string }): { subject: string; html: string } {
+/** Selection email for opportunities that do NOT use campaign pages. */
+export function buildSelectedEmailContent({
+  artistName,
+  opportunityTitle,
+  customMessage,
+}: {
+  artistName: string;
+  opportunityTitle: string;
+  customMessage?: string | null;
+}): { subject: string; html: string } {
+  const dashboardUrl = `${SITE_URL}/studio/opportunities?of=applied`;
+  const message = customMessage?.trim()
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${escHtml(customMessage.trim())}</p>`
+    : "";
+  return {
+    subject: `You've been selected for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
+      <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${escHtml(artistName)}</strong>!</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">You&apos;ve been selected for <strong>${escHtml(opportunityTitle)}</strong>. The organiser will be in touch about next steps.</p>
+      ${message}
+      <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard &rarr;</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  };
+}
+
+/** Selection email for opportunities that use campaign pages (QR code storefront). */
+export function buildCampaignSelectedEmailContent({
+  artistName,
+  opportunityTitle,
+  customMessage,
+}: {
+  artistName: string;
+  opportunityTitle: string;
+  customMessage?: string | null;
+}): { subject: string; html: string } {
+  const studioUrl = `${SITE_URL}/studio/qr-codes`;
+  const message = customMessage?.trim()
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${escHtml(customMessage.trim())}</p>`
+    : "";
+  return {
+    subject: `You've been selected for ${opportunityTitle}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;background:#fff;color:#000;margin:0;padding:0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:40px 24px;">
+    <tr><td>
+      <p style="color:#888;font-size:13px;margin:0 0 32px;">Patronage · Campaign selected</p>
+      <p style="margin:0 0 8px;font-size:15px;">Congratulations <strong>${escHtml(artistName)}</strong>!</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">You&apos;ve been selected for <strong>${escHtml(opportunityTitle)}</strong>.</p>
+      ${message}<p style="margin:0 0 24px;font-size:14px;color:#555;">Head to your Studio to create your campaign page: choose your hero artwork, add works, configure pricing, and get your QR code.</p>
+      <a href="${studioUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">Create your campaign page &rarr;</a>
+      <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you have an account at <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  };
+}
+
+export function buildShortlistEmailContent({ artistName, opportunityTitle, message }: { artistName: string; opportunityTitle: string; message?: string | null }): { subject: string; html: string } {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  const dashboardUrl = `${SITE_URL}/studio/opportunities?of=applied`;
+  const messageBlock = message?.trim()
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${esc(message.trim())}</p>`
+    : "";
   return {
     subject: `Update on your application for ${opportunityTitle}`,
     html: `<!DOCTYPE html>
@@ -1629,7 +1795,8 @@ export function buildShortlistEmailContent({ artistName, opportunityTitle }: { a
       <h1 style="font-size:20px;font-weight:600;margin:0 0 4px;">Patronage</h1>
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> is under active review. We&apos;ll be in touch soon.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#555;">Your application for <strong>${esc(opportunityTitle)}</strong> has been shortlisted. The organiser will be in touch about next steps.</p>
+      ${messageBlock}
       <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard &rarr;</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
     </td></tr>
@@ -1639,11 +1806,14 @@ export function buildShortlistEmailContent({ artistName, opportunityTitle }: { a
   };
 }
 
-export function buildRejectionEmailContent({ artistName, opportunityTitle, reason }: { artistName: string; opportunityTitle: string; reason?: string | null }): { subject: string; html: string } {
+export function buildRejectionEmailContent({ artistName, opportunityTitle, reason, message }: { artistName: string; opportunityTitle: string; reason?: string | null; message?: string | null }): { subject: string; html: string } {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const dashboardUrl = `${SITE_URL}/dashboard?tab=applications`;
+  const dashboardUrl = `${SITE_URL}/studio/opportunities?of=applied`;
   const feedbackBlock = reason
     ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;"><p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Feedback from the organiser</p><p style="margin:0;white-space:pre-wrap;">${esc(reason)}</p></div>`
+    : "";
+  const messageBlock = message?.trim()
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;white-space:pre-wrap;">${esc(message.trim())}</p>`
     : "";
   return {
     subject: `Your application for ${opportunityTitle}`,
@@ -1657,7 +1827,7 @@ export function buildRejectionEmailContent({ artistName, opportunityTitle, reaso
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Application update</p>
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(artistName)}</strong>,</p>
       <p style="margin:0 0 16px;font-size:14px;color:#555;">Thank you for applying for <strong>${esc(opportunityTitle)}</strong>. Unfortunately you weren&apos;t selected this time.</p>
-      ${feedbackBlock}
+      ${messageBlock}${feedbackBlock}
       <a href="${dashboardUrl}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">View in dashboard &rarr;</a>
       <p style="color:#888;font-size:12px;margin:32px 0 0;">You're receiving this because you applied via <a href="${SITE_URL}" style="color:#888;">Patronage</a>.</p>
     </td></tr>

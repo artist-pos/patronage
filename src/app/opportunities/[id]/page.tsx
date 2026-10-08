@@ -368,7 +368,7 @@ async function UserCTA({
       <div className="space-y-1">
         <p className="text-sm text-muted-foreground">
           You have already applied to this opportunity.{" "}
-          <Link href="/dashboard?tab=applications" className="underline">
+          <Link href="/studio/opportunities?of=applied" className="underline">
             View in dashboard →
           </Link>
         </p>
@@ -861,7 +861,9 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
         {isClosed && (
           <p className="mt-3 text-[13px] text-[color:var(--fg-muted)]">
-            Applications for this opportunity have closed.
+            {opp.archived_at
+              ? "This opportunity has concluded and is shown here as a record."
+              : "Applications for this opportunity have closed."}
           </p>
         )}
         {/* What applying involves, stated plainly: the profile is reused, the

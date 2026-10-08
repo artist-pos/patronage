@@ -32,9 +32,9 @@ const SYSTEM_STAGES: StageDef[] = [
   { val: "pending", label: "New", textColor: "text-stone-500", badgeColor: "bg-stone-100 text-stone-600", dot: "bg-amber-400" },
   { val: "shortlisted", label: "Shortlisted", textColor: "text-blue-600", badgeColor: "bg-blue-50 text-blue-700", dot: "bg-stone-700" },
   { val: "selected", label: "Selected", textColor: "text-green-600", badgeColor: "bg-green-50 text-green-700", dot: "bg-emerald-500" },
-  { val: "approved_pending_assets", label: "Awaiting File", textColor: "text-yellow-600", badgeColor: "bg-yellow-50 text-yellow-700", dot: "bg-blue-400" },
-  { val: "production_ready", label: "Ready", textColor: "text-emerald-600", badgeColor: "bg-emerald-50 text-emerald-700", dot: "bg-violet-500" },
-  { val: "rejected", label: "Rejected", textColor: "text-red-500", badgeColor: "bg-red-50 text-red-700", dot: "bg-stone-300" },
+  { val: "approved_pending_assets", label: "Waiting for files", textColor: "text-yellow-600", badgeColor: "bg-yellow-50 text-yellow-700", dot: "bg-blue-400" },
+  { val: "production_ready", label: "Files received", textColor: "text-emerald-600", badgeColor: "bg-emerald-50 text-emerald-700", dot: "bg-violet-500" },
+  { val: "rejected", label: "Not selected", textColor: "text-red-500", badgeColor: "bg-red-50 text-red-700", dot: "bg-stone-300" },
 ];
 
 export const ALL_STAGE_VALUES: StageValue[] = SYSTEM_STAGES.map((s) => s.val);

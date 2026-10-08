@@ -125,7 +125,7 @@ export async function claimShadowAccount(input: {
   if (!proved) issueEmailVerification(tokenRow.entity_id).catch(console.error);
   logCrmClaim(admin, tokenRow).catch(console.error);
 
-  return { redirectTo: tokenRow.entity_type === "partner" ? "/partner/dashboard" : "/dashboard" };
+  return { redirectTo: tokenRow.entity_type === "partner" ? "/dashboard" : "/dashboard" };
 }
 
 export async function claimEntity(
@@ -194,6 +194,6 @@ export async function claimEntity(
 
   await logCrmClaim(admin, tokenRow);
 
-  const redirectTo = tokenRow.entity_type === "partner" ? "/partner/dashboard" : "/dashboard";
+  const redirectTo = tokenRow.entity_type === "partner" ? "/dashboard" : "/dashboard";
   return { redirectTo };
 }

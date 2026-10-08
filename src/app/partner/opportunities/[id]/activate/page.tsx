@@ -30,9 +30,9 @@ export default function ActivatePage({ params }: Props) {
           <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Publishing fee</p>
           <h1 className="text-2xl font-semibold tracking-tight">Publish your open call</h1>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Your listing has been submitted for review. To publish the full application workflow,
-            a one-off publishing fee of <strong>$200 NZD</strong> is required.
-            Your first open call is free — this applies from your second listing onwards.
+            We&apos;ve reviewed your listing. To publish it with the full application workflow, a
+            one-off publishing fee of <strong>$200 NZD</strong> applies. It goes live as soon as the
+            payment is confirmed, and we&apos;ll email you when it does.
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export default function ActivatePage({ params }: Props) {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/partner/dashboard")}
+            onClick={() => router.push("/dashboard")}
             className="w-full text-sm text-stone-500 hover:text-foreground transition-colors py-2"
           >
             Skip for now — go to dashboard

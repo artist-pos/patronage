@@ -24,7 +24,7 @@ export function CommitteePanel({ opportunityId, collaborators }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-widest">Review committee</p>
+      <p className="text-sm font-semibold uppercase tracking-widest">Review committee</p>
       <div className="space-y-2">
         {collaborators.map((c) => {
           const profile = (c as unknown as { profiles?: { username?: string; full_name?: string; avatar_url?: string } }).profiles;
@@ -41,14 +41,14 @@ export function CommitteePanel({ opportunityId, collaborators }: Props) {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm truncate">{name}</p>
-                  <p className="text-xs text-stone-400 capitalize">{c.role}</p>
+                  <p className="text-sm text-stone-500 capitalize">{c.role}</p>
                 </div>
               </div>
               <button
                 type="button"
                 disabled={nudging === c.profile_id || didNudge}
                 onClick={() => handleNudge(c.profile_id)}
-                className="text-xs border border-stone-200 px-2.5 py-1 hover:border-black transition-colors disabled:opacity-50 shrink-0"
+                className="text-sm border border-stone-200 px-2.5 py-1 hover:border-black transition-colors disabled:opacity-50 shrink-0"
               >
                 {nudging === c.profile_id ? "Sending…" : didNudge ? "Sent ✓" : "Nudge"}
               </button>

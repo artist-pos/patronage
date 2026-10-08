@@ -44,10 +44,11 @@ export default async function ListAnOpportunityPage() {
   let pipelineFirstRoundUsed = false;
   if (user) {
     const { count } = await supabase
-      .from("pipeline_entry_payments")
+      .from("opportunities")
       .select("id", { count: "exact", head: true })
-      .eq("partner_id", user.id)
-      .eq("status", "paid");
+      .eq("profile_id", user.id)
+      .eq("routing_type", "pipeline")
+      .not("pipeline_paid_at", "is", null);
     pipelineFirstRoundUsed = (count ?? 0) > 0;
   }
 

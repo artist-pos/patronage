@@ -66,8 +66,9 @@ export interface ApplyFormProps {
 interface NormalisedField {
   id: string;
   label: string;
-  type: "short" | "long" | "file";
+  type: "short" | "long" | "file" | "checkbox";
   file_label?: string;
+  required: boolean;
 }
 
 function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
@@ -75,14 +76,16 @@ function normaliseFields(opp: OpportunityForApply): NormalisedField[] {
     return opp.pipeline_config.questions.map((q) => ({
       id: q.id,
       label: q.label,
-      type: q.type === "short_text" ? "short" : q.type === "long_text" ? "long" : "file",
+      type: q.type === "short_text" ? "short" : q.type === "long_text" ? "long" : q.type === "checkbox" ? "checkbox" : "file",
       file_label: q.file_label,
+      required: !!q.required,
     }));
   }
   return (opp.custom_fields ?? []).map((f) => ({
     id: f.id,
     label: f.question,
     type: f.inputType,
+    required: !!(f as { required?: boolean }).required,
   }));
 }
 
@@ -342,6 +345,8 @@ export function ApplyForm({
   const [error, setError] = useState<string | null>(null);
   const [showDescriptionErrors, setShowDescriptionErrors] = useState(false);
   const [showWorksRequiredError, setShowWorksRequiredError] = useState(false);
+  const [showRequiredErrors, setShowRequiredErrors] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const supabase = createClient();
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -762,7 +767,22 @@ export function ApplyForm({
     setStep(3);
   }
 
+  const hasAnswer = (f: NormalisedField) =>
+    f.type === "file" ? (fileUploads[f.id]?.length ?? 0) > 0 : (answers[f.id] ?? "").trim().length > 0;
+  const missingRequiredIds = new Set(fields.filter((f) => f.required && !hasAnswer(f)).map((f) => f.id));
+  const needsTerms = !!opportunity.pipeline_config?.terms_pdf_url;
+
   async function handleSubmit() {
+    if (missingRequiredIds.size > 0 || (needsTerms && !termsAccepted)) {
+      setStep(3);
+      setShowRequiredErrors(true);
+      setError(
+        missingRequiredIds.size > 0
+          ? "Please complete the questions marked required."
+          : "Please accept the terms to submit."
+      );
+      return;
+    }
     if (showPortfolioPicker && !hasEnoughWorks) {
       setStep(2);
       setShowWorksRequiredError(true);
@@ -800,6 +820,7 @@ export function ApplyForm({
       marketingOptIn,
       isJobOpportunity ? [] : selectedWorkIds,
       isJobOpportunity ? {} : workDescriptions,
+      termsAccepted,
     );
     setSubmitting(false);
 
@@ -1443,8 +1464,26 @@ export function ApplyForm({
             <div className="space-y-5">
               {fields.map((field) => (
                 <div key={field.id} className="space-y-1.5">
-                  <label className="text-sm font-medium">{field.label}</label>
+                  <label className="text-sm font-medium">
+                    {field.label}
+                    {field.required && <span className="text-[color:var(--urgent)]" aria-hidden> *</span>}
+                    {field.required && <span className="sr-only"> (required)</span>}
+                  </label>
                   {field.file_label && <p className="t-caption">{field.file_label}</p>}
+                  {showRequiredErrors && missingRequiredIds.has(field.id) && (
+                    <p className="t-mono-sm text-[color:var(--urgent)]">This question is required</p>
+                  )}
+                  {field.type === "checkbox" && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={answers[field.id] === "yes"}
+                        onChange={(e) => setAnswers((prev) => ({ ...prev, [field.id]: e.target.checked ? "yes" : "" }))}
+                        className="accent-black"
+                      />
+                      Yes
+                    </label>
+                  )}
                   {field.type === "short" && (
                     <input
                       type="text"
@@ -1514,6 +1553,31 @@ export function ApplyForm({
                 </div>
               ))}
             </div>
+          )}
+
+          {needsTerms && (
+            <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-border pt-5">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 shrink-0 accent-black"
+              />
+              <span className="text-xs text-[color:var(--fg-muted)]">
+                I have read and accept the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setPanelView("documents"); setShowListingPanel(true); }}
+                  className="underline underline-offset-2 text-foreground"
+                >
+                  terms and conditions
+                </button>{" "}
+                for this opportunity. <span className="text-[color:var(--urgent)]" aria-hidden>*</span>
+              </span>
+            </label>
+          )}
+          {showRequiredErrors && needsTerms && !termsAccepted && (
+            <p className="t-mono-sm text-[color:var(--urgent)]">Please accept the terms to submit.</p>
           )}
 
           {opportunity.routing_type === "pipeline" && (

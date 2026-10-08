@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
@@ -8,10 +8,21 @@ import { computeBadges } from "@/lib/badges";
 import { updateApplicationStatus, getSignedAssetUrl, markInvoicePaid } from "@/app/partner/dashboard/actions";
 import { RubricScoringPanel } from "@/components/partner/scoring/RubricScoringPanel";
 import type { CustomField, PipelineConfig } from "@/types/database";
-import type { EnrichedApp, CreativeWorkLite } from "./ApplicationsManager";
+import type { EnrichedApp, CreativeWorkLite } from "./types";
 import { getStages, getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
 import { PartnerPdfViewerClient } from "@/components/partners/PartnerPdfViewerClient";
 import { APPLICATION_BIO_KEY } from "@/lib/application-bio";
+import { transitionError } from "@/lib/decisions";
+import {
+  addNote,
+  getNotes,
+  getScoreMatrix,
+  setApplicationReviewers,
+  type NoteDTO,
+  type ScoreMatrix,
+  type ReviewOverview,
+} from "@/app/partner/dashboard/review-actions";
+import { TERMS_ACCEPTED_KEY } from "@/lib/application-terms";
 
 const isImageUrl = (url: string) => /\.(jpe?g|png|webp|gif|avif|tiff?)($|\?)/i.test(url);
 const isPdfUrl = (url: string) => /\.pdf($|\?)/i.test(url);
@@ -71,6 +82,8 @@ interface Application {
   invoice_requested_at: string | null;
   invoice_amount: number | null;
   invoice_paid_at: string | null;
+  /** What the artist has been told. Null or "pending" until results are published. */
+  released_status?: string | null;
   status_log?: StatusLogEntry[];
 }
 
@@ -90,9 +103,77 @@ interface Props {
   onClose?: () => void;
   allApps?: EnrichedApp[];
   onNavigate?: (id: string) => void;
+  /** Reports a confirmed change so the board and the panel share one status. */
+  onStatusChange?: (appId: string, status: string) => void;
+  /** Viewers can read an application but not decide it. */
+  canEdit?: boolean;
+  isOwner?: boolean;
+  /** Scores, assignments and the team, for the board. */
+  overview?: ReviewOverview | null;
 }
 
-type AppTab = "application" | "portfolio" | "cv" | "activity";
+type AppTab = "application" | "portfolio" | "cv" | "notes" | "activity";
+
+/** Notes the review team leaves for each other on one application. */
+function NotesTab({ applicationId, canWrite }: { applicationId: string; canWrite: boolean }) {
+  const [notes, setNotes] = useState<NoteDTO[] | null>(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getNotes(applicationId).then((n) => { if (!cancelled) setNotes(n); });
+    return () => { cancelled = true; };
+  }, [applicationId]);
+
+  async function submit() {
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    const result = await addNote(applicationId, text);
+    setBusy(false);
+    if (result.error) { setError(result.error); return; }
+    setText("");
+    setNotes(await getNotes(applicationId));
+  }
+
+  return (
+    <div className="max-w-xl space-y-4">
+      {notes === null && <p className="text-sm text-stone-500">Loading…</p>}
+      {notes?.length === 0 && <p className="text-sm text-stone-500">No notes yet. Notes are visible to everyone on the review team.</p>}
+      <ul className="space-y-3">
+        {notes?.map((n) => (
+          <li key={n.id} className="border-l-2 border-black/10 pl-3">
+            <p className="text-sm text-stone-500">
+              <span className="font-medium text-foreground">{n.mine ? "You" : n.authorName}</span>{" "}
+              · {new Date(n.createdAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
+            </p>
+            <p className="whitespace-pre-wrap text-sm">{n.body}</p>
+          </li>
+        ))}
+      </ul>
+      {canWrite && (
+        <div className="space-y-2">
+          <label htmlFor={`note-${applicationId}`} className="sr-only">Add a note</label>
+          <textarea
+            id={`note-${applicationId}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            placeholder="Add a note for the team"
+            className="w-full resize-none border border-black/20 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="button" onClick={submit} disabled={busy || !text.trim()}
+            className="border border-black px-4 py-1.5 text-sm font-medium hover:bg-black hover:text-white disabled:opacity-40">
+            {busy ? "Adding…" : "Add note"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * A submitted work's description. An override written for this application wins
@@ -108,15 +189,139 @@ function WorkDescription({ override, existing }: { override?: string; existing: 
   return (
     <div className="space-y-1 pt-1">
       {isOverride && <p className="t-section-label">Written for this application</p>}
-      <p className="whitespace-pre-wrap border-l-2 border-border pl-2.5 text-xs leading-relaxed text-[color:var(--fg-muted)]">
+      <p className="whitespace-pre-wrap border-l-2 border-border pl-2.5 text-sm leading-relaxed text-[color:var(--fg-muted)]">
         {text}
       </p>
     </div>
   );
 }
 
-export function ApplicantPanel({ application, opportunity, onClose, allApps, onNavigate }: Props) {
-  const [status, setStatus] = useState(application.status);
+/** Where reviewers agree, who is still to score, and (for the owner) who is assigned. */
+function TeamScores({ application, overview, isOwner }: { application: Application; overview: ReviewOverview; isOwner: boolean }) {
+  const summary = overview.scores[application.id];
+  const editors = overview.team.filter((t) => t.role === "editor" || (t.role === "owner" && overview.team.every((x) => x.role !== "editor")));
+  const [assigned, setAssigned] = useState<string[]>(summary?.assignedTo ?? []);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [matrix, setMatrix] = useState<ScoreMatrix | null>(null);
+  const [showMatrix, setShowMatrix] = useState(false);
+
+  async function toggleMatrix() {
+    const next = !showMatrix;
+    setShowMatrix(next);
+    if (next && !matrix) setMatrix(await getScoreMatrix(application.id));
+  }
+
+  if (!summary) return null;
+
+  async function save(next: string[]) {
+    setAssigned(next);
+    setSaving(true);
+    const result = await setApplicationReviewers(application.id, next);
+    setSaving(false);
+    setMessage(result.error ?? "Saved");
+    setTimeout(() => setMessage(null), 2500);
+  }
+
+  return (
+    <div className="space-y-3 border-t border-black/10 pt-4">
+      <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">Team scores</p>
+      {summary.avg !== null ? (
+        <div className="space-y-2">
+          <p className="text-sm">
+            <span className="text-xl font-semibold tabular-nums">{Math.round(summary.avg)}%</span>
+            <span className="ml-2 text-sm text-stone-500">
+              {summary.reviewersComplete}
+              {summary.reviewersAssigned > 0 ? ` of ${summary.reviewersAssigned}` : ""} reviewer{summary.reviewersComplete === 1 ? "" : "s"} done
+            </span>
+          </p>
+          {summary.spread !== null && summary.spread >= 25 && (
+            <p className="text-sm text-amber-700">Reviewers differ by {Math.round(summary.spread)} points. Worth a discussion.</p>
+          )}
+          {summary.reviewers.length > 1 && (
+            <button type="button" onClick={toggleMatrix} aria-expanded={showMatrix}
+              className="text-sm underline underline-offset-2 text-stone-500 hover:text-foreground">
+              {showMatrix ? "Hide scores by criterion" : "Show scores by criterion"}
+            </button>
+          )}
+          {showMatrix && (
+            matrix ? (
+              <div className="overflow-x-auto border border-black/10">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-black/10 bg-stone-50">
+                      <th className="px-2 py-1.5 text-left font-medium text-stone-500">Criterion</th>
+                      {matrix.reviewers.map((r) => (
+                        <th key={r.id} className="px-2 py-1.5 text-center font-medium text-stone-500">{r.name.split(" ")[0]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.criteria.map((c) => {
+                      const values = matrix.reviewers.map((r) => matrix.scores[r.id]?.[c.id]).filter((v): v is number => v !== undefined);
+                      const split = values.length > 1 && Math.max(...values) - Math.min(...values) >= Math.ceil(c.scaleMax * 0.4);
+                      return (
+                        <tr key={c.id} className="border-b border-black/5 last:border-0">
+                          <td className="px-2 py-1.5">{c.label}</td>
+                          {matrix.reviewers.map((r) => (
+                            <td key={r.id} className={`px-2 py-1.5 text-center tabular-nums ${split ? "bg-amber-50 font-medium text-amber-800" : ""}`}>
+                              {matrix.scores[r.id]?.[c.id] ?? "–"}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="px-2 py-1.5 text-sm text-stone-500">Shaded rows are where reviewers differ most.</p>
+              </div>
+            ) : (
+              <p className="text-sm text-stone-500">Loading…</p>
+            )
+          )}
+          <ul className="space-y-1">
+            {summary.reviewers.map((r) => (
+              <li key={r.reviewerId} className="flex items-center justify-between text-sm">
+                <span className="truncate">{r.name}</span>
+                <span className="tabular-nums text-stone-500">{Math.round(r.pct)}%{r.complete ? "" : " (partial)"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-stone-500">Score this application to see the team&apos;s results.</p>
+      )}
+
+      {isOwner && summary.recusedBy.length > 0 && (
+        <p className="text-sm text-stone-500">Stepped back (conflict of interest): {summary.recusedBy.join(", ")}</p>
+      )}
+
+      {isOwner && overview.config.assignment_mode !== "all" && (
+        <div className="space-y-1.5 pt-1">
+          <p className="text-sm font-medium">Assigned reviewers</p>
+          {editors.map((t) => (
+            <label key={t.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-black"
+                disabled={saving}
+                checked={assigned.includes(t.id)}
+                onChange={(e) => save(e.target.checked ? [...assigned, t.id] : assigned.filter((id) => id !== t.id))}
+              />
+              {t.name}
+            </label>
+          ))}
+          {message && <p role="status" className="text-sm text-stone-500">{message}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ApplicantPanel({ application, opportunity, onClose, allApps, onNavigate, onStatusChange, canEdit = true, isOwner = false, overview = null }: Props) {
+  // The shell owns the status; the panel only reflects it.
+  const status = application.status;
+  const [paidAt, setPaidAt] = useState(application.invoice_paid_at);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [toastIsUndo, setToastIsUndo] = useState(false);
@@ -157,6 +362,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
   const nextApp = allApps && currentIdx < allApps.length - 1 ? allApps[currentIdx + 1] : null;
 
   async function applyStatusChange(newStatus: string, reason?: string, message?: string) {
+    if (saving || newStatus === status) return;
     const previousStatus = status;
     setSaving(true);
     const result = await updateApplicationStatus(application.id, newStatus as Parameters<typeof updateApplicationStatus>[1], reason, message);
@@ -166,10 +372,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
       setToastIsUndo(false);
       setTimeout(() => setToast(null), 5000);
     } else {
-      setStatus(newStatus);
+      onStatusChange?.(application.id, newStatus);
       setUndoStatus(previousStatus);
       setToastIsUndo(true);
-      setToast(`Moved to ${stageLabel(newStatus, stagesCfg)}`);
+      setToast(result.warning ? `Error: ${result.warning}` : `Moved to ${stageLabel(newStatus, stagesCfg)}`);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       undoTimerRef.current = setTimeout(() => { setToast(null); setToastIsUndo(false); setUndoStatus(null); }, 5000);
     }
@@ -198,7 +404,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
 
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-black/10 shrink-0">
-          <div className="flex items-center gap-3 text-xs text-stone-400">
+          <div className="flex items-center gap-3 text-sm text-stone-500">
             <button type="button" onClick={onClose} className="hover:text-foreground transition-colors">
               <X className="w-4 h-4" />
             </button>
@@ -231,13 +437,13 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
             )}
             <div className="space-y-1.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                {artist?.career_stage && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{artist.career_stage}</span>}
+                {artist?.career_stage && <span className="text-sm border border-black/20 px-2 py-0.5 text-stone-500">{artist.career_stage}</span>}
                 {(artist?.medium ?? []).slice(0, 2).map((m: string) => (
-                  <span key={m} className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{m}</span>
+                  <span key={m} className="text-sm border border-black/20 px-2 py-0.5 text-stone-500">{m}</span>
                 ))}
               </div>
               <h2 className="text-xl font-semibold">{displayName}</h2>
-              <div className="flex items-center gap-3 text-xs text-stone-400 flex-wrap">
+              <div className="flex items-center gap-3 text-sm text-stone-500 flex-wrap">
                 {[artist?.city, artist?.country].filter(Boolean).join(", ") && (
                   <span>{[artist?.city, artist?.country].filter(Boolean).join(", ")}</span>
                 )}
@@ -250,10 +456,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               </div>
               {opportunity.show_badges_in_submission && badges && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {badges.withPatronage && <span className="text-xs bg-black text-white px-2 py-0.5">With Patronage</span>}
-                  {badges.verified && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Verified</span>}
-                  {badges.exhibited && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Exhibited</span>}
-                  {badges.grantRecipient && <span className="text-xs border border-black/20 text-stone-500 px-2 py-0.5">Grant Recipient</span>}
+                  {badges.withPatronage && <span className="text-sm bg-black text-white px-2 py-0.5">With Patronage</span>}
+                  {badges.verified && <span className="text-sm border border-black/20 text-stone-500 px-2 py-0.5">Verified</span>}
+                  {badges.exhibited && <span className="text-sm border border-black/20 text-stone-500 px-2 py-0.5">Exhibited</span>}
+                  {badges.grantRecipient && <span className="text-sm border border-black/20 text-stone-500 px-2 py-0.5">Grant Recipient</span>}
                 </div>
               )}
             </div>
@@ -266,10 +472,11 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
             { id: "application", label: "Application" },
             { id: "portfolio", label: `Portfolio${!portfolioIsEmpty ? ` · ${artworkImages.length + creativeWorksList.length + legacyImage.length}` : ""}` },
             { id: "cv", label: "CV" },
+            { id: "notes", label: "Notes" },
             { id: "activity", label: "Activity" },
           ] as { id: AppTab; label: string }[]).map((t) => (
             <button key={t.id} type="button" onClick={() => setAppTab(t.id)}
-              className={`text-sm px-4 py-2.5 border-b-2 transition-colors ${appTab === t.id ? "border-black text-foreground font-medium" : "border-transparent text-stone-400 hover:text-foreground"}`}>
+              className={`text-sm px-4 py-2.5 border-b-2 transition-colors ${appTab === t.id ? "border-black text-foreground font-medium" : "border-transparent text-stone-500 hover:text-foreground"}`}>
               {t.label}
             </button>
           ))}
@@ -283,12 +490,12 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
             <>
               {application.custom_answers?.[APPLICATION_BIO_KEY]?.trim() ? (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Bio for this application</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Bio for this application</p>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{application.custom_answers[APPLICATION_BIO_KEY]}</p>
                 </div>
               ) : questions.length === 0 && artist?.bio ? (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Practice</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Practice</p>
                   <p className="text-sm leading-relaxed">{artist.bio}</p>
                 </div>
               ) : null}
@@ -304,7 +511,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   const otherFiles = urls.filter((u) => !isImageUrl(u) && !isPdfUrl(u));
                   return (
                     <div key={field.id} className="space-y-1.5">
-                      <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{field.label}</p>
+                      <p className="text-sm font-medium uppercase tracking-widest text-stone-500">{field.label}</p>
                       {images.length > 0 && (
                         <div className="grid grid-cols-2 gap-3">
                           {images.map((url) => (
@@ -320,7 +527,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                           The viewer pages itself, so the panel's scroll is unaffected. */}
                       {pdfs.map((url, i) => (
                         <div key={url} className="space-y-1.5 pt-1">
-                          <p className="font-mono text-xs text-stone-400 truncate">
+                          <p className="font-mono text-sm text-stone-500 truncate">
                             {fileNameFromUrl(url, `Document ${i + 1}`)}
                           </p>
                           <PartnerPdfViewerClient pdfUrl={url} />
@@ -339,20 +546,27 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 }
                 return (
                   <div key={field.id} className="space-y-1.5">
-                    <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{field.label}</p>
+                    <p className="text-sm font-medium uppercase tracking-widest text-stone-500">{field.label}</p>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{answer}</p>
                   </div>
                 );
               })}
               {opportunity.pipeline_config?.terms_pdf_url && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Terms accepted</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Terms</p>
+                  {application.custom_answers?.[TERMS_ACCEPTED_KEY] ? (
+                    <p className="text-sm text-stone-600">
+                      Accepted {new Date(application.custom_answers[TERMS_ACCEPTED_KEY]).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-stone-500">No acceptance recorded (applied before terms were required).</p>
+                  )}
                   <a href={opportunity.pipeline_config.terms_pdf_url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs underline underline-offset-2">View T&C PDF →</a>
+                    className="text-sm underline underline-offset-2">View T&C PDF →</a>
                 </div>
               )}
               {questions.length === 0 && !artist?.bio && (
-                <p className="text-sm text-stone-400">No application answers.</p>
+                <p className="text-sm text-stone-500">No application answers.</p>
               )}
             </>
           )}
@@ -365,17 +579,17 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   {artworkImages.map((img) => (
                     <div key={img.id} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs uppercase tracking-widest text-stone-400">For sale</p>
+                        <p className="text-sm uppercase tracking-widest text-stone-500">For sale</p>
                         {artist?.username && (
                           <a href={`/${artist.username}/works/${img.id}`} target="_blank" rel="noopener noreferrer"
-                            className="text-stone-400 hover:text-foreground transition-colors" title="View this work">
+                            className="text-stone-500 hover:text-foreground transition-colors" title="View this work">
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
-                      {img.caption && <p className="text-xs text-stone-400">{img.caption}</p>}
+                      {img.caption && <p className="text-sm text-stone-500">{img.caption}</p>}
                       <WorkDescription override={workDescriptions[img.id]} existing={img.description} />
                     </div>
                   ))}
@@ -384,10 +598,10 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={work.thumb_url ?? work.url} alt={work.caption ?? work.title ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-stone-400 truncate">{work.title ?? work.caption ?? ""}</p>
+                        <p className="text-sm text-stone-500 truncate">{work.title ?? work.caption ?? ""}</p>
                         {artist?.username && (
                           <a href={`/${artist.username}/works/${work.id}`} target="_blank" rel="noopener noreferrer"
-                            className="text-stone-400 hover:text-foreground transition-colors shrink-0" title="View this work">
+                            className="text-stone-500 hover:text-foreground transition-colors shrink-0" title="View this work">
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
@@ -399,21 +613,21 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                     <div key={img.id} className="space-y-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt={img.caption ?? ""} className="w-full object-contain bg-stone-50 border border-black/10" style={{ maxHeight: 200 }} />
-                      {img.caption && <p className="text-xs text-stone-400">{img.caption}</p>}
+                      {img.caption && <p className="text-sm text-stone-500">{img.caption}</p>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-stone-400">No portfolio images submitted.</p>
+                <p className="text-sm text-stone-500">No portfolio images submitted.</p>
               )}
               {status === "production_ready" && application.highres_asset_url && (
                 <div className="border-t border-black/10 pt-4 space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Production Asset</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Production Asset</p>
                   <button type="button" onClick={handleDownload} disabled={loadingDownload}
-                    className="text-xs border border-black px-4 py-2 hover:bg-black hover:text-white transition-colors disabled:opacity-50">
+                    className="text-sm border border-black px-4 py-2 hover:bg-black hover:text-white transition-colors disabled:opacity-50">
                     {loadingDownload ? "Generating link…" : "Download High-Res →"}
                   </button>
-                  {signedUrl && <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block text-xs underline">Direct link (1 hour)</a>}
+                  {signedUrl && <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block text-sm underline">Direct link (1 hour)</a>}
                 </div>
               )}
             </>
@@ -430,15 +644,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               )}
               {exhibitionHistory.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Exhibitions</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Exhibitions</p>
                   <div className="divide-y divide-black/5">
                     {exhibitionHistory.map((ex, i) => (
                       <div key={i} className="py-2.5 grid grid-cols-[80px_1fr] gap-4 text-sm">
-                        <span className="text-stone-400 tabular-nums">{ex.year}</span>
+                        <span className="text-stone-500 tabular-nums">{ex.year}</span>
                         <div>
-                          <span className="text-xs border border-black/20 px-1.5 py-0.5 mr-2 text-stone-500">{ex.type}</span>
+                          <span className="text-sm border border-black/20 px-1.5 py-0.5 mr-2 text-stone-500">{ex.type}</span>
                           <span className="font-medium">{ex.title}</span>
-                          <span className="text-stone-400"> · {ex.venue}{ex.location ? `, ${ex.location}` : ""}</span>
+                          <span className="text-stone-500"> · {ex.venue}{ex.location ? `, ${ex.location}` : ""}</span>
                         </div>
                       </div>
                     ))}
@@ -447,7 +661,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               )}
               {(artist?.received_grants ?? []).length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Grants received</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Grants received</p>
                   <ul className="space-y-1">
                     {(artist?.received_grants ?? []).map((g: string, i: number) => (
                       <li key={i} className="text-sm text-stone-600">— {g}</li>
@@ -456,57 +670,60 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 </div>
               )}
               {!artist?.cv_url && exhibitionHistory.length === 0 && (
-                <p className="text-sm text-stone-400">No CV information available.</p>
+                <p className="text-sm text-stone-500">No CV information available.</p>
               )}
             </>
           )}
+
+          {/* ─ Notes tab ─ */}
+          {appTab === "notes" && <NotesTab applicationId={application.id} canWrite={canEdit} />}
 
           {/* ─ Activity tab ─ */}
           {appTab === "activity" && (
             <>
               <div className="space-y-1">
-                <p className="text-xs text-stone-400">Applied {new Date(application.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}</p>
+                <p className="text-sm text-stone-500">Applied {new Date(application.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}</p>
               </div>
               {(application.status_log ?? []).length > 0 ? (
                 <div className="space-y-2">
                   {(application.status_log ?? []).map((entry) => (
                     <div key={entry.id} className="flex items-start gap-3 text-sm">
-                      <span className="text-stone-300 tabular-nums text-xs mt-0.5 shrink-0">
+                      <span className="text-stone-400 tabular-nums text-sm mt-0.5 shrink-0">
                         {new Date(entry.changed_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
                       </span>
                       <span className="text-stone-600">
                         {stageLabel(entry.old_status, stagesCfg)} → {stageLabel(entry.new_status, stagesCfg)}
                       </span>
-                      {entry.changed_by_name && <span className="text-stone-400 text-xs">by {entry.changed_by_name}</span>}
+                      {entry.changed_by_name && <span className="text-stone-500 text-sm">by {entry.changed_by_name}</span>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-stone-400">No status changes recorded.</p>
+                <p className="text-sm text-stone-500">No status changes recorded.</p>
               )}
               {/* Invoice / payment */}
               {status === "production_ready" && (
                 <div className="border-t border-black/10 pt-4 space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Payment</p>
-                  {application.invoice_paid_at ? (
-                    <p className="text-xs text-stone-500">Payment confirmed {new Date(application.invoice_paid_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
+                  <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Payment</p>
+                  {paidAt ? (
+                    <p className="text-sm text-stone-500">Payment confirmed {new Date(paidAt).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
                   ) : application.invoice_requested_at ? (
                     <div className="space-y-1.5">
-                      <p className="text-xs text-stone-500">Invoice received {new Date(application.invoice_requested_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}{application.invoice_amount ? ` — NZD ${application.invoice_amount.toFixed(2)}` : ""}</p>
-                      <button type="button" disabled={markingPaid}
+                      <p className="text-sm text-stone-500">Invoice received {new Date(application.invoice_requested_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}{application.invoice_amount ? ` — NZD ${application.invoice_amount.toFixed(2)}` : ""}</p>
+                      <button type="button" disabled={markingPaid || !canEdit}
                         onClick={async () => {
                           setMarkingPaid(true);
                           const r = await markInvoicePaid(application.id);
                           setMarkingPaid(false);
-                          if (r.error) { setToast("Error: " + r.error); } else { setToast("Payment confirmed"); }
+                          if (r.error) { setToast("Error: " + r.error); } else { setPaidAt(new Date().toISOString()); setToast("Payment confirmed"); }
                           setTimeout(() => setToast(null), 4000);
                         }}
-                        className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50">
+                        className="text-sm border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50">
                         {markingPaid ? "Saving…" : "Mark as paid →"}
                       </button>
                     </div>
                   ) : (
-                    <p className="text-xs text-stone-400">Awaiting invoice from artist.</p>
+                    <p className="text-sm text-stone-500">Awaiting invoice from artist.</p>
                   )}
                 </div>
               )}
@@ -521,12 +738,15 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
 
           {/* Decision */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Decision</p>
+            <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">Decision</p>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full shrink-0 ${currentStageDot}`} />
               <span className="text-sm font-medium">{stageLabel(status, stagesCfg)}</span>
             </div>
-            <div className="grid grid-cols-2 gap-1.5">
+            {!canEdit && (
+              <p className="text-sm text-stone-500">You have view-only access to this opportunity.</p>
+            )}
+            <div className={`grid grid-cols-2 gap-1.5 ${canEdit ? "" : "hidden"}`}>
               {[
                 { val: "shortlisted", label: "Shortlist" },
                 { val: "selected", label: "Select" },
@@ -534,7 +754,8 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                 { val: "rejected", label: "Reject" },
               ].filter((opt) => (enabledStageVals as Set<string>).has(opt.val)).map((opt) => (
                 <button key={opt.val} type="button"
-                  disabled={saving || status === opt.val}
+                  disabled={saving || status === opt.val || !!transitionError(application.released_status ?? "pending", opt.val)}
+                  title={transitionError(application.released_status ?? "pending", opt.val) ?? undefined}
                   onClick={() => {
                     if (opt.val === "rejected" || opt.val === "selected") {
                       setConfirmAction(opt);
@@ -542,7 +763,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                       applyStatusChange(opt.val);
                     }
                   }}
-                  className={`text-xs px-3 py-2 border transition-colors disabled:opacity-40 ${
+                  className={`text-sm px-3 py-2 border transition-colors disabled:opacity-40 ${
                     opt.val === "rejected"
                       ? "border-red-200 text-red-600 hover:bg-red-50"
                       : opt.val === "selected"
@@ -554,7 +775,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               ))}
             </div>
             {toast && (
-              <div className={`text-xs flex items-center gap-2 ${toast.startsWith("Error") ? "text-red-500" : "text-emerald-600"}`}>
+              <div className={`text-sm flex items-center gap-2 ${toast.startsWith("Error") ? "text-red-500" : "text-emerald-600"}`}>
                 <span>{toast}</span>
                 {toastIsUndo && undoStatus && (
                   <button type="button" onClick={async () => {
@@ -569,22 +790,27 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
           </div>
 
           {/* Rubric scoring */}
-          {(opportunity.pipeline_config?.questions?.length ?? 0) > 0 && (
+          {canEdit && (opportunity.pipeline_config?.questions?.length ?? 0) > 0 && (
             <div className="space-y-3 border-t border-black/10 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Your scoring</p>
+              <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">Your scoring</p>
               <RubricScoringPanel opportunityId={opportunity.id} applicationId={application.id} compact />
             </div>
           )}
 
+          {/* Team scores and assignment */}
+          {overview && overview.hasRubric && (
+            <TeamScores application={application} overview={overview} isOwner={isOwner} />
+          )}
+
           {/* Actions */}
           <div className="space-y-2 border-t border-black/10 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Actions</p>
-            <Link href={`/messages`} className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors w-full">
+            <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">Actions</p>
+            <Link href={`/messages`} className="flex items-center gap-2 text-sm px-3 py-2 border border-black/15 hover:border-black transition-colors w-full">
               <span>Message {artist?.full_name?.split(" ")[0] ?? "artist"}</span>
             </Link>
             {artist?.cv_url && (
               <a href={artist.cv_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs px-3 py-2 border border-black/15 hover:border-black transition-colors">
+                className="flex items-center gap-2 text-sm px-3 py-2 border border-black/15 hover:border-black transition-colors">
                 Download CV
               </a>
             )}
@@ -599,17 +825,17 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
             <p className="font-semibold">{confirmAction.val === "rejected" ? "Reject this application?" : "Select this applicant?"}</p>
             <p className="text-sm text-stone-500">
               {confirmAction.val === "rejected"
-                ? "You can reverse this at any time by changing their status."
-                : "This will create a verified achievement on their Patronage profile."}
+                ? "This is private until you publish results. Nobody is emailed now."
+                : "This is private until you publish results. Nobody is emailed now, and the verified achievement is added when you publish."}
             </p>
             {confirmAction.val === "rejected" && (
               <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Reason for not selecting (sent to artist — optional)"
+                placeholder="Feedback for the artist (optional, included when you publish results)"
                 rows={3} className="w-full text-sm border border-black/20 px-3 py-2 resize-none focus:outline-none focus:border-black" />
             )}
             {confirmAction.val === "selected" && (
               <textarea value={selectionMessage} onChange={(e) => setSelectionMessage(e.target.value)}
-                placeholder="Personal message to the artist (optional — included in the selection email)"
+                placeholder="Personal message (optional, included in the selection email when you publish)"
                 rows={3} className="w-full text-sm border border-black/20 px-3 py-2 resize-none focus:outline-none focus:border-black" />
             )}
             <div className="flex gap-3">

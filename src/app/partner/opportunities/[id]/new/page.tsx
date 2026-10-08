@@ -36,11 +36,13 @@ export default async function NewOpportunityWizardPage({ params, searchParams }:
   const opp = oppResult.data as Opportunity;
   const isPipeline = typeParam === "pipeline" || opp.routing_type === "pipeline";
 
-  const pipelineSteps = [1, 2, 3, 4, 5, 6];
+  const pipelineSteps = [1, 2, 3, 4, 5];
   const freeSteps = [2, 3];
   const validSteps = isPipeline ? pipelineSteps : freeSteps;
 
-  const requestedStep = parseInt(stepParam ?? "1");
+  // Older links pointed at step 6 (the review step); it is step 5 now.
+  const parsedStep = parseInt(stepParam ?? "1");
+  const requestedStep = isPipeline && parsedStep === 6 ? 5 : parsedStep;
   const initialStep = validSteps.includes(requestedStep)
     ? requestedStep
     : validSteps[0];

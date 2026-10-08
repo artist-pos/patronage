@@ -90,7 +90,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
       <div className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Application questions</h3>
-          <p className="text-xs text-stone-500">Artists answer these when applying. Drag to reorder.</p>
+          <p className="text-sm text-stone-500">Artists answer these when applying. Drag to reorder.</p>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -112,7 +112,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
         <button
           type="button"
           onClick={addQuestion}
-          className="flex items-center gap-1.5 text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
+          className="flex items-center gap-1.5 text-sm border border-black px-3 py-1.5 hover:bg-muted transition-colors"
         >
           <Plus className="w-3 h-3" /> Add question
         </button>
@@ -123,7 +123,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
         <div className="space-y-3">
           <div className="space-y-1">
             <h3 className="text-sm font-semibold">Auto-included from profile</h3>
-            <p className="text-xs text-stone-500">Added to the submission automatically — the artist doesn&apos;t do anything for these.</p>
+            <p className="text-sm text-stone-500">Added to the submission automatically — the artist doesn&apos;t do anything for these.</p>
           </div>
           <div className="space-y-2.5">
             {ARTIST_DOC_OPTIONS.filter((d) => (ARTIST_DOC_AUTO_VALS as string[]).includes(d.val)).map(({ val, label, desc }) => (
@@ -136,7 +136,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
                 />
                 <div>
                   <p className="text-sm">{label}</p>
-                  <p className="text-xs text-stone-400">{desc}</p>
+                  <p className="text-sm text-stone-500">{desc}</p>
                 </div>
               </label>
             ))}
@@ -146,7 +146,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
         <div className="space-y-3">
           <div className="space-y-1">
             <h3 className="text-sm font-semibold">Let the artist pick a work</h3>
-            <p className="text-xs text-stone-500">Each option checked here gives the artist a picker on the application form to choose one matching work to submit.</p>
+            <p className="text-sm text-stone-500">Each option checked here gives the artist a picker on the application form to choose one matching work to submit.</p>
           </div>
           <div className="space-y-2.5">
             {ARTIST_DOC_OPTIONS.filter((d) => (ARTIST_DOC_PICKER_VALS as string[]).includes(d.val)).map(({ val, label, desc }) => (
@@ -160,11 +160,11 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
                   />
                   <div>
                     <p className="text-sm">{label}</p>
-                    <p className="text-xs text-stone-400">{desc}</p>
+                    <p className="text-sm text-stone-500">{desc}</p>
                   </div>
                 </label>
                 {val === "portfolio" && (artistDocs as string[]).includes("portfolio") && (
-                  <label className="flex items-center gap-2 mt-2 ml-7 text-xs text-stone-500">
+                  <label className="flex items-center gap-2 mt-2 ml-7 text-sm text-stone-500">
                     How many works can they submit?
                     <input
                       type="number"
@@ -172,7 +172,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
                       max={10}
                       value={portfolioPickCount}
                       onChange={(e) => onChange({ portfolioPickCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                      className="w-14 border border-black/20 px-2 py-1 text-xs text-center focus:outline-none focus:border-black"
+                      className="w-14 border border-black/20 px-2 py-1 text-sm text-center focus:outline-none focus:border-black"
                     />
                   </label>
                 )}
@@ -192,7 +192,7 @@ export function FormBuilderPanel({ opportunityId, questions, showBadges, artistD
                   />
                   <div>
                     <p className="text-sm">Require a description of each work</p>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-sm text-stone-500">
                       Artists can&apos;t submit until every work they attach has one — either the description already on the work, or one written for your application.
                     </p>
                   </div>
@@ -252,7 +252,7 @@ function SortableQuestionItem({
           type="button"
           {...attributes}
           {...listeners}
-          className="mt-0.5 cursor-grab active:cursor-grabbing text-stone-400 hover:text-foreground"
+          className="mt-0.5 cursor-grab active:cursor-grabbing text-stone-500 hover:text-foreground"
           aria-label="Drag to reorder"
         >
           <GripVertical className="w-4 h-4" />
@@ -269,14 +269,14 @@ function SortableQuestionItem({
             <select
               value={q.type}
               onChange={(e) => onUpdate({ ...q, type: e.target.value as PipelineQuestion["type"] })}
-              className="border border-black/20 px-2 py-1 text-xs focus:outline-none focus:border-black bg-background"
+              className="border border-black/20 px-2 py-1 text-sm focus:outline-none focus:border-black bg-background"
             >
               <option value="long_text">Long text</option>
               <option value="short_text">Short text</option>
               <option value="file_upload">File upload</option>
               <option value="url">URL</option>
             </select>
-            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={q.required}
@@ -289,7 +289,7 @@ function SortableQuestionItem({
         <button
           type="button"
           onClick={onDelete}
-          className="text-stone-400 hover:text-foreground transition-colors mt-0.5"
+          className="text-stone-500 hover:text-foreground transition-colors mt-0.5"
           aria-label="Remove question"
         >
           <X className="w-3.5 h-3.5" />

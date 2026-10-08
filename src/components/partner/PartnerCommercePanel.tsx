@@ -65,7 +65,7 @@ export function PartnerCommercePanel({
         <h2 className="text-sm font-semibold uppercase tracking-widest text-stone-500">
           Open call & promotion
         </h2>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Optional partner add-ons. External-link listings remain free.
         </p>
       </div>
@@ -73,12 +73,12 @@ export function PartnerCommercePanel({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="border border-stone-100 rounded-lg p-4 space-y-2">
           <p className="text-sm font-medium">Publishing fee</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Use Patronage&rsquo;s submission flow instead of an external
             application link.
           </p>
           {pipelinePaidAt ? (
-            <p className="text-xs text-emerald-700">
+            <p className="text-sm text-emerald-700">
               Active since {pipelinePaidAt.slice(0, 10)}.
             </p>
           ) : (
@@ -87,14 +87,14 @@ export function PartnerCommercePanel({
                 type="button"
                 onClick={handlePipeline}
                 disabled={isPending}
-                className="text-xs px-3 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-60"
+                className="text-sm px-3 py-1.5 rounded-md bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-60"
               >
                 Activate — {formatCents(
                   grossUpForStripe(PIPELINE_ACTIVATION_PRICE_CENTS).buyerTotalCents,
                   PRICING_CURRENCY,
                 )}
               </button>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Includes a {formatCents(
                   grossUpForStripe(PIPELINE_ACTIVATION_PRICE_CENTS).stripeFeeCents,
                   PRICING_CURRENCY,
@@ -106,12 +106,12 @@ export function PartnerCommercePanel({
 
         <div className="border border-stone-100 rounded-lg p-4 space-y-2">
           <p className="text-sm font-medium">Featured listing</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Promote this listing in featured slots across Patronage. Stacks
             with prior purchases.
           </p>
           {featuredActive && featuredUntil && (
-            <p className="text-xs text-emerald-700">
+            <p className="text-sm text-emerald-700">
               Featured until {featuredUntil.slice(0, 10)}.
             </p>
           )}
@@ -124,21 +124,21 @@ export function PartnerCommercePanel({
                   type="button"
                   onClick={() => handleFeature(plan.days)}
                   disabled={isPending}
-                  className="text-xs px-3 py-1.5 rounded-md border border-stone-200 hover:bg-stone-50 transition-colors disabled:opacity-60"
+                  className="text-sm px-3 py-1.5 rounded-md border border-stone-200 hover:bg-stone-50 transition-colors disabled:opacity-60"
                 >
                   {plan.label} — {formatCents(buyerTotalCents, PRICING_CURRENCY)}
                 </button>
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Includes a 2.9% + 30c card processing fee.
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 rounded-md px-3 py-2">{error}</p>
+        <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{error}</p>
       )}
     </section>
   );

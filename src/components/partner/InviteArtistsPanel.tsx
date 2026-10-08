@@ -101,24 +101,24 @@ export function InviteArtistsPanel({ opportunityId, opportunityTitle }: Props) {
 
       {/* Artist search */}
       <div className="space-y-2">
-        <p className="text-xs text-stone-500">
+        <p className="text-sm text-stone-500">
           Search for artists on Patronage and copy a personalised invite message to send them.
         </p>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
           <input
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             placeholder="Search artists by name…"
-            className="w-full border border-black/10 pl-9 pr-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-black/20"
+            className="w-full border border-black/10 pl-9 pr-3 py-2 text-sm placeholder:text-stone-500 focus:outline-none focus:ring-1 focus:ring-black/20"
           />
         </div>
       </div>
 
       {/* Results */}
       {searching && (
-        <p className="text-xs text-stone-400">Searching…</p>
+        <p className="text-sm text-stone-500">Searching…</p>
       )}
 
       {results.length > 0 && (
@@ -139,12 +139,12 @@ export function InviteArtistsPanel({ opportunityId, opportunityTitle }: Props) {
                 <p className="text-sm font-medium truncate">
                   {artist.full_name ?? artist.username}
                 </p>
-                <p className="text-xs text-stone-400 truncate">@{artist.username}</p>
+                <p className="text-sm text-stone-500 truncate">@{artist.username}</p>
               </div>
               <button
                 type="button"
                 onClick={() => copyInviteLink(artist)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs text-stone-500 hover:text-foreground transition-colors px-2 py-1"
+                className="shrink-0 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-foreground transition-colors px-2 py-1"
               >
                 {copiedId === artist.id ? (
                   <>
@@ -164,7 +164,7 @@ export function InviteArtistsPanel({ opportunityId, opportunityTitle }: Props) {
       )}
 
       {!searching && query.trim().length >= 2 && results.length === 0 && (
-        <p className="text-xs text-stone-400">No artists found.</p>
+        <p className="text-sm text-stone-500">No artists found.</p>
       )}
     </div>
   );

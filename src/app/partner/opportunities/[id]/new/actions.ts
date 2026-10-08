@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { RubricCriterion, PartnerDocument } from "@/types/database";
 import type { LocalCriterion } from "@/components/partner/wizard/RubricBuilder";
 
@@ -68,9 +69,11 @@ export async function saveRubricCriteria(
     .eq("opportunity_id", opportunityId)
     .eq("locked", false);
 
-  if (criteria.length === 0) return {};
+  // Locked criteria belong to scoring that has started. They are never rewritten here.
+  const open = criteria.filter((c) => !c.locked);
+  if (open.length === 0) return {};
 
-  const rows = criteria.map((c, i) => ({
+  const rows = open.map((c, i) => ({
     id: c.id,
     opportunity_id: opportunityId,
     label: c.label,
@@ -87,6 +90,38 @@ export async function saveRubricCriteria(
 
   if (error) return { error: error.message };
   return {};
+}
+
+/**
+ * Fix the wording of a criterion after scoring has started. Only the label and
+ * helper text can change: weight, scale and the list itself stay fixed, because
+ * changing those would change what earlier scores mean.
+ */
+export async function updateCriterionWording(
+  opportunityId: string,
+  criterionId: string,
+  label: string,
+  helper: string | null,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: opp } = await supabase.from("opportunities").select("profile_id").eq("id", opportunityId).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
+  if (!opp || (opp.profile_id !== user.id && !isAdminUser)) return { error: "Not authorised" };
+
+  const trimmed = label.trim();
+  if (!trimmed) return { error: "A criterion needs a name." };
+
+  // RLS blocks edits to locked rows, so this goes through the server once ownership is checked.
+  const { error } = await createAdminClient()
+    .from("rubric_criteria")
+    .update({ label: trimmed.slice(0, 120), helper: helper?.trim() ? helper.trim().slice(0, 300) : null })
+    .eq("id", criterionId)
+    .eq("opportunity_id", opportunityId);
+  return error ? { error: error.message } : {};
 }
 
 export async function getRubricCriteria(opportunityId: string): Promise<RubricCriterion[]> {

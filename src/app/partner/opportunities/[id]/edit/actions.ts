@@ -8,6 +8,17 @@ import { validPartnerProfileId } from "@/lib/organiser-link";
 import { isAdmin } from "@/lib/admin";
 import type { ApplicationLink } from "@/types/database";
 
+// The only columns a listing owner may write. Anything else in the payload is
+// dropped, so status, payment and featured flags can't be set from the client.
+const PARTNER_EDITABLE = new Set([
+  "title", "organiser", "organiser_profile_id", "caption", "full_description", "url",
+  "application_links", "contact_email", "type", "country", "city", "featured_image_url",
+  "secondary_image_url", "sub_categories", "career_stage", "tags", "opens_at", "deadline",
+  "funding_range", "entry_fee", "entry_fee_currency", "entry_fee_local", "grant_type",
+  "recipients_count", "artist_payment_type", "travel_support", "travel_support_details",
+  "routing_type", "source", "source_url", "show_badges_in_submission", "pipeline_config",
+]);
+
 async function getOpportunityForPartner(id: string) {
   const supabase = await createClient();
   const {
@@ -67,7 +78,9 @@ export async function updateOpportunityPartner(
   const { supabase, user, opp } = await getOpportunityForPartner(id);
 
   // Resolve entry fee currency conversion if needed
-  const updateData = { ...data };
+  const updateData = Object.fromEntries(
+    Object.entries(data).filter(([key]) => PARTNER_EDITABLE.has(key))
+  ) as typeof data;
 
   // A partner can only attribute their own listing to their own account;
   // admins (listing on behalf of an organisation, including shadow accounts)
@@ -121,7 +134,7 @@ export async function updateOpportunityPartner(
 
   if (error) throw new Error(error.message);
 
-  revalidatePath("/partner/dashboard");
+  revalidatePath("/dashboard");
   revalidatePath("/opportunities");
   revalidatePath(`/opportunities/${id}`);
   // The public page is served by slug when one exists — revalidating only the
@@ -157,7 +170,7 @@ export async function publishOpportunityPartner(id: string) {
 
   if (error) throw new Error(error.message);
 
-  revalidatePath("/partner/dashboard");
+  revalidatePath("/dashboard");
   revalidatePath("/opportunities");
   revalidatePath(`/opportunities/${id}`);
 }

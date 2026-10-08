@@ -73,8 +73,8 @@ export async function initiatePipelineActivation(
         pipeline_payment_id: payment.id,
         opportunity_id: opp.id,
       },
-      successPath: `/partner/opportunities/${opp.id}/edit?activation=success`,
-      cancelPath: `/partner/opportunities/${opp.id}/edit`,
+      successPath: `/partner/opportunities/${opp.id}/manage?activation=success`,
+      cancelPath: `/partner/opportunities/${opp.id}/manage?activation=cancelled`,
     });
     await admin
       .from("pipeline_entry_payments")

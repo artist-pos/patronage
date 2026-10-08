@@ -27,7 +27,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
     });
   }, [opportunityId, applicationId]);
 
-  if (!loaded) return <p className="text-xs text-stone-400">Loading rubric…</p>;
+  if (!loaded) return <p className="text-sm text-stone-500">Loading rubric…</p>;
   if (criteria.length === 0) return null;
 
   function myScore(criterionId: string) {
@@ -59,9 +59,9 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest">Scoring</p>
+        <p className="text-sm font-semibold uppercase tracking-widest">Scoring</p>
         {avg !== null && (
-          <span className="text-xs font-medium">
+          <span className="text-sm font-medium">
             {avg.toFixed(0)}% overall
           </span>
         )}
@@ -76,10 +76,10 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
             <div key={c.id} className="space-y-1.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className={`font-medium ${compact ? "text-xs" : "text-sm"}`}>{c.label}</p>
-                  {!compact && c.helper && <p className="text-xs text-stone-400">{c.helper}</p>}
+                  <p className={`font-medium ${compact ? "text-sm" : "text-sm"}`}>{c.label}</p>
+                  {!compact && c.helper && <p className="text-sm text-stone-500">{c.helper}</p>}
                 </div>
-                {!compact && <span className="text-xs text-stone-400 shrink-0 mt-0.5">×{c.weight}</span>}
+                {!compact && <span className="text-sm text-stone-500 shrink-0 mt-0.5">×{c.weight}</span>}
               </div>
               <div className="flex gap-1">
                 {steps.map((n) => (
@@ -88,7 +88,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
                     type="button"
                     disabled={isSaving}
                     onClick={() => handleScore(c.id, compact ? Math.round((n / 5) * c.scale_max) : n)}
-                    className={`${compact ? "w-6 h-6 text-xs" : "w-8 h-8 text-xs"} font-medium border transition-colors ${
+                    className={`${compact ? "w-6 h-6 text-sm" : "w-8 h-8 text-sm"} font-medium border transition-colors ${
                       compact
                         ? current !== null && n <= Math.round((current / c.scale_max) * 5)
                           ? "border-black bg-black text-white"
@@ -108,7 +108,7 @@ export function RubricScoringPanel({ opportunityId, applicationId, compact }: Pr
       </div>
 
       {scored.length < criteria.length && (
-        <p className="text-xs text-stone-400">
+        <p className="text-sm text-stone-500">
           {criteria.length - scored.length} criterion{criteria.length - scored.length !== 1 ? "a" : ""} not yet scored.
         </p>
       )}

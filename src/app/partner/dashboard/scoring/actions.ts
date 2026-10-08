@@ -3,9 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNudgeEmail } from "@/lib/email";
+import { saveScores } from "@/app/review/actions";
 import type { RubricCriterion, ApplicationScore } from "@/types/database";
 
-async function authoriseReviewer(opportunityId: string) {
+async function authoriseReviewer(opportunityId: string, requireEditor = false) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -23,7 +24,7 @@ async function authoriseReviewer(opportunityId: string) {
       .eq("opportunity_id", opportunityId)
       .eq("profile_id", user.id)
       .maybeSingle();
-    if (!collab) throw new Error("Not authorised");
+    if (!collab || (requireEditor && collab.role !== "editor")) throw new Error("Not authorised");
   }
 
   return { supabase, user };
@@ -57,41 +58,17 @@ export async function upsertScore(
   applicationId: string,
   criterionId: string,
   score: number,
-  note?: string
+  _note?: string
 ): Promise<{ error?: string }> {
-  const { supabase, user } = await authoriseReviewer(opportunityId).catch((e) => {
-    throw e;
-  });
-
-  // Lock the criterion after first score
-  await supabase
-    .from("rubric_criteria")
-    .update({ locked: true })
-    .eq("id", criterionId)
-    .eq("locked", false);
-
-  const { error } = await supabase
-    .from("application_scores")
-    .upsert(
-      {
-        application_id: applicationId,
-        criterion_id: criterionId,
-        reviewer_id: user.id,
-        score,
-        note: note ?? null,
-      },
-      { onConflict: "application_id,reviewer_id,criterion_id" }
-    );
-
-  if (error) return { error: error.message };
-  return {};
+  // One path for every score: range-checked and limited to assigned applications.
+  return saveScores(opportunityId, applicationId, { [criterionId]: score });
 }
 
 export async function nudgeReviewer(
   opportunityId: string,
   reviewerId: string
 ): Promise<{ error?: string }> {
-  await authoriseReviewer(opportunityId);
+  await authoriseReviewer(opportunityId, true);
 
   const admin = createAdminClient();
   const [{ data: authData }, { data: opp }] = await Promise.all([

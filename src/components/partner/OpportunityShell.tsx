@@ -1,21 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Download, Bell, ExternalLink, MoreHorizontal } from "lucide-react";
-import { BatchNotificationPanel } from "./BatchNotificationPanel";
+import { useRouter } from "next/navigation";
+import { Download, ExternalLink } from "lucide-react";
+import { ResultsTab } from "./ResultsTab";
 import { KanbanView } from "./pipeline/KanbanView";
 import { TableView } from "./pipeline/TableView";
 import { TriageView } from "./pipeline/TriageView";
 import { ApplicantPanel } from "./ApplicantPanel";
 import { CollaboratorsPanel } from "./CollaboratorsPanel";
-import { closeOpportunity, delistOpportunity, relistOpportunity } from "@/app/partner/dashboard/actions";
-import type { EnrichedApp, OpportunityShape } from "./ApplicationsManager";
+import { NextStepBanner } from "./NextStepBanner";
+import { AccessibleDialog } from "@/components/ui/AccessibleDialog";
+import {
+  closeOpportunity,
+  delistOpportunity,
+  relistOpportunity,
+  reopenOpportunity,
+  archiveOpportunity,
+  unarchiveOpportunity,
+  getApplicantEmails,
+} from "@/app/partner/dashboard/actions";
+import { getReviewOverview, type ReviewOverview } from "@/app/partner/dashboard/review-actions";
+import type { EnrichedApp, OpportunityShape } from "./types";
 import type { OpportunityCollaborator } from "@/types/database";
 import { getStagesWithOccupied, stageLabel } from "@/lib/pipeline-stages";
+import { nextStep, type NextTarget } from "@/lib/next-step";
 
 type ViewMode = "kanban" | "table" | "triage";
-type TabId = "pipeline" | "setup" | "analytics" | "impact" | "collaborators";
+type TabId = "applications" | "results" | "settings";
+type SettingsTabId = "listing" | "team" | "reports" | "impact";
+
+const VIEW_LABEL: Record<ViewMode, string> = { table: "List", kanban: "Board", triage: "One by one" };
 
 interface FollowupRow {
   id: string;
@@ -49,6 +65,7 @@ type OppExtra = {
   is_featured?: boolean;
   pipeline_paid_at?: string | null;
   is_active?: boolean;
+  archived_at?: string | null;
 };
 
 interface Props {
@@ -57,8 +74,13 @@ interface Props {
   followups: FollowupRow[];
   collaborators: OpportunityCollaborator[];
   isOwner: boolean;
+  /** Owner, admin or editor collaborator. Viewers can read but not decide or export. */
+  canEdit: boolean;
   opportunityId: string;
+  initialTab?: TabId;
 }
+
+type LifecycleAction = "close" | "delist" | "relist" | "reopen" | "archive" | "unarchive";
 
 function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
   const questions: { id: string; label: string }[] = opp.pipeline_config?.questions?.length
@@ -99,23 +121,88 @@ function exportCSV(apps: EnrichedApp[], opp: OpportunityShape) {
   URL.revokeObjectURL(url);
 }
 
-export function OpportunityShell({ opp, apps, followups, collaborators, isOwner, opportunityId }: Props) {
-  const [tab, setTab] = useState<TabId>("pipeline");
+const CONFIRM_COPY: Record<LifecycleAction, { title: string; body: string; cta: string }> = {
+  reopen: {
+    title: "Reopen applications?",
+    body: "Artists will be able to apply again until the deadline.",
+    cta: "Reopen applications",
+  },
+  archive: {
+    title: "Archive this call?",
+    body: "Use this when you are completely finished. Applications close and the call moves out of your live list. The public page and every application are kept, and you can restore it any time.",
+    cta: "Archive this call",
+  },
+  unarchive: {
+    title: "Restore from archive?",
+    body: "The call returns to your list. Applications stay closed until you reopen them.",
+    cta: "Restore",
+  },
+  close: {
+    title: "Close applications?",
+    body: "Artists will no longer be able to apply, and the listing will show as closed. Everything you have received is kept, and you can carry on reviewing.",
+    cta: "Close applications",
+  },
+  delist: {
+    title: "Hide this call from the public?",
+    body: "It is taken off the Patronage listings and search. Applications you have received are not affected, and you can show it again whenever you like.",
+    cta: "Hide from public",
+  },
+  relist: {
+    title: "Show this call to the public again?",
+    body: "It will reappear in the listings and search.",
+    cta: "Show to the public",
+  },
+};
+
+export function OpportunityShell({ opp, apps, followups, collaborators, isOwner, canEdit, opportunityId, initialTab = "applications" }: Props) {
+  const router = useRouter();
+  const [tab, setTab] = useState<TabId>(initialTab === "results" && !(opp.routing_type === "pipeline" && isOwner) ? "applications" : initialTab);
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>("listing");
   const [view, setView] = useState<ViewMode>("table");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [localApps, setLocalApps] = useState(apps);
-  const [confirmDialog, setConfirmDialog] = useState<"close_capacity" | "close_round" | "delist" | "relist" | null>(null);
+  const [overview, setOverview] = useState<ReviewOverview | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<LifecycleAction | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const openApp = openAppId ? localApps.find((a) => a.id === openAppId) ?? null : null;
+
+  function say(text: string) {
+    clearTimeout(noticeTimer.current);
+    setNotice(text);
+    noticeTimer.current = setTimeout(() => setNotice(null), 5000);
+  }
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
 
   function handleStatusChange(appId: string, status: string) {
     setLocalApps((prev) => prev.map((a) => (a.id === appId ? { ...a, status } : a)));
   }
+
+  // Applicant emails are only loaded for people who may see them, and only after
+  // the page is up, rather than as one auth lookup per applicant on every render.
+  useEffect(() => {
+    if (!canEdit) return;
+    let cancelled = false;
+    getApplicantEmails(opportunityId).then((emails) => {
+      if (cancelled) return;
+      setLocalApps((prev) =>
+        prev.map((a) => (a.artist && emails[a.id] ? { ...a, artist: { ...a.artist, email: emails[a.id] } } : a))
+      );
+    });
+    return () => { cancelled = true; };
+  }, [canEdit, opportunityId]);
+
+  // Scores, progress and assignments for the board.
+  useEffect(() => {
+    if (!canEdit) return;
+    let cancelled = false;
+    getReviewOverview(opportunityId).then((ov) => { if (!cancelled && ov) setOverview(ov); });
+    return () => { cancelled = true; };
+  }, [canEdit, opportunityId]);
 
   const filtered = statusFilter ? localApps.filter((a) => a.status === statusFilter) : localApps;
 
@@ -123,177 +210,166 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
   const counts = Object.fromEntries(stages.map((s) => [s.val, localApps.filter((a) => a.status === s.val).length]));
   const isPipeline = opp.routing_type === "pipeline";
   const isDelisted = opp.status === "unlisted";
-  const isClosed = opp.is_active === false;
+  const isArchived = !!opp.archived_at;
+  const isClosedByHand = opp.is_active === false && !isArchived;
+  const canReopen = isClosedByHand && opp.status === "published";
 
   const daysLeft = opp.deadline
     ? Math.ceil((new Date(opp.deadline + "T00:00:00").getTime() - Date.now()) / 86400000)
     : null;
+  const isClosed = isClosedByHand || (daysLeft !== null && daysLeft <= 0);
+
+  // Decisions made on the board that artists have not been told about yet.
+  const unpublished = localApps.filter((a) => a.status !== "pending" && (a.released_status ?? null) !== a.status).length;
+  const reviewerCount = collaborators.filter((c) => c.role === "editor").length;
+
+  const next = nextStep({
+    status: opp.status,
+    archived: isArchived,
+    closed: isClosed,
+    daysLeft,
+    total: localApps.length,
+    undecided: counts.pending ?? 0,
+    unpublished,
+    reviewers: reviewerCount,
+  });
+
+  function goTo(target: NextTarget) {
+    switch (target) {
+      case "review":
+        setTab("applications");
+        setStatusFilter("pending");
+        setView("triage");
+        break;
+      case "results":
+        setTab("results");
+        break;
+      case "team":
+        setTab("settings");
+        setSettingsTab("team");
+        break;
+      case "close":
+        setConfirmDialog("close");
+        break;
+      case "reopen":
+        setConfirmDialog("reopen");
+        break;
+      case "archive":
+        setConfirmDialog("archive");
+        break;
+      case "edit":
+        router.push(`/partner/opportunities/${opportunityId}/new?step=2&type=pipeline`);
+        break;
+      case "share": {
+        const url = `${window.location.origin}/opportunities/${opp.slug ?? opportunityId}`;
+        navigator.clipboard?.writeText(url).then(
+          () => say("Link copied. Paste it into an email or a post."),
+          () => say(`Your link: ${url}`),
+        );
+        break;
+      }
+    }
+  }
 
   const TABS: { id: TabId; label: string }[] = [
-    { id: "pipeline", label: `Applications${localApps.length > 0 ? ` ${localApps.length}` : ""}` },
-    { id: "setup", label: "Setup" },
-    { id: "analytics", label: "Analytics" },
-    { id: "impact", label: `Impact${followups.length > 0 ? ` ${followups.length}` : ""}` },
-    { id: "collaborators", label: `Collaborators${collaborators.length > 0 ? ` ${collaborators.length}` : ""}` },
+    { id: "applications", label: `Applications${localApps.length > 0 ? ` (${localApps.length})` : ""}` },
+    ...(isPipeline && isOwner ? [{ id: "results" as TabId, label: `Send results${unpublished > 0 ? ` (${unpublished} to send)` : ""}` }] : []),
+    { id: "settings", label: "Settings" },
+  ];
+  const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
+    { id: "listing", label: "This call" },
+    { id: "team", label: `Review team${collaborators.length > 0 ? ` (${collaborators.length})` : ""}` },
+    { id: "reports", label: "Reports" },
+    { id: "impact", label: `After the programme${followups.length > 0 ? ` (${followups.length})` : ""}` },
   ];
 
-  async function handleAction(action: "close_capacity" | "close_round" | "delist" | "relist") {
+  function onTabKey<T extends string>(e: React.KeyboardEvent, ids: T[], current: T, set: (id: T) => void) {
+    const i = ids.indexOf(current);
+    let to: number | null = null;
+    if (e.key === "ArrowRight") to = (i + 1) % ids.length;
+    else if (e.key === "ArrowLeft") to = (i - 1 + ids.length) % ids.length;
+    else if (e.key === "Home") to = 0;
+    else if (e.key === "End") to = ids.length - 1;
+    if (to === null) return;
+    e.preventDefault();
+    set(ids[to]);
+    requestAnimationFrame(() => document.getElementById(`tab-${ids[to!]}`)?.focus());
+  }
+
+  async function handleAction(action: LifecycleAction) {
     setActionPending(true);
     setActionError(null);
     let result: { error?: string };
-    if (action === "close_capacity" || action === "close_round") {
-      result = await closeOpportunity(opportunityId, action === "close_capacity" ? "capacity" : "round_end");
-    } else if (action === "delist") {
-      result = await delistOpportunity(opportunityId);
-    } else {
-      result = await relistOpportunity(opportunityId);
-    }
+    if (action === "close") result = await closeOpportunity(opportunityId, "capacity");
+    else if (action === "delist") result = await delistOpportunity(opportunityId);
+    else if (action === "relist") result = await relistOpportunity(opportunityId);
+    else if (action === "reopen") result = await reopenOpportunity(opportunityId);
+    else if (action === "archive") result = await archiveOpportunity(opportunityId);
+    else result = await unarchiveOpportunity(opportunityId);
     setActionPending(false);
     if (result.error) {
       setActionError(result.error);
     } else {
       setConfirmDialog(null);
-      setShowActionsMenu(false);
+      router.refresh();
     }
   }
 
-  const CONFIRM_COPY: Record<string, { title: string; body: string; cta: string; destructive?: boolean }> = {
-    close_capacity: {
-      title: "Close applications?",
-      body: "Applications will close immediately. Existing submissions are preserved and your review workflow continues normally. Applicants will see the listing as closed.",
-      cta: "Close applications",
-    },
-    close_round: {
-      title: "End this round?",
-      body: "This ends the open round and closes applications. Your review workflow and all submissions remain accessible. Applicants will see the listing as closed.",
-      cta: "End round",
-    },
-    delist: {
-      title: "Delist this opportunity?",
-      body: "This removes the listing from the public feed and search. Existing applications are unaffected and the listing can be re-published at any time.",
-      cta: "Delist",
-    },
-    relist: {
-      title: "Re-publish this listing?",
-      body: "The listing will reappear in public search and the opportunity feed.",
-      cta: "Re-publish",
-    },
-  };
+  const statusPill = isArchived
+    ? { text: "Archived", tone: "bg-stone-100 text-stone-700 border-stone-300" }
+    : isDelisted
+      ? { text: "Hidden from the public", tone: "bg-stone-100 text-stone-700 border-stone-300" }
+      : opp.status !== "published"
+        ? { text: opp.status === "draft" ? "Not finished" : "Being checked", tone: "bg-amber-50 text-amber-800 border-amber-300" }
+        : isClosed
+          ? { text: "Applications closed", tone: "bg-stone-100 text-stone-700 border-stone-300" }
+          : { text: daysLeft !== null ? `Open · ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left` : "Open", tone: daysLeft !== null && daysLeft < 7 ? "bg-red-50 text-red-700 border-red-300" : "bg-emerald-50 text-emerald-800 border-emerald-300" };
+
+  const headerBtn = "inline-flex items-center gap-2 border border-black/40 px-4 py-2 font-mono text-sm font-medium hover:border-black transition-colors";
 
   return (
-    <>
+    <div className="ams-comfort">
       {/* Sticky header */}
       <div className="sticky top-0 z-20 bg-background border-b border-black/10">
-        <div className="max-w-[1600px] mx-auto px-6">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
 
           {/* Top bar */}
-          <div className="h-11 flex items-center justify-between gap-4">
-            <Link href="/studio" className="flex items-center gap-1 text-xs text-stone-400 hover:text-foreground transition-colors">
-              ‹ Partner Dashboard
+          <div className="py-2 flex flex-wrap items-center justify-between gap-3">
+            <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-foreground">
+              ‹ Your dashboard
             </Link>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => exportCSV(localApps, opp)}
-                className="flex items-center gap-1.5 text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
-              {opp.slug && (
-                <Link
-                  href={`/opportunities/${opp.slug ?? opp.id}`}
-                  target="_blank"
-                  className="flex items-center gap-1.5 text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Public listing
+            <div className="flex flex-wrap items-center gap-2">
+              {canEdit && isPipeline && (
+                <Link href={`/review/${opportunityId}`} className={headerBtn}>
+                  Score applications
                 </Link>
               )}
-              {isPipeline && (
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications(true)}
-                  className="flex items-center gap-1.5 text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors"
-                >
-                  <Bell className="w-3 h-3" />
-                  Notifications
+              {canEdit && (
+                <button type="button" onClick={() => exportCSV(localApps, opp)} className={headerBtn}>
+                  <Download className="w-4 h-4" aria-hidden />
+                  Download list
                 </button>
               )}
-              {isOwner && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowActionsMenu((v) => !v)}
-                    className="flex items-center gap-1 text-xs border border-black/20 px-2.5 py-1.5 hover:border-black transition-colors"
-                  >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                  </button>
-                  {showActionsMenu && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setShowActionsMenu(false)} />
-                      <div className="absolute right-0 top-8 z-40 bg-background border border-black/20 shadow-md py-1 min-w-[180px]">
-                        {!isClosed && (
-                          <>
-                            <button type="button" onClick={() => { setConfirmDialog("close_capacity"); setShowActionsMenu(false); }}
-                              className="w-full text-left text-xs px-4 py-2 hover:bg-stone-50 transition-colors">
-                              Close applications
-                            </button>
-                            <button type="button" onClick={() => { setConfirmDialog("close_round"); setShowActionsMenu(false); }}
-                              className="w-full text-left text-xs px-4 py-2 hover:bg-stone-50 transition-colors">
-                              End round
-                            </button>
-                            <div className="border-t border-black/10 my-1" />
-                          </>
-                        )}
-                        {isDelisted ? (
-                          <button type="button" onClick={() => { setConfirmDialog("relist"); setShowActionsMenu(false); }}
-                            className="w-full text-left text-xs px-4 py-2 hover:bg-stone-50 transition-colors">
-                            Re-publish listing
-                          </button>
-                        ) : (
-                          <button type="button" onClick={() => { setConfirmDialog("delist"); setShowActionsMenu(false); }}
-                            className="w-full text-left text-xs px-4 py-2 hover:bg-stone-50 transition-colors text-stone-500">
-                            Delist
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+              {opp.slug && (
+                <Link href={`/opportunities/${opp.slug ?? opp.id}`} target="_blank" className={headerBtn}>
+                  <ExternalLink className="w-4 h-4" aria-hidden />
+                  See the public page
+                </Link>
               )}
             </div>
           </div>
 
-          {/* Title + tags */}
-          <div className="pb-2 space-y-1.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {opp.type && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.type}</span>}
-              {opp.country && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.country}{opp.city ? `, ${opp.city}` : ""}</span>}
-              {collaborators.length > 0 && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">Committee · {collaborators.length}</span>}
-              {daysLeft !== null && (
-                <span className={`text-xs border px-2 py-0.5 ${daysLeft < 7 && daysLeft > 0 ? "border-red-300 text-red-600 bg-red-50" : "border-black/20 text-stone-500"}`}>
-                  {daysLeft > 0 ? `${daysLeft} days left` : "Closed"}
-                </span>
-              )}
-              {counts.pending > 0 && (
-                <button type="button" onClick={() => { setTab("pipeline"); setStatusFilter("pending"); }}
-                  className="text-xs border border-amber-300 bg-amber-50 text-amber-700 px-2 py-0.5 hover:bg-amber-100 transition-colors">
-                  {counts.pending} new to review
-                </button>
-              )}
-              {(counts.production_ready ?? 0) > 0 && (
-                <span className="text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5">
-                  {counts.production_ready} in production
-                </span>
-              )}
-              {isClosed && <span className="text-xs border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Applications closed</span>}
-              {isDelisted && <span className="text-xs border border-stone-300 bg-stone-100 text-stone-600 px-2 py-0.5">Delisted</span>}
+          {/* Title */}
+          <div className="pb-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`font-mono text-sm font-medium border px-3 py-1 ${statusPill.tone}`}>{statusPill.text}</span>
+              {opp.type && <span className="font-mono text-sm border border-black/20 px-3 py-1 text-stone-600">{opp.type}</span>}
+              {opp.country && <span className="font-mono text-sm border border-black/20 px-3 py-1 text-stone-600">{opp.country}{opp.city ? `, ${opp.city}` : ""}</span>}
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">{opp.title}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{opp.title}</h1>
               {(opp.funding_range || opp.organiser) && (
-                <p className="text-sm text-stone-500">
+                <p className="text-base text-stone-600">
                   {[opp.funding_range, opp.organiser].filter(Boolean).join(" · ")}
                 </p>
               )}
@@ -301,12 +377,22 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
           </div>
 
           {/* Tab bar */}
-          <div className="flex items-center -mb-px">
+          <div role="tablist" aria-label="Sections" className="flex items-center -mb-px overflow-x-auto">
             {TABS.map((t) => (
-              <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                className={`text-sm px-4 py-2.5 border-b-2 transition-colors whitespace-nowrap ${
-                  tab === t.id ? "border-black text-foreground font-medium" : "border-transparent text-stone-400 hover:text-foreground"
-                }`}>
+              <button
+                key={t.id}
+                id={`tab-${t.id}`}
+                role="tab"
+                aria-selected={tab === t.id}
+                aria-controls={`panel-${t.id}`}
+                tabIndex={tab === t.id ? 0 : -1}
+                type="button"
+                onClick={() => setTab(t.id)}
+                onKeyDown={(e) => onTabKey(e, TABS.map((x) => x.id), tab, setTab)}
+                className={`text-base px-5 py-3 border-b-4 transition-colors whitespace-nowrap ${
+                  tab === t.id ? "border-brand text-foreground font-semibold" : "border-transparent text-stone-600 hover:text-foreground"
+                }`}
+              >
                 {t.label}
               </button>
             ))}
@@ -314,76 +400,138 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* ── Pipeline tab ── */}
-        {tab === "pipeline" && (
-          <div className="space-y-4">
+        {notice && (
+          <p role="status" className="border border-emerald-300 bg-emerald-50 px-4 py-3 text-base text-emerald-900">{notice}</p>
+        )}
+
+        {isPipeline && tab !== "settings" && (
+          <NextStepBanner step={next} onAction={goTo} canAct={canEdit && (isOwner || next.action?.target === "review")} />
+        )}
+
+        {/* ── Applications tab ── */}
+        {tab === "applications" && (
+          <div id="panel-applications" role="tabpanel" aria-labelledby="tab-applications" className="space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button type="button" onClick={() => setStatusFilter(null)}
-                  className={`text-xs px-3 py-1.5 border transition-colors ${statusFilter === null ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"}`}>
-                  All ({localApps.length})
+              <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Show applications">
+                <button type="button" onClick={() => setStatusFilter(null)} aria-pressed={statusFilter === null}
+                  className={`text-sm px-4 py-2 border transition-colors ${statusFilter === null ? "border-black bg-black text-white" : "border-stone-300 hover:border-black"}`}>
+                  Everyone ({localApps.length})
                 </button>
                 {stages.filter((s) => counts[s.val] > 0).map((s) => (
-                  <button key={s.val} type="button" onClick={() => setStatusFilter(statusFilter === s.val ? null : s.val)}
-                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 border transition-colors ${statusFilter === s.val ? "border-black bg-black text-white" : "border-stone-200 hover:border-black"} ${s.disabled ? "opacity-60" : ""}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusFilter === s.val ? "bg-white" : s.dot}`} />
-                    {s.label}{s.disabled ? " (disabled)" : ""} ({counts[s.val]})
+                  <button key={s.val} type="button" onClick={() => setStatusFilter(statusFilter === s.val ? null : s.val)} aria-pressed={statusFilter === s.val}
+                    className={`flex items-center gap-2 text-sm px-4 py-2 border transition-colors ${statusFilter === s.val ? "border-black bg-black text-white" : "border-stone-300 hover:border-black"} ${s.disabled ? "opacity-70" : ""}`}>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${statusFilter === s.val ? "bg-white" : s.dot}`} aria-hidden />
+                    {s.label} ({counts[s.val]})
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex border border-black/20">
-                  {(isPipeline ? (["table", "kanban", "triage"] as ViewMode[]) : (["table"] as ViewMode[])).map((v) => (
-                    <button key={v} type="button" onClick={() => setView(v)}
-                      className={`px-3 py-1.5 text-xs transition-colors ${view === v ? "bg-black text-white" : "hover:bg-muted"}`}>
-                      {v.charAt(0).toUpperCase() + v.slice(1)}
-                    </button>
-                  ))}
+              {isPipeline && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-stone-600">View as</span>
+                  <div className="flex border border-black/30" role="group" aria-label="View as">
+                    {(["table", "kanban", "triage"] as ViewMode[]).map((v) => (
+                      <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
+                        className={`px-4 py-2 text-sm transition-colors ${view === v ? "bg-black text-white" : "hover:bg-muted"}`}>
+                        {VIEW_LABEL[v]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-            {view === "table" && <TableView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
-            {view === "kanban" && <KanbanView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
-            {view === "triage" && <TriageView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} />}
+            {view === "table" && localApps.length > 0 && (
+              <p className="text-sm text-stone-600">Select a name to read the whole application. Nothing you choose here is sent to artists until you press &ldquo;Send results&rdquo;.</p>
+            )}
+            {view === "table" && <TableView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} canEdit={canEdit} scores={overview?.hasRubric ? overview.scores : undefined} />}
+            {view === "kanban" && <KanbanView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} canEdit={canEdit} />}
+            {view === "triage" && <TriageView apps={filtered} stages={stages} onOpenApp={setOpenAppId} onStatusChange={handleStatusChange} canEdit={canEdit} paused={openAppId !== null} />}
           </div>
         )}
 
-        {/* ── Setup tab ── */}
-        {tab === "setup" && (
-          <SetupTab opp={opp} opportunityId={opportunityId} isOwner={isOwner} />
+        {/* ── Results tab ── */}
+        {tab === "results" && isPipeline && isOwner && (
+          <div id="panel-results" role="tabpanel" aria-labelledby="tab-results">
+            <ResultsTab
+              opportunityId={opportunityId}
+              onPublished={() => {
+                // What artists can see has changed: mark everything decided as released.
+                setLocalApps((prev) => prev.map((a) => (a.status !== "pending" ? { ...a, released_status: a.status } : a)));
+                router.refresh();
+              }}
+            />
+          </div>
         )}
 
-        {/* ── Analytics tab ── */}
-        {tab === "analytics" && <AnalyticsTab apps={localApps} opp={opp} />}
+        {/* ── Settings tab ── */}
+        {tab === "settings" && (
+          <div id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" className="space-y-6">
+            <div role="tablist" aria-label="Settings sections" className="flex flex-wrap gap-2">
+              {SETTINGS_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  id={`tab-${t.id}`}
+                  role="tab"
+                  aria-selected={settingsTab === t.id}
+                  tabIndex={settingsTab === t.id ? 0 : -1}
+                  type="button"
+                  onClick={() => setSettingsTab(t.id)}
+                  onKeyDown={(e) => onTabKey(e, SETTINGS_TABS.map((x) => x.id), settingsTab, setSettingsTab)}
+                  className={`text-base px-4 py-2 border transition-colors ${settingsTab === t.id ? "border-black bg-black text-white" : "border-stone-300 hover:border-black"}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        {/* ── Impact tab ── */}
-        {tab === "impact" && <ImpactTab followups={followups} apps={localApps} />}
-
-        {/* ── Collaborators tab ── */}
-        {tab === "collaborators" && (
-          <CollaboratorsPanel opportunityId={opportunityId} initialCollaborators={collaborators} isOwner={isOwner} />
+            {settingsTab === "listing" && (
+              <div className="space-y-8">
+                {isOwner && (
+                  <CallStatusPanel
+                    isArchived={isArchived}
+                    isClosed={isClosed}
+                    canReopen={canReopen}
+                    isDelisted={isDelisted}
+                    isPublished={opp.status === "published"}
+                    onAction={setConfirmDialog}
+                    onShare={() => goTo("share")}
+                  />
+                )}
+                <SetupTab opp={opp} opportunityId={opportunityId} isOwner={isOwner} />
+              </div>
+            )}
+            {settingsTab === "team" && (
+              <CollaboratorsPanel opportunityId={opportunityId} initialCollaborators={collaborators} isOwner={isOwner} />
+            )}
+            {settingsTab === "reports" && <AnalyticsTab apps={localApps} opp={opp} />}
+            {settingsTab === "impact" && <ImpactTab followups={followups} apps={localApps} />}
+          </div>
         )}
       </div>
-
-      {/* Notification batch panel */}
-      {showNotifications && (
-        <BatchNotificationPanel opportunityId={opportunityId} onClose={() => setShowNotifications(false)} />
-      )}
 
       {/* Application detail modal */}
       {openApp && (
         <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setOpenAppId(null)}>
-          <div className="absolute inset-0 sm:inset-6 lg:inset-8 bg-background shadow-2xl flex flex-col overflow-hidden max-w-6xl mx-auto"
-            onClick={(e) => e.stopPropagation()}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Application from ${openApp.artist?.full_name ?? openApp.artist?.username ?? "applicant"}`}
+            className="absolute inset-0 sm:inset-6 lg:inset-8 bg-background shadow-2xl flex flex-col overflow-hidden max-w-6xl mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ApplicantPanel
+              key={openApp.id}
+              canEdit={canEdit}
+              isOwner={isOwner}
+              overview={overview}
+              onStatusChange={handleStatusChange}
               application={{
                 ...openApp,
-                documentation: (openApp as { documentation?: Record<string, string> | null }).documentation ?? null,
-                invoice_requested_at: null,
-                invoice_amount: null,
-                invoice_paid_at: null,
+                documentation: openApp.documentation ?? null,
+                invoice_requested_at: openApp.invoice_requested_at ?? null,
+                invoice_amount: openApp.invoice_amount ?? null,
+                invoice_paid_at: openApp.invoice_paid_at ?? null,
               }}
               opportunity={opp}
               closeUrl={`/partner/dashboard/${opportunityId}`}
@@ -396,33 +544,72 @@ export function OpportunityShell({ opp, apps, followups, collaborators, isOwner,
       )}
 
       {/* Confirm dialog */}
-      {confirmDialog && (() => {
-        const copy = CONFIRM_COPY[confirmDialog];
-        return (
-          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmDialog(null)}>
-            <div className="bg-background w-full max-w-sm p-6 space-y-4 border border-black/10 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <p className="font-semibold">{copy.title}</p>
-              <p className="text-sm text-stone-500 leading-relaxed">{copy.body}</p>
-              {actionError && <p className="text-xs text-red-500">{actionError}</p>}
-              <div className="flex gap-3">
-                <button type="button" onClick={() => handleAction(confirmDialog)} disabled={actionPending}
-                  className="flex-1 text-sm px-4 py-2 bg-black text-white hover:bg-black/80 transition-colors disabled:opacity-50">
-                  {actionPending ? "Saving…" : copy.cta}
-                </button>
-                <button type="button" onClick={() => setConfirmDialog(null)}
-                  className="flex-1 text-sm px-4 py-2 border border-black/20 hover:border-black transition-colors">
-                  Cancel
-                </button>
-              </div>
+      <AccessibleDialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)} labelledBy="lifecycle-title" className="bg-background w-full max-w-md p-6 space-y-4 border border-black/10 shadow-xl">
+        {confirmDialog && (
+          <>
+            <h2 id="lifecycle-title" className="text-lg font-semibold">{CONFIRM_COPY[confirmDialog].title}</h2>
+            <p className="text-base text-stone-600 leading-relaxed">{CONFIRM_COPY[confirmDialog].body}</p>
+            {actionError && <p role="alert" className="text-sm text-red-700">{actionError}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => handleAction(confirmDialog)} disabled={actionPending}
+                className="flex-1 text-base px-4 py-2 bg-brand text-brand-foreground font-medium hover:bg-brand/90 transition-colors disabled:opacity-50">
+                {actionPending ? "Saving…" : CONFIRM_COPY[confirmDialog].cta}
+              </button>
+              <button type="button" onClick={() => setConfirmDialog(null)}
+                className="flex-1 text-base px-4 py-2 border border-black/30 hover:border-black transition-colors">
+                Go back
+              </button>
             </div>
-          </div>
-        );
-      })()}
-    </>
+          </>
+        )}
+      </AccessibleDialog>
+    </div>
   );
 }
 
-// ── Setup tab ────────────────────────────────────────────────────────────────
+// ── Call status ─────────────────────────────────────────────────────────────
+
+function CallStatusPanel({
+  isArchived, isClosed, canReopen, isDelisted, isPublished, onAction, onShare,
+}: {
+  isArchived: boolean;
+  isClosed: boolean;
+  canReopen: boolean;
+  isDelisted: boolean;
+  isPublished: boolean;
+  onAction: (a: LifecycleAction) => void;
+  onShare: () => void;
+}) {
+  const rows: { title: string; body: string; label: string; onClick: () => void; show: boolean }[] = [
+    { title: "Share this call", body: "Copy the public link to put in an email, newsletter or social post.", label: "Copy the link", onClick: onShare, show: isPublished && !isArchived },
+    { title: "Stop taking applications", body: "Artists can no longer apply. Everything received is kept and you carry on reviewing.", label: "Close applications", onClick: () => onAction("close"), show: isPublished && !isClosed && !isArchived },
+    { title: "Take applications again", body: "Open the call back up until its deadline.", label: "Reopen applications", onClick: () => onAction("reopen"), show: canReopen },
+    { title: "Hide from the public", body: "Take the call off the Patronage listings and search. Applications are kept.", label: "Hide from public", onClick: () => onAction("delist"), show: isPublished && !isDelisted && !isArchived },
+    { title: "Show to the public again", body: "Put the call back on the listings and search.", label: "Show to the public", onClick: () => onAction("relist"), show: isDelisted && !isArchived },
+    { title: "Finished with this call", body: "Move it out of your live list. The public page and every application are kept.", label: "Archive this call", onClick: () => onAction("archive"), show: !isArchived },
+    { title: "Bring it back", body: "Return this call to your list.", label: "Restore from archive", onClick: () => onAction("unarchive"), show: isArchived },
+  ];
+  return (
+    <section className="max-w-3xl space-y-3" aria-label="Open, close and archive">
+      <h2 className="text-lg font-semibold">Open, close and archive</h2>
+      <ul className="border border-black/10 divide-y divide-black/10">
+        {rows.filter((r) => r.show).map((r) => (
+          <li key={r.label} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0 max-w-md">
+              <p className="text-base font-medium">{r.title}</p>
+              <p className="text-sm text-stone-600">{r.body}</p>
+            </div>
+            <button type="button" onClick={r.onClick} className="border border-black px-5 py-2 text-base font-medium hover:bg-stone-100 transition-colors">
+              {r.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ── This call ─────────────────────────────────────────────────────────────── ────────────────────────────────────────────────────────────────
 
 function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & OppExtra; opportunityId: string; isOwner: boolean }) {
   const questions = opp.pipeline_config?.questions ?? [];
@@ -436,44 +623,44 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
       <div className="border border-black/10 overflow-hidden">
         <div className="p-6 grid grid-cols-1 sm:grid-cols-[1fr_200px] gap-6">
           <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Opportunity</p>
+            <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Opportunity</p>
             <div className="space-y-1">
               <h2 className="text-lg font-semibold">{opp.title}</h2>
               {opp.caption && <p className="text-sm text-stone-500">{opp.caption}</p>}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {opp.type && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.type}</span>}
-              {opp.country && <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">{opp.country}</span>}
+              {opp.type && <span className="text-sm border border-black/20 px-2 py-0.5 text-stone-500">{opp.type}</span>}
+              {opp.country && <span className="text-sm border border-black/20 px-2 py-0.5 text-stone-500">{opp.country}</span>}
               {(opp.pipeline_config?.questions?.[0] as { category?: string } | undefined)?.category && (
-                <span className="text-xs border border-black/20 px-2 py-0.5 text-stone-500">NZ-based</span>
+                <span className="text-sm border border-black/20 px-2 py-0.5 text-stone-500">NZ-based</span>
               )}
             </div>
           </div>
-          <div className="space-y-3 text-xs">
+          <div className="space-y-3 text-sm">
             {opp.funding_range && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Funding</p>
+                <p className="text-sm font-medium uppercase tracking-widest text-stone-500 mb-0.5">Funding</p>
                 <p className="font-medium">{opp.funding_range}</p>
               </div>
             )}
             {opp.opens_at && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Opens</p>
+                <p className="text-sm font-medium uppercase tracking-widest text-stone-500 mb-0.5">Opens</p>
                 <p>{new Date(opp.opens_at + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
               </div>
             )}
             {opp.deadline && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Closes</p>
+                <p className="text-sm font-medium uppercase tracking-widest text-stone-500 mb-0.5">Closes</p>
                 <p>{new Date(opp.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Routing</p>
-              <p>{opp.routing_type === "pipeline" ? `Pipeline${isPipelinePaid ? " · paid" : " · free round"}` : "External link"}</p>
+              <p className="text-sm font-medium uppercase tracking-widest text-stone-500 mb-0.5">Type of call</p>
+              <p>{opp.routing_type === "pipeline" ? `Applications through Patronage${isPipelinePaid ? " · paid" : " · first call"}` : "Applications on another site"}</p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-stone-400 mb-0.5">Featured</p>
+              <p className="text-sm font-medium uppercase tracking-widest text-stone-500 mb-0.5">Featured</p>
               <p>
                 {opp.is_featured ? "Yes" : (
                   <span>No · <a href={`/partner/opportunities/${opportunityId}/manage`} className="underline underline-offset-2 hover:text-foreground transition-colors">boost</a></span>
@@ -485,22 +672,22 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
         <div className="border-t border-black/10 px-6 py-3 flex items-center justify-between gap-4 bg-stone-50/50">
           <div className="flex gap-2">
             <Link href={`/partner/opportunities/${opportunityId}/manage`}
-              className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
+              className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
               Edit details
             </Link>
             <Link href={`/partner/opportunities/${opportunityId}/manage`}
-              className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
+              className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
               Edit description
             </Link>
             {opp.slug && (
               <Link href={`/opportunities/${opp.slug}`} target="_blank"
-                className="flex items-center gap-1 text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
+                className="flex items-center gap-1 text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
                 <ExternalLink className="w-3 h-3" />
                 Public listing
               </Link>
             )}
           </div>
-          <span className={`text-xs font-medium ${statusColor}`}>
+          <span className={`text-sm font-medium ${statusColor}`}>
             ● {statusLabel}
           </span>
         </div>
@@ -512,11 +699,11 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">Application questions</h3>
-              <p className="text-xs text-stone-400 mt-0.5">{questions.length} question{questions.length !== 1 ? "s" : ""} applicants answer when applying</p>
+              <p className="text-sm text-stone-500 mt-0.5">{questions.length} question{questions.length !== 1 ? "s" : ""} applicants answer when applying</p>
             </div>
             {isOwner && (
               <Link href={`/partner/opportunities/${opportunityId}/manage`}
-                className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
+                className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors">
                 + Add question
               </Link>
             )}
@@ -524,10 +711,10 @@ function SetupTab({ opp, opportunityId, isOwner }: { opp: OpportunityShape & Opp
           <div className="border border-black/10 divide-y divide-black/5">
             {questions.map((q: { id: string; label: string; type: string; required?: boolean }, i: number) => (
               <div key={q.id} className="flex items-center gap-4 px-4 py-3">
-                <span className="text-xs font-mono text-stone-300 w-6 shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-sm font-mono text-stone-400 w-6 shrink-0">{String(i + 1).padStart(2, "0")}</span>
                 <p className="flex-1 text-sm font-medium">{q.label}</p>
-                <span className="text-xs text-stone-400 shrink-0 hidden sm:block">{q.type?.replace("_", " ")}</span>
-                <span className={`text-xs font-medium shrink-0 ${q.required !== false ? "text-red-500" : "text-stone-400"}`}>
+                <span className="text-sm text-stone-500 shrink-0 hidden sm:block">{q.type?.replace("_", " ")}</span>
+                <span className={`text-sm font-medium shrink-0 ${q.required !== false ? "text-red-500" : "text-stone-500"}`}>
                   {q.required !== false ? "Required" : "Optional"}
                 </span>
               </div>
@@ -589,9 +776,9 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
           { label: "SELECTION RATE", value: `${selectionRate}%`, sub: `${selected} of ${total}` },
         ].map((k) => (
           <div key={k.label} className="bg-background p-5 space-y-1">
-            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{k.label}</p>
+            <p className="text-sm font-medium uppercase tracking-widest text-stone-500">{k.label}</p>
             <p className="text-3xl font-semibold tabular-nums">{k.value}</p>
-            <p className="text-xs text-stone-400">{k.sub}</p>
+            <p className="text-sm text-stone-500">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -600,7 +787,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
       <div className="space-y-3">
         <div>
           <h3 className="font-semibold">Conversion funnel</h3>
-          <p className="text-xs text-stone-400 mt-0.5">From listing view through to selection</p>
+          <p className="text-sm text-stone-500 mt-0.5">From listing view through to selection</p>
         </div>
         <div className="border border-black/10 overflow-hidden">
           {[
@@ -618,12 +805,12 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
                 <div className="flex-1 flex items-center gap-3">
                   <div className="flex-1 h-8 bg-stone-50 relative">
                     <div className={`h-full ${row.color} flex items-center justify-end pr-3`} style={{ width: `${Math.max(pct, row.count > 0 ? 2 : 0)}%` }}>
-                      {row.count > 0 && <span className="text-xs font-medium text-white">{row.count.toLocaleString("en-NZ")}</span>}
+                      {row.count > 0 && <span className="text-sm font-medium text-white">{row.count.toLocaleString("en-NZ")}</span>}
                     </div>
                   </div>
-                  <span className="text-xs text-stone-400 w-10 text-right shrink-0">{pct}%</span>
+                  <span className="text-sm text-stone-500 w-10 text-right shrink-0">{pct}%</span>
                   {drop !== null && drop > 0 && (
-                    <span className="text-xs text-stone-300 w-20 shrink-0">−{drop.toLocaleString("en-NZ")} drop</span>
+                    <span className="text-sm text-stone-400 w-20 shrink-0">−{drop.toLocaleString("en-NZ")} drop</span>
                   )}
                 </div>
               </div>
@@ -637,7 +824,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
         <div className="space-y-3">
           <div>
             <h3 className="font-semibold">Submissions over time</h3>
-            <p className="text-xs text-stone-400 mt-0.5">Cumulative applications across the open window</p>
+            <p className="text-sm text-stone-500 mt-0.5">Cumulative applications across the open window</p>
           </div>
           <div className="border border-black/10 p-5">
             <MiniLineChart points={timePoints} />
@@ -663,7 +850,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
         <div className="space-y-3">
           <div>
             <h3 className="font-semibold">Identity tags</h3>
-            <p className="text-xs text-stone-400 mt-0.5">Optional self-identification</p>
+            <p className="text-sm text-stone-500 mt-0.5">Optional self-identification</p>
           </div>
           <div className="border border-black/10 divide-y divide-black/5">
             {identityTags.map((r) => {
@@ -672,7 +859,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
                 <div key={r.label} className="px-5 py-3 space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
                     <span>{r.label}</span>
-                    <span className="text-stone-400 tabular-nums">{r.count} <span className="text-stone-300">({Math.round(pct)}%)</span></span>
+                    <span className="text-stone-500 tabular-nums">{r.count} <span className="text-stone-400">({Math.round(pct)}%)</span></span>
                   </div>
                   <div className="h-1.5 bg-stone-100">
                     <div className="h-full bg-black" style={{ width: `${pct}%` }} />
@@ -684,7 +871,7 @@ function AnalyticsTab({ apps, opp }: { apps: EnrichedApp[]; opp: OpportunityShap
         </div>
       )}
 
-      {total === 0 && <p className="text-sm text-stone-400">No applications yet.</p>}
+      {total === 0 && <p className="text-sm text-stone-500">No applications yet.</p>}
     </div>
   );
 }
@@ -757,7 +944,7 @@ function DemoBarChart({
     <div className="border border-black/10 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{title}</p>
-        <span className="text-xs text-stone-400">n = {total}</span>
+        <span className="text-sm text-stone-500">n = {total}</span>
       </div>
       <div className="space-y-2">
         {sorted.map((r) => {
@@ -769,12 +956,12 @@ function DemoBarChart({
                 <div className="flex-1 h-4 bg-stone-100 relative">
                   <div className="h-full bg-black" style={{ width: `${pct}%` }} />
                 </div>
-                <span className="text-xs text-stone-400 w-5 text-right tabular-nums shrink-0">{r.count}</span>
+                <span className="text-sm text-stone-500 w-5 text-right tabular-nums shrink-0">{r.count}</span>
               </div>
             </div>
           );
         })}
-        {sorted.length === 0 && <p className="text-xs text-stone-400">No data</p>}
+        {sorted.length === 0 && <p className="text-sm text-stone-500">No data</p>}
       </div>
     </div>
   );
@@ -825,7 +1012,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
       {responded.length > 0 && (
         <div className="border border-black/10 overflow-hidden">
           <div className="px-6 py-4 border-b border-black/10 bg-stone-50/50">
-            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Cumulative impact</p>
+            <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Cumulative impact</p>
             <p className="text-sm font-semibold mt-0.5">Across {responded.length} past recipient{responded.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-black/10">
@@ -836,10 +1023,10 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
               { label: "Income from practice", value: totalIncome > 0 ? `$${(totalIncome / 1000).toFixed(0)}k` : "—" },
             ].map((m) => (
               <div key={m.label} className="p-5 space-y-1">
-                <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
+                <p className="text-sm font-medium uppercase tracking-widest text-stone-500">{m.label}</p>
                 <p className="text-2xl font-semibold">{m.value}</p>
                 {m.label === "Income from practice" && totalIncome > 0 && (
-                  <p className="text-xs text-stone-400">reported, this cohort</p>
+                  <p className="text-sm text-stone-500">reported, this cohort</p>
                 )}
               </div>
             ))}
@@ -850,7 +1037,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
       {/* Per-recipient cards */}
       {selectedApps.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Recipients</p>
+          <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Recipients</p>
           <div className="space-y-4">
             {selectedApps.map((app) => {
               const artist = app.artist;
@@ -869,16 +1056,16 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm">{artist.full_name ?? artist.username}</p>
-                          <span className="text-xs border border-black/20 px-1.5 py-0.5 text-stone-400">recipient</span>
-                          <span className="text-xs text-stone-400">{new Date(app.created_at).getFullYear()}</span>
+                          <span className="text-sm border border-black/20 px-1.5 py-0.5 text-stone-500">recipient</span>
+                          <span className="text-sm text-stone-500">{new Date(app.created_at).getFullYear()}</span>
                         </div>
                         {followup?.further_opportunities && (
-                          <p className="text-xs text-stone-500 mt-0.5">{followup.further_opportunities}</p>
+                          <p className="text-sm text-stone-500 mt-0.5">{followup.further_opportunities}</p>
                         )}
                       </div>
                     </div>
                     <Link href={`/${artist.username}`} target="_blank"
-                      className="text-xs border border-black/20 px-3 py-1.5 hover:border-black transition-colors flex items-center gap-1 shrink-0">
+                      className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors flex items-center gap-1 shrink-0">
                       <ExternalLink className="w-3 h-3" />
                       View profile
                     </Link>
@@ -894,7 +1081,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                           { label: "Income from practice", value: income > 0 ? `$${income.toLocaleString("en-NZ")}` : (followup.income_from_practice || "—") },
                         ].map((m) => (
                           <div key={m.label} className="px-4 py-3">
-                            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">{m.label}</p>
+                            <p className="text-sm font-medium uppercase tracking-widest text-stone-500">{m.label}</p>
                             <p className="text-base font-semibold mt-0.5">{m.value}</p>
                           </div>
                         ))}
@@ -904,7 +1091,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
                           <blockquote className="text-sm italic text-stone-700 leading-relaxed">
                             &ldquo;{followup.testimonial}&rdquo;
                           </blockquote>
-                          <p className="text-xs text-stone-400 mt-2 flex items-center gap-1">
+                          <p className="text-sm text-stone-500 mt-2 flex items-center gap-1">
                             <span>✓</span> Consent given to share publicly
                           </p>
                         </div>
@@ -914,7 +1101,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
 
                   {!followup && (
                     <div className="border-t border-black/10 px-5 py-3">
-                      <p className="text-xs text-stone-400">No follow-up response yet.</p>
+                      <p className="text-sm text-stone-500">No follow-up response yet.</p>
                     </div>
                   )}
                 </div>
@@ -925,7 +1112,7 @@ function ImpactTab({ followups, apps }: { followups: FollowupRow[]; apps: Enrich
       )}
 
       {selectedApps.length === 0 && (
-        <p className="text-sm text-stone-400">No selected recipients yet. Impact data is collected automatically from artists after the programme completes.</p>
+        <p className="text-sm text-stone-500">No selected recipients yet. Impact data is collected automatically from artists after the programme completes.</p>
       )}
 
       {void profileMap}

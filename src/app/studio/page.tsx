@@ -76,8 +76,11 @@ export default async function StudioHomePage({ searchParams }: PageProps) {
     return <ArtistHome userId={user.id} />;
   }
 
+  if (role === "reviewer") redirect("/review");
+
   if (role === "partner") {
-    return <PartnerHome />;
+    // Organisers live on /dashboard. An admin previewing as one is sent to the admin view of it.
+    redirect(profile.role === "partner" ? "/dashboard" : "/dashboard?view=partner");
   }
 
   // Patron (default)
@@ -283,38 +286,6 @@ async function PatronHome() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Partner Home ─────────────────────────────────────────────────────────────
-
-function PartnerHome() {
-  return (
-    <div className="space-y-10">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold">Welcome back</h2>
-        <p className="text-sm text-muted-foreground">Your dashboard at a glance.</p>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[
-          { href: "/opportunities", label: "Open Calls", description: "Browse and manage your opportunity listings" },
-          { href: "/partner/roster", label: "Your Artists", description: "Artists associated with your organisation" },
-          { href: "/messages", label: "Messages", description: "Conversations with artists and patrons" },
-          { href: "/list-an-opportunity", label: "List an Opportunity", description: "Publish a new call, grant, or residency" },
-          { href: "/artists", label: "Artists", description: "Discover artists on Patronage" },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="border border-border p-4 space-y-1 hover:border-black transition-colors group"
-          >
-            <p className="text-sm font-semibold group-hover:underline underline-offset-2">{item.label}</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }

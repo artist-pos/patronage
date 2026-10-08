@@ -199,6 +199,7 @@ export async function signInAction(input: {
     // A returning, fully onboarded artist gets more value from their matched
     // opportunities than from the studio management screen.
     if (isArtist) return { redirectTo: safeNext(input.next, "/opportunities?tab=for-you") };
+    if (profile.role === "partner") return { redirectTo: safeNext(input.next, "/dashboard") };
   }
 
   return { redirectTo: safeNext(input.next, "/profile/edit") };

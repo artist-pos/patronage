@@ -73,12 +73,27 @@ export async function regenerateOpportunitySlug(id: string): Promise<{ error?: s
   return { error: "Couldn't find a free slug — try renaming the listing slightly" };
 }
 
-export async function deleteOpportunity(id: string) {
+export async function deleteOpportunity(id: string): Promise<{ error?: string }> {
   await guard();
   const supabase = await createClient();
-  await supabase.from("opportunities").delete().eq("id", id);
+
+  // Deleting cascades to every application, score and status log. If anyone has
+  // applied, the record is worth keeping: archive it instead.
+  const { count } = await supabase
+    .from("opportunity_applications")
+    .select("id", { count: "exact", head: true })
+    .eq("opportunity_id", id);
+  if ((count ?? 0) > 0) {
+    return {
+      error: `This opportunity has ${count} application${count === 1 ? "" : "s"}. Archive it instead; deleting would permanently remove them.`,
+    };
+  }
+
+  const { error } = await supabase.from("opportunities").delete().eq("id", id);
+  if (error) return { error: error.message };
   revalidatePath("/admin/opportunities");
   revalidatePath("/opportunities");
+  return {};
 }
 
 export async function createDraftUnclaimedListing(): Promise<Opportunity> {

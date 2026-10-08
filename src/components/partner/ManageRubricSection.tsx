@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { RubricBuilder, type LocalCriterion } from "@/components/partner/wizard/RubricBuilder";
 import { PartnerDocumentsUploader } from "@/components/partner/wizard/PartnerDocumentsUploader";
-import { saveRubricCriteria } from "@/app/partner/opportunities/[id]/new/actions";
+import { saveRubricCriteria, updateCriterionWording } from "@/app/partner/opportunities/[id]/new/actions";
 import type { PartnerDocument } from "@/types/database";
 
 interface Props {
@@ -30,7 +30,11 @@ export function ManageRubricSection({ opportunityId, initialCriteria, initialDoc
 
   return (
     <div className="space-y-8">
-      <RubricBuilder criteria={criteria} onChange={setCriteria} />
+      <RubricBuilder
+        criteria={criteria}
+        onChange={setCriteria}
+        onEditLockedWording={(id, label, helper) => updateCriterionWording(opportunityId, id, label, helper)}
+      />
 
       <div className="flex justify-end">
         <button
@@ -45,7 +49,7 @@ export function ManageRubricSection({ opportunityId, initialCriteria, initialDoc
 
       <div className="border-t border-black/10 pt-6 space-y-3">
         <p className="text-sm font-medium">Brief documents</p>
-        <p className="text-xs text-stone-500">Upload PDFs or supporting files artists can download when applying.</p>
+        <p className="text-sm text-stone-500">Upload PDFs or supporting files artists can download when applying.</p>
         <PartnerDocumentsUploader
           opportunityId={opportunityId}
           documents={documents}

@@ -233,14 +233,9 @@ export default async function PartnersPage() {
               <p className="t-body-sm mt-2 max-w-[520px]">
                 An open call for artists to paint an 11m² utility box at Peake Mews in Cambridge,
                 Waikato, for the residents and children who live around it. A $3,000 all-inclusive
-                artist fee, a box template and a brief, with applications run through Patronage.
+                artist fee, a box template and a brief, with applications run through Patronage and
+                the artist selected by the trust.
               </p>
-              <Link
-                href="/opportunities/bridge-housing-charitable-trust-utility-box-mural-cambridge-2026"
-                className={`${TEXT_LINK} mt-2`}
-              >
-                See the open call <span aria-hidden>→</span>
-              </Link>
             </article>
             <article>
               <p className="text-[13px] font-medium text-[color:var(--fg-muted)]">

@@ -19,13 +19,18 @@ export async function requestPayment(params: {
 
   const { data: app } = await supabase
     .from("opportunity_applications")
-    .select("id, artist_id, opportunity_id, status")
+    .select("*")
     .eq("id", params.applicationId)
     .eq("artist_id", user.id)
     .single();
 
   if (!app) return { error: "Application not found" };
   if ((app.status as string) !== "production_ready") return { error: "Payment can only be requested at production ready stage" };
+  if (app.invoice_paid_at) return { error: "This payment has already been confirmed." };
+  const lastSent = app.invoice_requested_at ? new Date(app.invoice_requested_at as string).getTime() : 0;
+  if (lastSent && Date.now() - lastSent < 60 * 60 * 1000) {
+    return { error: "A payment request was sent within the last hour. Please wait before sending another." };
+  }
   if (params.amount <= 0) return { error: "Amount must be greater than zero" };
 
   const admin = createAdminClient();
@@ -91,7 +96,7 @@ export async function sendRejectionReplyAction(params: {
 
   const { data: app } = await supabase
     .from("opportunity_applications")
-    .select("id, artist_id, opportunity_id, status, rejection_reply_sent_at")
+    .select("*")
     .eq("id", params.applicationId)
     .eq("artist_id", user.id)
     .single();

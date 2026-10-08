@@ -29,7 +29,7 @@ export async function claimListing(
 
   if (updateError) return { error: updateError.message };
 
-  revalidatePath("/partner/dashboard");
+  revalidatePath("/dashboard");
   revalidatePath("/opportunities");
 
   return { id: opp.id };

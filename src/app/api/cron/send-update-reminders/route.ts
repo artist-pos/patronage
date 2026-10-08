@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   // Fetch all active selected applications, joined to opportunity for pipeline_config + partner profile
   const { data: apps, error: appsError } = await admin
     .from("opportunity_applications")
-    .select("id, artist_id, opportunity_id, selected_at, last_reminder_sent_at, opportunity:opportunities(title, profile_id, pipeline_config)")
+    .select("id, artist_id, opportunity_id, released_at, last_reminder_sent_at, opportunity:opportunities(title, profile_id, pipeline_config)")
     .in("status", ["selected", "approved_pending_assets", "production_ready"]);
 
   if (appsError) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     if (!postSel?.requires_studio_updates || !postSel.update_frequency_days) continue;
 
     // Compute when the next reminder is due
-    const baseDate = app.last_reminder_sent_at ?? app.selected_at;
+    const baseDate = app.last_reminder_sent_at ?? app.released_at;
     if (!baseDate) continue;
 
     const nextDue = new Date(baseDate);

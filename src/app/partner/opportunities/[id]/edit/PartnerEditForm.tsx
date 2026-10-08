@@ -382,7 +382,7 @@ export function PartnerEditForm({ opp }: Props) {
           {isPipeline && (opp.status === "draft" || opp.status === "draft_unclaimed") && (
             <p className="text-xs text-stone-500">
               Pipeline listings publish from the{" "}
-              <a href={`/partner/opportunities/${opp.id}/new?step=6&type=pipeline`} className="underline underline-offset-2">
+              <a href={`/partner/opportunities/${opp.id}/new?step=5&type=pipeline`} className="underline underline-offset-2">
                 application wizard&rsquo;s Review &amp; Publish step
               </a>
               , not here.

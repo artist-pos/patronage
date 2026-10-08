@@ -4,8 +4,8 @@ import { useState } from "react";
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, type DragEndEvent } from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
 import { KanbanCard } from "./KanbanCard";
-import { updateApplicationStatus } from "@/app/partner/dashboard/actions";
-import type { EnrichedApp } from "@/components/partner/ApplicationsManager";
+import { useStatusChange } from "./useStatusChange";
+import type { EnrichedApp } from "@/components/partner/types";
 import type { StageDef } from "@/lib/pipeline-stages";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   stages: StageDef[];
   onOpenApp: (id: string) => void;
   onStatusChange: (appId: string, status: string) => void;
+  canEdit: boolean;
 }
 
 function KanbanColumn({
@@ -33,13 +34,13 @@ function KanbanColumn({
   return (
     <div className={`flex flex-col min-w-[220px] w-[220px] shrink-0 ${disabled ? "opacity-50" : ""}`}>
       <div className="flex items-center justify-between mb-2 px-0.5">
-        <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">
+        <p className="text-sm font-semibold uppercase tracking-widest text-stone-500">
           {label}{disabled ? " · disabled" : ""}
         </p>
-        <span className="text-xs text-stone-400">{apps.length}</span>
+        <span className="text-sm text-stone-500">{apps.length}</span>
       </div>
       {disabled && (
-        <p className="text-xs text-stone-400 mb-1.5 px-0.5">Move these applicants to continue.</p>
+        <p className="text-sm text-stone-500 mb-1.5 px-0.5">Move these applicants to continue.</p>
       )}
       <div
         ref={setNodeRef}
@@ -53,46 +54,28 @@ function KanbanColumn({
   );
 }
 
-export function KanbanView({ apps, stages, onOpenApp, onStatusChange }: Props) {
-  const [localApps, setLocalApps] = useState(apps);
+export function KanbanView({ apps, stages, onOpenApp, onStatusChange, canEdit }: Props) {
+  const { request, dialog } = useStatusChange({ apps, stages, onStatusChange });
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const draggingApp = draggingId ? localApps.find((a) => a.id === draggingId) ?? null : null;
+  const draggingApp = draggingId ? apps.find((a) => a.id === draggingId) ?? null : null;
 
-  async function handleDragEnd(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     setDraggingId(null);
-    if (!over) return;
-
-    const targetStatus = over.id as string;
-    const draggedApp = localApps.find((a) => a.id === active.id);
-    if (!draggedApp || draggedApp.status === targetStatus) return;
-
-    // Optimistic update
-    setLocalApps((prev) =>
-      prev.map((a) => (a.id === active.id ? { ...a, status: targetStatus } : a))
-    );
-    onStatusChange(active.id as string, targetStatus);
-
-    const result = await updateApplicationStatus(
-      active.id as string,
-      targetStatus as Parameters<typeof updateApplicationStatus>[1]
-    );
-    if (result.error) {
-      // Revert on error
-      setLocalApps((prev) =>
-        prev.map((a) => (a.id === active.id ? { ...a, status: draggedApp.status } : a))
-      );
-    }
+    if (!over || !canEdit) return;
+    request([active.id as string], over.id as string);
   }
 
   const appsByStatus = Object.fromEntries(
-    stages.map((col) => [col.val, localApps.filter((a) => a.status === col.val)])
+    stages.map((col) => [col.val, apps.filter((a) => a.status === col.val)])
   );
 
   return (
+    <>
+    {dialog}
     <DndContext
       sensors={sensors}
       onDragStart={(e) => setDraggingId(e.active.id as string)}
@@ -122,5 +105,6 @@ export function KanbanView({ apps, stages, onOpenApp, onStatusChange }: Props) {
         )}
       </DragOverlay>
     </DndContext>
+    </>
   );
 }

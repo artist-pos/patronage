@@ -19,10 +19,12 @@ export const metadata: Metadata = { title: "Manage Listing" };
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ activation?: string }>;
 }
 
-export default async function ManagePage({ params }: Props) {
+export default async function ManagePage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { activation } = await searchParams;
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -67,6 +69,16 @@ export default async function ManagePage({ params }: Props) {
 
   return (
     <ManageShell opp={opp as Opportunity} isPipeline={isPipeline} opportunityId={id}>
+      {activation === "success" && (
+        <div role="status" className="border border-emerald-300 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm">
+          Payment received. Your open call is now with our team for review, usually within two business days. We&apos;ll email you when it goes live.
+        </div>
+      )}
+      {activation === "cancelled" && (
+        <div role="status" className="border border-amber-300 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
+          Payment was cancelled, so your listing has not been published. You can pay any time from the Commerce section below.
+        </div>
+      )}
       {/* Basics */}
       <section id="basics" className="scroll-mt-20 space-y-4">
         <SectionHeader label="Basics" desc="Core details — title, type, dates, description, image." />

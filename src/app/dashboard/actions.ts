@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function toggleSaveOpportunity(
@@ -49,8 +50,8 @@ export async function markApplied(opportunityId: string): Promise<{ error?: stri
       { onConflict: "user_id,opportunity_id" }
     );
 
-  if (error) return { error: error.message };
   revalidatePath("/dashboard");
+  revalidatePath("/studio/opportunities");
   return {};
 }
 
@@ -65,19 +66,33 @@ export async function submitHighResAsset(
   // Verify the application belongs to this user
   const { data: app } = await supabase
     .from("opportunity_applications")
-    .select("id, artist_id")
+    .select("*")
     .eq("id", applicationId)
     .single();
 
   if (!app || app.artist_id !== user.id) return { error: "Not authorised" };
+  // Only once the organiser has asked for the file (and told them so).
+  if ((app.status as string) !== "approved_pending_assets") return { error: "No file has been requested for this application." };
 
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("opportunity_applications")
-    .update({ highres_asset_url: assetUrl, status: "production_ready" })
+    .update({ highres_asset_url: assetUrl, status: "production_ready", released_at: now })
     .eq("id", applicationId);
-
   if (error) return { error: error.message };
+
+  // The artist has done their part: the organiser's working decision follows. They can't write
+  // decisions themselves, so this goes through the server.
+  const admin = createAdminClient();
+  await admin
+    .from("application_decisions")
+    .upsert(
+      { application_id: applicationId, opportunity_id: app.opportunity_id as string, status: "production_ready", updated_at: now },
+      { onConflict: "application_id" },
+    );
+
   revalidatePath("/dashboard");
+  revalidatePath("/studio/opportunities");
   return {};
 }
 

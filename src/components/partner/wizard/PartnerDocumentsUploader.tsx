@@ -48,8 +48,8 @@ export function PartnerDocumentsUploader({ opportunityId, documents, onUploaded,
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">Assessor documents <span className="text-stone-400 font-normal">optional</span></h3>
-        <p className="text-xs text-stone-500">
+        <h3 className="text-sm font-semibold">Assessor documents <span className="text-stone-500 font-normal">optional</span></h3>
+        <p className="text-sm text-stone-500">
           Upload briefs, rubric guides, or reference material for your review committee. Not visible to applicants.
         </p>
       </div>
@@ -59,14 +59,14 @@ export function PartnerDocumentsUploader({ opportunityId, documents, onUploaded,
           {documents.map((doc) => (
             <div key={doc.id} className="flex items-center justify-between border border-black/10 px-3 py-2 text-sm">
               <div className="flex items-center gap-2 min-w-0">
-                <Paperclip className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <Paperclip className="w-3.5 h-3.5 text-stone-500 shrink-0" />
                 <span className="truncate">{doc.label}</span>
-                <span className="text-xs text-stone-400 shrink-0">{doc.file_size_kb} KB</span>
+                <span className="text-sm text-stone-500 shrink-0">{doc.file_size_kb} KB</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleDelete(doc)}
-                className="text-stone-400 hover:text-foreground transition-colors ml-3 shrink-0"
+                className="text-stone-500 hover:text-foreground transition-colors ml-3 shrink-0"
                 aria-label="Remove document"
               >
                 <X className="w-3.5 h-3.5" />

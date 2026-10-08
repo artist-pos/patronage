@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Partner Dashboard",
-};
-
-export default async function PartnerDashboardPage() {
-  redirect("/studio");
+// The organiser's dashboard lives at /dashboard.
+export default function PartnerDashboardRedirect() {
+  redirect("/dashboard");
 }

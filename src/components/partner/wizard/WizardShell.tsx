@@ -19,12 +19,6 @@ import type { TemplateKey } from "@/lib/pipeline-templates";
 import { ALL_STAGE_VALUES, type PipelineStagesConfig } from "@/lib/pipeline-stages";
 import type { LocalCriterion } from "./RubricBuilder";
 
-type NotificationDefaults = {
-  shortlisted: "send" | "hold";
-  rejected: "send" | "hold";
-  selected: "send" | "hold";
-};
-
 interface Props {
   opp: Opportunity;
   initialStep: number;
@@ -36,29 +30,28 @@ interface Props {
 }
 
 const FREE_STEPS = [
-  { number: 2, label: "Basics" },
-  { number: 3, label: "Review" },
+  { number: 2, label: "Details" },
+  { number: 3, label: "Check" },
 ];
 
 // Anonymous authors only fill the info step; they must sign in before the rest
 // of the listing process (review + publish), which happens once authenticated.
-const FREE_STEPS_ANON = [{ number: 2, label: "Basics" }];
+const FREE_STEPS_ANON = [{ number: 2, label: "Details" }];
 
 const PIPELINE_STEPS = [
-  { number: 1, label: "Template" },
-  { number: 2, label: "Basics" },
-  { number: 3, label: "Form" },
-  { number: 4, label: "Scoring" },
-  { number: 5, label: "Post-selection" },
-  { number: 6, label: "Review & Publish" },
+  { number: 1, label: "Start" },
+  { number: 2, label: "Details" },
+  { number: 3, label: "Questions" },
+  { number: 4, label: "Judging" },
+  { number: 5, label: "Check" },
 ];
 
 // Anonymous partners only fill Template + Basics; everything past that persists
 // against a real opportunity id (rubric, documents, terms upload) so it's
 // gated behind sign-in, same as free listings only doing Basics anonymously.
 const PIPELINE_STEPS_ANON = [
-  { number: 1, label: "Template" },
-  { number: 2, label: "Basics" },
+  { number: 1, label: "Start" },
+  { number: 2, label: "Details" },
 ];
 
 const DEFAULT_POST_SELECTION: PostSelectionConfig = {
@@ -67,12 +60,6 @@ const DEFAULT_POST_SELECTION: PostSelectionConfig = {
   update_frequency_days: 30,
   requires_documentation: false,
   doc_fields: [],
-};
-
-const DEFAULT_NOTIFICATION_DEFAULTS = {
-  shortlisted: "hold" as const,
-  rejected: "hold" as const,
-  selected: "send" as const,
 };
 
 export function WizardShell({
@@ -101,12 +88,6 @@ export function WizardShell({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const router = useRouter();
-
-  // Notification defaults with fallback to pipeline_config or defaults
-  const [notificationDefaults, setNotificationDefaults] = useState<NotificationDefaults>(
-    (initialOpp.pipeline_config?.notification_defaults as NotificationDefaults | undefined) ??
-      DEFAULT_NOTIFICATION_DEFAULTS
-  );
 
   // Post-selection config
   const [postSelection, setPostSelection] = useState<PostSelectionConfig>(
@@ -233,14 +214,6 @@ export function WizardShell({
     });
   }
 
-  function handleNotificationDefaultsChange(defaults: NotificationDefaults) {
-    setNotificationDefaults(defaults);
-    const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
-    queueSave({
-      pipeline_config: { ...prevConfig, notification_defaults: defaults },
-    });
-  }
-
   function handleStagesConfigChange(config: PipelineStagesConfig) {
     setStagesConfig(config);
     const prevConfig = opp.pipeline_config ?? { questions: [], artist_documents: [], terms_pdf_url: null };
@@ -316,7 +289,7 @@ export function WizardShell({
         nextLabel={anonymous && isLastStep ? "Sign in to continue →" : undefined}
       />
 
-      <main className="max-w-[1280px] mx-auto px-6 py-10 pb-24">
+      <main className="ams-comfort max-w-[1280px] mx-auto px-4 sm:px-6 py-10 pb-28">
         {step === 1 && isPipeline && (
           <StepTemplate
             selectedTemplate={template}
@@ -363,28 +336,32 @@ export function WizardShell({
         )}
 
         {step === 4 && isPipeline && (
-          <StepRubric
-            opportunityId={opp.id}
-            criteria={criteria}
-            documents={documents}
-            onCriteriaChange={setCriteria}
-            onDocUploaded={(doc) => setDocuments((prev) => [...prev, doc])}
-            onDocDeleted={(id) => setDocuments((prev) => prev.filter((d) => d.id !== id))}
-          />
+          <div className="space-y-10">
+            <StepRubric
+              opportunityId={opp.id}
+              criteria={criteria}
+              documents={documents}
+              onCriteriaChange={setCriteria}
+              onDocUploaded={(doc) => setDocuments((prev) => [...prev, doc])}
+              onDocDeleted={(id) => setDocuments((prev) => prev.filter((d) => d.id !== id))}
+            />
+            <details className="max-w-2xl border border-black/20 p-4">
+              <summary className="cursor-pointer text-base font-semibold">
+                What happens after you pick artists? <span className="font-normal text-stone-600">(optional, for most calls you can skip this)</span>
+              </summary>
+              <div className="pt-6">
+                <StepPostSelection
+                  postSelection={postSelection}
+                  stagesConfig={stagesConfig}
+                  onPostSelectionChange={handlePostSelectionChange}
+                  onStagesConfigChange={handleStagesConfigChange}
+                />
+              </div>
+            </details>
+          </div>
         )}
 
-        {step === 5 && isPipeline && (
-          <StepPostSelection
-            postSelection={postSelection}
-            notificationDefaults={notificationDefaults}
-            stagesConfig={stagesConfig}
-            onPostSelectionChange={handlePostSelectionChange}
-            onNotificationDefaultsChange={handleNotificationDefaultsChange}
-            onStagesConfigChange={handleStagesConfigChange}
-          />
-        )}
-
-        {step === (isPipeline ? 6 : 3) && (
+        {step === (isPipeline ? 5 : 3) && (
           <StepReviewPublish
             opp={opp}
             criteria={criteria}

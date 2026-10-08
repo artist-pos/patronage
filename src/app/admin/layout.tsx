@@ -18,7 +18,7 @@ const NAV = [
   { href: "/admin/claim-tokens", label: "Claim Tokens" },
   { href: "/admin/orphaned-users", label: "Orphaned Users" },
   { href: "/admin/social", label: "Social" },
-  { href: "/partner/dashboard", label: "Open Calls" },
+  { href: "/dashboard?view=partner", label: "Open Calls" },
 ];
 
 export default async function AdminLayout({

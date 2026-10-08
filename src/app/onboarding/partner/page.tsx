@@ -38,7 +38,7 @@ export default async function OnboardingPartnerPage({ searchParams }: Props) {
   };
   const hasLocation = !!(seeded.city_id || profile.country);
   const hasOrgCategory = !!profile.org_category;
-  if (hasLocation && hasOrgCategory) redirect(resume ?? "/partner/dashboard");
+  if (hasLocation && hasOrgCategory) redirect(resume ?? "/dashboard");
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-6 py-12">

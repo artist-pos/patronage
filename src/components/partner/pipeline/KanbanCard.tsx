@@ -3,7 +3,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import type { EnrichedApp } from "@/components/partner/ApplicationsManager";
+import type { EnrichedApp } from "@/components/partner/types";
 
 interface Props {
   app: EnrichedApp;
@@ -34,7 +34,7 @@ export function KanbanCard({ app, onClick }: Props) {
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 cursor-grab active:cursor-grabbing text-stone-300 hover:text-stone-500 shrink-0"
+          className="mt-0.5 cursor-grab active:cursor-grabbing text-stone-400 hover:text-stone-500 shrink-0"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </button>
@@ -49,7 +49,7 @@ export function KanbanCard({ app, onClick }: Props) {
             <p className="text-sm font-medium truncate">{a?.full_name ?? a?.username ?? "Unknown"}</p>
           </div>
           {a?.career_stage && (
-            <p className="text-xs text-stone-400 mt-0.5">{a.career_stage}</p>
+            <p className="text-sm text-stone-500 mt-0.5">{a.career_stage}</p>
           )}
         </div>
       </div>
@@ -59,7 +59,7 @@ export function KanbanCard({ app, onClick }: Props) {
           <img src={thumb} alt="" className="w-full h-20 object-cover" />
         </div>
       )}
-      <p className="text-xs text-stone-400 cursor-pointer" onClick={onClick}>
+      <p className="text-sm text-stone-500 cursor-pointer" onClick={onClick}>
         {new Date(app.created_at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}
       </p>
     </div>
