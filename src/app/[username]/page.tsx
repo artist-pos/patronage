@@ -449,7 +449,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     // because representation renders in the header, above the tabs.
     isArtistProfile
       ? getArtistAffiliations(profile.id)
-      : Promise.resolve({ representation: [], participation: [] }),
+      : Promise.resolve({ representation: [], participation: [], membership: [] }),
   ]);
 
   const viewerRole: string | null = viewerRoleResult;
@@ -893,6 +893,22 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                         {affiliations.representation.map((org, i) => (
                           <span key={org.username}>
                             {i > 0 && (i === affiliations.representation.length - 1 ? " and " : ", ")}
+                            <Link
+                              href={`/${org.username}`}
+                              className="text-white underline decoration-white/30 underline-offset-[3px] transition-colors hover:decoration-white"
+                            >
+                              {org.name}
+                            </Link>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                    {affiliations.membership.length > 0 && (
+                      <p className="mt-1.5 text-[13px] text-white/70">
+                        Member of{" "}
+                        {affiliations.membership.map((org, i) => (
+                          <span key={org.username}>
+                            {i > 0 && (i === affiliations.membership.length - 1 ? " and " : ", ")}
                             <Link
                               href={`/${org.username}`}
                               className="text-white underline decoration-white/30 underline-offset-[3px] transition-colors hover:decoration-white"

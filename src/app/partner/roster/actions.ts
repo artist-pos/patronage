@@ -20,7 +20,7 @@ interface Caller {
   id: string;
   category: string;
   /** The relationship this category's roster carries, e.g. "participant". */
-  relationship: "represented" | "participant";
+  relationship: "represented" | "participant" | "member";
   name: string;
 }
 
@@ -58,7 +58,7 @@ async function requireRosterOrg(): Promise<{ caller?: Caller; error?: string }> 
   if (!canKeepRoster(p.org_category)) {
     const label = orgCategory(p.org_category)?.label ?? "Your organisation type";
     return {
-      error: `${label} does not keep an artist list. Galleries list represented artists, residencies list participants.`,
+      error: `${label} does not keep an artist list. Galleries list represented artists, residencies list participants, art societies list members.`,
     };
   }
 
@@ -185,7 +185,9 @@ async function notifyArtist(caller: Caller, artistId: string, rosterId: string) 
   const claim =
     caller.relationship === "represented"
       ? `${caller.name} would like to list you as a represented artist`
-      : `${caller.name} would like to list you as a past participant`;
+      : caller.relationship === "member"
+        ? `${caller.name} would like to list you as a member`
+        : `${caller.name} would like to list you as a past participant`;
 
   const [a, b] = [caller.id, artistId].sort();
   const { data: existing } = await admin

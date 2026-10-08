@@ -15,6 +15,7 @@ export type OrgCategory =
   | "local_board_arts_org"
   | "gallery"
   | "residency"
+  | "art_society"
   | "council"
   | "developer"
   | "corporate";
@@ -35,7 +36,9 @@ export type ArtistRelationship =
   | "geographic"
   | "representation"
   | "commissioning"
-  | "participation";
+  | "participation"
+  /** artists belong to it. A society or club: members list themselves, with consent. */
+  | "membership";
 
 export interface OrgCategoryDef {
   value: OrgCategory;
@@ -50,6 +53,8 @@ export interface OrgCategoryDef {
   /** May build a dated alumni list, each of whom must accept. Distinct from
    *  representation: it records a past association, not a current mandate. */
   hasAlumni: boolean;
+  /** May keep a consented list of members (art societies, clubs). */
+  hasMembers: boolean;
   /** What one membership is called in the interface, singular. */
   rosterNoun: string | null;
 }
@@ -63,6 +68,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: true,
     representsArtists: false,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: null,
   },
   {
@@ -73,6 +79,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: false,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: null,
   },
   {
@@ -83,6 +90,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: true,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: "represented artist",
   },
   {
@@ -96,7 +104,19 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: false,
     hasAlumni: true,
+    hasMembers: false,
     rosterNoun: "participant",
+  },
+  {
+    value: "art_society",
+    label: "Art society / Club",
+    hint: "Art societies, clubs and guilds. Members join your list with their own consent, and you can run calls for them.",
+    relationship: "membership",
+    anchorsRegion: false,
+    representsArtists: false,
+    hasAlumni: false,
+    hasMembers: true,
+    rosterNoun: "member",
   },
   {
     value: "council",
@@ -106,6 +126,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: false,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: null,
   },
   {
@@ -116,6 +137,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: false,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: null,
   },
   {
@@ -126,6 +148,7 @@ export const ORG_CATEGORIES: OrgCategoryDef[] = [
     anchorsRegion: false,
     representsArtists: false,
     hasAlumni: false,
+    hasMembers: false,
     rosterNoun: null,
   },
 ];
@@ -156,7 +179,7 @@ export function hasAlumni(value: string | null | undefined): boolean {
  */
 export function canKeepRoster(value: string | null | undefined): boolean {
   const c = orgCategory(value);
-  return !!c && (c.representsArtists || c.hasAlumni);
+  return !!c && (c.representsArtists || c.hasAlumni || c.hasMembers);
 }
 
 /**
@@ -166,11 +189,12 @@ export function canKeepRoster(value: string | null | undefined): boolean {
  */
 export function defaultRelationship(
   value: string | null | undefined
-): "represented" | "participant" | null {
+): "represented" | "participant" | "member" | null {
   const c = orgCategory(value);
   if (!c) return null;
   if (c.representsArtists) return "represented";
   if (c.hasAlumni) return "participant";
+  if (c.hasMembers) return "member";
   return null;
 }
 

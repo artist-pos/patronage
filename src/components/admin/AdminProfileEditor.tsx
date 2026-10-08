@@ -1,16 +1,37 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateProfileBasics } from "@/app/admin/profiles/actions";
+import { setOrgCategory, updateProfileBasics } from "@/app/admin/profiles/actions";
+import { ORG_CATEGORIES, canKeepRoster } from "@/lib/org-categories";
 import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 
 interface Props {
   profileId: string;
+  /** Set for organisations only: their current type and how many roster entries they have. */
+  orgType: { value: string; rosterCount: number } | null;
   defaults: { full_name: string; bio: string; website_url: string; username: string };
 }
 
-export function AdminProfileEditor({ profileId, defaults }: Props) {
+export function AdminProfileEditor({ profileId, orgType, defaults }: Props) {
+  const [category, setCategory] = useState(orgType?.value ?? "");
+  const [categorySaved, setCategorySaved] = useState(orgType?.value ?? "");
+  const [categoryMessage, setCategoryMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const [categoryPending, startCategory] = useTransition();
+
+  function saveCategory() {
+    setCategoryMessage(null);
+    startCategory(async () => {
+      const res = await setOrgCategory(profileId, category || null);
+      if (res.error) {
+        setCategoryMessage({ text: res.error, ok: false });
+      } else {
+        setCategorySaved(category);
+        setCategoryMessage({ text: "Saved.", ok: true });
+      }
+    });
+  }
+
   const [fullName, setFullName] = useState(defaults.full_name);
   const [username, setUsername] = useState(defaults.username);
   const [bio, setBio] = useState(defaults.bio);
@@ -96,6 +117,42 @@ export function AdminProfileEditor({ profileId, defaults }: Props) {
           )}
         </div>
       </form>
+
+      {orgType && (
+        <section className="space-y-3 border-t border-border pt-6">
+          <label htmlFor="pe-category" className={labelCls}>Organisation type</label>
+          <select
+            id="pe-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">Not set</option>
+            {ORG_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+          {category !== categorySaved && orgType.rosterCount > 0 && !canKeepRoster(category) && (
+            <p className="text-xs text-amber-700">
+              This organisation has {orgType.rosterCount} roster {orgType.rosterCount === 1 ? "entry" : "entries"}. The new type
+              cannot add to it, though existing entries stay linked.
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveCategory}
+              disabled={categoryPending || category === categorySaved}
+              className="bg-black px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {categoryPending ? "Saving…" : "Save type"}
+            </button>
+            {categoryMessage && (
+              <span className={`text-xs ${categoryMessage.ok ? "text-green-700" : "text-red-600"}`}>{categoryMessage.text}</span>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3 border-t border-border pt-6">
         <p className={labelCls}>Logo / avatar</p>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Instagram, Mail } from "lucide-react";
 
 type FooterLink = { text: string; href: string; external?: boolean };
 type FooterColumn = { label: string; links: FooterLink[] };
@@ -43,8 +43,6 @@ const COLUMNS: FooterColumn[] = [
       { text: "Resources", href: "/resources" },
       { text: "Blog", href: "/blog" },
       { text: "Report a bug", href: "/report-bug" },
-      { text: "Instagram", href: "https://www.instagram.com/patronage.nz/", external: true },
-      { text: "Contact", href: "mailto:hello@patronage.nz", external: true },
     ],
   },
 ];
@@ -71,6 +69,24 @@ function Brand() {
       <p className="mt-3.5 max-w-[220px] text-[13px] leading-[1.65] text-[color:var(--fg-muted)]">
         Connecting artists, organisations and opportunity in Aotearoa and beyond.
       </p>
+      <div className="mt-4 flex items-center gap-2">
+        <a
+          href="https://www.instagram.com/patronage.nz/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Patronage on Instagram"
+          className="flex h-9 w-9 items-center justify-center border border-border text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+        >
+          <Instagram className="h-4 w-4" aria-hidden="true" />
+        </a>
+        <a
+          href="mailto:blake@patronage.nz"
+          aria-label="Email Patronage"
+          className="flex h-9 w-9 items-center justify-center border border-border text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
+        >
+          <Mail className="h-4 w-4" aria-hidden="true" />
+        </a>
+      </div>
     </div>
   );
 }

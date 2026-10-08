@@ -444,7 +444,7 @@ export function PartnerProfileView({
             <div className="mb-[18px] flex items-baseline justify-between">
               <h2 className={SECTION_LABEL}>{rosterHeading(roster.relationship)}</h2>
               <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
-                {roster.artists.length} artist{roster.artists.length !== 1 ? "s" : ""}
+                {roster.artists.length} {roster.relationship === "member" ? "member" : "artist"}{roster.artists.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-[2px] sm:grid-cols-3 lg:grid-cols-6">

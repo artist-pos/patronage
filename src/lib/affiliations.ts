@@ -29,9 +29,11 @@ export interface ArtistAffiliations {
   representation: Affiliation[];
   /** Residencies and studio programmes, newest first: a timeline. */
   participation: Affiliation[];
+  /** Art societies and clubs the artist belongs to. */
+  membership: Affiliation[];
 }
 
-const EMPTY: ArtistAffiliations = { representation: [], participation: [] };
+const EMPTY: ArtistAffiliations = { representation: [], participation: [], membership: [] };
 
 export async function getArtistAffiliations(
   artistId: string
@@ -65,6 +67,7 @@ export async function getArtistAffiliations(
 
   const representation: Affiliation[] = [];
   const participation: Affiliation[] = [];
+  const membership: Affiliation[] = [];
 
   for (const row of rows) {
     const org = row.collective?.org;
@@ -83,6 +86,8 @@ export async function getArtistAffiliations(
       representation.push(entry);
     } else if (relationship === "participant") {
       participation.push(entry);
+    } else if (relationship === "member") {
+      membership.push(entry);
     }
   }
 
@@ -91,7 +96,9 @@ export async function getArtistAffiliations(
     (a, b) => (b.startYear ?? 0) - (a.startYear ?? 0) || a.name.localeCompare(b.name)
   );
 
-  return { representation, participation };
+  membership.sort((a, b) => a.name.localeCompare(b.name));
+
+  return { representation, participation, membership };
 }
 
 /** "2022 to 2023", "2024 to now", or null when no years were recorded. */
@@ -118,7 +125,7 @@ export interface RosterArtist {
 
 export interface OrgRoster {
   /** "represented" for a gallery, "participant" for a residency. */
-  relationship: "represented" | "shows_with" | "participant" | null;
+  relationship: "represented" | "shows_with" | "participant" | "member" | null;
   artists: RosterArtist[];
 }
 
@@ -190,5 +197,7 @@ export async function getOrgRoster(orgProfileId: string): Promise<OrgRoster> {
 
 /** What the section on the organisation's page is called. */
 export function rosterHeading(relationship: OrgRoster["relationship"]): string {
-  return relationship === "participant" ? "Artists who have been here" : "Represented artists";
+  if (relationship === "participant") return "Artists who have been here";
+  if (relationship === "member") return "Members";
+  return "Represented artists";
 }

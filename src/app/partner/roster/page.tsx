@@ -208,7 +208,9 @@ export default async function PartnerRosterPage() {
           {keepsRoster
             ? isAlumni
               ? "Everyone who has been through your programme, with the years. Each person confirms before they appear on your page."
-              : "The artists you represent. Each one confirms before they appear on your page."
+              : category?.hasMembers
+                ? "Your members. Each one confirms before they appear on your page."
+                : "The artists you represent. Each one confirms before they appear on your page."
             : "Invite the artists you work with onto Patronage. Your organisation does not claim them: they simply get a profile, and appear on their region's page because of where they work."}
         </p>
       </header>

@@ -15,11 +15,29 @@ export default async function AdminProfileEditPage({ params }: Props) {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, full_name, bio, website_url, role, account_status")
+    .select("id, username, full_name, bio, website_url, role, account_status, org_category")
     .eq("id", id)
     .maybeSingle();
 
   if (!profile) notFound();
+
+  // A roster outlives a change of type, so say how many entries are attached.
+  let rosterCount = 0;
+  if (profile.role === "partner") {
+    const { data: roster } = await supabase
+      .from("collectives")
+      .select("id")
+      .eq("org_profile_id", profile.id)
+      .limit(1)
+      .maybeSingle();
+    if (roster) {
+      const { count } = await supabase
+        .from("collective_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("collective_id", roster.id);
+      rosterCount = count ?? 0;
+    }
+  }
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -42,6 +60,7 @@ export default async function AdminProfileEditPage({ params }: Props) {
       </div>
       <AdminProfileEditor
         profileId={profile.id}
+        orgType={profile.role === "partner" ? { value: profile.org_category ?? "", rosterCount } : null}
         defaults={{
           full_name: profile.full_name ?? "",
           bio: profile.bio ?? "",

@@ -34,13 +34,15 @@ export type ArtistLocationTarget =
 
 // Sets the structured location (migration 182) by hand. A town carries its own
 // region; a region alone places someone who lives somewhere the taxonomy does
-// not list. The freeform text the artist typed is left alone unless a town is
+// not list. Both are New Zealand taxonomies, so choosing one also sets the country.
+// The freeform text the artist typed is left alone unless a town is
 // chosen, in which case it follows the town like the artist-facing picker does.
 export async function setArtistLocation(id: string, target: ArtistLocationTarget) {
   await guard();
   const supabase = await createClient();
 
   let patch: {
+    country?: CountryEnum;
     city_id: string | null;
     region_id: string | null;
     city?: string;
@@ -56,7 +58,7 @@ export async function setArtistLocation(id: string, target: ArtistLocationTarget
       .eq("id", target.cityId)
       .maybeSingle();
     if (!city) return { error: "Town not found." };
-    patch = { city_id: city.id, region_id: city.region_id, city: city.name, location_needs_review: false };
+    patch = { city_id: city.id, region_id: city.region_id, city: city.name, country: "NZ", location_needs_review: false };
   } else {
     const { data: region } = await supabase
       .from("regions")
@@ -64,7 +66,7 @@ export async function setArtistLocation(id: string, target: ArtistLocationTarget
       .eq("id", target.regionId)
       .maybeSingle();
     if (!region) return { error: "Region not found." };
-    patch = { city_id: null, region_id: region.id, location_needs_review: false };
+    patch = { city_id: null, region_id: region.id, country: "NZ", location_needs_review: false };
   }
 
   // Keep the board only if it still belongs to the region they are moving to.
