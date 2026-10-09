@@ -139,6 +139,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${title}, ${artistName}`,
     description: work.description ? work.description.slice(0, 155) : `${title} by ${artistName}.`,
+    // One URL per work: the UUID form and the slug form both resolve.
+    alternates: { canonical: `/${username}/works/${work.slug ?? work.id}` },
     openGraph: { images: work.url ? [{ url: work.url }] : [] },
   };
 }
