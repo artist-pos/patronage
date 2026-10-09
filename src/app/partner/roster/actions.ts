@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canKeepRoster, defaultRelationship, orgCategory } from "@/lib/org-categories";
 import { anyMinor } from "@/lib/minor";
+import { notifyRosterArtist } from "@/lib/notifications";
 
 /**
  * An organisation's roster: the artists it represents, or who have been through
@@ -154,6 +155,8 @@ export async function inviteArtistToRoster(input: {
   }
 
   await notifyArtist(caller, input.artistId, rosterId);
+  // The bell reaches under-18s too, who cannot receive the DM.
+  notifyRosterArtist(input.artistId, caller.name, caller.relationship, "roster_invite").catch(console.error);
 
   revalidatePath("/partner/roster");
   return {};
@@ -277,6 +280,15 @@ export async function removeFromRoster(membershipId: string): Promise<{ error?: 
   const rosterId = (roster as { id: string } | null)?.id;
   if (!rosterId) return { error: "No roster to edit." };
 
+  // Read before deleting: only someone already listed is told they were removed.
+  // Withdrawing a pending invitation is silent.
+  const { data: membership } = await admin
+    .from("collective_members")
+    .select("user_id, status")
+    .eq("id", membershipId)
+    .eq("collective_id", rosterId)
+    .maybeSingle();
+
   const { error: deleteError } = await admin
     .from("collective_members")
     .delete()
@@ -284,6 +296,11 @@ export async function removeFromRoster(membershipId: string): Promise<{ error?: 
     .eq("collective_id", rosterId);
 
   if (deleteError) return { error: deleteError.message };
+
+  const m = membership as { user_id: string; status: string } | null;
+  if (m?.status === "accepted") {
+    notifyRosterArtist(m.user_id, caller.name, caller.relationship, "roster_removed").catch(console.error);
+  }
 
   revalidatePath("/partner/roster");
   return {};

@@ -76,11 +76,11 @@ export default async function StudioProfilePage() {
       </div>
 
       {/* Groups */}
-      <section className="space-y-4 border-t border-border pt-10">
+      <section id="groups" className="space-y-4 border-t border-border pt-10 scroll-mt-20">
         <div className="space-y-1">
           <h2 className="text-base font-semibold">Groups</h2>
           <p className="text-sm text-muted-foreground">
-            Create or join artist groups. Expand a group to manage members — search for artists by name or username to add them.
+            Create or join artist groups. Expand a group to manage members — search for artists by name or username to add them. Galleries, residencies, societies and schools that list you also appear here: nothing is shown on their page until you accept, and you can remove yourself at any time.
           </p>
         </div>
         <CollectivesManager userId={user.id} initialMemberships={initialMemberships} />

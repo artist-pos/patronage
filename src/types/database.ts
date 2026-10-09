@@ -262,7 +262,9 @@ export interface ApplicationScore {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'sale' | 'support' | 'transfer_request' | 'transfer_accepted' | 'note';
+  type:
+    | 'sale' | 'support' | 'transfer_request' | 'transfer_accepted' | 'note'
+    | 'roster_invite' | 'roster_accepted' | 'roster_declined' | 'roster_left' | 'roster_removed';
   title: string;
   body: string | null;
   link: string | null;

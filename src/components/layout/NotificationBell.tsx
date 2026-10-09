@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ShoppingBag, Heart, ArrowLeftRight, MessageSquare } from "lucide-react";
+import { Bell, ShoppingBag, Heart, ArrowLeftRight, MessageSquare, UserPlus, UserMinus } from "lucide-react";
 import { createRealtimeClient } from "@/lib/supabase/client";
 import { markNotificationsRead } from "@/app/notifications/actions";
 import type { Notification } from "@/types/database";
@@ -29,6 +29,11 @@ const TYPE_ICON: Record<Notification["type"], React.ReactNode> = {
   transfer_request: <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />,
   transfer_accepted: <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />,
   note: <MessageSquare className="w-3.5 h-3.5 shrink-0" />,
+  roster_invite: <UserPlus className="w-3.5 h-3.5 shrink-0" />,
+  roster_accepted: <UserPlus className="w-3.5 h-3.5 shrink-0" />,
+  roster_declined: <UserMinus className="w-3.5 h-3.5 shrink-0" />,
+  roster_left: <UserMinus className="w-3.5 h-3.5 shrink-0" />,
+  roster_removed: <UserMinus className="w-3.5 h-3.5 shrink-0" />,
 };
 
 export function NotificationBell({ userId, initialUnreadCount }: Props) {

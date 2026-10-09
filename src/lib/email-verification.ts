@@ -47,7 +47,7 @@ export async function issueEmailVerification(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("email, full_name, username, email_verified_at, email_verify_sent_at")
+    .select("email, full_name, username, role, email_verified_at, email_verify_sent_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -75,6 +75,7 @@ export async function issueEmailVerification(
       email: profile.email,
       name: profile.full_name?.trim() || profile.username || "there",
       token: raw,
+      role: profile.role,
     });
   } catch {
     return "error";

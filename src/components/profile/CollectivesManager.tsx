@@ -38,6 +38,37 @@ interface Props {
   initialMemberships: CollectiveMember[];
 }
 
+/** An organisation's list (gallery, residency, society, school), as opposed to an artist-run group. */
+function isOrgRoster(m: CollectiveMember): boolean {
+  return !!m.collective?.org_profile_id;
+}
+
+function rosterInvitePhrase(m: CollectiveMember): string {
+  switch (m.collective?.relationship) {
+    case "represented":
+      return "would like to list you as a represented artist";
+    case "participant":
+      return "would like to list you as a past participant";
+    case "member":
+      return "would like to list you as a member";
+    default:
+      return "would like to list you on their page";
+  }
+}
+
+function rosterStatusLabel(m: CollectiveMember): string {
+  switch (m.collective?.relationship) {
+    case "represented":
+      return "Represented artist · shown on their page";
+    case "participant":
+      return "Past participant · shown on their page";
+    case "member":
+      return "Member · shown on their page";
+    default:
+      return "Listed on their page";
+  }
+}
+
 export function CollectivesManager({ userId, initialMemberships }: Props) {
   const [memberships, setMemberships] = useState<CollectiveMember[]>(initialMemberships);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -178,6 +209,13 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
   }
 
   async function handleLeave(collectiveId: string) {
+    const target = memberships.find(m => m.collective_id === collectiveId);
+    if (
+      target && isOrgRoster(target) &&
+      !window.confirm(`Remove yourself from ${target.collective?.name ?? "this list"}? You will no longer appear on their page, and they will be told.`)
+    ) {
+      return;
+    }
     const result = await leaveCollective(collectiveId);
     if (result.error) showToast(result.error);
     else {
@@ -247,7 +285,11 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                   <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{m.collective?.name ?? "Unnamed collective"}</p>
-                    <p className="text-xs text-muted-foreground">You&apos;ve been invited to join</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isOrgRoster(m)
+                        ? `${rosterInvitePhrase(m)}. You will not appear until you accept.`
+                        : "You\u2019ve been invited to join"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -257,7 +299,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                     className="flex items-center gap-1 text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity"
                   >
                     <Check className="w-3 h-3" />
-                    Accept
+                    {isOrgRoster(m) ? "Accept and be listed" : "Accept"}
                   </button>
                   <button
                     type="button"
@@ -278,7 +320,8 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
         <div className="divide-y divide-border border border-border">
           {accepted.map(m => {
             const isAdmin = m.role === "admin";
-            const isOpen = expandedId === m.collective_id;
+            const orgRoster = isOrgRoster(m);
+            const isOpen = !orgRoster && expandedId === m.collective_id;
             const members = membersMap[m.collective_id] ?? [];
             const picker = pickerValue[m.collective_id] ?? [];
             const existingUserIds = new Set(members.map(mb => mb.user_id));
@@ -289,17 +332,19 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                 <div className="flex items-center justify-between px-4 py-3 gap-4">
                   <button
                     type="button"
-                    onClick={() => toggleExpand(m.collective_id)}
-                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                    onClick={() => !orgRoster && toggleExpand(m.collective_id)}
+                    className={`flex items-center gap-3 min-w-0 flex-1 text-left ${orgRoster ? "cursor-default" : ""}`}
                   >
                     <Users className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{m.collective?.name ?? "Unnamed"}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        {isAdmin ? <><Crown className="w-3 h-3" />Admin</> : "Member"}
+                        {orgRoster
+                          ? rosterStatusLabel(m)
+                          : isAdmin ? <><Crown className="w-3 h-3" />Admin</> : "Member"}
                       </p>
                     </div>
-                    {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-auto" />}
+                    {!orgRoster && (isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-auto" />)}
                   </button>
                   <div className="shrink-0">
                     {isAdmin ? (
@@ -318,7 +363,7 @@ export function CollectivesManager({ userId, initialMemberships }: Props) {
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
                       >
                         <LogOut className="w-3.5 h-3.5" />
-                        Leave
+                        {orgRoster ? "Remove me from this list" : "Leave"}
                       </button>
                     )}
                   </div>

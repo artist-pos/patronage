@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendCollectiveInvitation } from "@/lib/email";
 import { anyMinor } from "@/lib/minor";
+import { notifyRosterOrg } from "@/lib/notifications";
 
 type CollectiveMemberRow = {
   id: string;
@@ -175,6 +176,7 @@ export async function acceptCollectiveInvitation(collectiveId: string): Promise<
     .eq("status", "pending");
 
   if (error) return { error: error.message };
+  notifyRosterOrg(collectiveId, user.id, "roster_accepted").catch(console.error);
   revalidatePath("/studio");
   return {};
 }
@@ -193,6 +195,7 @@ export async function declineCollectiveInvitation(collectiveId: string): Promise
     .eq("status", "pending");
 
   if (error) return { error: error.message };
+  notifyRosterOrg(collectiveId, user.id, "roster_declined").catch(console.error);
   revalidatePath("/studio");
   return {};
 }
@@ -324,7 +327,9 @@ export async function leaveCollective(collectiveId: string): Promise<{ error?: s
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };
+  notifyRosterOrg(collectiveId, user.id, "roster_left").catch(console.error);
   revalidatePath("/profile");
+  revalidatePath("/studio/profile");
   return {};
 }
 

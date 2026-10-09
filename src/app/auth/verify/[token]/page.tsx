@@ -51,18 +51,30 @@ export default async function VerifyTokenPage({ params }: Props) {
     }
   }
 
+  const role = profile?.role;
+  const next =
+    role === "partner"
+      ? { href: "/partner/dashboard", label: "Go to your dashboard", done: "Your email is confirmed." }
+      : role === "patron"
+        ? { href: "/artists", label: "Discover artists", done: "Your email is confirmed." }
+        : {
+            href: "/opportunities?tab=for-you",
+            label: "See opportunities for you",
+            done: "You can now apply for opportunities, and your weekly digest is active.",
+          };
+
   return (
     <Shell title={status === "verified" ? "Email confirmed" : "Already confirmed"}>
       <p className="text-sm text-muted-foreground leading-relaxed">
         {status === "verified"
-          ? "You can now apply for opportunities, and your weekly digest is active."
+          ? next.done
           : "This address was already confirmed. Nothing more to do."}
       </p>
       <Link
-        href="/opportunities?tab=for-you"
+        href={next.href}
         className="inline-block text-sm bg-black text-white px-4 py-2.5 hover:opacity-80 transition-opacity"
       >
-        See opportunities for you
+        {next.label}
       </Link>
     </Shell>
   );

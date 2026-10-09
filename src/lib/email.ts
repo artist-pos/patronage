@@ -1997,32 +1997,110 @@ export function buildArtistInviteEmail({
 }
 
 /**
+ * What each role can do, and what confirming the address switches on for it.
+ *
+ * The same email used to go to everyone with artist copy (applications,
+ * weekly digest), which told a gallery or a patron about features they
+ * cannot use. Keyed by `profiles.role`; "owner" is an artist who also holds
+ * work, and anything unknown falls back to the patron copy.
+ */
+export interface VerificationCopy {
+  subject: string;
+  intro: string;
+  /** What the person can do now. */
+  canDo: string[];
+  /** What confirming the address adds, or null when nothing is gated. */
+  unlocks: string[] | null;
+  cta: { label: string; path: string };
+}
+
+export function verificationCopy(role: string | null | undefined): VerificationCopy {
+  switch (role) {
+    case "artist":
+    case "owner":
+      return {
+        subject: "Confirm your email to start applying",
+        intro: "Your artist account is already set up. Here is what you can do on Patronage:",
+        canDo: [
+          "Browse grants, residencies and open calls across Aotearoa and Australia, and save the ones you want",
+          "Build your profile: works, exhibitions, press and CV",
+          "Post studio updates to the feed and show works that are available",
+          "Be listed by a gallery, residency, society or school, if you accept their invitation",
+        ],
+        unlocks: [
+          "Applying to opportunities through Patronage",
+          "Your weekly digest of opportunities matched to your practice",
+        ],
+        cta: { label: "Confirm my email", path: "" },
+      };
+    case "partner":
+      return {
+        subject: "Confirm your email to get started on Patronage",
+        intro: "Your organisation account is ready. Here is what you can do on Patronage:",
+        canDo: [
+          "List grants, residencies, open calls and jobs, and review the applications that come in",
+          "Invite artists you work with, and keep a list of the artists you represent, host or teach (each one has to accept before they appear on your page)",
+          "Message artists directly",
+        ],
+        unlocks: null,
+        cta: { label: "Confirm my email", path: "" },
+      };
+    default:
+      return {
+        subject: "Confirm your email to get started on Patronage",
+        intro: "Your patron account is ready. Here is what you can do on Patronage:",
+        canDo: [
+          "Discover and follow artists across Aotearoa and Australia",
+          "Keep a collection: confirm works that artists add to it and see their provenance",
+          "Support artists directly, and message them",
+        ],
+        unlocks: null,
+        cta: { label: "Confirm my email", path: "" },
+      };
+  }
+}
+
+/**
  * Prove ownership of the signup address.
  *
- * Sent after the account already works, so this is not a gate the artist is
- * waiting behind — it is the thing that switches on applications and the
- * weekly digest. The copy says both, because one reason is easy to ignore.
+ * Sent after the account already works, so this is not a gate anyone is
+ * waiting behind. For artists it switches on applications and the weekly
+ * digest; for other roles it just secures the account, so the copy leads with
+ * what their role can do.
  */
 export async function sendVerificationEmail({
   email,
   name,
   token,
+  role,
 }: {
   email: string;
   name: string;
   token: string;
+  role?: string | null;
 }): Promise<void> {
+  const copy = verificationCopy(role);
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: "Confirm your email to start applying",
-    html: buildVerificationHtml({ name, token }),
+    subject: copy.subject,
+    html: buildVerificationHtml({ name, token, copy }),
   });
 }
 
-function buildVerificationHtml({ name, token }: { name: string; token: string }): string {
+function buildVerificationHtml({
+  name,
+  token,
+  copy,
+}: {
+  name: string;
+  token: string;
+  copy: VerificationCopy;
+}): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const url = `${SITE_URL}/auth/verify/${token}`;
+  const items = (xs: string[]) =>
+    xs.map((x, i) => `<li style="margin-bottom:${i === xs.length - 1 ? 0 : 6}px;">${esc(x)}</li>`).join("");
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -2033,17 +2111,18 @@ function buildVerificationHtml({ name, token }: { name: string; token: string })
       <p style="color:#888;font-size:13px;margin:0 0 32px;">Confirm your email</p>
 
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>${esc(name)}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#555;">
-        Your account is already set up &mdash; you can browse and save opportunities right now.
-        Confirming your address switches on the two things that need it:
-      </p>
-      <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#555;">
-        <li style="margin-bottom:6px;">Applying to opportunities through Patronage</li>
-        <li>Your weekly digest of opportunities matched to your practice</li>
-      </ul>
+      <p style="margin:0 0 12px;font-size:14px;color:#555;">${esc(copy.intro)}</p>
+      <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#555;">${items(copy.canDo)}</ul>
+
+      ${
+        copy.unlocks
+          ? `<p style="margin:0 0 12px;font-size:14px;color:#555;">Confirming your address switches on the things that need it:</p>
+      <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#555;">${items(copy.unlocks)}</ul>`
+          : `<p style="margin:0 0 24px;font-size:14px;color:#555;">Confirming your address keeps your account secure and lets us reach you about it.</p>`
+      }
 
       <a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:10px 20px;font-size:14px;text-decoration:none;">
-        Confirm my email &rarr;
+        ${esc(copy.cta.label)} &rarr;
       </a>
 
       <p style="margin:24px 0 0;font-size:12px;color:#888;">
