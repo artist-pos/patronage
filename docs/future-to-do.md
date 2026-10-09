@@ -179,3 +179,19 @@ Let partners who run their intake/relationship management in an external CRM (e.
 **Incident (Sept 2026):** three `@example.com` rows left in `subscribers` by ad-hoc RLS testing (`dbc42bd`) caused every weekly digest send to fail — cron and manual — from 9 Sep through 16 Sep with zero visibility, because `resend.batch.send()` rejects the *entire* batch when any single recipient's address is undeliverable, and `sendWeeklyDigest` (`src/lib/digest-send.ts`) discarded the Resend error instead of surfacing it. Fixed the silent-failure part in that incident (errors now flow through `DigestSendResult.queryError` to the admin UI) and deleted the bad rows, but the underlying fragility — one poisoned address blocks every real recipient — is still there.
 
 **Fix:** in `sendWeeklyDigest`'s send loop (~line 303 in `digest-send.ts`), either (a) filter obviously-undeliverable addresses (malformed, `@example.com`/`@test.com`/reserved domains) out of `getDigestRecipients()` before batching, and/or (b) on a batch error, fall back to sending that chunk one-by-one so only the actual bad address is dropped instead of the whole chunk. (b) is the real fix — (a) only catches known-bad patterns, not every way an address can be rejected. Note `#24` step 7 already flagged the related "current code marks a whole chunk failed" issue in its verification notes — worth doing both in the same pass if #24 is picked up first.
+
+
+---
+
+## #27 · Embeddable opportunities widget + outreach (CNZ)
+
+**Idea:** let partner sites (galleries, schools, art societies, councils) embed live Patronage opportunities, and re-contact Creative New Zealand about listing Patronage on their opportunities/resources page. Both earn backlinks, which helps the indexing problem (low authority, slow crawling of partner/shadow profiles).
+
+**Already in place:** `/api/public/opportunities` (filters `type`, `country`, `page`, `limit` ≤ 100; CDN-cached 1 h), plus `/api/public/artists` and `/api/public/cities`. `next.config.ts` already drops `X-Frame-Options` and sets `frame-ancestors *` for `/embed/*`; `/embed/[username]/collection` is the only embed today.
+
+**To build:**
+1. `/embed/opportunities` — iframe-able list, optional filters (`?type=residency&country=NZ&limit=6`), "Powered by Patronage" link back to `/opportunities`.
+2. CORS headers (`Access-Control-Allow-Origin`) on `/api/public/*` so sites can call the API from the browser.
+3. `/partners/embed` — pick filters, copy the `<iframe>` snippet.
+
+**CNZ outreach (not code):** lead with the lighter ask: list Patronage as a place to find NZ/AU opportunities. Pitch: aggregates 50+ sources weekly, free for artists; offer CNZ an embed/feed of their own listings so their data stays accurate. Need the right contact.
