@@ -65,11 +65,13 @@ export function ClosedOpportunityRecovery({ opportunityId, suggestions }: Props)
   return (
     <section ref={ref} className="mt-8 border-t border-border pt-7">
       <p className="mb-1 text-[15px] font-semibold">This opportunity has closed.</p>
-      <p className="mb-5 text-[14px] text-[color:var(--fg-muted)]">
-        You might be interested in:
-      </p>
+      {suggestions.length > 0 && (
+        <p className="mb-5 text-[14px] text-[color:var(--fg-muted)]">
+          You might be interested in:
+        </p>
+      )}
 
-      <div className="grid grid-cols-1 gap-[2px] bg-feed-bg sm:grid-cols-2">
+      {suggestions.length > 0 && <div className="grid grid-cols-1 gap-[2px] bg-feed-bg sm:grid-cols-2">
         {suggestions.map((s) => (
           <Link
             key={s.id}
@@ -107,7 +109,14 @@ export function ClosedOpportunityRecovery({ opportunityId, suggestions }: Props)
             </div>
           </Link>
         ))}
-      </div>
+      </div>}
+
+      <Link
+        href="/opportunities"
+        className="mt-5 inline-flex h-[44px] items-center bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-80"
+      >
+        View all opportunities →
+      </Link>
     </section>
   );
 }

@@ -897,7 +897,7 @@ export default async function OpportunityPage({ params }: Props) {
       </div>
 
       {/* ── Closed listing: live alternatives instead of a dead end ──────── */}
-      {isClosed && recoverySuggestions.length > 0 && (
+      {isClosed && (
         <ClosedOpportunityRecovery
           opportunityId={opp.id}
           suggestions={recoverySuggestions}

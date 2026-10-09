@@ -1,5 +1,6 @@
 import { CARD_FIELDS } from "@/lib/opportunity-card-fields";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { parseFundingText } from "./parse-funding";
@@ -254,6 +255,29 @@ export type SimilarOpportunity = Pick<
 
 const SIMILAR_FIELDS =
   "id, slug, title, organiser, type, country, city, deadline, featured_image_url, funding_range, funding_amount, sub_categories";
+
+/**
+ * A handful of live listings for pages with no listing to be similar to (a
+ * removed opportunity's link). Soonest real deadline first, so what is shown
+ * is what is about to close. Shared by every visitor, so cached for 5 minutes.
+ */
+export const getOpenOpportunitySample = unstable_cache(
+  async (limit: number = 4): Promise<SimilarOpportunity[]> => {
+    const supabase = createPublicClient();
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
+      .from("opportunities")
+      .select(SIMILAR_FIELDS)
+      .eq("is_active", true)
+      .eq("status", "published")
+      .gte("deadline", today)
+      .order("deadline", { ascending: true })
+      .limit(limit);
+    return (data ?? []) as SimilarOpportunity[];
+  },
+  ["open-opportunity-sample"],
+  { revalidate: 300, tags: ["opportunities"] }
+);
 
 /** Best available numeric read of an opportunity's value, for band comparison. */
 function valueBand(o: { funding_amount: number | null; funding_range: string | null }): number {
