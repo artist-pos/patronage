@@ -601,7 +601,7 @@ export function PatronProfileView({
                 Edit Profile
               </Link>
             )}
-            {!isOwner && (
+            {!isOwner && !profile.is_minor && (
               <FollowButton
                 followingId={profile.id}
                 initialIsFollowing={alreadyFollowing}

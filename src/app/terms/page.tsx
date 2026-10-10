@@ -8,7 +8,7 @@ export default function TermsPage() {
     <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: June 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: October 2026</p>
       </header>
 
       <Section title="1. Who We Are">
@@ -24,8 +24,8 @@ export default function TermsPage() {
         <ul className="mt-3 space-y-2">
           <Item label="Artists">
             Control their own portfolio, bio, available works, and support tiers. Artists
-            can receive enquiries from patrons and reply to messages, but cannot initiate
-            conversations. Artists can apply to opportunities listed on the platform.
+            can message other artists, and can message patrons and partners who follow them
+            or have engaged with their opportunities. Artists can apply to opportunities listed on the platform.
           </Item>
           <Item label="Patrons">
             Can browse artist profiles, send enquiries about available works, purchase works
@@ -148,11 +148,22 @@ export default function TermsPage() {
         <ul className="mt-3 space-y-1.5 list-disc list-inside text-muted-foreground">
           <li>Send unsolicited commercial messages (spam) to other users</li>
           <li>Scrape, harvest, or use artist contact details or profile data for commercial purposes without consent</li>
+          <li>
+            Send unsolicited messages promoting your own paid services, workshops, courses,
+            or external groups (including Facebook groups) to other members, or repeatedly
+            post such promotion in a way that dominates your profile or studio feed
+          </li>
           <li>Impersonate another person or misrepresent your identity or role</li>
           <li>Upload content that is unlawful, defamatory, or infringes a third party&rsquo;s rights</li>
           <li>Attempt to circumvent any security or access controls on the platform</li>
           <li>Generate, upload, or distribute AI-generated work represented as original human-created art</li>
         </ul>
+        <p className="mt-4">
+          Mentioning your own workshops, teaching, or offerings on your profile, and linking
+          to your website or social accounts, is fine. Repeated or unsolicited promotion
+          sent to other members may result in content being removed, messaging being
+          restricted, or the account being suspended or removed.
+        </p>
       </Section>
 
       <Section title="6. Aggregated Content">

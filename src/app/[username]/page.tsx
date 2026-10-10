@@ -467,9 +467,11 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   // ── Messaging relationship check — artists may only message users they
   // have a relationship with (follower, applied-to, or saved-opportunity).
-  // Non-artist roles can always message.
+  // Non-artist roles can always message, and artist-to-artist is open — the
+  // gate only applies when an artist reaches out to a patron or partner.
+  const profileIsArtist = profile.role === "artist" || profile.role === "owner";
   let canMessageProfile = canMessage; // default: logged in + not self
-  if (canMessage && viewerIsArtist) {
+  if (canMessage && viewerIsArtist && !profileIsArtist) {
     // Run the three relationship checks concurrently
     const [followRes, appliedRes, savedRes] = await Promise.all([
       supabase
@@ -970,14 +972,16 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                   )}
                   {!isOwner && (
                     <>
-                      <FollowButton
-                        followingId={profile.id}
-                        initialIsFollowing={alreadyFollowing}
-                        isAuthenticated={!!user}
-                      />
+                      {!profile.is_minor && (
+                        <FollowButton
+                          followingId={profile.id}
+                          initialIsFollowing={alreadyFollowing}
+                          isAuthenticated={!!user}
+                        />
+                      )}
                       {canMessageProfile ? (
                         <MessageButton otherUserId={profile.id} />
-                      ) : (user && viewerIsArtist) ? (
+                      ) : (user && viewerIsArtist && !profile.is_minor) ? (
                         <span className="text-xs text-muted-foreground max-w-[220px] leading-snug">
                           Message {displayName} once they follow you — share your profile link to connect.
                         </span>
@@ -1037,7 +1041,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             {/* Sticky mini-header — keeps name + patron actions in reach once
                 the cover and action bar have scrolled away */}
             <ProfileStickyBar name={displayName}>
-              {!isOwner && (
+              {!isOwner && !profile.is_minor && (
                 <FollowButton
                   followingId={profile.id}
                   initialIsFollowing={alreadyFollowing}
@@ -1150,7 +1154,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           displayName={displayName}
           isOwner={isOwner}
           canMessage={canMessageProfile}
-          messageHint={user && viewerIsArtist && !canMessageProfile
+          messageHint={user && viewerIsArtist && !profile.is_minor && !canMessageProfile
             ? `Message ${displayName} once they follow you — share your profile link to connect.`
             : undefined}
           verified={!!(profile.bio && profile.avatar_url) && profile.account_status !== "shadow"}
@@ -1170,7 +1174,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           displayName={displayName}
           isOwner={isOwner}
           canMessage={canMessageProfile}
-          messageHint={user && viewerIsArtist && !canMessageProfile
+          messageHint={user && viewerIsArtist && !profile.is_minor && !canMessageProfile
             ? `Message ${displayName} once they follow you — share your profile link to connect.`
             : undefined}
           isAuthenticated={!!user}
