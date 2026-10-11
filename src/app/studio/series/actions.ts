@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { deleteFolio } from "@/app/studio/series/folio-actions";
 
 function slugify(text: string): string {
   return text
@@ -192,6 +193,18 @@ export async function deleteSeries(seriesId: string): Promise<{ error?: string }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+
+  // A folio owns files in storage (cover, panels, details) that the row delete
+  // would leave behind, so it goes through its own delete.
+  const { data: kind } = await supabase
+    .from("series")
+    .select("series_type")
+    .eq("id", seriesId)
+    .eq("artist_id", user.id)
+    .maybeSingle();
+  if ((kind as { series_type?: string } | null)?.series_type === "folio") {
+    return deleteFolio(seriesId);
+  }
 
   const { error } = await supabase
     .from("series")

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles";
 import { SeriesDetailClient } from "./SeriesDetailClient";
+import { FolioView } from "./FolioView";
 import type { SeriesWork, SeriesEditionOption } from "@/types/database";
 
 interface Props {
@@ -25,7 +26,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${series.title}, ${artistName}`,
     description: series.description?.slice(0, 155) ?? `${series.title} by ${artistName}.`,
-    openGraph: { images: series.hero_image_url ? [{ url: series.hero_image_url }] : [] },
+    // Under-18s are reachable only by their own link: never indexed.
+    ...(profile.is_minor && { robots: { index: false, follow: false } }),
+    openGraph: { images: !profile.is_minor && series.hero_image_url ? [{ url: series.hero_image_url }] : [] },
   };
 }
 
@@ -41,11 +44,35 @@ export default async function SeriesDetailPage({ params }: Props) {
 
   const { data: series } = await supabase
     .from("series")
-    .select("id, title, description, hero_image_url")
+    .select("id, title, description, hero_image_url, series_type, folio_subject, year")
     .eq("artist_id", profile.id)
     .eq("slug", slug)
     .single();
   if (!series) notFound();
+
+  if (series.series_type === "folio") {
+    const { data: imageRows } = await supabase
+      .from("series_folio_images")
+      .select("url, kind")
+      .eq("series_id", series.id)
+      .order("position", { ascending: true });
+    const images = (imageRows ?? []) as { url: string; kind: string }[];
+    return (
+      <FolioView
+        title={series.title}
+        description={series.description}
+        subject={series.folio_subject as string | null}
+        year={(series.year as number | null) ?? null}
+        coverUrl={series.hero_image_url}
+        panels={images.filter((i) => i.kind === "panel").map((i) => i.url)}
+        details={images.filter((i) => i.kind === "detail").map((i) => i.url)}
+        artistName={profile.full_name ?? profile.username}
+        artistUsername={username}
+        seriesId={series.id}
+        isOwner={authResult.data.user?.id === profile.id}
+      />
+    );
+  }
 
   const { data: artworksRaw } = await supabase
     .from("series_artworks")

@@ -308,7 +308,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
     needsSeries
       ? supabase
           .from("series")
-          .select("id, title, slug, hero_image_url, is_featured, position, year, series_artworks(count)")
+          .select("id, title, slug, hero_image_url, is_featured, position, year, series_type, series_artworks(count), series_folio_images(count)")
           .eq("artist_id", profile.id)
           .order("position", { ascending: true })
           .then(({ data }) => (data ?? []).map(s => ({
@@ -319,8 +319,11 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
             is_featured: s.is_featured as boolean,
             position: s.position as number,
             year: (s.year as number | null) ?? undefined,
+            // A folio's panels are not artworks, so it counts its own images.
             artworkCount: Array.isArray(s.series_artworks)
-              ? (s.series_artworks[0] as { count: number } | undefined)?.count ?? 0
+              ? ((s.series_type === "folio"
+                  ? (s.series_folio_images as { count: number }[] | null)?.[0]
+                  : (s.series_artworks[0] as { count: number } | undefined))?.count ?? 0)
               : 0,
           })))
       : Promise.resolve([] as Array<{ id: string; title: string; slug: string; hero_image_url: string | null; is_featured: boolean; position: number; year?: number; artworkCount: number }>),

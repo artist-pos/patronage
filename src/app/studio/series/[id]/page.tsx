@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { SeriesEditorClient } from "./SeriesEditorClient";
+import { FolioManage } from "./FolioManage";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Edit Series — Studio" };
@@ -16,7 +17,7 @@ export default async function EditSeriesPage({ params }: PageProps) {
 
   const [profileResult, seriesResult] = await Promise.all([
     supabase.from("profiles").select("role, username").eq("id", user.id).single(),
-    supabase.from("series").select("id, title, slug, hero_image_url, description, year").eq("id", id).eq("artist_id", user.id).single(),
+    supabase.from("series").select("id, title, slug, hero_image_url, description, year, series_type").eq("id", id).eq("artist_id", user.id).single(),
   ]);
 
   const profile = profileResult.data;
@@ -24,6 +25,24 @@ export default async function EditSeriesPage({ params }: PageProps) {
 
   const series = seriesResult.data;
   if (!series) notFound();
+
+  if (series.series_type === "folio") {
+    const { count } = await supabase
+      .from("series_folio_images")
+      .select("id", { count: "exact", head: true })
+      .eq("series_id", id)
+      .eq("kind", "panel");
+    return (
+      <FolioManage
+        seriesId={series.id}
+        title={series.title}
+        slug={series.slug}
+        username={profile.username ?? ""}
+        coverUrl={series.hero_image_url}
+        panelCount={count ?? 0}
+      />
+    );
+  }
 
   const { data: artworksRaw } = await supabase
     .from("series_artworks")

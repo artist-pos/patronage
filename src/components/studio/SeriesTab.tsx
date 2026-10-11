@@ -41,12 +41,20 @@ export function SeriesTab({ series: initialSeries }: Props) {
         <p className="text-sm text-muted-foreground">
           Group related works under a shared page. Each work keeps its own price and provenance.
         </p>
-        <Link
-          href="/studio/series/new"
-          className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium shrink-0 ml-4"
-        >
-          + Add Series
-        </Link>
+        <div className="flex shrink-0 items-center gap-2 ml-4">
+          <Link
+            href="/studio/series/new-folio"
+            className="text-xs border border-border px-3 py-1.5 hover:bg-muted/40 transition-colors font-medium"
+          >
+            + Add folio
+          </Link>
+          <Link
+            href="/studio/series/new"
+            className="text-xs bg-black text-white px-3 py-1.5 hover:opacity-80 transition-opacity font-medium"
+          >
+            + Add Series
+          </Link>
+        </div>
       </div>
 
       {error && (
