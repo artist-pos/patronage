@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { getDigestData, digestSubject, DIGEST_SIZE } from "@/lib/digest";
-import { getDigestRecipientCount, getLastDigestSend } from "@/lib/digest-send";
+import { DIGEST_DAILY_BUDGET, getDigestSplitCounts, getLastDigestSend } from "@/lib/digest-send";
 import { DigestControls } from "./DigestControls";
 
 export const metadata = { title: "Digest — Admin" };
@@ -23,11 +23,12 @@ function fmtSent(iso: string) {
 }
 
 export default async function AdminDigestPage() {
-  const [subscriberCount, digest, lastSend] = await Promise.all([
-    getDigestRecipientCount(),
+  const [splitCounts, digest, lastSend] = await Promise.all([
+    getDigestSplitCounts(),
     getDigestData(),
     getLastDigestSend(),
   ]);
+  const subscriberCount = splitCounts.a + splitCounts.b + splitCounts.partner;
   const hasResend = !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
   const picks = digest.opportunities;
   const isEmpty = picks.length === 0;
@@ -43,13 +44,15 @@ export default async function AdminDigestPage() {
             : " · never sent"}
         </p>
         <p className="text-xs text-muted-foreground">
-          Preview shows an unsuppressed issue. A real send skips what each
+          Each send is capped at {DIGEST_DAILY_BUDGET} emails so welcome and verification mail still fits under
+          Resend&apos;s 100 a day. Preview shows an unsuppressed issue. A real send skips what each
           person has already been shown, so individual emails will differ.
         </p>
       </div>
 
       <DigestControls
-        subscriberCount={subscriberCount}
+        counts={splitCounts}
+        total={subscriberCount}
         hasResend={hasResend}
         isEmpty={isEmpty}
       />

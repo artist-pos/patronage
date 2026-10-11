@@ -1,12 +1,22 @@
 {
-  "regions": ["syd1"],
+  "regions": [
+    "syd1"
+  ],
   "env": {
     "NEXT_PUBLIC_SITE_URL": "https://patronage.nz"
   },
   "crons": [
     {
-      "path": "/api/admin/send-digest",
+      "path": "/api/admin/send-digest?half=a",
       "schedule": "30 20 * * 2"
+    },
+    {
+      "path": "/api/admin/send-digest?half=b",
+      "schedule": "30 20 * * 3"
+    },
+    {
+      "path": "/api/admin/send-digest?half=partner",
+      "schedule": "45 20 * * 2"
     },
     {
       "path": "/api/cron/send-followups",
@@ -23,6 +33,10 @@
     {
       "path": "/api/cron/refresh-minor-flags",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/send-activation-nudges",
+      "schedule": "0 21 * * *"
     }
   ]
 }

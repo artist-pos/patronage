@@ -12,8 +12,8 @@ I built Patronage to make finding opportunities to apply for a little easier. Yo
 
 A few things worth doing:
 
-— Add where you're based
-— Add a few works to your profile
+— Add a profile photo and a short bio
+— Add three works to your profile. That makes you Verified, which opens up selling and support
 — Add your exhibition history, awards and press
 — Save opportunities you want to come back to
 

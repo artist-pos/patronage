@@ -7,6 +7,9 @@ import { RosterManager, type RosterEntry } from "./RosterManager";
 import { InviteUpload } from "./InviteUpload";
 import { InviteCopyEditor } from "./InviteCopyEditor";
 import { OrgJoinLink } from "./OrgJoinLink";
+import { CohortManager, type CohortView } from "./CohortManager";
+import { COHORT_MATCH_MIN_MEMBERS, getCohortSummaries } from "@/lib/cohorts";
+import { opportunityUrl } from "@/lib/digest";
 import { defaultInviteCopy } from "@/lib/email";
 import { getLocalBoards } from "@/lib/regions";
 import type { Metadata } from "next";
@@ -103,7 +106,27 @@ export default async function PartnerRosterPage() {
       .eq("invited_by_org_id", profile.id)
       .eq("signup_source", "org_link"),
   ]);
-  const joinUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/${profile.username}/join`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const joinUrl = `${siteUrl}/${profile.username}/join`;
+  const cohorts: CohortView[] = (await getCohortSummaries(profile.id)).map((c) => ({
+    id: c.id,
+    name: c.name,
+    year: c.year,
+    url: `${siteUrl}/c/${c.code}`,
+    isActive: c.is_active,
+    memberCount: c.memberCount,
+    minMembers: COHORT_MATCH_MIN_MEMBERS,
+    matches: c.matches
+      ? c.matches.map((o) => ({
+          title: o.title,
+          organiser: o.organiser,
+          deadline: o.deadline
+            ? new Date(o.deadline + "T00:00:00").toLocaleDateString("en-NZ", { day: "numeric", month: "short" })
+            : null,
+          url: opportunityUrl(o, siteUrl, "cohort"),
+        }))
+      : null,
+  }));
   const regionArtists = (regionRows ?? []) as Array<{
     id: string;
     username: string;
@@ -229,6 +252,18 @@ export default async function PartnerRosterPage() {
       {keepsRoster && !roster && (
         <RosterManager entries={[]} isAlumni={isAlumni} rosterNoun={category?.rosterNoun ?? "artist"} />
       )}
+
+      <section className="space-y-5 border-t border-border pt-10">
+        <div className="space-y-2">
+          <h2 className="text-[17px] font-semibold leading-[1.3]">Cohorts</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            A year group, a studio, a set of members. Each cohort has its own join link. Once five or more have joined,
+            you will see what is open for the group as a whole, ready to copy and send. Individual members are never
+            listed here, and anyone under 18 is counted but never named.
+          </p>
+        </div>
+        <CohortManager cohorts={cohorts} />
+      </section>
 
       <section className="space-y-4 border-t border-border pt-10">
         <div className="space-y-2">

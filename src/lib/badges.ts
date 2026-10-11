@@ -1,4 +1,5 @@
 import type { Profile } from "@/types/database";
+import { computeVerifiedProgress } from "@/lib/verified-progress";
 
 export interface BadgeSet {
   withPatronage: boolean;  // profile.is_patronage_supported
@@ -15,7 +16,7 @@ export function computeBadges(
 ): BadgeSet {
   return {
     withPatronage: profile.is_patronage_supported,
-    verified: !!(profile.bio && profile.avatar_url && worksCount >= 3),
+    verified: computeVerifiedProgress(profile, worksCount).verified,
     exhibited: (profile.exhibition_history ?? []).length > 0,
     grantRecipient: (profile.received_grants ?? []).length > 0,
     collected: isCollected,

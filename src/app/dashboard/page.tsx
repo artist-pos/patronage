@@ -9,6 +9,7 @@ import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscript
 import { formatCents } from "@/lib/commerce-fee";
 import type { Metadata } from "next";
 import { PartnerDashboard } from "@/components/partner/PartnerDashboard";
+import { ListingUiShell } from "@/components/accessibility/ListingUiShell";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -65,7 +66,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const isStaff = viewer?.role === "admin" || viewer?.role === "owner";
   if (viewer?.role === "reviewer") redirect("/review");
   if (viewer?.role === "partner" || (isStaff && params.view === "partner")) {
-    return <PartnerDashboard />;
+    return (
+      <ListingUiShell>
+        <PartnerDashboard />
+      </ListingUiShell>
+    );
   }
 
   const rawTab = params.tab ?? "overview";

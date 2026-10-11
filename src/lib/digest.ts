@@ -218,7 +218,7 @@ function metaLine(o: Opportunity): string {
   return parts.map(esc).join(" &middot; ");
 }
 
-function oppCard(o: Opportunity, siteUrl: string): string {
+function oppCard(o: Opportunity, siteUrl: string, forwardLabel = "Know someone for this?"): string {
   const img = absoluteImage(o.featured_image_url);
   const view = opportunityUrl(o, siteUrl, "digest");
   const copy = `${view}&action=copy`;
@@ -275,7 +275,7 @@ function oppCard(o: Opportunity, siteUrl: string): string {
           <tr>
             <td style="background:${BRAND_SUB};padding:10px 12px;">
               <p style="margin:0;font-family:${SANS};font-size:12px;line-height:1.6;color:${MUTED};">
-                Know someone for this?
+                ${esc(forwardLabel)}
                 &nbsp;<a href="${forwardMailto(o, siteUrl)}" style="color:${BRAND};text-decoration:underline;font-weight:600;">Email</a>
                 &nbsp;&middot;&nbsp;<a href="${copy}" style="color:${BRAND};text-decoration:underline;font-weight:600;">Copy link</a>
               </p>
@@ -392,6 +392,159 @@ export function buildDigestHtml(
                     </p>
                     <p style="margin:0;font-family:${SANS};font-size:12px;line-height:1.6;color:${SUBTLE};">
                       You are receiving this because you subscribed at
+                      <a href="${siteUrl}" style="color:${SUBTLE};">patronage.nz</a>.
+                      &nbsp;&middot;&nbsp;
+                      <a href="${unsubscribeUrl}" style="color:${SUBTLE};">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ── Partner digest ───────────────────────────────────────────────────────────
+// Same picks as the artist digest, framed for an organisation that wants to
+// pass them on to its students or members, plus how their own listings are doing.
+
+export interface PartnerListingStat {
+  title: string;
+  url: string;
+  /** Lifetime total; view_count is cumulative, so weekly views aren't available. */
+  views: number;
+  clicks7d: number;
+}
+
+export interface PartnerDigestData extends DigestData {
+  stats: PartnerListingStat[];
+}
+
+export function partnerDigestSubject(count: number): string {
+  return count === 1
+    ? "1 opportunity to pass on to your artists"
+    : `${count} opportunities to pass on to your artists`;
+}
+
+/** Plain text a partner can paste into a newsletter, group chat or post. */
+function partnerBlurb(opportunities: Opportunity[], siteUrl: string): string {
+  const lines = opportunities.slice(0, 5).map((o) => {
+    const close = o.deadline ? ` (closes ${fmtDate(o.deadline)})` : "";
+    return `• ${o.title}${close}\n  ${opportunityUrl(o, siteUrl, "partner_digest")}`;
+  });
+  return ["Open this week on Patronage:", "", ...lines, "", `More: ${siteUrl}/opportunities?ref=partner_digest`].join("\n");
+}
+
+export function buildPartnerDigestHtml(
+  data: PartnerDigestData,
+  siteUrl: string,
+  unsubscribeToken?: string
+): string {
+  const { opportunities, stats } = data;
+
+  const unsubscribeUrl = unsubscribeToken
+    ? `${siteUrl}/unsubscribe?token=${unsubscribeToken}`
+    : `${siteUrl}/unsubscribe`;
+
+  const issueDate = new Date(data.generatedAt).toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const cards = opportunities
+    .map((o) => oppCard(o, siteUrl, "Send this to your artists:"))
+    .join("");
+
+  const statsBlock = stats.length
+    ? `
+          <tr>
+            <td style="padding:26px 0 8px;border-top:1px solid ${RULE};">
+              <p style="margin:0 0 12px;font-family:${MONO};font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:${SUBTLE};">Your listings</p>
+              ${stats
+                .map(
+                  (s) => `<p style="margin:0 0 10px;font-family:${SANS};font-size:14px;line-height:1.5;">
+                    <a href="${esc(s.url)}" style="color:${INK};font-weight:600;text-decoration:none;">${esc(s.title)}</a><br>
+                    <span style="color:${MUTED};font-size:13px;">${s.views} view${s.views === 1 ? "" : "s"} in total &middot; ${s.clicks7d} apply click${s.clicks7d === 1 ? "" : "s"} in the last 7 days</span>
+                  </p>`
+                )
+                .join("")}
+            </td>
+          </tr>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>${esc(partnerDigestSubject(opportunities.length))}</title>
+</head>
+<body style="margin:0;padding:0;background:${PAPER};color:${INK};-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:${PAPER};">
+    <tr>
+      <td align="center" style="padding:40px 24px;">
+        <table width="552" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:552px;width:100%;">
+
+          <tr>
+            <td style="padding:0 0 6px;">
+              <a href="${siteUrl}?ref=partner_digest" style="text-decoration:none;">
+                <span style="font-family:${SANS};font-size:17px;font-weight:600;letter-spacing:-.01em;color:${INK};">Patronage</span>
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 20px;border-bottom:1px solid ${INK};">
+              <p style="margin:0;font-family:${MONO};font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:${SUBTLE};">
+                For organisations &nbsp;&middot;&nbsp; ${esc(issueDate)}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:26px 0 8px;">
+              <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${MUTED};">
+                ${opportunities.length === 1
+                  ? "One opportunity your students or members might want this week."
+                  : `${opportunities.length} opportunities your students or members might want this week.`}
+                Forward this email, or use the text below.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                ${cards}
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 0 24px;">
+              <p style="margin:0 0 8px;font-family:${MONO};font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:${SUBTLE};">Copy and paste</p>
+              <div style="background:${BRAND_SUB};padding:14px 16px;font-family:${SANS};font-size:13px;line-height:1.7;color:${INK};white-space:pre-wrap;">${esc(partnerBlurb(opportunities, siteUrl))}</div>
+            </td>
+          </tr>
+          ${statsBlock}
+
+          <tr>
+            <td style="padding:30px 0 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-top:1px solid ${RULE};">
+                <tr>
+                  <td style="padding:18px 0 0;">
+                    <p style="margin:0 0 10px;font-family:${SANS};font-size:13px;">
+                      <a href="${siteUrl}/dashboard?ref=partner_digest" style="color:${INK};text-decoration:underline;">Open your dashboard &rarr;</a>
+                    </p>
+                    <p style="margin:0;font-family:${SANS};font-size:12px;line-height:1.6;color:${SUBTLE};">
+                      You are receiving this because your organisation has an account on
                       <a href="${siteUrl}" style="color:${SUBTLE};">patronage.nz</a>.
                       &nbsp;&middot;&nbsp;
                       <a href="${unsubscribeUrl}" style="color:${SUBTLE};">Unsubscribe</a>

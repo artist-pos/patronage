@@ -10,6 +10,7 @@ import { sendWelcomeDm } from "@/lib/welcome-dm";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { isOrgCategory } from "@/lib/org-categories";
 import { validLocalBoardId } from "@/lib/local-boards";
+import { validCohortId } from "@/lib/cohorts";
 import {
   SIGNUP_CONTEXT_COOKIE,
   decodeSignupContext,
@@ -75,6 +76,12 @@ async function applyRole(role: string, next?: string | null) {
       ? await validLocalBoardId(supabase, signupCtx.localBoardId, signupCtx.regionId)
       : null;
 
+  // Re-checked against the organisation rather than trusted from the cookie.
+  const seededCohortId =
+    isArtist && signupCtx?.cohortId && signupCtx?.invitedByOrgId
+      ? await validCohortId(signupCtx.cohortId, signupCtx.invitedByOrgId)
+      : null;
+
   const profileData = {
     id: user.id,
     username: baseUsername,
@@ -112,6 +119,7 @@ async function applyRole(role: string, next?: string | null) {
     ...(isArtist && signupCtx?.invitedByOrgId && {
       invited_by_org_id: signupCtx.invitedByOrgId,
     }),
+    ...(seededCohortId && { cohort_id: seededCohortId }),
     // Their organisation had a name on file. Offered as the starting value
     // because a blank profile is the main reason people abandon onboarding.
     // The name they typed at signup (or Google's) outranks the organisation's

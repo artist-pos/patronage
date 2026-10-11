@@ -195,3 +195,43 @@ Let partners who run their intake/relationship management in an external CRM (e.
 3. `/partners/embed` — pick filters, copy the `<iframe>` snippet.
 
 **CNZ outreach (not code):** lead with the lighter ask: list Patronage as a place to find NZ/AU opportunities. Pitch: aggregates 50+ sources weekly, free for artists; offer CNZ an embed/feed of their own listings so their data stays accurate. Need the right contact.
+
+
+**Update (Oct 2026):** steps 1 and 2 are built (`/embed/opportunities`, CORS plus deadline and discipline filters on `/api/public/opportunities`). Still to do: step 3 (`/partners/embed` snippet picker) and the CNZ outreach.
+
+---
+
+## #26 update (Oct 2026)
+
+Fixed in the digest split work: undeliverable addresses are filtered in `getDigestRecipients()` and a failed batch falls back to single sends (`deliver()` in `src/lib/digest-send.ts`).
+
+---
+
+## #28 · Monthly Patronage microprize
+
+**Idea:** a monthly prize (NZ$500 to $1,000, partner-sponsored or self-funded) run through the application pipeline. Gives the pipeline its first real usage (there has been 1 application ever), a shareable finalist badge, and a monthly press and Instagram moment.
+
+**Design notes:**
+- Needs a Patronage-owned partner account as the listing owner.
+- Use the existing `prize` pipeline template (`src/lib/pipeline-templates.ts`).
+- `opportunity_applications` is `UNIQUE (opportunity_id, artist_id)`, so each month must be a **new opportunity row**: a monthly cron clones the previous round (pipeline config, scoring criteria, reviewers), sets a new slug, deadline and `opens_at`, and archives the old one (`archived_at`, migration 197).
+- Skip the NZD 200 pipeline publishing fee and admin approval via the service role: `protect_opportunity_columns` (migration 197) stops partners setting `pipeline_paid_at` or `status = published` themselves. The first round per partner is free; later rounds are not.
+- The recurrence columns (`is_recurring`, `recurrence_pattern`, ...) exist but nothing consumes them, so the cron is new work.
+- Payout is manual or invoice-based. There are no Stripe Connect transfers to winners in this flow.
+- Decide before building: amount, funder, judges, conflict-of-interest rule, whether entries are free.
+
+---
+
+## #29 · Paid tier for matching and alerts (decision pending)
+
+**Context:** the idea was a $5/month subscription on "For you", to offset API costs. "For you" is a database filter (`getMatchedOpportunities` / `selectInstantMatches`) with **no per-user AI cost**. Claude spend comes from the scraper (Haiku extraction), `/api/parse-opportunity`, `/api/parse-cv` and partner invite parsing, none of which scale with subscribers. The popup funnel also shows the personalised pitch is the main reason people sign up, and there are only about 50 new profiles a month.
+
+**If revisited:** charge for things that cost something or that people pay for elsewhere: instant/daily alerts, saved searches, a CV-parse allowance, and for partners, leads. Leave the core matched list free. Hold off until a few hundred active artists.
+
+---
+
+## #30 · Opportunities popup: intent trigger and cooldown
+
+**Data (30 days to 11 Oct 2026):** the grid modal fires at the 15th card for everyone; 98 of 121 dismissals had no pick; 33 people saw it more than once; mobile is about half of views. The artist directory modal had 35 dismissals from 37 views and asks "What do you make?" of people who came to find artists.
+
+**Options:** trigger after a second opportunity click or a save attempt; short cooldown after a no-pick dismissal; bottom sheet on mobile; remove or reframe the directory modal. Fix tracking first (done: double-counted dismissals, untracked "Just apply").

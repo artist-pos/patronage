@@ -56,8 +56,13 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
     }
   }
 
+  // The modal's own dismiss() already fires before_you_go_modal_dismissed.
   function dismiss() {
-    trackEvent("before_you_go_modal_dismissed", { opportunity_id: opportunityId });
+    proceed();
+  }
+
+  function skip() {
+    trackEvent("before_you_go_modal_skipped", { opportunity_id: opportunityId });
     proceed();
   }
 
@@ -102,7 +107,7 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
           next={POST_SIGNUP_DESTINATION}
           onClose={dismiss}
           skipLabel="Just apply →"
-          onSkip={proceed}
+          onSkip={skip}
         />
       )}
     </>

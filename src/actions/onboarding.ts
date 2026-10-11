@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { isOrgCategory } from "@/lib/org-categories";
 import { validLocalBoardId } from "@/lib/local-boards";
+import { validCohortId } from "@/lib/cohorts";
 import { sendWelcomeDigest } from "@/lib/digest-send";
 import { issueEmailVerification } from "@/lib/email-verification";
 import { sendWelcomeDm } from "@/lib/welcome-dm";
@@ -131,6 +132,12 @@ export async function completeOnboarding(
     const candidate = nameHandle.length >= 3 ? nameHandle : emailHandle || "";
     const baseUsername = candidate.length >= 3 ? candidate : `${candidate}${user.id.replace(/-/g, "").slice(0, 6)}`;
 
+    // Re-checked against the organisation rather than trusted from the cookie.
+    const seededCohortId =
+      isArtist && signupCtx?.cohortId && signupCtx?.invitedByOrgId
+        ? await validCohortId(signupCtx.cohortId, signupCtx.invitedByOrgId)
+        : null;
+
     const profileData = {
       id: user.id,
       username: baseUsername,
@@ -151,6 +158,7 @@ export async function completeOnboarding(
         ...(signupCtx.ref && { signup_source_ref: signupCtx.ref }),
       }),
       ...(isArtist && signupCtx?.invitedByOrgId && { invited_by_org_id: signupCtx.invitedByOrgId }),
+      ...(seededCohortId && { cohort_id: seededCohortId }),
       ...(signupCtx?.regionId && !regionId && { region_id: signupCtx.regionId }),
     };
 

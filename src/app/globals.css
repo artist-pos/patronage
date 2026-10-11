@@ -601,3 +601,41 @@ div[data-figure-row] > figure[data-figure-image] {
   outline: 3px solid var(--brand);
   outline-offset: 2px;
 }
+
+/* ─── Opportunity-listing screens: compact view vs accessibility view ─────────
+   Scoped to .listing-ui (ListingUiShell wraps /list-an-opportunity, /partner/*
+   and the organiser dashboard) so the rest of the site is untouched.
+
+   Default is the compact view: the smaller type and lighter secondary grey those
+   screens had before the October accessibility pass. Tailwind v4 reads its type
+   scale from --text-* variables, so re-pointing them here changes every
+   text-xs / text-sm inside the scope without touching a component.
+   [data-a11y="on"] puts back the current values; the wrapper also gets
+   .ams-comfort then, for 44px targets and the strong focus ring. */
+.listing-ui {
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --fg-muted: oklch(0.53 0 0);
+  --muted-foreground: oklch(0.53 0 0);
+}
+
+.listing-ui[data-a11y="on"] {
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --fg-muted: oklch(0.44 0 0);
+  --muted-foreground: oklch(0.44 0 0);
+}
+
+/* A further step up. zoom scales px-sized text too, which a variable cannot. */
+.listing-ui[data-large="on"] {
+  zoom: 1.15;
+}
+
+.listing-ui[data-motion="reduce"] *,
+.listing-ui[data-motion="reduce"] *::before,
+.listing-ui[data-motion="reduce"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}

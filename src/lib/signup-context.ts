@@ -44,6 +44,9 @@ export interface SignupContext {
   /** Organisation whose invitation brought them here (migration 187). Recorded
    *  as attribution on the new profile. It grants the organisation nothing. */
   invitedByOrgId?: string;
+  /** The cohort whose join code brought them here (migration 206). Re-validated
+   *  against invitedByOrgId before being written. */
+  cohortId?: string;
   /** The invitation row, so joining can be marked against it. */
   inviteToken?: string;
   /** Name the organisation had on file, offered as a default rather than

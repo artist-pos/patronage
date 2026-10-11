@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { computeVerifiedProgress, VERIFIED_WORKS_REQUIRED } from "@/lib/verified-progress";
 
 /**
  * Commerce (sales, support tiers, campaign sales, negotiated sales, Stripe
@@ -9,7 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * call this, since server actions are public endpoints and hiding a button is
  * cosmetic.
  */
-export const COMMERCE_WORKS_REQUIRED = 3;
+export const COMMERCE_WORKS_REQUIRED = VERIFIED_WORKS_REQUIRED;
 
 export interface CommerceEligibility {
   eligible: boolean;
@@ -24,14 +25,8 @@ export async function getCommerceEligibility(artistId: string): Promise<Commerce
     admin.from("artworks").select("id", { count: "exact", head: true }).eq("profile_id", artistId),
   ]);
 
-  const missing: string[] = [];
-  if (!profile?.bio?.trim()) missing.push("a bio");
-  if (!profile?.avatar_url) missing.push("a profile photo");
-  const works = count ?? 0;
-  if (works < COMMERCE_WORKS_REQUIRED) {
-    missing.push(`${COMMERCE_WORKS_REQUIRED - works} more work${COMMERCE_WORKS_REQUIRED - works === 1 ? "" : "s"}`);
-  }
-  return { eligible: missing.length === 0, missing };
+  const { verified, missing } = computeVerifiedProgress(profile, count ?? 0);
+  return { eligible: verified, missing };
 }
 
 /**

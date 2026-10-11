@@ -8,6 +8,18 @@ const MAX_LIMIT = 100;
 // Cache for 1 hour at the CDN; serve stale for up to 24 h while revalidating
 const CACHE = "public, s-maxage=3600, stale-while-revalidate=86400";
 
+// Other sites call this from the browser (an embedded board, a school's own
+// page), so it is open to any origin. Read-only and public data.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
@@ -15,6 +27,10 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10)));
   const type    = searchParams.get("type")    ?? null;
   const country = searchParams.get("country") ?? null;
+  // A category such as "Photography". Matches the listing's sub_categories.
+  const discipline = searchParams.get("discipline") ?? null;
+  // Closed calls are hidden unless asked for: they used to leak into results.
+  const includeClosed = searchParams.get("include_closed") === "1";
 
   const supabase = await createClient();
 
@@ -40,6 +56,11 @@ export async function GET(req: NextRequest) {
 
   if (type)    query = query.eq("type", type);
   if (country) query = query.eq("country", country);
+  if (discipline) query = query.contains("sub_categories", [discipline]);
+  if (!includeClosed) {
+    const today = new Date().toISOString().split("T")[0];
+    query = query.or(`deadline.gte.${today},deadline.is.null`);
+  }
 
   const from = (page - 1) * limit;
   query = query.range(from, from + limit - 1);
@@ -47,7 +68,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500, headers: CORS });
   }
 
   const opportunities = (data ?? []).map((o: any) => ({
@@ -93,7 +114,7 @@ export async function GET(req: NextRequest) {
       meta: { total, page, limit, has_more },
     },
     {
-      headers: { "Cache-Control": CACHE },
+      headers: { "Cache-Control": CACHE, ...CORS },
     }
   );
 }

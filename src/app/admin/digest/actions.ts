@@ -1,9 +1,11 @@
 "use server";
 
 import { isAdmin } from "@/lib/admin";
-import { sendWeeklyDigest } from "@/lib/digest-send";
+import { sendPartnerDigest, sendWeeklyDigest } from "@/lib/digest-send";
 
-export async function sendDigestAction(): Promise<{
+export type DigestAudience = "a" | "b" | "partner";
+
+export async function sendDigestAction(audience: DigestAudience): Promise<{
   ok: boolean;
   sent: number;
   message: string;
@@ -18,7 +20,10 @@ export async function sendDigestAction(): Promise<{
     };
   }
 
-  const { sent, skipped, errors, queryError } = await sendWeeklyDigest("manual");
+  const { sent, skipped, errors, deferred, queryError } =
+    audience === "partner"
+      ? await sendPartnerDigest("manual")
+      : await sendWeeklyDigest("manual", { half: audience });
 
   if (queryError) {
     return { ok: false, sent: 0, message: `Query failed: ${queryError}` };
@@ -41,6 +46,7 @@ export async function sendDigestAction(): Promise<{
   const parts = [`Sent to ${sent} recipient${sent !== 1 ? "s" : ""}.`];
   if (skipped > 0) parts.push(`${skipped} skipped as too thin.`);
   if (errors > 0) parts.push(`${errors} failed.`);
+  if (deferred) parts.push(`${deferred} held back by the daily email limit; send this audience again tomorrow.`);
 
   return { ok: true, sent, message: parts.join(" ") };
 }

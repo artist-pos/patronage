@@ -39,8 +39,8 @@ export function ArtistDirectorySignupTrigger() {
   }, []);
 
   function close() {
+    // The modal's own dismiss() already fires *_dismissed; don't double-count it here.
     setOpen(false);
-    trackEvent("artists_directory_signup_modal_dismissed", {});
   }
 
   return (

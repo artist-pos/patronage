@@ -4,7 +4,7 @@ import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPendingConfirmationCount } from "@/lib/pending-confirmations";
 import { getMissingFields, getCompletionPercent, isProfileComplete } from "@/lib/profile-completion";
-import { fetchCompletionProfile } from "@/lib/profile-completion.server";
+import { fetchCompletionProfile, fetchVerifiedProgress } from "@/lib/profile-completion.server";
 import { ProfileCompletionBanner } from "@/components/profile/ProfileCompletionBanner";
 import { getEffectiveRole } from "@/lib/view-as";
 import { StudioNav } from "./StudioNav";
@@ -46,7 +46,7 @@ export default async function StudioLayout({
   const isArtist = role === "artist" || role === "owner" || role === "admin";
   const labels = WORKSPACE_LABELS[role] ?? WORKSPACE_LABELS.patron;
 
-  const [pendingProvenanceCount, pendingConfirmationCount] = isArtist
+  const [pendingProvenanceCount, pendingConfirmationCount, verifiedProgress] = isArtist
     ? await Promise.all([
         (async () => {
           try {
@@ -63,8 +63,9 @@ export default async function StudioLayout({
           }
         })(),
         getPendingConfirmationCount(user.id),
+        fetchVerifiedProgress(user.id),
       ])
-    : [0, 0];
+    : [0, 0, undefined];
 
   const missingFields = completionProfile
     ? getMissingFields(completionProfile)
@@ -98,6 +99,7 @@ export default async function StudioLayout({
         <ProfileCompletionBanner
           percent={percent}
           missingFields={missingFields}
+          verified={verifiedProgress}
         />
       )}
 
