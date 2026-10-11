@@ -575,6 +575,8 @@ export default async function OpportunityPage({ params }: Props) {
       educationalProgramMode: "https://schema.org/OnlineOrOffline",
     }
     : schemaType === "JobPosting" ? {
+      // Google reads `title` for JobPosting (the shared `name` isn't enough).
+      title: opp.title,
       hiringOrganization: orgNode,
       datePosted: opp.created_at.slice(0, 10),
       ...(opp.deadline && { validThrough: opp.deadline }),
