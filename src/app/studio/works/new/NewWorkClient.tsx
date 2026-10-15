@@ -618,13 +618,22 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
       // ── Supporting images ─────────────────────────────────────────────────
       if (artworkId && supportingImages.length > 0) {
+        // Raw phone photos can exceed Vercel's ~4.5 MB server-action body cap, which
+        // surfaces as "an unexpected response was received from the server". Resize
+        // to WebP first (same as the primary image), and never let a failed extra
+        // photo block the work itself — it can be re-added from the work page.
         await Promise.all(
           supportingImages.map(async (imgFile) => {
-            const fd = new FormData();
-            fd.set("artworkId", artworkId!);
-            fd.set("type", "other");
-            fd.set("file", imgFile);
-            await uploadDocumentationPhoto(fd);
+            try {
+              const blob = await resizeToWebp(imgFile);
+              const fd = new FormData();
+              fd.set("artworkId", artworkId!);
+              fd.set("type", "other");
+              fd.set("file", new File([blob], "supporting.webp", { type: "image/webp" }));
+              await uploadDocumentationPhoto(fd);
+            } catch (e) {
+              console.error("Supporting photo upload failed", e);
+            }
           })
         );
       }
