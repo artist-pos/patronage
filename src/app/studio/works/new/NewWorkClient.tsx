@@ -269,6 +269,7 @@ const smallLabelCls = "text-sm text-muted-foreground";
 
 export function NewWorkClient({ profileId, mode }: Props) {
   const router = useRouter();
+  const submittingRef = useRef(false);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   // File refs
@@ -434,6 +435,8 @@ export function NewWorkClient({ profileId, mode }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // State updates are async, so a fast double-click/Enter could otherwise fire twice
+    if (submittingRef.current) return;
     if (!canSubmit()) {
       setError("Please add the required media for this work.");
       return;
@@ -452,6 +455,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
       }
     }
 
+    submittingRef.current = true;
     setUploading(true);
     setError(null);
 
@@ -641,6 +645,7 @@ export function NewWorkClient({ profileId, mode }: Props) {
       router.push(`/studio/works/${artworkId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
+      submittingRef.current = false;
       setUploading(false);
     }
   }
