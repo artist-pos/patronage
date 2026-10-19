@@ -23,6 +23,19 @@ const PROTECTED = ["/onboarding/role", "/onboarding", "/profile/edit", "/admin"]
  * Official pattern: https://supabase.com/docs/guides/auth/server-side/nextjs
  */
 export async function proxy(request: NextRequest) {
+  // Rabobank pilot pages are token-gated and must stay free of sessions,
+  // analytics and indexing. They never touch Supabase auth here, and the root
+  // layout reads x-rabobank-bare to render without Header, PostHog or Vercel
+  // scripts. The admin screens live under /admin/rabobank and are not affected.
+  if (request.nextUrl.pathname.startsWith("/partners/rabobank")) {
+    const headers = new Headers(request.headers);
+    headers.set("x-rabobank-bare", "1");
+    const res = NextResponse.next({ request: { headers } });
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "private, no-store");
+    return res;
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

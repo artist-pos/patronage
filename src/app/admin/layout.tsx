@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/claim-tokens", label: "Claim Tokens" },
   { href: "/admin/orphaned-users", label: "Orphaned Users" },
   { href: "/admin/social", label: "Social" },
+  { href: "/admin/rabobank", label: "Rabobank pilot" },
   { href: "/dashboard?view=partner", label: "Open Calls" },
 ];
 

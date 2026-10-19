@@ -26,6 +26,8 @@ const PRIVATE_PATHS = [
   "/settings$",
   "/settings/",
   "/partner/",
+  // Token-gated Rabobank pilot pages. The link, not this list, is the protection.
+  "/partners/rabobank",
   // Links that carry a secret token, sent by email.
   "/claim/",
   "/claim-account",

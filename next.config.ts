@@ -81,6 +81,15 @@ const nextConfig: NextConfig = {
         source: "/embed/:path*",
         headers: embedHeaders,
       },
+      // Token-gated pilot pages and their admin screens stay out of search.
+      {
+        source: "/partners/rabobank/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/admin/rabobank/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
 };

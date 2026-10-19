@@ -12,6 +12,7 @@ import { PostHogProvider } from "@/components/PostHogProvider";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { ViewAsBar } from "@/components/layout/ViewAsBar";
 import { getEffectiveRole } from "@/lib/view-as";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -132,6 +133,18 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+  // Token-gated pilot pages render bare: no session lookup, Header, PostHog,
+  // Vercel Analytics or Speed Insights. See proxy.ts.
+  if ((await headers()).get("x-rabobank-bare") === "1") {
+    return (
+      <html lang="en-NZ">
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+          <main>{children}</main>
+        </body>
+      </html>
+    );
+  }
+
   const { actualRole, isViewingAs, viewAsRole } = await getEffectiveRole();
 
   return (
