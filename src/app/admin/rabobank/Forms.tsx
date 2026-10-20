@@ -12,6 +12,7 @@ export interface SettingsFormValues {
   shortlist_close_at: string;
   collect_first_name: string;
   survey_intro: string;
+  shortlist_intro: string;
 }
 
 export function SettingsForm({ values }: { values: SettingsFormValues }) {
@@ -46,6 +47,10 @@ export function SettingsForm({ values }: { values: SettingsFormValues }) {
         <span className="font-medium">Survey intro (leave blank for the default)</span>
         <textarea name="survey_intro" rows={4} defaultValue={values.survey_intro} className={input} />
         <span className="text-xs text-muted-foreground">{"{close_date}"} is replaced with the close date.</span>
+      </label>
+      <label className="block space-y-1 text-sm">
+        <span className="font-medium">Shortlist intro (leave blank for the default)</span>
+        <textarea name="shortlist_intro" rows={2} defaultValue={values.shortlist_intro} className={input} />
       </label>
       <button disabled={pending} className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">
         {pending ? "Saving…" : "Save"}

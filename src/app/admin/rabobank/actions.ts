@@ -41,6 +41,7 @@ export async function saveSettings(_: ActionState, fd: FormData): Promise<Action
       ...dates,
       collect_first_name: mode,
       survey_intro: String(fd.get("survey_intro") ?? "").trim() || null,
+      shortlist_intro: String(fd.get("shortlist_intro") ?? "").trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);
@@ -86,6 +87,22 @@ export async function deleteAllNames(): Promise<void> {
   await requireAdmin();
   const admin = createAdminClient();
   await admin.from("rabobank_survey_response").update({ first_name: null }).not("first_name", "is", null);
+  await admin.from("rabobank_reaction").update({ first_name: null }).not("first_name", "is", null);
   await admin.from("rabobank_settings").update({ names_deleted_at: new Date().toISOString() }).eq("id", 1);
   revalidatePath("/admin/rabobank");
+}
+
+export async function saveSummary(_: ActionState, fd: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const { error } = await createAdminClient()
+    .from("rabobank_settings")
+    .update({
+      comment_summary: String(fd.get("comment_summary") ?? "").trim() || null,
+      show_raw_comments_to_client: fd.get("show_raw_comments_to_client") === "on",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/rabobank/reactions");
+  return { ok: true };
 }

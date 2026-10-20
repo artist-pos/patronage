@@ -42,6 +42,7 @@ export default async function RabobankAdmin() {
             shortlist_close_at: utcToNzLocalInput(settings.shortlist_close_at),
             collect_first_name: settings.collect_first_name,
             survey_intro: settings.survey_intro ?? "",
+            shortlist_intro: settings.shortlist_intro ?? "",
           }}
         />
       </section>
@@ -114,7 +115,7 @@ export default async function RabobankAdmin() {
       <section className="space-y-3">
         <h2 className={h2}>Names</h2>
         <p className="text-sm text-muted-foreground">
-          Removes every first name and keeps the answers.{" "}
+          Removes every first name from survey answers and shortlist reactions, and keeps the answers.{" "}
           {settings.names_deleted_at && `Last done ${formatNz(settings.names_deleted_at, { weekday: undefined })}.`}
         </p>
         <form action={deleteAllNames}>
