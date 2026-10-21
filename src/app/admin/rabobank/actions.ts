@@ -18,7 +18,7 @@ const dateField = (fd: FormData, name: string): string | null => {
 };
 
 export async function saveSettings(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return { error: "Not authorised." };
   const mode = String(fd.get("collect_first_name"));
   if (!["required", "optional", "off"].includes(mode)) return { error: "Choose a name setting." };
 
@@ -50,7 +50,7 @@ export async function saveSettings(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function createToken(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return { error: "Not authorised." };
   const type = String(fd.get("type")) as TokenType;
   if (!["survey", "staff", "client"].includes(type)) return { error: "Choose a link type." };
   const expires = dateField(fd, "expires_at");

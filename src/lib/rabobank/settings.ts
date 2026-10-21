@@ -24,7 +24,7 @@ export async function getSettings(): Promise<RabobankSettings> {
       survey_close_at: null,
       shortlist_open_at: null,
       shortlist_close_at: null,
-      collect_first_name: "required",
+      collect_first_name: "optional",
       survey_intro: null,
       shortlist_intro: null,
       comment_summary: null,

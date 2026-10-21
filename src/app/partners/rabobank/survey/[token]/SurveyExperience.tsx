@@ -4,17 +4,17 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 import {
   LIMITS,
-  NOTHING_IN_PARTICULAR,
   QUESTIONS,
   type Question,
   type TextField,
 } from "@/lib/rabobank/survey";
 import type { NameMode } from "@/lib/rabobank/settings";
 import { submitSurvey } from "./actions";
+import { KiwiConfetti } from "./KiwiConfetti";
 import "./survey.css";
 
 const DONE_KEY = "rabobank_survey_done";
-const PARTING = "The artwork should interpret Rabobank’s story, not illustrate its marketing.";
+const PARTING = "Thank you for helping shape an artwork for this place, these people and the work they make possible together.";
 
 type Answers = {
   artRelation: string;
@@ -170,6 +170,7 @@ export function SurveyExperience({
   const [a, setA] = useState<Answers>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const loadedAt = useRef(0);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLDivElement>(null);
@@ -235,6 +236,7 @@ export function SurveyExperience({
     setSending(false);
     if (!res.ok) { setError(res.error); return; }
     try { localStorage.setItem(DONE_KEY, "1"); } catch { /* a courtesy flag, nothing more */ }
+    setCelebrate(true);
     go(last);
   }
 
@@ -245,9 +247,7 @@ export function SurveyExperience({
     setA((cur) => {
       const on = cur.roomWants.includes(option);
       if (on) return { ...cur, roomWants: cur.roomWants.filter((w) => w !== option) };
-      if (option === NOTHING_IN_PARTICULAR) return { ...cur, roomWants: [option] };
-      const base = cur.roomWants.filter((w) => w !== NOTHING_IN_PARTICULAR);
-      return base.length >= max ? cur : { ...cur, roomWants: [...base, option] };
+      return cur.roomWants.length >= max ? cur : { ...cur, roomWants: [...cur.roomWants, option] };
     });
   }
 
@@ -257,11 +257,13 @@ export function SurveyExperience({
   /* ----- content for the current step ----- */
   let body: React.ReactNode = null;
   let canSkip = false;
+  // Enter and Next only move on once there's an answer; skipping is its own quieter link.
+  const enter = () => { if (!canSkip || idx === last - 1) next(); };
 
   if (state === "closed") {
     body = (
       <>
-        <p className="rb-eyebrow">Te Puke event space</p>
+        <p className="rb-eyebrow">Rabobank Te Puke Event Space</p>
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora.</h1>
         <p className="rb-copy">{message}</p>
       </>
@@ -270,7 +272,7 @@ export function SurveyExperience({
     body = (
       <div className="rb-intro">
         <div>
-        <p className="rb-eyebrow">Te Puke event space</p>
+        <p className="rb-eyebrow">Rabobank Te Puke Event Space</p>
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora,</h1>
         <p className="rb-copy">I&rsquo;m Blake, an artist and architectural graduate, and the founder of Patronage. I&rsquo;m working with Rabobank on an artwork for the Te Puke event space, where colleagues, clients and community come together.</p>
         <p className="rb-copy">I spent the first years of my schooling at Paengaroa Primary School, so this part of the Bay of Plenty has a connection to my own story, too.</p>
@@ -313,7 +315,7 @@ export function SurveyExperience({
         <>
           {heading}
           <div className="rb-body">
-            <Writing id="rb-field" value={value} onChange={(v) => set(q.field, v)} limit={q.limit} label={q.title} autoFocus onEnter={next} />
+            <Writing id="rb-field" value={value} onChange={(v) => set(q.field, v)} limit={q.limit} label={q.title} autoFocus onEnter={enter} />
           </div>
         </>
       );
@@ -322,7 +324,7 @@ export function SurveyExperience({
       body = (
         <>
           {heading}
-          <fieldset className="rb-pebbles rb-body" aria-labelledby="rb-q" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); next(); } }}>
+          <fieldset className="rb-pebbles rb-body" aria-labelledby="rb-q" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); enter(); } }}>
             {q.options.map((o) => (
               <label key={o} className="rb-pebble">
                 <input type="radio" name="artRelation" checked={a.artRelation === o} onChange={() => set("artRelation", o)} />
@@ -331,14 +333,14 @@ export function SurveyExperience({
             ))}
           </fieldset>
           <div className="rb-note">
-            <Writing id="rb-note" small value={a.artNote} onChange={(v) => set("artNote", v)} limit={q.note.limit} label={q.note.label} placeholder={`${q.note.label}…`} onEnter={next} />
+            <Writing id="rb-note" small value={a.artNote} onChange={(v) => set("artNote", v)} limit={q.note.limit} label={q.note.label} placeholder={`${q.note.label}…`} onEnter={enter} />
           </div>
         </>
       );
     } else {
       const chosen = a.roomWants;
       canSkip = chosen.length === 0;
-      const full = chosen.length >= q.max || chosen.includes(NOTHING_IN_PARTICULAR);
+      const full = chosen.length >= q.max;
       body = (
         <>
           <p className="rb-eyebrow">{q.eyebrow}</p>
@@ -348,7 +350,7 @@ export function SurveyExperience({
           <p className="rb-help" id="rb-help" aria-live="polite">
             {chosen.length >= q.max ? "That’s three. Put one back if you’d like to choose another." : q.help}
           </p>
-          <fieldset className="rb-pebbles rb-body" aria-labelledby="rb-q" aria-describedby="rb-help" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); next(); } }}>
+          <fieldset className="rb-pebbles rb-body" aria-labelledby="rb-q" aria-describedby="rb-help" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); enter(); } }}>
             {q.options.map((o) => {
               const order = chosen.indexOf(o);
               return (
@@ -356,7 +358,7 @@ export function SurveyExperience({
                   <input
                     type="checkbox"
                     checked={order >= 0}
-                    disabled={order < 0 && full && o !== NOTHING_IN_PARTICULAR}
+                    disabled={order < 0 && full}
                     onChange={() => toggleWant(o, q.max)}
                   />
                   <span style={{ ["--lvl" as string]: order >= 0 ? order + 1 : 1 }}>{o}</span>
@@ -408,7 +410,6 @@ export function SurveyExperience({
         <img className="rb-hero" src="/rabobank-pilot/room.webp" alt="" width={684} height={384} />
         <p className="rb-eyebrow">Thank you</p>
         <h2 className="rb-title" ref={titleRef} tabIndex={-1}>Thank you</h2>
-        <p className="rb-copy">Thanks for sharing a little of what makes this place and its people distinctive. Your answers will help shape the brief the artist receives.</p>
         <p className="rb-copy">In early November, you&rsquo;ll be invited to see the shortlisted artists and respond to their work.</p>
         <p className="rb-parting" aria-label={PARTING}>
           {PARTING.split(" ").map((w, i) => (
@@ -432,6 +433,7 @@ export function SurveyExperience({
   return (
     <div className="rb" data-step={stepName} data-phase={dataPhase} style={{ ["--p" as string]: p }}>
       <Scene p={p} />
+      {celebrate && <KiwiConfetti />}
       <div className="rb-stage">
         <div className={`rb-col rb-${phase}${step.kind === "intro" ? " rb-col--wide" : ""}${step.kind === "thanks" ? " rb-col--thanks" : ""}`} key={`${state}-${idx}`}>
           <div ref={honeypot} aria-hidden="true">{showActions && <HoneypotField />}</div>
@@ -440,12 +442,20 @@ export function SurveyExperience({
             <>
               {error && <p className="rb-error" role="alert">{error}</p>}
               <div className="rb-actions">
-                <button type="button" className="rb-next" data-quiet={canSkip && !isFinal ? "true" : "false"} disabled={sending} onClick={next}>
-                  {sending ? "Sending…" : isFinal ? (canSkip ? "Finish without a name" : "Send my answers") : canSkip ? "Skip" : "Continue"}
+                <button type="button" className="rb-next" disabled={sending || (canSkip && !isFinal)} onClick={next}>
+                  {sending ? "Sending…" : isFinal ? "Send my answers" : "Next"}
                   <span className="rb-arrow" aria-hidden="true" />
                 </button>
-                <button type="button" className="rb-back" onClick={back}>Back</button>
                 <span className="rb-hint" aria-hidden="true">or press Enter</span>
+                <span className="rb-quiet">
+                  <button type="button" className="rb-link" onClick={back}>Back</button>
+                  {!isFinal && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button type="button" className="rb-link" onClick={next}>Skip</button>
+                    </>
+                  )}
+                </span>
               </div>
             </>
           )}

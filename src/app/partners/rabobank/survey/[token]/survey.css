@@ -11,6 +11,7 @@
   --blue: #000faa;
   --orange: #ff6700;
   --p: 0;
+  --trail-h: clamp(70px, 11vh, 120px);
   position: relative;
   min-height: 100dvh;
   color: var(--ink);
@@ -31,24 +32,35 @@
 }
 
 /* the orange line: how far along you are */
-.rb-trail { position: absolute; left: 0; right: 0; bottom: 0; height: clamp(70px, 11vh, 120px); }
+.rb-trail { position: absolute; left: 0; right: 0; bottom: 0; height: var(--trail-h); }
 .rb-trail svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* the dot glows: its light swells and fades like a slow breath */
 .rb-trail-dot {
   position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
-  background: var(--orange); box-shadow: 0 0 0 6px rgba(255, 103, 0, 0.16), 0 0 18px 4px rgba(255, 103, 0, 0.35);
+  background: var(--orange);
+  animation: rb-glow-pulse 2.4s ease-in-out infinite;
 }
+@keyframes rb-glow-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 6px 1px rgba(255, 103, 0, 0.45), 0 0 14px 4px rgba(255, 140, 40, 0.18); }
+  50% { transform: scale(1.18); box-shadow: 0 0 12px 3px rgba(255, 103, 0, 0.6), 0 0 32px 12px rgba(255, 140, 40, 0.28); }
+}
+
+/* kiwifruit on submit, over everything and never in the way */
+.rb-confetti { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; pointer-events: none; }
 
 /* ---------- the stage ---------- */
 .rb-stage {
   position: relative; z-index: 1; min-height: 100dvh;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   padding: clamp(1.5rem, 6vh, 4rem) 1.25rem;
+  /* clear the orange line (fixed to the viewport bottom) so it never runs through the buttons */
+  padding-bottom: calc(var(--trail-h) + 1.5rem);
 }
 .rb-col { width: 100%; max-width: 38rem; }
 .rb-col--wide { max-width: 68rem; }
 .rb-col--thanks { max-width: 40rem; }
 
-.rb-eyebrow { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--stone); font-weight: 500; margin: 0 0 1rem; }
+.rb-eyebrow { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--blue); font-weight: 500; margin: 0 0 1rem; }
 .rb-title {
   font-weight: 300; font-size: clamp(2rem, 1.2rem + 3vw, 3.4rem);
   line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 1rem; text-wrap: balance; outline: none;
@@ -81,10 +93,10 @@
   display: block; width: 100%; min-height: 3.6em; margin: 0; padding: 0 0 0.7rem;
   border: 0; border-radius: 0; background: transparent; outline: none; resize: none; overflow: hidden;
   color: var(--ink); caret-color: var(--orange);
-  font: inherit; font-weight: 300; font-size: clamp(1.4rem, 1rem + 1.3vw, 1.9rem); line-height: 1.35; letter-spacing: -0.015em;
+  font: inherit; font-weight: 300; font-size: clamp(1.25rem, 0.95rem + 1.1vw, 1.65rem); line-height: 1.38; letter-spacing: -0.015em;
 }
 .rb-textarea::placeholder { color: var(--stone); opacity: 0.6; }
-.rb-textarea--small { font-size: clamp(1.1rem, 0.95rem + 0.6vw, 1.3rem); min-height: 2.8em; }
+.rb-textarea--small { font-size: clamp(1.02rem, 0.9rem + 0.5vw, 1.2rem); min-height: 2.8em; }
 .rb-rule { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line); }
 .rb-rule::after {
   content: ""; position: absolute; left: 0; top: -1px; height: 2px; width: 100%;
@@ -119,8 +131,12 @@
 }
 .rb-next:hover { opacity: 0.85; }
 .rb-next:focus-visible, .rb-back:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
-.rb-next[data-quiet="true"] { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px #a8a29e; }
-.rb-next:disabled { opacity: 0.6; cursor: default; }
+.rb-next:disabled { opacity: 0.25; cursor: default; }
+/* back and skip: small and out of the way, so skipping never looks like the suggested move */
+.rb-quiet { margin-left: auto; display: inline-flex; align-items: center; gap: 0.55rem; color: #a8a29e; font-size: 0.85rem; }
+.rb-link { appearance: none; border: 0; background: none; cursor: pointer; padding: 0.4rem 0; font: inherit; color: var(--stone); transition: color 0.2s ease; }
+.rb-link:hover { color: var(--ink); }
+.rb-link:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .rb-arrow { display: inline-block; width: 1.05rem; height: 1px; background: currentColor; position: relative; }
 .rb-arrow::after { content: ""; position: absolute; right: 0; top: -3px; width: 7px; height: 7px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; transform: rotate(45deg); }
 .rb-back { appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-soft); font: inherit; font-size: 0.95rem; padding: 0.5rem 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #d6d3d1; }
@@ -156,4 +172,5 @@
 @media (prefers-reduced-motion: reduce) {
   .rb *, .rb *::before, .rb *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
   .rb-in .rb-parting, .rb-word { animation: none; opacity: 1; }
+  .rb-trail-dot { animation: none; box-shadow: 0 0 8px 2px rgba(255, 103, 0, 0.5), 0 0 20px 6px rgba(255, 140, 40, 0.2); }
 }

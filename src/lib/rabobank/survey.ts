@@ -1,34 +1,28 @@
 export const ART_RELATION = [
   "I love having art around",
-  "I like it when it says something about a place or its people",
-  "I like it when it gives me something to think about",
-  "I enjoy looking, but don't know much about art",
-  "I don't really notice it",
-  "I'm not sure it adds much",
-  "It depends",
+  "I enjoy it, but don’t know much about it",
+  "I don’t really notice it",
+  "I’m not sure it adds much",
 ] as const;
 
 export const ROOM_WANTS = [
-  "A sense of welcome",
-  "A reason to start a conversation",
-  "A feeling of connection to Te Puke and the region",
-  "A reflection of the relationships between Rabobank, its clients and the community",
-  "A sense of how land, people and production are connected",
-  "Pride in the people and work of this region",
-  "A moment of calm amid a busy day",
-  "Something unexpected",
-  "Something else",
-  "Nothing in particular",
+  "Makes the room feel distinctly Te Puke",
+  "Reflects the people, work and relationships that shape this region",
+  "Expresses what Rabobank and its clients make possible together",
+  "Gives people something to talk about",
+  "Offers a fresh perspective on something familiar",
+  "Holds its own in the room, even when things are busy",
+  "Makes the room feel welcoming",
 ] as const;
 
-/** Picking this clears the others, and picking any other clears it. */
-export const NOTHING_IN_PARTICULAR = "Nothing in particular";
 export const MAX_ROOM_WANTS = 3;
 
 export const LIMITS = {
   firstName: 60,
   artNote: 200,
-  story: 300,
+  story: 500,
+  place: 300,
+  cooperation: 500,
   wrong: 200,
   memory: 200,
   artist: 200,
@@ -76,25 +70,24 @@ export const QUESTIONS: Question[] = [
     eyebrow: "Place",
     title:
       "Is there a place around Te Puke, or a local story or tradition, that you hold dear? What makes it meaningful to you?",
-    limit: LIMITS.story,
+    help: "It could be a landscape, a familiar place, a local story or something from everyday life. What makes it matter to you?",
+    limit: LIMITS.place,
   },
   {
     key: "cooperation",
     kind: "text",
     field: "cooperation",
-    eyebrow: "Cooperation",
-    title: "What do you value about the way people in this region work together?",
-    help:
-      "It could be something you’ve experienced with clients, colleagues, growers or the wider community. A particular moment or example is welcome.",
-    limit: LIMITS.story,
+    eyebrow: "Pulling together",
+    title: "Can you think of a time people working together made something possible that wouldn’t have happened otherwise? What happened?",
+    help: "It could involve clients, colleagues, growers or the wider community. A particular moment or example is welcome.",
+    limit: LIMITS.cooperation,
   },
   {
     key: "room",
     kind: "multi",
     field: "roomWants",
     eyebrow: "The room",
-    title:
-      "Imagine the event space is full. People are meeting, talking, sharing ideas or working through a problem together. What would you want the artwork to bring to that moment?",
+    title: "When the event space is in use, what should the artwork be doing?",
     help: "Pick up to three.",
     options: ROOM_WANTS,
     max: MAX_ROOM_WANTS,
@@ -114,7 +107,7 @@ export const QUESTIONS: Question[] = [
     kind: "text",
     field: "memory",
     eyebrow: "A memory",
-    title: "Has an artwork ever made you stop, look twice or hold a memory? What’s the story?",
+    title: "Has an artwork ever stayed with you? What was it, and why?",
     help: "It could be something you’ve seen anywhere, not just in a gallery.",
     optional: true,
     limit: LIMITS.memory,

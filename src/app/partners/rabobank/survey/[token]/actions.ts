@@ -7,7 +7,7 @@ import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { windowState } from "@/lib/rabobank/time";
-import { ART_RELATION, LIMITS, MAX_ROOM_WANTS, NOTHING_IN_PARTICULAR, ROOM_WANTS } from "@/lib/rabobank/survey";
+import { ART_RELATION, LIMITS, MAX_ROOM_WANTS, ROOM_WANTS } from "@/lib/rabobank/survey";
 
 export interface SurveyInput {
   token: string;
@@ -64,7 +64,7 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
   const wants = Array.isArray(input.roomWants)
     ? [...new Set(input.roomWants.filter((w): w is string => (ROOM_WANTS as readonly string[]).includes(w)))]
     : [];
-  const roomWants = (wants.includes(NOTHING_IN_PARTICULAR) ? [NOTHING_IN_PARTICULAR] : wants).slice(0, MAX_ROOM_WANTS);
+  const roomWants = wants.slice(0, MAX_ROOM_WANTS);
   const artRelation = (ART_RELATION as readonly string[]).includes(input.artRelation) ? input.artRelation : null;
   const seconds = Number.isFinite(input.completionSeconds)
     ? Math.min(Math.max(Math.round(input.completionSeconds), 0), 86_400)
@@ -77,8 +77,8 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
       art_relation: artRelation,
       art_relation_note: clean(input.artNote, LIMITS.artNote),
       story_together: clean(input.story, LIMITS.story),
-      story_place: clean(input.place, LIMITS.story),
-      story_cooperation: clean(input.cooperation, LIMITS.story),
+      story_place: clean(input.place, LIMITS.place),
+      story_cooperation: clean(input.cooperation, LIMITS.cooperation),
       room_wants: roomWants,
       feels_wrong: clean(input.wrong, LIMITS.wrong),
       memorable_artwork: clean(input.memory, LIMITS.memory),
