@@ -3,7 +3,7 @@ import { formatNz, utcToNzLocalInput, windowState } from "@/lib/rabobank/time";
 import { ART_RELATION, ROOM_WANTS } from "@/lib/rabobank/survey";
 import type { RabobankSettings } from "@/lib/rabobank/settings";
 import { revokeToken } from "./actions";
-import { DeleteNamesButton, ScheduleForm, TokenForm } from "./Forms";
+import { DeleteNamesButton, DeleteTokenButton, ScheduleForm, TokenForm } from "./Forms";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- rows come straight from Supabase */
 export interface DashboardData {
@@ -102,14 +102,17 @@ export function Dashboard({ settings, tokens, rows }: DashboardData) {
                       <td className="px-4">{t.label ?? "—"}</td>
                       <td className="px-4">{formatNz(t.created_at, { weekday: undefined, month: "short" })}</td>
                       <td className="px-4 text-right">
-                        {isLive ? (
-                          <form action={revokeToken} className="inline">
-                            <input type="hidden" name="id" value={t.id} />
-                            <button className="text-xs text-stone-500 underline underline-offset-4 hover:text-destructive">Revoke</button>
-                          </form>
-                        ) : (
-                          <span className="text-xs">{t.revoked ? "Revoked" : "Expired"}</span>
-                        )}
+                        <span className="inline-flex items-center gap-3">
+                          {isLive ? (
+                            <form action={revokeToken} className="inline">
+                              <input type="hidden" name="id" value={t.id} />
+                              <button className="text-xs text-stone-500 underline underline-offset-4 hover:text-destructive">Revoke</button>
+                            </form>
+                          ) : (
+                            <span className="text-xs">{t.revoked ? "Revoked" : "Expired"}</span>
+                          )}
+                          <DeleteTokenButton id={t.id} live={isLive} />
+                        </span>
                       </td>
                     </tr>
                   );

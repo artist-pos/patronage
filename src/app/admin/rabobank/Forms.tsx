@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { saveSettings, createToken, deleteAllNames, type ActionState } from "./actions";
+import { saveSettings, createToken, deleteAllNames, deleteToken, type ActionState } from "./actions";
 import { RangeCalendar } from "./RangeCalendar";
 
 const input = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
@@ -190,6 +190,22 @@ export function TokenForm() {
         </div>
       )}
     </div>
+  );
+}
+
+export function DeleteTokenButton({ id, live }: { id: string; live: boolean }) {
+  return (
+    <form
+      action={deleteToken}
+      className="inline"
+      onSubmit={(e) => {
+        const msg = live ? "Delete this link? Anyone who has it will no longer be able to open it." : "Delete this link from the list?";
+        if (!confirm(msg)) e.preventDefault();
+      }}
+    >
+      <input type="hidden" name="id" value={id} />
+      <button className="text-xs text-stone-500 underline underline-offset-4 hover:text-destructive">Delete</button>
+    </form>
   );
 }
 

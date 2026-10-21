@@ -82,6 +82,16 @@ export async function revokeToken(fd: FormData): Promise<void> {
   revalidatePath("/admin/rabobank");
 }
 
+/** Removes a link entirely. Nothing references a token row, and answers keep no link to it. */
+export async function deleteToken(fd: FormData): Promise<void> {
+  await requireAdmin();
+  await createAdminClient()
+    .from("rabobank_access_token")
+    .delete()
+    .eq("id", String(fd.get("id")));
+  revalidatePath("/admin/rabobank");
+}
+
 export async function deleteAllNames(): Promise<void> {
   await requireAdmin();
   const admin = createAdminClient();
