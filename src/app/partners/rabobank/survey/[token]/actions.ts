@@ -7,17 +7,20 @@ import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { windowState } from "@/lib/rabobank/time";
-import { MOODS } from "@/lib/rabobank/survey";
+import { ART_RELATION, LIMITS, MAX_ROOM_WANTS, NOTHING_IN_PARTICULAR, ROOM_WANTS } from "@/lib/rabobank/survey";
 
 export interface SurveyInput {
   token: string;
   firstName: string;
-  q1: string;
-  q2: string[];
-  q2Other: string;
-  q3: string;
-  q4: string;
-  q5: "yes" | "no" | "";
+  artRelation: string;
+  artNote: string;
+  story: string;
+  place: string;
+  cooperation: string;
+  roomWants: string[];
+  wrong: string;
+  memory: string;
+  artist: string;
   completionSeconds: number;
   [HONEYPOT_FIELD]?: string;
 }
@@ -38,8 +41,7 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
   }
 
   const settings = await getSettings();
-  const state = windowState(settings.survey_open_at, settings.survey_close_at);
-  if (state !== "open") {
+  if (windowState(settings.survey_open_at, settings.survey_close_at) !== "open") {
     return { ok: false, error: "This survey is closed." };
   }
 
@@ -54,14 +56,16 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
     return { ok: false, error: "Too many submissions from this connection. Please try again later." };
   }
 
-  const firstName = clean(input.firstName, 60);
+  const firstName = clean(input.firstName, LIMITS.firstName);
   if (settings.collect_first_name === "required" && !firstName) {
     return { ok: false, error: "Please add your first name." };
   }
 
-  const q2 = Array.isArray(input.q2)
-    ? [...new Set(input.q2.filter((m): m is string => MOODS.includes(m as (typeof MOODS)[number])))].slice(0, 2)
+  const wants = Array.isArray(input.roomWants)
+    ? [...new Set(input.roomWants.filter((w): w is string => (ROOM_WANTS as readonly string[]).includes(w)))]
     : [];
+  const roomWants = (wants.includes(NOTHING_IN_PARTICULAR) ? [NOTHING_IN_PARTICULAR] : wants).slice(0, MAX_ROOM_WANTS);
+  const artRelation = (ART_RELATION as readonly string[]).includes(input.artRelation) ? input.artRelation : null;
   const seconds = Number.isFinite(input.completionSeconds)
     ? Math.min(Math.max(Math.round(input.completionSeconds), 0), 86_400)
     : null;
@@ -70,12 +74,15 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
     .from("rabobank_survey_response")
     .insert({
       first_name: settings.collect_first_name === "off" ? null : firstName,
-      q1: clean(input.q1, 300),
-      q2,
-      q2_other: q2.includes("Other") ? clean(input.q2Other, 100) : null,
-      q3: clean(input.q3, 500),
-      q4: clean(input.q4, 500),
-      q5: input.q5 === "yes" ? true : input.q5 === "no" ? false : null,
+      art_relation: artRelation,
+      art_relation_note: clean(input.artNote, LIMITS.artNote),
+      story_together: clean(input.story, LIMITS.story),
+      story_place: clean(input.place, LIMITS.story),
+      story_cooperation: clean(input.cooperation, LIMITS.story),
+      room_wants: roomWants,
+      feels_wrong: clean(input.wrong, LIMITS.wrong),
+      memorable_artwork: clean(input.memory, LIMITS.memory),
+      local_artist: clean(input.artist, LIMITS.artist),
       completion_seconds: seconds,
     });
 

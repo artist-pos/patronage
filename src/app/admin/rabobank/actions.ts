@@ -40,7 +40,6 @@ export async function saveSettings(_: ActionState, fd: FormData): Promise<Action
     .update({
       ...dates,
       collect_first_name: mode,
-      survey_intro: String(fd.get("survey_intro") ?? "").trim() || null,
       shortlist_intro: String(fd.get("shortlist_intro") ?? "").trim() || null,
       updated_at: new Date().toISOString(),
     })

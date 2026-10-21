@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/rabobank/settings";
 import { formatNz, utcToNzLocalInput } from "@/lib/rabobank/time";
-import { MOODS } from "@/lib/rabobank/survey";
+import { ART_RELATION, ROOM_WANTS } from "@/lib/rabobank/survey";
 import { deleteAllNames, revokeToken } from "./actions";
 import { SettingsForm, TokenForm } from "./Forms";
 
@@ -24,9 +24,8 @@ export default async function RabobankAdmin() {
   const times = rows.map((r) => r.completion_seconds).filter((n): n is number => typeof n === "number").sort((a, b) => a - b);
   const median = times.length ? times[Math.floor(times.length / 2)] : null;
   const mean = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
-  const moodCounts = Object.fromEntries(MOODS.map((m) => [m, rows.filter((r) => (r.q2 ?? []).includes(m)).length]));
-  const yes = rows.filter((r) => r.q5 === true).length;
-  const no = rows.filter((r) => r.q5 === false).length;
+  const relationCounts = ART_RELATION.map((o) => [o, rows.filter((r) => r.art_relation === o).length] as const);
+  const wantCounts = ROOM_WANTS.map((o) => [o, rows.filter((r) => (r.room_wants ?? []).includes(o)).length] as const);
 
   return (
     <div className="space-y-12">
@@ -41,7 +40,6 @@ export default async function RabobankAdmin() {
             shortlist_open_at: utcToNzLocalInput(settings.shortlist_open_at),
             shortlist_close_at: utcToNzLocalInput(settings.shortlist_close_at),
             collect_first_name: settings.collect_first_name,
-            survey_intro: settings.survey_intro ?? "",
             shortlist_intro: settings.shortlist_intro ?? "",
           }}
         />
@@ -85,15 +83,21 @@ export default async function RabobankAdmin() {
           <h2 className={h2}>Survey results ({rows.length})</h2>
           <Link href="/admin/rabobank/export" prefetch={false} className="text-sm underline">Export CSV</Link>
         </div>
-        <dl className="grid gap-4 text-sm sm:grid-cols-4">
+        <dl className="grid gap-4 text-sm sm:grid-cols-3">
           <div><dt className="text-muted-foreground">Responses</dt><dd className="text-xl font-semibold">{rows.length}</dd></div>
           <div><dt className="text-muted-foreground">Median time</dt><dd className="text-xl font-semibold">{median !== null ? `${median}s` : "–"}</dd></div>
           <div><dt className="text-muted-foreground">Average time</dt><dd className="text-xl font-semibold">{mean !== null ? `${mean}s` : "–"}</dd></div>
-          <div><dt className="text-muted-foreground">Want to see artists</dt><dd className="text-xl font-semibold">{yes} yes · {no} no</dd></div>
         </dl>
-        <p className="text-sm">
-          {MOODS.map((m) => `${m}: ${moodCounts[m]}`).join(" · ")}
-        </p>
+        <div className="grid gap-6 text-sm sm:grid-cols-2">
+          <div>
+            <h3 className="mb-1 font-medium">Relationship with art</h3>
+            <ul className="space-y-0.5">{relationCounts.map(([o, n]) => <li key={o}>{n} · {o}</li>)}</ul>
+          </div>
+          <div>
+            <h3 className="mb-1 font-medium">What the room should bring</h3>
+            <ul className="space-y-0.5">{wantCounts.map(([o, n]) => <li key={o}>{n} · {o}</li>)}</ul>
+          </div>
+        </div>
         <div className="space-y-3">
           {rows.map((r) => (
             <article key={r.id} className="rounded-md border border-border p-4 text-sm">
@@ -102,10 +106,27 @@ export default async function RabobankAdmin() {
                 {r.completion_seconds !== null && ` · ${r.completion_seconds}s`}
               </p>
               <dl className="space-y-1">
-                <div><dt className="inline text-muted-foreground">Day to day: </dt><dd className="inline">{r.q1 ?? "–"}</dd></div>
-                <div><dt className="inline text-muted-foreground">Feeling: </dt><dd className="inline">{[...(r.q2 ?? []), r.q2_other ? `(${r.q2_other})` : ""].join(", ") || "–"}</dd></div>
-                <div><dt className="inline text-muted-foreground">Subjects: </dt><dd className="inline">{r.q3 ?? "–"}</dd></div>
-                <div><dt className="inline text-muted-foreground">Avoid: </dt><dd className="inline">{r.q4 ?? "–"}</dd></div>
+                {(
+                  [
+                    ["Relationship with art", [r.art_relation, r.art_relation_note].filter(Boolean).join(" — ")],
+                    ["Working together", r.story_together],
+                    ["Place", r.story_place],
+                    ["Cooperation", r.story_cooperation],
+                    ["The room should bring", (r.room_wants ?? []).join("; ")],
+                    ["Would feel wrong", r.feels_wrong],
+                    ["A memorable artwork", r.memorable_artwork],
+                    ["Local artist or maker", r.local_artist],
+                    // First survey, kept so earlier responses still read.
+                    ["Day to day (v1)", r.q1],
+                    ["Feeling (v1)", [...(r.q2 ?? []), r.q2_other ? `(${r.q2_other})` : ""].filter(Boolean).join(", ")],
+                    ["Subjects (v1)", r.q3],
+                    ["Avoid (v1)", r.q4],
+                  ] as const
+                )
+                  .filter(([, v]) => v)
+                  .map(([label, v]) => (
+                    <div key={label}><dt className="inline text-muted-foreground">{label}: </dt><dd className="inline">{v}</dd></div>
+                  ))}
               </dl>
             </article>
           ))}

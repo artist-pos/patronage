@@ -11,7 +11,6 @@ export interface SettingsFormValues {
   shortlist_open_at: string;
   shortlist_close_at: string;
   collect_first_name: string;
-  survey_intro: string;
   shortlist_intro: string;
 }
 
@@ -42,11 +41,6 @@ export function SettingsForm({ values }: { values: SettingsFormValues }) {
           <option value="optional">Optional</option>
           <option value="off">Not asked</option>
         </select>
-      </label>
-      <label className="block space-y-1 text-sm">
-        <span className="font-medium">Survey intro (leave blank for the default)</span>
-        <textarea name="survey_intro" rows={4} defaultValue={values.survey_intro} className={input} />
-        <span className="text-xs text-muted-foreground">{"{close_date}"} is replaced with the close date.</span>
       </label>
       <label className="block space-y-1 text-sm">
         <span className="font-medium">Shortlist intro (leave blank for the default)</span>

@@ -52,7 +52,8 @@ export function formatNz(iso: string | null, opts?: Intl.DateTimeFormatOptions):
 }
 
 export function formatNzDate(iso: string | null): string {
-  return formatNz(iso, { hour: undefined, minute: undefined });
+  // en-NZ puts a comma after the weekday; "Friday 30 October" reads better.
+  return formatNz(iso, { hour: undefined, minute: undefined }).replace(",", "");
 }
 
 export type Window = "before" | "open" | "closed";
