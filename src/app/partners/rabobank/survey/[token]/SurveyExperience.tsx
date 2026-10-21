@@ -73,98 +73,26 @@ function bezierTo(p: [number, number][], t: number) {
   const lerp = (a: [number, number], b: [number, number]): [number, number] => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   const a = lerp(p[0], p[1]), b = lerp(p[1], p[2]), c = lerp(p[2], p[3]);
   const d = lerp(a, b), e = lerp(b, c);
-  const f = lerp(d, e);
-  return { c1: a, c2: d, end: f };
+  return { c1: a, c2: d, end: lerp(d, e) };
 }
 
-const PATH: [number, number][] = [[40, 74], [41, 61], [58, 57], [50.1, 50.6]];
+// A single line across the foot of the page, 1000 wide by 100 high.
+const TRAIL: [number, number][] = [[0, 78], [260, 8], [560, 122], [1000, 30]];
 
-const MOTES = [
-  [12, 62, 0], [24, 40, 6], [33, 78, 12], [47, 55, 3], [58, 30, 9], [66, 70, 15],
-  [74, 48, 5], [82, 66, 11], [90, 36, 2], [18, 22, 14], [52, 86, 8], [8, 84, 17],
-];
-
-/** A leafy hedge top: points along a ray from the vanishing point, nudged sideways. */
-function canopyEdge(side: 1 | -1): string {
-  const pts: string[] = [];
-  const ux = side * 0.857, uy = -0.514; // direction of the hedge top
-  const nx = -uy * side, ny = ux * side; // perpendicular
-  for (let i = 0; i <= 120; i++) {
-    const d = i * 1.4;
-    const r = Math.sin(i * 12.9898 + side * 4.1) * 43758.5453;
-    const j = (r - Math.floor(r) - 0.5) * 2; // -1..1, stable across renders
-    const amp = 0.018 * d * (i % 7 === 0 ? 2.2 : 1);
-    pts.push(`${(50 + side * 0.7 + ux * d + nx * j * amp).toFixed(2)},${(49.4 + uy * d + ny * j * amp).toFixed(2)}`);
-  }
-  return pts.join(" ");
-}
-const LEFT_TOP = canopyEdge(-1);
-const RIGHT_TOP = canopyEdge(1);
-const POSTS = [3, 4.8, 7.4, 11, 16, 23, 33];
-
+/** A soft light that warms as you go, and the line that grows with you. */
 function Scene({ p }: { p: number }) {
-  const t = Math.max(0.001, Math.min(1, p));
-  const { c1, c2, end } = bezierTo(PATH, t);
-  const d = `M ${PATH[0][0]} ${PATH[0][1]} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${end[0]} ${end[1]}`;
+  const t = Math.max(0.002, Math.min(1, p));
+  const { c1, c2, end } = bezierTo(TRAIL, t);
+  const d = `M ${TRAIL[0][0]} ${TRAIL[0][1]} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${end[0]} ${end[1]}`;
   return (
     <div className="rb-scene" aria-hidden="true">
-      <div className="rb-sky" />
       <div className="rb-glow" />
-      <div className="rb-world">
-        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" focusable="false">
-          <defs>
-            <linearGradient id="rb-ground" x1="0" y1="50" x2="0" y2="110" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#f3ecd9" />
-              <stop offset="0.3" stopColor="#e6dcc2" />
-              <stop offset="1" stopColor="#cdbf9b" />
-            </linearGradient>
-            <radialGradient id="rb-hedge" cx="50" cy="50" r="80" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#eef1e2" />
-              <stop offset="0.25" stopColor="#d9e1c8" />
-              <stop offset="0.7" stopColor="#bfcbab" />
-              <stop offset="1" stopColor="#a9b995" />
-            </radialGradient>
-            <radialGradient id="rb-ridge" cx="50" cy="50" r="70" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#dde2d4" />
-              <stop offset="1" stopColor="#c3cdb9" />
-            </radialGradient>
-          </defs>
-          <path d="M -120 50.2 L -120 46 Q -90 43 -60 46.5 T -10 45.5 Q 20 42.2 36 46.8 T 49 48 L 51 48 Q 66 44 80 46.6 T 120 44.5 Q 150 42 170 46 L 220 50.2 Z" fill="url(#rb-ridge)" opacity="0.8" />
-          <rect x="-150" y="50" width="400" height="130" fill="url(#rb-ground)" />
-          {/* hedgerows either side of the row, with leafy tops */}
-          <polygon points={`${LEFT_TOP} -90,170 49.3,50.5`} fill="url(#rb-hedge)" />
-          <polygon points={`${RIGHT_TOP} 190,170 50.7,50.5`} fill="url(#rb-hedge)" />
-          {/* where hedge meets ground */}
-          <polygon points="49.3,50.5 -90,170 -90,150 49.2,50.2" fill="#8c9c78" opacity="0.28" />
-          <polygon points="50.7,50.5 190,170 190,150 50.8,50.2" fill="#8c9c78" opacity="0.28" />
-          {/* trellis posts marking the rows you pass */}
-          <g stroke="#8a7650" strokeOpacity="0.45" strokeLinecap="round" fill="none">
-            {POSTS.flatMap((z) => [-1, 1].map((side) => (
-              <line key={`${z}${side}`} x1={50 + side * z * 0.42} y1={50 + z} x2={50 + side * z * 0.42} y2={50 + z - z * 0.55} strokeWidth={Math.max(1, z * 0.14)} vectorEffect="non-scaling-stroke" />
-            )))}
-          </g>
-          {/* furrows */}
-          <g stroke="#8a7650" strokeOpacity="0.16" fill="none">
-            {[-60, -40, -22, -8, 8, 22, 40, 60].map((dx) => (
-              <line key={dx} x1="50" y1="50.5" x2={50 + dx * 1.6} y2="150" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-            ))}
-          </g>
-          {/* the path: the line that grows as you answer */}
-          <path d={d} fill="none" stroke="#ff6700" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity="0.9" />
-          <circle cx={end[0]} cy={end[1]} r="1.3" fill="#ff6700" opacity="0.22" />
-          <circle cx={end[0]} cy={end[1]} r="0.5" fill="#ff6700" />
+      <div className="rb-trail">
+        <svg viewBox="0 0 1000 100" preserveAspectRatio="none" focusable="false">
+          <path d={d} fill="none" stroke="#ff6700" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
+        <span className="rb-trail-dot" style={{ left: `${end[0] / 10}%`, top: `${end[1]}%` }} />
       </div>
-      <div className="rb-haze" />
-      <div className="rb-aperture" />
-      <div className="rb-arrival" />
-      <div className="rb-wash" />
-      <div className="rb-motes">
-        {MOTES.map(([x, y, delay], i) => (
-          <span key={i} className="rb-mote" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${-delay}s` }} />
-        ))}
-      </div>
-      <div className="rb-grain" />
     </div>
   );
 }
@@ -258,7 +186,7 @@ export function SurveyExperience({
 
   const step = steps[idx];
   const progress = state === "closed" ? 0.12 : dest / last;
-  const p = useTween(progress);
+  const p = useTween(progress, 1800);
 
   const go = useCallback((to: number) => {
     if (phase === "out") return;
@@ -340,7 +268,8 @@ export function SurveyExperience({
     );
   } else if (step.kind === "intro") {
     body = (
-      <>
+      <div className="rb-intro">
+        <div>
         <p className="rb-eyebrow">Te Puke event space</p>
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora,</h1>
         <p className="rb-copy">I&rsquo;m Blake, an artist and architectural graduate, and the founder of Patronage. I&rsquo;m working with Rabobank on an artwork for the Te Puke event space, where colleagues, clients and community come together.</p>
@@ -353,7 +282,16 @@ export function SurveyExperience({
         <div className="rb-actions">
           <button type="button" className="rb-next" onClick={() => go(1)}>Begin <span className="rb-arrow" aria-hidden="true" /></button>
         </div>
-      </>
+        </div>
+        <figure className="rb-figure">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/rabobank-pilot/room.webp" alt="A render of the Te Puke event space, with a table at its centre and the focal wall on the left" width={684} height={384} />
+          <figcaption>The event space</figcaption>
+          {/* The official Rabobank wordmark, unaltered. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="rb-mark" src="/rabobank-pilot/rabobank-wordmark.png" alt="Rabobank" width={401} height={76} />
+        </figure>
+      </div>
     );
   } else if (step.kind === "q") {
     const q = step.q;
@@ -466,6 +404,8 @@ export function SurveyExperience({
   } else {
     body = (
       <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="rb-hero" src="/rabobank-pilot/room.webp" alt="" width={684} height={384} />
         <p className="rb-eyebrow">Thank you</p>
         <h2 className="rb-title" ref={titleRef} tabIndex={-1}>Thank you</h2>
         <p className="rb-copy">Thanks for sharing a little of what makes this place and its people distinctive. Your answers will help shape the brief the artist receives.</p>
@@ -473,9 +413,14 @@ export function SurveyExperience({
         <p className="rb-parting" aria-label={PARTING}>
           {PARTING.split(" ").map((w, i) => (
             <span key={i} aria-hidden="true">
-              <span className="rb-word" style={{ animationDelay: `${3.2 + i * 0.22}s` }}>{w}</span>{" "}
+              <span className="rb-word" style={{ animationDelay: `${1.9 + i * 0.18}s` }}>{w}</span>{" "}
             </span>
           ))}
+        </p>
+        <p className="rb-patronage">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/favicon_white_512.png" alt="" width={24} height={24} />
+          Patronage
         </p>
       </>
     );
@@ -488,7 +433,7 @@ export function SurveyExperience({
     <div className="rb" data-step={stepName} data-phase={dataPhase} style={{ ["--p" as string]: p }}>
       <Scene p={p} />
       <div className="rb-stage">
-        <div className={`rb-col rb-${phase}${step.kind === "intro" ? " rb-col--wide" : ""}`} key={`${state}-${idx}`}>
+        <div className={`rb-col rb-${phase}${step.kind === "intro" ? " rb-col--wide" : ""}${step.kind === "thanks" ? " rb-col--thanks" : ""}`} key={`${state}-${idx}`}>
           <div ref={honeypot} aria-hidden="true">{showActions && <HoneypotField />}</div>
           {body}
           {showActions && (
@@ -506,22 +451,6 @@ export function SurveyExperience({
           )}
         </div>
       </div>
-      {step.kind === "intro" && state === "open" && (
-        <div className="rb-corner">
-          {/* The official Rabobank wordmark, unaltered. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="rb-mark" src="/rabobank-pilot/rabobank-wordmark.png" alt="Rabobank" width={401} height={76} />
-        </div>
-      )}
-      {step.kind === "thanks" && (
-        <div className="rb-corner">
-          <span className="rb-patronage">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/favicon_white_512.png" alt="" width={24} height={24} />
-            Patronage
-          </span>
-        </div>
-      )}
     </div>
   );
 }

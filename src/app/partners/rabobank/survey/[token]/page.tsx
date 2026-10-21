@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Instrument_Serif } from "next/font/google";
 import { notFound } from "next/navigation";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
@@ -13,14 +12,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const display = Instrument_Serif({
-  subsets: ["latin", "latin-ext"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-rb-display",
-  display: "swap",
-});
-
 export default async function SurveyPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!(await verifyToken(token, "survey"))) notFound();
@@ -33,7 +24,7 @@ export default async function SurveyPage({ params }: { params: Promise<{ token: 
       : "This survey has closed. Thank you to everyone who took part.";
 
   return (
-    <div className={display.variable}>
+    <div>
       <SurveyExperience
         token={token}
         nameMode={settings.collect_first_name}
