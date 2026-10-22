@@ -17,6 +17,7 @@ export interface SurveyInput {
   story: string;
   place: string;
   cooperation: string;
+  meaning: string;
   roomWants: string[];
   roomUses: string[];
   wrong: string;
@@ -84,6 +85,7 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
       story_together: clean(input.story, LIMITS.story),
       story_place: clean(input.place, LIMITS.place),
       story_cooperation: clean(input.cooperation, LIMITS.cooperation),
+      together_meaning: clean(input.meaning, LIMITS.meaning),
       room_uses: roomUses,
       room_wants: roomWants,
       feels_wrong: clean(input.wrong, LIMITS.wrong),

@@ -27,7 +27,7 @@ type Answers = {
 
 const EMPTY: Answers = {
   artRelation: "", artNote: "", roomWants: [], roomUses: [],
-  story: "", place: "", cooperation: "", artist: "", wrong: "", memory: "",
+  story: "", place: "", cooperation: "", meaning: "", artist: "", wrong: "", memory: "",
   firstName: "",
 };
 
@@ -295,6 +295,7 @@ export function SurveyExperience({
       story: a.story,
       place: a.place,
       cooperation: a.cooperation,
+      meaning: a.meaning,
       roomWants: a.roomWants,
       roomUses: a.roomUses,
       wrong: a.wrong,
@@ -336,7 +337,7 @@ export function SurveyExperience({
   if (state === "closed") {
     body = (
       <>
-        <p className="rb-eyebrow">Rabobank Te Puke Event Space</p>
+        <p className="rb-eyebrow">Rabobank Te Puke &middot; Event Space Artwork</p>
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora.</h1>
         <p className="rb-copy">{message}</p>
       </>
@@ -345,7 +346,7 @@ export function SurveyExperience({
     body = (
       <div className="rb-intro">
         <div>
-        <p className="rb-eyebrow">Rabobank Te Puke Event Space</p>
+        <p className="rb-eyebrow">Rabobank Te Puke &middot; Event Space Artwork</p>
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora,</h1>
         <p className="rb-copy">I&rsquo;m Blake, an artist and architectural graduate, and the founder of Patronage. I&rsquo;m working with Rabobank on an artwork for the Te Puke event space, where colleagues, clients and community come together.</p>
         <p className="rb-copy">I spent the first years of my schooling at Paengaroa Primary School, so this part of the Bay of Plenty has a connection to my own story, too.</p>

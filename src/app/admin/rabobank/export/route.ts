@@ -22,6 +22,7 @@ export async function GET() {
       story_together: r.story_together ?? "",
       story_place: r.story_place ?? "",
       story_cooperation: r.story_cooperation ?? "",
+      together_meaning: r.together_meaning ?? "",
       local_artist: r.local_artist ?? "",
       room_uses: (r.room_uses ?? []).join("; "),
       room_scene: r.room_scene ?? "",

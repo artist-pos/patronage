@@ -58,6 +58,7 @@ const answerRows = (r: any) =>
       ["Working together", r.story_together],
       ["Place", r.story_place],
       ["Pulling together", r.story_cooperation],
+      ["“Together”, pictured", r.together_meaning],
       ["Local artist or maker", r.local_artist],
       ["The room in use", (r.room_uses ?? []).join("; ")],
       ["The room in use (written)", r.room_scene], // the brief free-text version
