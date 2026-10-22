@@ -14,7 +14,8 @@ import { KiwiConfetti, prepareKiwiConfetti } from "./KiwiConfetti";
 import "./survey.css";
 
 const DONE_KEY = "rabobank_survey_done";
-const PARTING = "Thank you for helping shape an artwork for this place, these people and the work they make possible together.";
+const WORK_URL = "https://patronage.nz/blakeaitken?utm_source=rabobank_survey&utm_medium=survey&utm_campaign=rabobank_te_puke";
+const PARTING ="Thank you for helping shape an artwork for this place, these people and the work they make possible together.";
 
 type Answers = {
   artRelation: string;
@@ -173,7 +174,7 @@ export function SurveyExperience({
   const [a, setA] = useState<Answers>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [celebrate, setCelebrate] = useState(false);
+  const [burst, setBurst] = useState(0); // 0 until sent; bumping it replays the confetti
   const loadedAt = useRef(0);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLDivElement>(null);
@@ -211,6 +212,38 @@ export function SurveyExperience({
     if (phase === "in") titleRef.current?.focus({ preventScroll: true });
   }, [idx, phase]);
 
+  // On the sent screen, drift slowly down so the closing line, sign-off and
+  // wordmark come into view as they fade in. Any scroll or touch of their own wins.
+  const onThanks = step.kind === "thanks" && phase === "in";
+  useEffect(() => {
+    if (!onThanks || prefersReducedMotion()) return;
+    let raf = 0;
+    let cancelled = false;
+    const stop = () => { cancelled = true; cancelAnimationFrame(raf); };
+    const events = ["wheel", "touchstart", "keydown", "mousedown"] as const;
+    events.forEach((e) => window.addEventListener(e, stop, { passive: true }));
+    const timer = window.setTimeout(() => {
+      const from = window.scrollY;
+      const to = document.documentElement.scrollHeight - window.innerHeight;
+      if (cancelled || to <= from + 4) return;
+      const duration = Math.min(8000, Math.max(5500, (to - from) * 14)); // slow on purpose
+      const ease = (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        if (cancelled) return;
+        const k = Math.min(1, (now - t0) / duration);
+        window.scrollTo(0, from + (to - from) * ease(k));
+        if (k < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, 1400);
+    return () => {
+      window.clearTimeout(timer);
+      stop();
+      events.forEach((e) => window.removeEventListener(e, stop));
+    };
+  }, [onThanks]);
+
   const set = <K extends keyof Answers>(k: K, v: Answers[K]) => setA((cur) => ({ ...cur, [k]: v }));
 
   async function finish() {
@@ -225,7 +258,7 @@ export function SurveyExperience({
     if (preview) {
       await new Promise((r) => setTimeout(r, 400)); // roughly what a real send feels like
       setSending(false);
-      setCelebrate(true);
+      setBurst(1);
       go(last);
       return;
     }
@@ -249,7 +282,7 @@ export function SurveyExperience({
     setSending(false);
     if (!res.ok) { setError(res.error); return; }
     try { localStorage.setItem(DONE_KEY, "1"); } catch { /* a courtesy flag, nothing more */ }
-    setCelebrate(true);
+    setBurst(1);
     go(last);
   }
 
@@ -431,9 +464,20 @@ export function SurveyExperience({
             </span>
           ))}
         </p>
+        <div className="rb-signoff">
+          <p className="rb-sign">&mdash; Blake Aitken</p>
+          <a className="rb-work" href={WORK_URL} target="_blank" rel="noopener">
+            View his work <span className="rb-arrow" aria-hidden="true" />
+          </a>
+        </div>
+        {!prefersReducedMotion() && (
+          <button type="button" className="rb-replay" onClick={() => setBurst((n) => n + 1)}>
+            <span className="rb-replay-dot" aria-hidden="true" /> Replay kiwi-fetti
+          </button>
+        )}
         <p className="rb-patronage">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/favicon_white_512.png" alt="" width={24} height={24} />
+          <img src="/Favicon_Bleed_512.png" alt="" width={22} height={22} />
           Patronage
         </p>
       </>
@@ -446,7 +490,7 @@ export function SurveyExperience({
   return (
     <div className="rb" data-step={stepName} data-phase={dataPhase} style={{ ["--p" as string]: p }}>
       <Scene p={p} />
-      {celebrate && <KiwiConfetti />}
+      {burst > 0 && <KiwiConfetti key={burst} />}
       {preview && <p className="rb-preview" role="note">Preview · answers aren&rsquo;t saved</p>}
       <div className="rb-stage">
         <div className={`rb-col rb-${phase}${step.kind === "intro" ? " rb-col--wide" : ""}${step.kind === "thanks" ? " rb-col--thanks" : ""}`} key={`${state}-${idx}`}>

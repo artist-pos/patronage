@@ -89,8 +89,25 @@
 .rb-figure figcaption { color: var(--stone); font-size: 0.8rem; }
 .rb-mark { display: block; width: 6.5rem; height: auto; align-self: flex-end; margin-top: 1.2rem; }
 .rb-hero { margin: 0 0 2rem; }
-.rb-patronage { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--stone); font-size: 0.85rem; letter-spacing: 0.04em; margin: 2.6rem 0 0; }
-.rb-patronage img { width: 1.5rem; height: 1.5rem; filter: invert(1) brightness(0.45); }
+/* the wordmark, set exactly as the site header sets it */
+.rb-patronage { display: flex; align-items: center; gap: 0.5rem; color: #000; font-size: 15px; font-weight: 600; letter-spacing: -0.025em; margin: 3rem 0 0; }
+.rb-patronage img { width: 22px; height: 22px; }
+.rb-signoff { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.2rem; margin: 2rem 0 0; }
+.rb-sign { margin: 0; font-size: 1.1rem; color: var(--ink); }
+.rb-work {
+  display: inline-flex; align-items: center; gap: 0.6rem; min-height: 2.4rem; padding: 0 1rem; border-radius: 10px;
+  color: var(--ink); text-decoration: none; font-size: 0.92rem; font-weight: 500; box-shadow: inset 0 0 0 1px #a8a29e;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.rb-work:hover { background: #f5f5f4; box-shadow: inset 0 0 0 1px var(--ink); }
+.rb-work:focus-visible, .rb-replay:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.rb-replay {
+  appearance: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; margin: 1.6rem 0 0;
+  padding: 0.45rem 0.9rem; border-radius: 999px; background: #f5f5f4; color: var(--ink-soft); font: inherit; font-size: 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.rb-replay:hover { background: #e7e5e4; color: var(--ink); }
+.rb-replay-dot { width: 7px; height: 7px; border-radius: 50%; background: #8cc63f; box-shadow: 0 0 0 2px #7a5a34; }
 .rb-parting { font-weight: 300; font-size: clamp(1.6rem, 1.1rem + 2vw, 2.4rem); line-height: 1.16; letter-spacing: -0.025em; margin: 2.2rem 0 0; max-width: 28rem; text-wrap: balance; }
 .rb-already { font-size: 0.95rem; color: var(--ink-soft); border-left: 2px solid var(--orange); padding-left: 0.9rem; margin: 0 0 1.6rem; max-width: 30rem; }
 
@@ -153,7 +170,7 @@
 .rb-note { margin: 0 0 1.4rem; max-width: 32rem; }
 
 /* ---------- movement: the question lifts away, the answer settles, the next one arrives ---------- */
-.rb-in .rb-eyebrow, .rb-in .rb-title, .rb-in .rb-help, .rb-in .rb-copy, .rb-in .rb-body, .rb-in .rb-actions, .rb-in .rb-note, .rb-in .rb-parting, .rb-in .rb-figure, .rb-in .rb-hero, .rb-in .rb-patronage {
+.rb-in .rb-eyebrow, .rb-in .rb-title, .rb-in .rb-help, .rb-in .rb-copy, .rb-in .rb-body, .rb-in .rb-actions, .rb-in .rb-note, .rb-in .rb-parting, .rb-in .rb-figure, .rb-in .rb-hero, .rb-in .rb-patronage, .rb-in .rb-signoff, .rb-in .rb-replay {
   animation: rb-arrive 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 .rb-in .rb-title { animation-delay: 0.08s; }
@@ -166,7 +183,10 @@
 .rb-in .rb-actions { animation-delay: 0.55s; }
 .rb-in .rb-figure, .rb-in .rb-hero { animation-delay: 0.15s; animation-duration: 1.4s; }
 .rb-in .rb-parting { animation-delay: 1.8s; animation-duration: 1.4s; }
-.rb-in .rb-patronage { animation-delay: 3.2s; }
+/* after the closing line has finished writing itself (~19 words, the last starting near 5.1s) */
+.rb-in .rb-signoff { animation-delay: 5.6s; }
+.rb-in .rb-replay { animation-delay: 6s; }
+.rb-in .rb-patronage { animation-delay: 6.3s; }
 @keyframes rb-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .rb-out .rb-eyebrow, .rb-out .rb-title, .rb-out .rb-help, .rb-out .rb-copy { transition: opacity 0.5s ease, transform 0.5s ease; opacity: 0; transform: translateY(-14px); }
 .rb-out .rb-body, .rb-out .rb-note, .rb-out .rb-figure { transition: opacity 0.5s ease, transform 0.5s ease; opacity: 0; transform: translateY(16px); }
