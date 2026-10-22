@@ -15,7 +15,7 @@ import "./survey.css";
 
 const DONE_KEY = "rabobank_survey_done";
 const WORK_URL = "https://patronage.nz/blakeaitken?utm_source=rabobank_survey&utm_medium=survey&utm_campaign=rabobank_te_puke";
-const PARTING ="Thank you for helping shape an artwork for this place, these people and the work they make possible together.";
+const PARTING = "Thank you for helping shape an artwork about where you work, who you work with, and what you make possible together.";
 
 type Answers = {
   artRelation: string;
