@@ -17,6 +17,19 @@ export const ROOM_WANTS = [
 
 export const MAX_ROOM_WANTS = 3;
 
+/** Picking this clears the other uses, and picking any other use clears it. */
+export const ROOM_USES_NONE = "I haven’t seen the space in use";
+export const ROOM_USES = [
+  "Client meetings and presentations",
+  "Staff gatherings and team events",
+  "Community or grower events",
+  "Training and workshops",
+  "Informal catch-ups and coffees",
+  "Formal functions and celebrations",
+  ROOM_USES_NONE,
+] as const;
+export const MAX_ROOM_USES = 3;
+
 export const LIMITS = {
   firstName: 60,
   artNote: 200,
@@ -24,7 +37,6 @@ export const LIMITS = {
   place: 300,
   cooperation: 500,
   artist: 200,
-  scene: 200,
   wrong: 200,
   memory: 200,
 } as const;
@@ -39,9 +51,10 @@ export interface QuestionBase {
 export type Question =
   | (QuestionBase & { kind: "text"; field: TextField; limit: number })
   | (QuestionBase & { kind: "single"; field: "artRelation"; options: readonly string[]; note: { field: "artNote"; limit: number; label: string } })
-  | (QuestionBase & { kind: "multi"; field: "roomWants"; options: readonly string[]; max: number });
+  | (QuestionBase & { kind: "multi"; field: MultiField; options: readonly string[]; max: number; exclusive?: string });
 
-export type TextField = "story" | "place" | "cooperation" | "artist" | "scene" | "wrong" | "memory";
+export type TextField = "story" | "place" | "cooperation" | "artist" | "wrong" | "memory";
+export type MultiField = "roomUses" | "roomWants";
 
 export const QUESTIONS: Question[] = [
   {
@@ -93,14 +106,15 @@ export const QUESTIONS: Question[] = [
     limit: LIMITS.artist,
   },
   {
-    key: "scene",
-    kind: "text",
-    field: "scene",
+    key: "uses",
+    kind: "multi",
+    field: "roomUses",
     eyebrow: "The room in use",
-    title: "When you picture the event space in use, what’s happening?",
-    help: "Who’s there, what they’re doing, how it feels. A sentence is plenty.",
-    optional: true,
-    limit: LIMITS.scene,
+    title: "When the event space is in use, what’s usually happening?",
+    help: "Pick up to three.",
+    options: ROOM_USES,
+    max: MAX_ROOM_USES,
+    exclusive: ROOM_USES_NONE,
   },
   {
     key: "room",

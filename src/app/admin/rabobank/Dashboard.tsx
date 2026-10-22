@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronDown, Download, Eye } from "lucide-react";
 import { formatNz, utcToNzLocalInput, windowState } from "@/lib/rabobank/time";
-import { ART_RELATION, ROOM_WANTS } from "@/lib/rabobank/survey";
+import { ART_RELATION, ROOM_USES, ROOM_WANTS } from "@/lib/rabobank/survey";
 import type { RabobankSettings } from "@/lib/rabobank/settings";
 import { revokeToken } from "./actions";
 import { DeleteNamesButton, DeleteResponseButton, DeleteTokenButton, SettingsPanel, TokenForm } from "./Forms";
@@ -59,7 +59,8 @@ const answerRows = (r: any) =>
       ["Place", r.story_place],
       ["Pulling together", r.story_cooperation],
       ["Local artist or maker", r.local_artist],
-      ["The room in use", r.room_scene],
+      ["The room in use", (r.room_uses ?? []).join("; ")],
+      ["The room in use (written)", r.room_scene], // the brief free-text version
       ["What the artwork should do", (r.room_wants ?? []).join("; ")],
       ["Would feel wrong", r.feels_wrong],
       ["An artwork that stayed with them", r.memorable_artwork],
@@ -76,6 +77,8 @@ export function Dashboard({ settings, tokens, rows }: DashboardData) {
   const median = times.length ? times[Math.floor(times.length / 2)] : null;
   const named = rows.filter((r) => r.first_name).length;
   const relationCounts = ART_RELATION.map((o) => [o, rows.filter((r) => r.art_relation === o).length] as const);
+  const useCounts = ROOM_USES.map((o) => [o, rows.filter((r) => (r.room_uses ?? []).includes(o)).length] as const)
+    .sort((a, b) => b[1] - a[1]);
   const wantCounts = ROOM_WANTS.map((o) => [o, rows.filter((r) => (r.room_wants ?? []).includes(o)).length] as const)
     .sort((a, b) => b[1] - a[1]);
   const surveyStatus = windowStatus(settings.survey_open_at, settings.survey_close_at);
@@ -117,14 +120,19 @@ export function Dashboard({ settings, tokens, rows }: DashboardData) {
             ))}
           </dl>
 
-          <div className="grid divide-y divide-border rounded-xl border border-border bg-white md:grid-cols-2 md:divide-x md:divide-y-0">
-            <section className="p-5">
+          {/* The headline chart spans the top; the two context charts sit side by side beneath it. */}
+          <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-2">
+            <section className="bg-white p-5 md:col-span-2">
+              <h2 className="mb-4 text-sm font-medium">What the artwork should do <span className="font-normal text-stone-400">· top three in black</span></h2>
+              <Bars items={wantCounts} total={rows.length} highlight={3} />
+            </section>
+            <section className="bg-white p-5">
               <h2 className="mb-4 text-sm font-medium">Relationship with art</h2>
               <Bars items={relationCounts} total={rows.length} />
             </section>
-            <section className="p-5">
-              <h2 className="mb-4 text-sm font-medium">What the artwork should do <span className="font-normal text-stone-400">· top three in black</span></h2>
-              <Bars items={wantCounts} total={rows.length} highlight={3} />
+            <section className="bg-white p-5">
+              <h2 className="mb-4 text-sm font-medium">The room in use</h2>
+              <Bars items={useCounts} total={rows.length} />
             </section>
           </div>
 

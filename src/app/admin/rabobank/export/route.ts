@@ -23,6 +23,7 @@ export async function GET() {
       story_place: r.story_place ?? "",
       story_cooperation: r.story_cooperation ?? "",
       local_artist: r.local_artist ?? "",
+      room_uses: (r.room_uses ?? []).join("; "),
       room_scene: r.room_scene ?? "",
       room_wants: (r.room_wants ?? []).join("; "),
       feels_wrong: r.feels_wrong ?? "",

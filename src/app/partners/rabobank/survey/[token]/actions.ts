@@ -7,7 +7,7 @@ import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { windowState } from "@/lib/rabobank/time";
-import { ART_RELATION, LIMITS, MAX_ROOM_WANTS, ROOM_WANTS } from "@/lib/rabobank/survey";
+import { ART_RELATION, LIMITS, MAX_ROOM_USES, MAX_ROOM_WANTS, ROOM_USES, ROOM_USES_NONE, ROOM_WANTS } from "@/lib/rabobank/survey";
 
 export interface SurveyInput {
   token: string;
@@ -18,10 +18,10 @@ export interface SurveyInput {
   place: string;
   cooperation: string;
   roomWants: string[];
+  roomUses: string[];
   wrong: string;
   memory: string;
   artist: string;
-  scene: string;
   completionSeconds: number;
   [HONEYPOT_FIELD]?: string;
 }
@@ -66,6 +66,10 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
     ? [...new Set(input.roomWants.filter((w): w is string => (ROOM_WANTS as readonly string[]).includes(w)))]
     : [];
   const roomWants = wants.slice(0, MAX_ROOM_WANTS);
+  const uses = Array.isArray(input.roomUses)
+    ? [...new Set(input.roomUses.filter((w): w is string => (ROOM_USES as readonly string[]).includes(w)))]
+    : [];
+  const roomUses = (uses.includes(ROOM_USES_NONE) ? [ROOM_USES_NONE] : uses).slice(0, MAX_ROOM_USES);
   const artRelation = (ART_RELATION as readonly string[]).includes(input.artRelation) ? input.artRelation : null;
   const seconds = Number.isFinite(input.completionSeconds)
     ? Math.min(Math.max(Math.round(input.completionSeconds), 0), 86_400)
@@ -80,7 +84,7 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
       story_together: clean(input.story, LIMITS.story),
       story_place: clean(input.place, LIMITS.place),
       story_cooperation: clean(input.cooperation, LIMITS.cooperation),
-      room_scene: clean(input.scene, LIMITS.scene),
+      room_uses: roomUses,
       room_wants: roomWants,
       feels_wrong: clean(input.wrong, LIMITS.wrong),
       memorable_artwork: clean(input.memory, LIMITS.memory),

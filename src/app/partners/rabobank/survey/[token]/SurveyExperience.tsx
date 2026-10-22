@@ -6,6 +6,7 @@ import {
   LIMITS,
   QUESTIONS,
   type Question,
+  type MultiField,
   type TextField,
 } from "@/lib/rabobank/survey";
 import type { NameMode } from "@/lib/rabobank/settings";
@@ -21,11 +22,12 @@ type Answers = {
   artRelation: string;
   artNote: string;
   roomWants: string[];
+  roomUses: string[];
 } & Record<TextField, string> & { firstName: string };
 
 const EMPTY: Answers = {
-  artRelation: "", artNote: "", roomWants: [],
-  story: "", place: "", cooperation: "", artist: "", scene: "", wrong: "", memory: "",
+  artRelation: "", artNote: "", roomWants: [], roomUses: [],
+  story: "", place: "", cooperation: "", artist: "", wrong: "", memory: "",
   firstName: "",
 };
 
@@ -272,10 +274,10 @@ export function SurveyExperience({
       place: a.place,
       cooperation: a.cooperation,
       roomWants: a.roomWants,
+      roomUses: a.roomUses,
       wrong: a.wrong,
       memory: a.memory,
       artist: a.artist,
-      scene: a.scene,
       completionSeconds: (Date.now() - loadedAt.current) / 1000,
       [HONEYPOT_FIELD]: hp,
     });
@@ -289,11 +291,14 @@ export function SurveyExperience({
   const next = () => (idx === last - 1 ? void finish() : go(idx + 1));
   const back = () => go(Math.max(0, idx - 1));
 
-  function toggleWant(option: string, max: number) {
+  /** Up to `max` picks; an `exclusive` option (e.g. "I haven't seen it") stands alone. */
+  function toggleMulti(field: MultiField, option: string, max: number, exclusive?: string) {
     setA((cur) => {
-      const on = cur.roomWants.includes(option);
-      if (on) return { ...cur, roomWants: cur.roomWants.filter((w) => w !== option) };
-      return cur.roomWants.length >= max ? cur : { ...cur, roomWants: [...cur.roomWants, option] };
+      const list = cur[field];
+      if (list.includes(option)) return { ...cur, [field]: list.filter((w) => w !== option) };
+      if (option === exclusive) return { ...cur, [field]: [option] };
+      const base = list.filter((w) => w !== exclusive);
+      return base.length >= max ? cur : { ...cur, [field]: [...base, option] };
     });
   }
 
@@ -334,10 +339,12 @@ export function SurveyExperience({
         <figure className="rb-figure">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rabobank-pilot/room.webp" alt="A render of the Te Puke event space, with a table at its centre and the focal wall on the left" width={684} height={384} />
-          <figcaption>The event space</figcaption>
-          {/* The official Rabobank wordmark, unaltered. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="rb-mark" src="/rabobank-pilot/rabobank-wordmark.png" alt="Rabobank" width={401} height={76} />
+          <div className="rb-figmeta">
+            <figcaption>The event space</figcaption>
+            {/* The official Rabobank wordmark, unaltered. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="rb-mark" src="/rabobank-pilot/rabobank-wordmark.png" alt="Rabobank" width={401} height={76} />
+          </div>
         </figure>
       </div>
     );
@@ -384,8 +391,9 @@ export function SurveyExperience({
         </>
       );
     } else {
-      const chosen = a.roomWants;
+      const chosen = a[q.field];
       canSkip = chosen.length === 0;
+      // An exclusive pick never locks the others: tapping one swaps it out (see toggleMulti).
       const full = chosen.length >= q.max;
       body = (
         <>
@@ -405,7 +413,7 @@ export function SurveyExperience({
                     type="checkbox"
                     checked={order >= 0}
                     disabled={order < 0 && full}
-                    onChange={() => toggleWant(o, q.max)}
+                    onChange={() => toggleMulti(q.field, o, q.max, q.exclusive)}
                   />
                   <span style={{ ["--lvl" as string]: order >= 0 ? order + 1 : 1 }}>{o}</span>
                 </label>
