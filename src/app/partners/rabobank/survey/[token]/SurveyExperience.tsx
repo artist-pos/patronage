@@ -27,7 +27,7 @@ type Answers = {
 
 const EMPTY: Answers = {
   artRelation: "", artNote: "", roomWants: [], roomUses: [],
-  story: "", place: "", cooperation: "", meaning: "", artist: "", wrong: "", memory: "",
+  story: "", place: "", cooperation: "", artist: "", wrong: "", memory: "",
   firstName: "",
 };
 
@@ -295,7 +295,6 @@ export function SurveyExperience({
       story: a.story,
       place: a.place,
       cooperation: a.cooperation,
-      meaning: a.meaning,
       roomWants: a.roomWants,
       roomUses: a.roomUses,
       wrong: a.wrong,
@@ -350,8 +349,8 @@ export function SurveyExperience({
         <h1 className="rb-title" ref={titleRef} tabIndex={-1}>Kia ora,</h1>
         <p className="rb-copy">I&rsquo;m Blake, an artist and architectural graduate, and the founder of Patronage. I&rsquo;m working with Rabobank on an artwork for the Te Puke event space, where colleagues, clients and community come together.</p>
         <p className="rb-copy">I spent the first years of my schooling at Paengaroa Primary School, so this part of the Bay of Plenty has a connection to my own story, too.</p>
-        <p className="rb-copy">I&rsquo;m interested in the stories, places and relationships that make this part of the world what it is. You don&rsquo;t need to know anything about art to take part. There are no right answers, and a sentence or two is plenty.</p>
-        <p className="rb-copy">Your answers will help shape the brief and the artists invited to respond to it. It takes about five minutes, and the survey closes {closeDate}. In early November, you&rsquo;ll be invited back to see the shortlisted artists and respond to their work.</p>
+        <p className="rb-copy">I&rsquo;m interested in the stories, places and relationships that make this part of the world what it is. The artwork&rsquo;s theme is &ldquo;Together&rdquo;: what working together makes possible here, between colleagues, clients, growers and the wider community. It will interpret that idea rather than illustrate it.</p>
+        <p className="rb-copy">You don&rsquo;t need to know anything about art to take part. There are no right answers, and a sentence or two is plenty. Your answers will help shape the brief and the artists invited to respond to it. It takes about five minutes, and the survey closes {closeDate}. In early November, you&rsquo;ll be invited back to see the shortlisted artists and respond to their work.</p>
         {alreadyDone && (
           <p className="rb-already" role="status">It looks like you&rsquo;ve already shared your answers from this device. You&rsquo;re welcome to add more.</p>
         )}

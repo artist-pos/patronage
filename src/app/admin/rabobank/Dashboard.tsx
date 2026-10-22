@@ -57,8 +57,8 @@ const answerRows = (r: any) =>
       ["Relationship with art", [r.art_relation, r.art_relation_note].filter(Boolean).join(" — ")],
       ["Working together", r.story_together],
       ["Place", r.story_place],
-      ["Pulling together", r.story_cooperation],
-      ["“Together”, pictured", r.together_meaning],
+      ["What it made possible", r.story_cooperation],
+      ["“Together”, pictured", r.together_meaning], // asked briefly as its own question; kept for those answers
       ["Local artist or maker", r.local_artist],
       ["The room in use", (r.room_uses ?? []).join("; ")],
       ["The room in use (written)", r.room_scene], // the brief free-text version

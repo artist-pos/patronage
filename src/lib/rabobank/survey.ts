@@ -36,7 +36,6 @@ export const LIMITS = {
   story: 500,
   place: 300,
   cooperation: 500,
-  meaning: 300,
   artist: 200,
   wrong: 200,
   memory: 200,
@@ -54,7 +53,7 @@ export type Question =
   | (QuestionBase & { kind: "single"; field: "artRelation"; options: readonly string[]; note: { field: "artNote"; limit: number; label: string } })
   | (QuestionBase & { kind: "multi"; field: MultiField; options: readonly string[]; max: number; exclusive?: string });
 
-export type TextField = "story" | "place" | "cooperation" | "meaning" | "artist" | "wrong" | "memory";
+export type TextField = "story" | "place" | "cooperation" | "artist" | "wrong" | "memory";
 export type MultiField = "roomUses" | "roomWants";
 
 export const QUESTIONS: Question[] = [
@@ -92,21 +91,10 @@ export const QUESTIONS: Question[] = [
     key: "cooperation",
     kind: "text",
     field: "cooperation",
-    eyebrow: "Pulling together",
+    eyebrow: "What it made possible",
     title: "Can you think of a time people working together made something possible that wouldn’t have happened otherwise? What happened?",
-    help: "It could involve clients, colleagues, growers or the wider community. A particular moment or example is welcome.",
+    help: "It could involve clients, colleagues, growers or the wider community. A particular moment is welcome, even a single image that sums it up.",
     limit: LIMITS.cooperation,
-  },
-  {
-    // Asked after the two story questions, so the theme doesn't steer those answers.
-    key: "meaning",
-    kind: "text",
-    field: "meaning",
-    eyebrow: "The idea of “Together”",
-    title:
-      "The artwork’s brief centres on “Together”: how cooperation, shared knowledge and relationships make things possible that couldn’t happen alone. When you think of “together” here, what do you picture?",
-    help: "A moment, a place, a gesture, an image. The artwork will interpret the idea rather than illustrate it, so your own take is what matters.",
-    limit: LIMITS.meaning,
   },
   {
     key: "artist",
