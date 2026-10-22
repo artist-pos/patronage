@@ -21,6 +21,7 @@ export interface SurveyInput {
   wrong: string;
   memory: string;
   artist: string;
+  scene: string;
   completionSeconds: number;
   [HONEYPOT_FIELD]?: string;
 }
@@ -79,6 +80,7 @@ export async function submitSurvey(input: SurveyInput): Promise<SurveyResult> {
       story_together: clean(input.story, LIMITS.story),
       story_place: clean(input.place, LIMITS.place),
       story_cooperation: clean(input.cooperation, LIMITS.cooperation),
+      room_scene: clean(input.scene, LIMITS.scene),
       room_wants: roomWants,
       feels_wrong: clean(input.wrong, LIMITS.wrong),
       memorable_artwork: clean(input.memory, LIMITS.memory),

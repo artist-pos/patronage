@@ -1,5 +1,5 @@
 export const ART_RELATION = [
-  "I love having art around",
+  "Art matters to me — I seek it out",
   "I enjoy it, but don’t know much about it",
   "I don’t really notice it",
   "I’m not sure it adds much",
@@ -8,7 +8,7 @@ export const ART_RELATION = [
 export const ROOM_WANTS = [
   "Makes the room feel distinctly Te Puke",
   "Reflects the people, work and relationships that shape this region",
-  "Expresses what Rabobank and its clients make possible together",
+  "Shows what the bank and its clients build together",
   "Gives people something to talk about",
   "Offers a fresh perspective on something familiar",
   "Holds its own in the room, even when things are busy",
@@ -23,9 +23,10 @@ export const LIMITS = {
   story: 500,
   place: 300,
   cooperation: 500,
+  artist: 200,
+  scene: 200,
   wrong: 200,
   memory: 200,
-  artist: 200,
 } as const;
 
 export interface QuestionBase {
@@ -40,7 +41,7 @@ export type Question =
   | (QuestionBase & { kind: "single"; field: "artRelation"; options: readonly string[]; note: { field: "artNote"; limit: number; label: string } })
   | (QuestionBase & { kind: "multi"; field: "roomWants"; options: readonly string[]; max: number });
 
-export type TextField = "story" | "place" | "cooperation" | "wrong" | "memory" | "artist";
+export type TextField = "story" | "place" | "cooperation" | "artist" | "scene" | "wrong" | "memory";
 
 export const QUESTIONS: Question[] = [
   {
@@ -70,7 +71,7 @@ export const QUESTIONS: Question[] = [
     eyebrow: "Place",
     title:
       "Is there a place around Te Puke, or a local story or tradition, that you hold dear? What makes it meaningful to you?",
-    help: "It could be a landscape, a familiar place, a local story or something from everyday life. What makes it matter to you?",
+    help: "It could be a landscape, a familiar place, a local story or something from everyday life.",
     limit: LIMITS.place,
   },
   {
@@ -81,6 +82,25 @@ export const QUESTIONS: Question[] = [
     title: "Can you think of a time people working together made something possible that wouldn’t have happened otherwise? What happened?",
     help: "It could involve clients, colleagues, growers or the wider community. A particular moment or example is welcome.",
     limit: LIMITS.cooperation,
+  },
+  {
+    key: "artist",
+    kind: "text",
+    field: "artist",
+    eyebrow: "Local makers",
+    title: "Is there a local artist or maker whose work you know and love?",
+    help: "Someone from Te Puke or the wider Bay of Plenty is especially welcome. A name or link is enough.",
+    limit: LIMITS.artist,
+  },
+  {
+    key: "scene",
+    kind: "text",
+    field: "scene",
+    eyebrow: "The room in use",
+    title: "When you picture the event space in use, what’s happening?",
+    help: "Who’s there, what they’re doing, how it feels. A sentence is plenty.",
+    optional: true,
+    limit: LIMITS.scene,
   },
   {
     key: "room",
@@ -111,15 +131,5 @@ export const QUESTIONS: Question[] = [
     help: "It could be something you’ve seen anywhere, not just in a gallery.",
     optional: true,
     limit: LIMITS.memory,
-  },
-  {
-    key: "artist",
-    kind: "text",
-    field: "artist",
-    eyebrow: "Local makers",
-    title: "Is there a local artist or maker whose work you know and love?",
-    help: "Someone from Te Puke or the wider Bay of Plenty is especially welcome. A name or link is enough.",
-    optional: true,
-    limit: LIMITS.artist,
   },
 ];

@@ -10,7 +10,7 @@ import {
 } from "@/lib/rabobank/survey";
 import type { NameMode } from "@/lib/rabobank/settings";
 import { submitSurvey } from "./actions";
-import { KiwiConfetti } from "./KiwiConfetti";
+import { KiwiConfetti, prepareKiwiConfetti } from "./KiwiConfetti";
 import "./survey.css";
 
 const DONE_KEY = "rabobank_survey_done";
@@ -24,7 +24,7 @@ type Answers = {
 
 const EMPTY: Answers = {
   artRelation: "", artNote: "", roomWants: [],
-  story: "", place: "", cooperation: "", wrong: "", memory: "", artist: "",
+  story: "", place: "", cooperation: "", artist: "", scene: "", wrong: "", memory: "",
   firstName: "",
 };
 
@@ -217,6 +217,7 @@ export function SurveyExperience({
       return;
     }
     setSending(true);
+    prepareKiwiConfetti(); // draw the fruit now, while the answers are on their way
     const hp = (honeypot.current?.querySelector("input") as HTMLInputElement | null)?.value ?? "";
     const res = await submitSurvey({
       token,
@@ -230,6 +231,7 @@ export function SurveyExperience({
       wrong: a.wrong,
       memory: a.memory,
       artist: a.artist,
+      scene: a.scene,
       completionSeconds: (Date.now() - loadedAt.current) / 1000,
       [HONEYPOT_FIELD]: hp,
     });
@@ -277,7 +279,7 @@ export function SurveyExperience({
         <p className="rb-copy">I&rsquo;m Blake, an artist and architectural graduate, and the founder of Patronage. I&rsquo;m working with Rabobank on an artwork for the Te Puke event space, where colleagues, clients and community come together.</p>
         <p className="rb-copy">I spent the first years of my schooling at Paengaroa Primary School, so this part of the Bay of Plenty has a connection to my own story, too.</p>
         <p className="rb-copy">I&rsquo;m interested in the stories, places and relationships that make this part of the world what it is. You don&rsquo;t need to know anything about art to take part. There are no right answers, and a sentence or two is plenty.</p>
-        <p className="rb-copy">Your answers will help shape the brief and the artists invited to respond to it. It takes about five minutes. The survey closes {closeDate}.</p>
+        <p className="rb-copy">Your answers will help shape the brief and the artists invited to respond to it. It takes about five minutes, and the survey closes {closeDate}. In early November, you&rsquo;ll be invited back to see the shortlisted artists and respond to their work.</p>
         {alreadyDone && (
           <p className="rb-already" role="status">It looks like you&rsquo;ve already shared your answers from this device. You&rsquo;re welcome to add more.</p>
         )}
@@ -408,8 +410,8 @@ export function SurveyExperience({
       <>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="rb-hero" src="/rabobank-pilot/room.webp" alt="" width={684} height={384} />
-        <p className="rb-eyebrow">Thank you</p>
-        <h2 className="rb-title" ref={titleRef} tabIndex={-1}>Thank you</h2>
+        <p className="rb-eyebrow">Sent</p>
+        <h2 className="rb-title" ref={titleRef} tabIndex={-1}>Your responses are in.</h2>
         <p className="rb-copy">In early November, you&rsquo;ll be invited to see the shortlisted artists and respond to their work.</p>
         <p className="rb-parting" aria-label={PARTING}>
           {PARTING.split(" ").map((w, i) => (

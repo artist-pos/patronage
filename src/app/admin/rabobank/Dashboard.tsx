@@ -58,10 +58,11 @@ const answerRows = (r: any) =>
       ["Working together", r.story_together],
       ["Place", r.story_place],
       ["Pulling together", r.story_cooperation],
+      ["Local artist or maker", r.local_artist],
+      ["The room in use", r.room_scene],
       ["What the artwork should do", (r.room_wants ?? []).join("; ")],
       ["Would feel wrong", r.feels_wrong],
       ["An artwork that stayed with them", r.memorable_artwork],
-      ["Local artist or maker", r.local_artist],
       // First survey, kept so earlier responses still read.
       ["Day to day (v1)", r.q1],
       ["Feeling (v1)", [...(r.q2 ?? []), r.q2_other ? `(${r.q2_other})` : ""].filter(Boolean).join(", ")],

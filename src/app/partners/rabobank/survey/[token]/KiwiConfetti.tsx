@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 /* A one-off burst of kiwifruit from both bottom corners when the survey is sent. */
 
-const COUNT = 70;
+const COUNT = 54;
 const LIFE_MS = 4200;
 const GRAVITY = 0.32; // px per frame², at 60fps
 
@@ -66,7 +66,18 @@ function drawWhole(r: number): HTMLCanvasElement {
   return c;
 }
 
-interface Bit { img: HTMLCanvasElement; x: number; y: number; vx: number; vy: number; rot: number; vr: number; flip: number; vf: number; size: number }
+interface Bit { img: HTMLCanvasElement; w: number; h: number; x: number; y: number; vx: number; vy: number; rot: number; vr: number; flip: number; vf: number; size: number }
+
+let sprites: HTMLCanvasElement[] | null = null;
+
+/**
+ * Draws the fruit once and keeps it. Call it while the answers are sending so
+ * the work is done before the burst, not during its first frames.
+ */
+export function prepareKiwiConfetti() {
+  if (typeof document === "undefined" || sprites) return;
+  sprites = [8, 11, 14, 17].map(drawSlice).concat([9, 12].map(drawWhole));
+}
 
 export function KiwiConfetti() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -75,16 +86,17 @@ export function KiwiConfetti() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const canvas = ref.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ctx = canvas.getContext("2d", { desynchronized: true })!;
+    // 1.5x is plenty for small moving shapes, and much cheaper to clear and fill than 2x or 3x.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const resize = () => {
-      canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr);
     };
     resize();
     addEventListener("resize", resize);
 
-    const sprites = [8, 11, 14, 17].map(drawSlice).concat([9, 12].map(drawWhole));
+    prepareKiwiConfetti();
+    const art = sprites!;
     const scale = Math.min(1, innerWidth / 900) * 0.4 + 0.6; // a little smaller on phones
     const bits: Bit[] = Array.from({ length: COUNT }, (_, i) => {
       const left = i % 2 === 0;
@@ -92,9 +104,11 @@ export function KiwiConfetti() {
       const peak = innerHeight * (0.5 + Math.random() * 0.45);
       const vy = -Math.sqrt(2 * GRAVITY * peak) * 1.12; // a touch extra to make up for drag
       const vx = (left ? 1 : -1) * (1.5 + Math.random() * (innerWidth / 110));
-      const img = sprites[Math.random() < 0.15 ? 4 + (i % 2) : i % 4];
+      const img = art[Math.random() < 0.15 ? 4 + (i % 2) : i % 4];
       return {
         img,
+        w: img.width / 2,
+        h: img.height / 2,
         x: left ? -10 : innerWidth + 10,
         y: innerHeight + 10,
         vx,
@@ -114,26 +128,30 @@ export function KiwiConfetti() {
       const dt = Math.min(2, (now - prev) / 16.67); // frames at 60fps, capped after a stall
       prev = now;
       const t = now - start;
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const drag = 0.99 ** dt;
+      const floor = innerHeight + 40;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = t > LIFE_MS - 900 ? Math.max(0, (LIFE_MS - t) / 900) : 1;
+      let onScreen = 0;
       for (const b of bits) {
-        b.vy += GRAVITY * dt;
-        b.vx *= 0.99 ** dt;
-        b.vy *= 0.99 ** dt;
+        b.vy = (b.vy + GRAVITY * dt) * drag;
+        b.vx *= drag;
         b.x += b.vx * dt;
         b.y += b.vy * dt;
+        if (b.y > floor && b.vy > 0) continue; // fallen out of view
+        onScreen++;
         b.rot += b.vr * dt;
         b.flip += b.vf * dt;
-        const w = b.img.width / 2, h = b.img.height / 2;
-        ctx.save();
-        ctx.translate(b.x, b.y);
-        ctx.rotate(b.rot);
-        ctx.scale(b.size * (0.35 + 0.65 * Math.abs(Math.cos(b.flip))), b.size); // tumbling in 3D, roughly
-        ctx.drawImage(b.img, -w / 2, -h / 2, w, h);
-        ctx.restore();
+        // One transform per piece: position, spin, and a squash that reads as tumbling.
+        const sx = b.size * (0.35 + 0.65 * Math.abs(Math.cos(b.flip))) * dpr;
+        const sy = b.size * dpr;
+        const c = Math.cos(b.rot), s = Math.sin(b.rot);
+        ctx.setTransform(c * sx, s * sx, -s * sy, c * sy, b.x * dpr, b.y * dpr);
+        ctx.drawImage(b.img, -b.w / 2, -b.h / 2, b.w, b.h);
       }
-      if (t < LIFE_MS) raf = requestAnimationFrame(tick);
-      else ctx.clearRect(0, 0, innerWidth, innerHeight);
+      if (t < LIFE_MS && onScreen > 0) raf = requestAnimationFrame(tick);
+      else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     };
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); removeEventListener("resize", resize); };
