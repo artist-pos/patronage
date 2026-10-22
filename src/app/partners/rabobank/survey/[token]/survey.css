@@ -48,6 +48,13 @@
 /* kiwifruit on submit, over everything and never in the way */
 .rb-confetti { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; pointer-events: none; }
 
+/* admin walk-through marker */
+.rb-preview {
+  position: fixed; top: 0.9rem; left: 50%; z-index: 6; transform: translateX(-50%); margin: 0;
+  padding: 0.35rem 0.85rem; border-radius: 999px; background: var(--ink); color: #fff;
+  font-size: 0.75rem; letter-spacing: 0.02em; pointer-events: none; white-space: nowrap;
+}
+
 /* ---------- the stage ---------- */
 .rb-stage {
   position: relative; z-index: 1; min-height: 100dvh;

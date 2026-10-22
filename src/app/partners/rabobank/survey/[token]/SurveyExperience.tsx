@@ -149,12 +149,15 @@ export function SurveyExperience({
   closeDate,
   state,
   message,
+  preview = false,
 }: {
   token: string;
   nameMode: NameMode;
   closeDate: string;
   state: "open" | "closed";
   message?: string;
+  /** Admin walk-through: everything works except that nothing is sent or remembered. */
+  preview?: boolean;
 }) {
   const steps: Step[] = [
     { kind: "intro" },
@@ -175,13 +178,14 @@ export function SurveyExperience({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLDivElement>(null);
 
-  const alreadyDone = useSyncExternalStore(
+  const remembered = useSyncExternalStore(
     () => () => {},
     () => {
       try { return Boolean(localStorage.getItem(DONE_KEY)); } catch { return false; }
     },
     () => false
   );
+  const alreadyDone = remembered && !preview;
 
   useEffect(() => { loadedAt.current = Date.now(); }, []);
 
@@ -218,6 +222,13 @@ export function SurveyExperience({
     }
     setSending(true);
     prepareKiwiConfetti(); // draw the fruit now, while the answers are on their way
+    if (preview) {
+      await new Promise((r) => setTimeout(r, 400)); // roughly what a real send feels like
+      setSending(false);
+      setCelebrate(true);
+      go(last);
+      return;
+    }
     const hp = (honeypot.current?.querySelector("input") as HTMLInputElement | null)?.value ?? "";
     const res = await submitSurvey({
       token,
@@ -436,6 +447,7 @@ export function SurveyExperience({
     <div className="rb" data-step={stepName} data-phase={dataPhase} style={{ ["--p" as string]: p }}>
       <Scene p={p} />
       {celebrate && <KiwiConfetti />}
+      {preview && <p className="rb-preview" role="note">Preview · answers aren&rsquo;t saved</p>}
       <div className="rb-stage">
         <div className={`rb-col rb-${phase}${step.kind === "intro" ? " rb-col--wide" : ""}${step.kind === "thanks" ? " rb-col--thanks" : ""}`} key={`${state}-${idx}`}>
           <div ref={honeypot} aria-hidden="true">{showActions && <HoneypotField />}</div>

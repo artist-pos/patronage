@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown, Download } from "lucide-react";
+import { ChevronDown, Download, Eye } from "lucide-react";
 import { formatNz, utcToNzLocalInput, windowState } from "@/lib/rabobank/time";
 import { ART_RELATION, ROOM_WANTS } from "@/lib/rabobank/survey";
 import type { RabobankSettings } from "@/lib/rabobank/settings";
@@ -86,9 +86,19 @@ export function Dashboard({ settings, tokens, rows }: DashboardData) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h1 className="text-2xl font-semibold">Rabobank Te Puke pilot</h1>
-        <p className="text-sm text-stone-500">Survey {surveyStatus.charAt(0).toLowerCase() + surveyStatus.slice(1)}</p>
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <div>
+          <h1 className="text-2xl font-semibold">Rabobank Te Puke pilot</h1>
+          <p className="mt-0.5 text-sm text-stone-500">Survey {surveyStatus.charAt(0).toLowerCase() + surveyStatus.slice(1)}</p>
+        </div>
+        <a
+          href="/partners/rabobank/preview"
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-sm hover:border-stone-400"
+        >
+          <Eye className="size-4" /> Preview survey
+        </a>
       </header>
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
