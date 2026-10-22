@@ -92,6 +92,16 @@ export async function deleteToken(fd: FormData): Promise<void> {
   revalidatePath("/admin/rabobank");
 }
 
+/** Removes one survey response for good, e.g. a test run. */
+export async function deleteResponse(fd: FormData): Promise<void> {
+  await requireAdmin();
+  await createAdminClient()
+    .from("rabobank_survey_response")
+    .delete()
+    .eq("id", String(fd.get("id")));
+  revalidatePath("/admin/rabobank");
+}
+
 export async function deleteAllNames(): Promise<void> {
   await requireAdmin();
   const admin = createAdminClient();
