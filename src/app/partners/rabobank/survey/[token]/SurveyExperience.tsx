@@ -219,30 +219,52 @@ export function SurveyExperience({
   const onThanks = step.kind === "thanks" && phase === "in";
   useEffect(() => {
     if (!onThanks || prefersReducedMotion()) return;
+    const root = document.scrollingElement ?? document.documentElement;
     let raf = 0;
     let cancelled = false;
-    const stop = () => { cancelled = true; cancelAnimationFrame(raf); };
-    const events = ["wheel", "touchstart", "keydown", "mousedown"] as const;
-    events.forEach((e) => window.addEventListener(e, stop, { passive: true }));
+    // Only a deliberate scroll of their own takes over: a wheel that actually
+    // moves, a swipe, or a scrolling key. Clicks and taps don't.
+    const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "]);
+    const stop = () => { cancelled = true; cancelAnimationFrame(raf); detach(); };
+    const onWheel = (e: WheelEvent) => { if (Math.abs(e.deltaY) > 2) stop(); };
+    const onKey = (e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key)) stop(); };
+    const detach = () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchmove", stop);
+      window.removeEventListener("keydown", onKey);
+    };
+    // Next frame, or ~50ms later if the browser is holding frames back (some
+    // windows and embeds pause requestAnimationFrame entirely).
+    const frame = (cb: (now: number) => void) => {
+      let done = false;
+      const run = () => { if (!done) { done = true; cb(performance.now()); } };
+      raf = requestAnimationFrame(run);
+      window.setTimeout(run, 50);
+    };
     const timer = window.setTimeout(() => {
-      const from = window.scrollY;
-      const to = document.documentElement.scrollHeight - window.innerHeight;
-      if (cancelled || to <= from + 4) return;
-      const duration = Math.min(8000, Math.max(5500, (to - from) * 14)); // slow on purpose
+      if (cancelled) return;
+      // Listen only from here, so momentum left over from reaching Send can't cancel it.
+      window.addEventListener("wheel", onWheel, { passive: true });
+      window.addEventListener("touchmove", stop, { passive: true });
+      window.addEventListener("keydown", onKey);
+      const from = root.scrollTop;
+      const end = () => root.scrollHeight - window.innerHeight; // re-measured each frame
+      if (end() <= from + 4) return;
+      const duration = Math.min(8000, Math.max(5500, (end() - from) * 14)); // slow on purpose
       const ease = (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
       const t0 = performance.now();
       const tick = (now: number) => {
         if (cancelled) return;
         const k = Math.min(1, (now - t0) / duration);
-        window.scrollTo(0, from + (to - from) * ease(k));
-        if (k < 1) raf = requestAnimationFrame(tick);
+        root.scrollTop = from + (end() - from) * ease(k);
+        if (k < 1) frame(tick);
+        else detach();
       };
-      raf = requestAnimationFrame(tick);
-    }, 1400);
+      frame(tick);
+    }, 1200);
     return () => {
       window.clearTimeout(timer);
       stop();
-      events.forEach((e) => window.removeEventListener(e, stop));
     };
   }, [onThanks]);
 
