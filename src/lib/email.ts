@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { RejectionReason } from "@/lib/listing-rejection";
 
 const FROM = process.env.RESEND_FROM ?? "Patronage <noreply@patronage.nz>";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -1632,18 +1633,39 @@ export async function sendPartnerListingDecision({
   partnerEmail,
   opportunityTitle,
   approved,
-  reason,
+  reasons = [],
+  message,
   url,
 }: {
   partnerEmail: string;
   opportunityTitle: string;
   approved: boolean;
-  reason?: string | null;
+  /** Preset reasons picked by the admin (see lib/listing-rejection). */
+  reasons?: RejectionReason[];
+  /** The admin's own words, shown after the reasons. */
+  message?: string | null;
   url: string;
 }): Promise<void> {
-  const reasonBlock = !approved && reason?.trim()
-    ? `<div style="margin:0 0 24px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;white-space:pre-wrap;">${escHtml(reason.trim())}</div>`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const note = message?.trim();
+  const reasonList = reasons.length
+    ? `<ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#555;">${reasons
+        .map((r) => `<li style="margin:0 0 6px;">${escHtml(r.statement)}</li>`)
+        .join("")}</ul>`
     : "";
+  const noteBlock = note
+    ? `<div style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #ccc;background:#f9f9f9;font-size:14px;color:#555;white-space:pre-wrap;">${escHtml(note)}</div>`
+    : "";
+  const citesTerms = reasons.some((r) => r.terms);
+  const termsLine = citesTerms
+    ? `<p style="margin:0 0 16px;font-size:13px;color:#777;">This is covered by section 10 of our <a href="${siteUrl}/terms" style="color:#777;">Terms of Service</a> (Partner Listings &amp; Review).</p>`
+    : "";
+  // If none of the reasons can be fixed by editing, don't invite a resubmission.
+  const canRevise = reasons.length === 0 || reasons.some((r) => r.fixable);
+  const closing = canRevise
+    ? ""
+    : `<p style="margin:0 0 24px;font-size:14px;color:#555;">If you think we&apos;ve got this wrong, just reply to this email.</p>`;
+
   await getResend().emails.send({
     from: FROM,
     to: partnerEmail,
@@ -1652,9 +1674,9 @@ export async function sendPartnerListingDecision({
       heading: approved ? "Listing approved" : "Listing not approved",
       body: approved
         ? `<p style="margin:0 0 24px;font-size:14px;color:#555;"><strong>${escHtml(opportunityTitle)}</strong> has been approved and is now live on Patronage.</p>`
-        : `<p style="margin:0 0 16px;font-size:14px;color:#555;">We weren&apos;t able to publish <strong>${escHtml(opportunityTitle)}</strong> as submitted.</p>${reasonBlock}`,
-      ctaUrl: url,
-      ctaLabel: approved ? "View your dashboard" : "Edit your listing",
+        : `<p style="margin:0 0 16px;font-size:14px;color:#555;">We weren&apos;t able to publish <strong>${escHtml(opportunityTitle)}</strong> on Patronage${reasons.length ? ", for the following reason" + (reasons.length > 1 ? "s" : "") : " as submitted"}.</p>${reasonList}${noteBlock}${termsLine}${closing}`,
+      ctaUrl: approved || canRevise ? url : `${siteUrl}/terms`,
+      ctaLabel: approved ? "View your dashboard" : canRevise ? "Edit your listing" : "Read our terms",
     }),
   });
 }

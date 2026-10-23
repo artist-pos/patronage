@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
 import { validPartnerProfileId } from "@/lib/organiser-link";
 import { isAdmin } from "@/lib/admin";
@@ -125,7 +124,9 @@ export async function updateOpportunityPartner(
     updateData.entry_fee_currency = null;
   }
 
-  // Partners cannot change status, is_active, is_featured, or recurring fields
+  // Partners cannot publish: status, is_active, is_featured and recurring fields
+  // are not in PARTNER_EDITABLE, and the protect_opportunity_columns trigger
+  // refuses an owner's draft -> published change. Only an admin approves.
   const { error } = await supabase
     .from("opportunities")
     .update(updateData)
@@ -140,37 +141,4 @@ export async function updateOpportunityPartner(
   // The public page is served by slug when one exists — revalidating only the
   // id path left it stale (e.g. a newly-uploaded T&C PDF not showing up).
   if (opp.slug) revalidatePath(`/opportunities/${opp.slug}`);
-}
-
-export async function publishOpportunityPartner(id: string) {
-  const { supabase, opp, user } = await getOpportunityForPartner(id);
-
-  if (opp.status !== "draft" && opp.status !== "draft_unclaimed") {
-    throw new Error("Only draft listings can be published");
-  }
-
-  // Pipeline listings must go through the application wizard's Review & Publish
-  // step, not this shortcut — that's what enforces admin review and the
-  // activation fee (submitDraftForReview / approveSubmission). Publishing
-  // directly here would skip both.
-  if (opp.routing_type === "pipeline") {
-    throw new Error("Pipeline listings publish from the application wizard's Review & Publish step, not here.");
-  }
-
-  const updates: Record<string, unknown> = { status: "published", is_active: true };
-  if (isSlugBad(opp.slug)) {
-    updates.slug = toSlug(opp.title ?? "", opp.organiser ?? null, opp.deadline ?? null);
-  }
-
-  const { error } = await supabase
-    .from("opportunities")
-    .update(updates)
-    .eq("id", id)
-    .eq("profile_id", user.id);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/dashboard");
-  revalidatePath("/opportunities");
-  revalidatePath(`/opportunities/${id}`);
 }

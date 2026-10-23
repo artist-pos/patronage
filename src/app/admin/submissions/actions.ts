@@ -7,13 +7,18 @@ import { createNotification } from "@/lib/notifications";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
+import { resolveRejectionReasons, summariseRejection, type RejectionReason } from "@/lib/listing-rejection";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
 }
 
 /** Email and in-app notice to whoever owns the listing. Never blocks the decision. */
-async function tellPartner(id: string, approved: boolean, reason?: string | null) {
+async function tellPartner(
+  id: string,
+  approved: boolean,
+  rejection?: { reasons: RejectionReason[]; message?: string | null },
+) {
   try {
     const admin = createAdminClient();
     const { data: opp } = await admin
@@ -28,13 +33,21 @@ async function tellPartner(id: string, approved: boolean, reason?: string | null
     const email = auth?.user?.email;
     const url = approved ? `${siteUrl}/partner/dashboard/${opp.id}` : `${siteUrl}/partner/opportunities/${opp.id}/manage`;
     if (email) {
-      await sendPartnerListingDecision({ partnerEmail: email, opportunityTitle: title, approved, reason, url });
+      await sendPartnerListingDecision({
+        partnerEmail: email,
+        opportunityTitle: title,
+        approved,
+        reasons: rejection?.reasons,
+        message: rejection?.message,
+        url,
+      });
     }
+    const summary = rejection ? summariseRejection(rejection.reasons, rejection.message) : "";
     await createNotification(
       opp.profile_id as string,
       "note",
       approved ? `${title} is now live` : `${title} was not approved`,
-      approved ? "Your listing has been approved and published." : reason?.trim() || "Open the listing to see what to change.",
+      approved ? "Your listing has been approved and published." : summary || "Open the listing to see what to change.",
       approved ? `/partner/dashboard/${opp.id}` : `/partner/opportunities/${opp.id}/manage`,
     );
   } catch (err) {
@@ -121,15 +134,31 @@ export async function requestPipelineFee(submissionId: string) {
   );
 }
 
-export async function rejectSubmission(submissionId: string, reason?: string) {
+/**
+ * Decline a listing. Pick any of the preset reasons and/or write your own
+ * message; the organiser gets both in one email. Also works on a listing that
+ * is already live, which takes it offline.
+ */
+export async function rejectSubmission(
+  submissionId: string,
+  input: { reasonKeys?: string[]; message?: string } = {},
+) {
   await guard();
+  const reasons = resolveRejectionReasons(input.reasonKeys);
+  const message = input.message?.trim() || null;
+  if (reasons.length === 0 && !message) {
+    throw new Error("Pick at least one reason or write a message for the organiser.");
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("opportunities")
-    .update({ status: "rejected" })
+    .update({ status: "rejected", is_active: false })
     .eq("id", submissionId);
   if (error) throw new Error(error.message);
 
-  await tellPartner(submissionId, false, reason);
+  await tellPartner(submissionId, false, { reasons, message });
   revalidatePath("/admin/submissions");
+  revalidatePath("/opportunities");
+  revalidatePath(`/opportunities/${submissionId}`);
 }

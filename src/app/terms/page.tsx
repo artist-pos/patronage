@@ -208,7 +208,52 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="10. Group Accounts">
+      <Section title="10. Partner Listings & Review">
+        <p>
+          Partners and organisers may submit opportunities to be listed on Patronage. Every
+          listing is subject to review. We may approve, reject, edit, unpublish, delist, or
+          remove any listing at any time, before or after it goes live, at our sole
+          discretion and with or without giving reasons. A listing being visible on
+          Patronage does not mean we have reviewed or endorsed it, and a listing that
+          becomes live without our approval may be removed once we notice.
+        </p>
+        <p className="mt-3">
+          Listings must be genuine opportunities for artists, such as grants, residencies,
+          commissions, open calls, prizes, or exhibitions. In particular, a listing must not:
+        </p>
+        <ul className="mt-3 space-y-1.5 list-disc list-inside text-muted-foreground">
+          <li>
+            Exist mainly to promote the organiser&rsquo;s own website, app, marketplace,
+            token, membership, or service, or to drive sign-ups, sales, or traffic to it
+          </li>
+          <li>
+            Promote a platform or service that competes with Patronage, including by
+            directing artists to list, sell, or build a profile elsewhere in place of
+            using Patronage
+          </li>
+          <li>
+            Require artists to register, mint, buy, list work, connect a wallet, or pay
+            platform, transaction, or blockchain fees in order to take part, unless that is
+            clearly disclosed and we have agreed the listing is appropriate
+          </li>
+          <li>
+            Describe the main benefit as credits, badges, exposure, or other value that can
+            only be used on the organiser&rsquo;s own platform, without making that clear
+          </li>
+          <li>
+            Misstate the organiser, the prizes, the fees, the eligibility rules, or the
+            dates, or leave out costs or conditions an artist would reasonably want to know
+          </li>
+        </ul>
+        <p className="mt-4">
+          If a listing breaks these rules we may remove it, refuse to list future
+          submissions from the same organiser, and restrict or suspend the account. Listing
+          fees are refundable only at our discretion. Resubmitting a removed listing under
+          a different title or account to get around a decision is a breach of these terms.
+        </p>
+      </Section>
+
+      <Section title="11. Group Accounts">
         <p>
           Artists can create group accounts to represent a group practice. The admin of
           a group account is responsible for all content and activity posted under that
@@ -216,7 +261,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="11. Changes">
+      <Section title="12. Changes">
         <p>
           We may update these terms from time to time. Continued use of the platform after
           changes are posted constitutes acceptance of the revised terms. Significant changes
@@ -224,7 +269,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="12. Contact">
+      <Section title="13. Contact">
         <p>
           Questions about these terms?{" "}
           <a

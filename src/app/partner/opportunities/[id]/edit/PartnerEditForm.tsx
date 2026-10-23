@@ -8,7 +8,8 @@ import {
   oppToFormData,
   type OpportunityFormData,
 } from "@/components/opportunities/OpportunityForm";
-import { updateOpportunityPartner, publishOpportunityPartner } from "./actions";
+import { updateOpportunityPartner } from "./actions";
+import { submitDraftForReview } from "@/app/partner/opportunities/new/actions";
 import type { Opportunity, PostSelectionConfig, PostSelectionDocField, PipelineConfig } from "@/types/database";
 import { Lightbulb, Plus, Trash2, GripVertical } from "lucide-react";
 
@@ -166,16 +167,18 @@ export function PartnerEditForm({ opp }: Props) {
     }
   }
 
-  async function handlePublish() {
+  // Nothing goes live from here: a draft moves to "pending" and waits for an admin.
+  async function handleSubmitForReview() {
     setPublishing(true);
     try {
       await updateOpportunityPartner(opp.id, buildUpdatePayload());
-      await publishOpportunityPartner(opp.id);
-      setToast("Published! Your listing is now live.");
-      setTimeout(() => setToast(null), 4000);
+      const result = await submitDraftForReview(opp.id);
+      if (result.error) throw new Error(result.error);
+      setToast("Saved. Your listing has been sent for review and will go live once approved.");
+      setTimeout(() => setToast(null), 5000);
       router.refresh();
     } catch (err) {
-      setToast(err instanceof Error ? err.message : "Publish failed");
+      setToast(err instanceof Error ? err.message : "Submit failed");
       setTimeout(() => setToast(null), 4000);
     } finally {
       setPublishing(false);
@@ -183,9 +186,9 @@ export function PartnerEditForm({ opp }: Props) {
   }
 
   const isPipeline = formData.routingType === "pipeline";
-  // Pipeline drafts publish via the application wizard's Review & Publish step
+  // Pipeline drafts go through the application wizard's Review & Publish step
   // (admin review + activation fee), not this shortcut.
-  const canPublish = (opp.status === "draft" || opp.status === "draft_unclaimed") && !isPipeline;
+  const canSubmit = (opp.status === "draft" || opp.status === "draft_unclaimed") && !isPipeline;
 
   return (
     <div className="space-y-6">
@@ -391,7 +394,7 @@ export function PartnerEditForm({ opp }: Props) {
           {toast && (
             <p
               className={`text-xs ${
-                toast.startsWith("Saved") || toast.startsWith("Published")
+                toast.startsWith("Saved")
                   ? "text-green-600"
                   : "text-destructive"
               }`}
@@ -409,14 +412,14 @@ export function PartnerEditForm({ opp }: Props) {
           >
             {saving ? "Saving…" : "Save draft"}
           </button>
-          {canPublish && (
+          {canSubmit && (
             <button
               type="button"
-              onClick={handlePublish}
+              onClick={handleSubmitForReview}
               disabled={saving || publishing}
               className="text-xs border border-black bg-black text-white px-4 py-2 hover:bg-white hover:text-black transition-colors disabled:opacity-50"
             >
-              {publishing ? "Publishing…" : "Save & Publish"}
+              {publishing ? "Submitting…" : "Submit for review"}
             </button>
           )}
         </div>
