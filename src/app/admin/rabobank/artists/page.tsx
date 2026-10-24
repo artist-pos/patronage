@@ -5,8 +5,9 @@ import { loadArtistAdmin } from "@/lib/rabobank/artist-admin";
 import { formatNz, utcToNzLocalInput } from "@/lib/rabobank/time";
 import { inviteLink } from "@/lib/rabobank/invites";
 import { RETENTION_DAYS } from "@/lib/rabobank/retention";
-import { adminDeleteProfile, deleteInvite, markInvited, saveNotes } from "./actions";
-import { CloseSelection, ConfirmButton, CopyLinks, InviteForm, QuoteTable, SettingsForm, ShortlistToggle } from "./ArtistsAdmin";
+import { TAKE_REMINDER, getTakes } from "@/lib/rabobank/takes";
+import { addTake, adminDeleteProfile, deleteInvite, deleteTake, markInvited, moveTake, saveNotes, toggleTake, updateTake } from "./actions";
+import { CloseSelection, ConfirmButton, CopyLinks, DirectionUpload, InviteForm, QuoteTable, SettingsForm, ShortlistToggle, TakeEditor } from "./ArtistsAdmin";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Rabobank artists", robots: { index: false, follow: false } };
@@ -16,7 +17,7 @@ const STATUS = { not_started: "Not started", saved: "Saved", done: "Done" } as c
 const stamp = (iso: string | null) => (iso ? formatNz(iso, { weekday: undefined, month: "short" }) : "–");
 
 export default async function RabobankArtistsAdmin() {
-  const { rows, settings } = await loadArtistAdmin();
+  const [{ rows, settings }, takes] = await Promise.all([loadArtistAdmin(), getTakes({ activeOnly: false })]);
   const quoted = rows.filter((r) => r.quote?.status === "submitted" && r.quote.interested !== "no");
   const closedAt = settings.selection_closed_at;
   const deleteOn = closedAt ? new Date(new Date(closedAt).getTime() + RETENTION_DAYS * 864e5).toISOString() : null;
@@ -53,7 +54,7 @@ export default async function RabobankArtistsAdmin() {
                         <span className="w-28 text-stone-500">Two: {r.deletion ? "Deleted" : STATUS[r.partTwo]}</span>
                         <span className="hidden flex-1 text-right text-xs text-stone-400 sm:block">
                           {r.invite.opened_at ? `Opened ${stamp(r.invite.opened_at)}${r.invite.opened_source ? ` via ${r.invite.opened_source}` : ""}` : r.invite.invited_at ? `Sent ${stamp(r.invite.invited_at)}` : "Not sent"}
-                          {r.invite.last_activity_at && ` · active ${stamp(r.invite.last_activity_at)}`}
+                          {r.invite.direction_opened_at && ` · PDF read ${stamp(r.invite.direction_opened_at)}`}
                         </span>
                       </summary>
                       <div className="space-y-5 border-t border-border bg-stone-50/60 px-5 py-5">
@@ -109,6 +110,42 @@ export default async function RabobankArtistsAdmin() {
           </section>
 
           <section className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className={sectionTitle}>Thoughts for question 4</h2>
+              <span className="text-xs text-stone-500">{takes.filter((t) => t.active).length} active · rotating, one at a time</span>
+            </div>
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{TAKE_REMINDER}</p>
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-white">
+              {takes.map((t, i) => (
+                <li key={t.id} className={`space-y-2 px-4 py-3 ${t.active ? "" : "bg-stone-50 text-stone-500"}`}>
+                  <TakeEditor action={updateTake} id={t.id} initial={t.text} submitLabel="Save" />
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <form action={toggleTake}>
+                      <input type="hidden" name="id" value={t.id} />
+                      <input type="hidden" name="active" value={t.active ? "false" : "true"} />
+                      <button className="text-stone-600 underline-offset-4 hover:underline">{t.active ? "Turn off" : "Turn on"}</button>
+                    </form>
+                    {i > 0 && (
+                      <form action={moveTake}><input type="hidden" name="id" value={t.id} /><input type="hidden" name="dir" value="up" /><button className="text-stone-600 hover:text-foreground" aria-label="Move up">↑</button></form>
+                    )}
+                    {i < takes.length - 1 && (
+                      <form action={moveTake}><input type="hidden" name="id" value={t.id} /><input type="hidden" name="dir" value="down" /><button className="text-stone-600 hover:text-foreground" aria-label="Move down">↓</button></form>
+                    )}
+                    <form action={deleteTake} className="ml-auto">
+                      <input type="hidden" name="id" value={t.id} />
+                      <ConfirmButton message="Delete this thought?">Delete</ConfirmButton>
+                    </form>
+                  </div>
+                </li>
+              ))}
+              <li className="px-4 py-3">
+                <p className="mb-1.5 text-xs font-medium text-stone-600">Add a thought</p>
+                <TakeEditor action={addTake} submitLabel="Add" />
+              </li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
             <h2 className={sectionTitle}>Quote comparison</h2>
             <p className="text-sm text-stone-500">
               Fees shown excluding GST. Indicative total = fee + framing (the artist&rsquo;s own figure if they frame it, otherwise your framer figure) + the artist&rsquo;s installation cost.
@@ -121,7 +158,7 @@ export default async function RabobankArtistsAdmin() {
                 framing: r.quote.framing_option,
                 install: r.quote.install_option,
                 leadTime: r.quote.lead_time_weeks,
-                workType: r.quote.work_type,
+                workType: ({ often: "made this scale often", some: "made this scale once or twice", largest: "would be their largest" } as Record<string, string>)[r.quote.scale_experience] ?? null,
                 big: r.sizes.big,
                 small: r.sizes.small,
               }))}
@@ -133,6 +170,10 @@ export default async function RabobankArtistsAdmin() {
           <section className="space-y-3 p-5">
             <h2 className={sectionTitle}>New invite</h2>
             <InviteForm />
+          </section>
+          <section className="space-y-3 p-5">
+            <h2 className={sectionTitle}>Creative direction PDF</h2>
+            <DirectionUpload uploadedAt={settings.direction_pdf_uploaded_at ? stamp(settings.direction_pdf_uploaded_at) : null} />
           </section>
           <section className="space-y-3 p-5">
             <h2 className={sectionTitle}>Settings</h2>

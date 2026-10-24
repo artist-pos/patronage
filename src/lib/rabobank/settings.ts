@@ -20,6 +20,9 @@ export interface RabobankSettings {
   framer_quote_1600x800: number | null;
   /** The single switch for whether staff see quotes on the shortlist. Off by default. */
   staff_see_quotes: boolean;
+  // Creative direction PDF (migration 217), in the private bucket.
+  direction_pdf_path?: string | null;
+  direction_pdf_uploaded_at?: string | null;
 }
 
 export async function getSettings(): Promise<RabobankSettings> {

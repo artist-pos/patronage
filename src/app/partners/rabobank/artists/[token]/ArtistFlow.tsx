@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock } from "lucide-react";
-import { COPY } from "@/lib/rabobank/artist-copy";
+import { CONTACT_EMAIL, COPY, fill } from "@/lib/rabobank/artist-copy";
 import { formatNzDate } from "@/lib/rabobank/time";
 import { safeUrl } from "@/lib/rabobank/shortlist";
 import type { ArtistInvite, PartStatus } from "@/lib/rabobank/invites";
@@ -23,7 +23,7 @@ import "../../survey/[token]/survey.css";
 import "./artist-flow.css";
 
 type Mode = "home" | "one" | "oneDone" | "two" | "twoDone" | "declined";
-const ONE = ["interested", "deliver", "workType", "approach", "quote", "framing", "install", "leadTime", "anythingElse"] as const;
+const ONE = ["interested", "deliver", "scale", "approach", "quote", "framing", "install", "leadTime", "anythingElse"] as const;
 const TWO = ["photo", "name", "bio", "links", "works", "prompt", "choice", "consent"] as const;
 type OneKey = (typeof ONE)[number];
 type TwoKey = (typeof TWO)[number];
@@ -66,6 +66,57 @@ function Money({ id, value, onChange, label, onEnter }: { id: string; value: str
       <Line id={id} value={value} onChange={(v) => onChange(v.replace(/[^\d.,]/g, ""))} label={label} inputMode="decimal" onEnter={onEnter} />
       <span className="rb-nzd">NZD</span>
     </div>
+  );
+}
+
+/**
+ * "Just some thoughts": one of Blake's takes at a time, crossfading every ~8s
+ * from a random start. Pauses while the artist is writing (paused) or while the
+ * panel is hovered or focused. With reduced motion there is no auto-rotation,
+ * only the button. Auto-changes are not announced; manual ones are.
+ */
+function TakesPanel({ takes, paused }: { takes: string[]; paused: boolean }) {
+  const [i, setI] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const [held, setHeld] = useState(false);
+  const [manual, setManual] = useState(false);
+  const step = useCallback((by: number, isManual: boolean) => {
+    if (takes.length < 2) return;
+    setManual(isManual);
+    if (prefersReducedMotion()) { setI((n) => (n + by) % takes.length); return; }
+    setVisible(false);
+    window.setTimeout(() => { setI((n) => (n + by) % takes.length); setVisible(true); }, 450);
+  }, [takes.length]);
+
+  // A random starting thought, chosen after load so the server and browser agree on first paint.
+  useEffect(() => {
+    if (takes.length < 2) return;
+    const id = requestAnimationFrame(() => setI(Math.floor(Math.random() * takes.length)));
+    return () => cancelAnimationFrame(id);
+  }, [takes.length]);
+
+  useEffect(() => {
+    if (paused || held || takes.length < 2 || prefersReducedMotion()) return;
+    const t = window.setInterval(() => step(1, false), 8000);
+    return () => window.clearInterval(t);
+  }, [paused, held, step, takes.length]);
+
+  if (!takes.length) return null;
+  return (
+    <aside
+      className="rb-takes"
+      aria-label={C1.q.takes.heading}
+      onMouseEnter={() => setHeld(true)}
+      onMouseLeave={() => setHeld(false)}
+      onFocusCapture={() => setHeld(true)}
+      onBlurCapture={() => setHeld(false)}
+    >
+      <p className="rb-takes-head">{C1.q.takes.heading}</p>
+      <p className="rb-take" data-visible={visible} aria-live={manual ? "polite" : "off"}>{takes[i % takes.length]}</p>
+      {takes.length > 1 && (
+        <button type="button" className="rb-link" onClick={() => step(1, true)}>{C1.q.takes.next}</button>
+      )}
+    </aside>
   );
 }
 
@@ -161,6 +212,8 @@ export function ArtistFlow({
   open,
   quote,
   profile,
+  takes,
+  hasDirection,
 }: {
   token: string;
   invite: ArtistInvite;
@@ -168,7 +221,12 @@ export function ArtistFlow({
   open: { partOneOpen: boolean; partTwoOpen: boolean };
   quote: QuoteState;
   profile: ProfileState;
+  /** Blake's active thoughts for Q4, in order. Empty hides the panel. */
+  takes: string[];
+  /** Whether a creative direction PDF has been uploaded. */
+  hasDirection: boolean;
 }) {
+  const [writingApproach, setWritingApproach] = useState(false);
   const [status, setStatus] = useState<{ one: PartStatus; two: PartStatus }>(() => ({
     one: quote.status === "submitted" && !quote.unsubmitted ? "done" : quote.status === "none" ? "not_started" : "saved",
     two: profile.state && ["complete", "private_only", "kept"].includes(profile.state) ? "done" : profile.exists ? "saved" : "not_started",
@@ -236,7 +294,7 @@ export function ArtistFlow({
     // "Yes, with a couple of questions" needs at least one question typed.
     interested: !!q.interested && (q.interested !== "yes_with_questions" || questionLines(q.questions_text).some((l) => l.trim())),
     deliver: q.deliver_by === "yes" || (q.deliver_by === "date" && !!q.deliver_date),
-    workType: !!q.work_type,
+    scale: !!q.scale_experience,
     approach: !!q.approach_text.trim() && q.approach_text.length <= QUOTE_LIMITS.approach,
     quote: fee1800 !== null && !Number.isNaN(fee1800) && fee1800 > 0 && amountOk(q.fee_1600x800),
     framing: !!q.framing_option && amountOk(q.framing_cost),
@@ -246,7 +304,7 @@ export function ArtistFlow({
   };
   const oneOptional = new Set<OneKey>(["framing", "install", "leadTime", "anythingElse"]);
   const oneField: Partial<Record<keyof QuoteDraft, number>> = {
-    interested: 0, questions_text: 0, deliver_by: 1, deliver_date: 1, work_type: 2, approach_text: 3, fee_1800x900: 4, fee_1600x800: 4,
+    interested: 0, questions_text: 0, deliver_by: 1, deliver_date: 1, scale_experience: 2, approach_text: 3, fee_1800x900: 4, fee_1600x800: 4,
     framing_cost: 5, install_cost: 6, lead_time_weeks: 7,
   };
 
@@ -353,31 +411,50 @@ export function ArtistFlow({
     const nextIsOne = status.one !== "done" && open.partOneOpen;
     body = (
       <div className="rb-home">
+        {/* As on the staff survey: the letter beside the room, with the Rabobank wordmark. */}
         <div className="rb-intro">
           <div>
             <p className="rb-eyebrow">{COPY.landing.eyebrow}</p>
             <h1 className="rb-title">{COPY.landing.greeting(invite.first_name)}</h1>
             {invite.why_paragraph?.split(/\n{2,}/).map((para, i) => <p key={i} className="rb-copy">{para}</p>)}
-            {site && <a href={site} target="_blank" rel="noopener noreferrer" className="rb-sitelink">{COPY.landing.siteLink}</a>}
           </div>
-          {featured && (
-            <figure className="rb-figure">
+          <figure className="rb-figure">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/rabobank-pilot/room.webp" alt="A render of the Te Puke event space, with a table at its centre and the focal wall on the left" width={684} height={384} />
+            <div className="rb-figmeta">
+              <figcaption>{COPY.landing.roomCaption}</figcaption>
+              {/* The official Rabobank wordmark, unaltered. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={featured} alt={invite.featured_title ?? ""} />
-              <figcaption>
-                {[invite.featured_title, invite.featured_caption].filter(Boolean).join(". ")}
-                <br />
-                {COPY.landing.featuredCredit}
-                {source && <> <a href={source} target="_blank" rel="noopener noreferrer">{source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
-              </figcaption>
-            </figure>
-          )}
+              <img className="rb-mark" src="/rabobank-pilot/rabobank-wordmark.png" alt="Rabobank" width={401} height={76} />
+            </div>
+          </figure>
         </div>
+
+        {featured && (
+          <figure className="rb-feature">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={featured} alt={invite.featured_title ?? ""} />
+            <figcaption>
+              {invite.featured_title && <strong>{invite.featured_title}</strong>}
+              {invite.featured_caption && <>{invite.featured_title ? ". " : ""}{invite.featured_caption}</>}
+              {source && <><br />{COPY.landing.featuredCredit} <a href={source} target="_blank" rel="noopener noreferrer">{source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
+              {site && <><br /><a href={site} target="_blank" rel="noopener noreferrer">{COPY.landing.siteLink}</a></>}
+            </figcaption>
+          </figure>
+        )}
+        {!featured && site && <a href={site} target="_blank" rel="noopener noreferrer" className="rb-sitelink">{COPY.landing.siteLink}</a>}
 
         <section className="rb-section">
           <p className="rb-eyebrow">{COPY.landing.briefHeading}</p>
           {COPY.landing.briefBody.split(/\n{2,}/).map((para, i) => <p key={i} className="rb-copy">{para}</p>)}
           {deadlineAt && <p className="rb-deadline">{COPY.landing.deadline(formatNzDate(deadlineAt))}</p>}
+          {hasDirection && (
+            <div className="rb-direction">
+              <a className="rb-work" href={`/partners/rabobank/artists/${token}/direction`} target="_blank" rel="noopener">
+                {COPY.landing.directionButton} <span className="rb-arrow" aria-hidden="true" />
+              </a>
+            </div>
+          )}
         </section>
 
         <section className="rb-section">
@@ -430,7 +507,7 @@ export function ArtistFlow({
     const titles: Record<OneKey, [string, string | undefined]> = {
       interested: [Q.interested.label, Q.interested.help],
       deliver: [Q.deliver.label, Q.deliver.help],
-      workType: [Q.workType.label, Q.workType.help],
+      scale: [Q.scale.label, Q.scale.help],
       approach: [Q.approach.label, Q.approach.help],
       quote: [Q.quote.label, Q.quote.help],
       framing: [Q.framing.label, Q.framing.help],
@@ -466,13 +543,14 @@ export function ArtistFlow({
           </>
         );
         break;
-      case "workType":
+      case "scale":
         input = (
           <>
-            <Pebbles name="work_type" label={title} value={q.work_type} options={C1.options.workType} onChange={(v) => setQf("work_type", v)} />
-            {(q.work_type === "existing" || q.work_type === "either") && (
-              <div className="rb-note">
+            <Pebbles name="scale" label={title} value={q.scale_experience} options={C1.options.scale} onChange={(v) => setQf("scale_experience", v)} />
+            {(
+              <div className="rb-note" style={{ marginTop: "2.2rem" }}>
                 <Sub optional>{Q.existingImages.label}</Sub>
+                <p className="rb-help">{Q.existingImages.help}</p>
                 <div className="rb-thumbs">
                   {q.existing_work_images.map((url) => (
                     <div key={url} className="rb-thumb">
@@ -494,7 +572,14 @@ export function ArtistFlow({
         );
         break;
       case "approach":
-        input = <Writing id="rb-approach" value={q.approach_text} onChange={(v) => setQf("approach_text", v)} limit={QUOTE_LIMITS.approach} label={title} onEnter={enter} autoFocus />;
+        input = (
+          <>
+            <TakesPanel takes={takes} paused={writingApproach} />
+            <div onFocusCapture={() => setWritingApproach(true)} onBlurCapture={() => setWritingApproach(false)}>
+              <Writing id="rb-approach" value={q.approach_text} onChange={(v) => setQf("approach_text", v)} limit={QUOTE_LIMITS.approach} label={title} onEnter={enter} />
+            </div>
+          </>
+        );
         break;
       case "quote":
         input = (
@@ -606,7 +691,7 @@ export function ArtistFlow({
               {p.photo_url && <img src={p.photo_url} alt="" />}
             </span>
             <label className="rb-add" aria-disabled={uploading}>
-              {uploading ? COPY.saving.saving : C2.work.add}
+              {uploading ? COPY.saving.saving : Q.photo.button}
               <input type="file" accept={ACCEPT} onChange={(e) => { void addUpload("photo", e.target.files); e.target.value = ""; }} />
             </label>
             {p.photo_url && <button type="button" className="rb-link" onClick={() => { setPf("photo_url", ""); void removePhoto(token); }}>{C2.work.remove}</button>}
@@ -705,10 +790,10 @@ export function ArtistFlow({
       case "consent":
         input = (
           <>
-            <div className="rb-consent">{Q.consent.body.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)}</div>
+            <div className="rb-consent">{fill(Q.consent.body, { contactEmail: CONTACT_EMAIL }).split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)}</div>
             <label className="rb-check rb-check--block">
               <input type="checkbox" checked={p.consent} onChange={(e) => setPf("consent", e.target.checked)} />
-              <span>{Q.consent.label}</span>
+              <span>{Q.consent.tick}</span>
             </label>
           </>
         );

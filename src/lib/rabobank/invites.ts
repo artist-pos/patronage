@@ -29,6 +29,8 @@ export interface ArtistInvite {
   declined_at: string | null;
   decline_suggestion: string | null;
   admin_notes: string | null;
+  /** First open of the creative direction PDF (migration 217). */
+  direction_opened_at?: string | null;
   created_at: string;
 }
 

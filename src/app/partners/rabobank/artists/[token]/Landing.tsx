@@ -10,6 +10,8 @@ export function Landing(props: {
   open: { partOneOpen: boolean; partTwoOpen: boolean };
   quote: QuoteState;
   profile: ProfileState;
+  takes: string[];
+  hasDirection: boolean;
 }) {
   return <ArtistFlow {...props} />;
 }

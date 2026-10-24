@@ -21,7 +21,8 @@ export interface QuoteDraft {
   questions_text: string;
   deliver_by: "yes" | "date" | "";
   deliver_date: string;
-  work_type: "new" | "existing" | "either" | "";
+  /** Q3: "Have you made work at this scale before?" */
+  scale_experience: "often" | "some" | "largest" | "";
   existing_work_images: string[];
   approach_text: string;
   fee_1800x900: string;
@@ -41,7 +42,7 @@ export interface QuoteDraft {
 }
 
 export const EMPTY_QUOTE: QuoteDraft = {
-  interested: "", questions_text: "", deliver_by: "", deliver_date: "", work_type: "",
+  interested: "", questions_text: "", deliver_by: "", deliver_date: "", scale_experience: "",
   existing_work_images: [], approach_text: "", fee_1800x900: "", fee_1600x800: "",
   gst_inclusive: false, alt_size_note: "", framing_option: "", framing_cost: "",
   framing_recommendation: "", install_option: "", install_cost: "", install_recommendation: "",
@@ -83,7 +84,7 @@ export function validateQuote(q: QuoteDraft): QuoteErrors {
 
   if (!q.deliver_by) e.deliver_by = "required";
   if (q.deliver_by === "date" && !q.deliver_date) e.deliver_date = "required";
-  if (!q.work_type) e.work_type = "required";
+  if (!q.scale_experience) e.scale_experience = "required";
   if (!q.approach_text.trim()) e.approach_text = "required";
   else if (q.approach_text.length > QUOTE_LIMITS.approach) e.approach_text = "tooLong";
 
@@ -121,8 +122,8 @@ export function quoteToRow(q: QuoteDraft) {
     questions_text: text(q.questions_text, QUOTE_LIMITS.questions),
     deliver_by: q.deliver_by || null,
     deliver_date: q.deliver_by === "date" && /^\d{4}-\d{2}-\d{2}$/.test(q.deliver_date) ? q.deliver_date : null,
-    work_type: q.work_type || null,
-    existing_work_images: q.work_type === "new" ? [] : q.existing_work_images.slice(0, 2),
+    scale_experience: q.scale_experience || null,
+    existing_work_images: q.existing_work_images.slice(0, 2),
     approach_text: text(q.approach_text, 700),
     fee_1800x900: num(q.fee_1800x900),
     fee_1600x800: num(q.fee_1600x800),
@@ -150,7 +151,7 @@ export function rowToQuote(r: Partial<QuoteRow> | null | undefined): QuoteDraft 
     questions_text: s(r.questions_text),
     deliver_by: (r.deliver_by as "yes" | "date") ?? "",
     deliver_date: s(r.deliver_date),
-    work_type: (r.work_type as QuoteDraft["work_type"]) ?? "",
+    scale_experience: (r.scale_experience as QuoteDraft["scale_experience"]) ?? "",
     existing_work_images: r.existing_work_images ?? [],
     approach_text: s(r.approach_text),
     fee_1800x900: s(r.fee_1800x900),

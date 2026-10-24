@@ -4,6 +4,7 @@ import { startTransition, useActionState, useMemo, useState } from "react";
 import { ArrowDownUp, Check, Copy } from "lucide-react";
 import type { ArtistInvite } from "@/lib/rabobank/invites";
 import type { SizeCost } from "@/lib/rabobank/artist-admin";
+import { TAKE_GUIDE } from "@/lib/rabobank/take-rules";
 import { closeSelection, saveArtistSettings, saveInvite, setShortlisted, type AdminResult } from "./actions";
 
 const input = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
@@ -14,6 +15,53 @@ function Note({ state, pending }: { state: AdminResult; pending: boolean }) {
   if (state?.error) return <span className="text-xs text-destructive">{state.error}</span>;
   if (state?.message) return <span className="inline-flex items-center gap-1 text-xs text-stone-500"><Check className="size-3.5" />{state.message}</span>;
   return null;
+}
+
+/** One thought: plain text with a live character guide, saved by a server action. */
+export function TakeEditor({ action, initial = "", submitLabel, id }: { action: (fd: FormData) => Promise<void>; initial?: string; submitLabel: string; id?: string }) {
+  const [value, setValue] = useState(initial);
+  const over = value.length > TAKE_GUIDE;
+  return (
+    <form action={async (fd) => { await action(fd); if (!id) setValue(""); }} className="space-y-1.5">
+      {id && <input type="hidden" name="id" value={id} />}
+      <textarea name="text" rows={3} value={value} onChange={(e) => setValue(e.target.value)} maxLength={600} className={input} placeholder="Two or three sentences about the work." />
+      <div className="flex items-center justify-between gap-3">
+        <span className={`text-xs ${over ? "text-amber-700" : "text-stone-400"}`}>{value.length} / about {TAKE_GUIDE}</span>
+        <button disabled={!value.trim() || value === initial} className="rounded-lg border border-border bg-white px-3 py-1 text-xs font-medium hover:border-stone-400 disabled:opacity-40">{submitLabel}</button>
+      </div>
+    </form>
+  );
+}
+
+/** Replaces the creative direction PDF (kept private; artists open it through their own link). */
+export function DirectionUpload({ uploadedAt }: { uploadedAt: string | null }) {
+  const [state, setState] = useState<{ busy: boolean; error?: string; done?: boolean }>({ busy: false });
+  return (
+    <div className="space-y-1.5 text-sm">
+      <p className="text-stone-600">{uploadedAt ? `Uploaded ${uploadedAt}.` : "No PDF yet. The button stays hidden on artist pages until one is uploaded."}</p>
+      <label className="inline-flex cursor-pointer rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium hover:border-stone-400">
+        {state.busy ? "Uploading…" : uploadedAt ? "Replace PDF" : "Upload PDF"}
+        <input
+          type="file"
+          accept="application/pdf"
+          className="sr-only"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            setState({ busy: true });
+            const body = new FormData();
+            body.set("file", file);
+            const res = await fetch("/admin/rabobank/artists/direction", { method: "POST", body });
+            const json = await res.json().catch(() => null);
+            setState(res.ok ? { busy: false, done: true } : { busy: false, error: json?.error ?? "Upload failed." });
+          }}
+        />
+      </label>
+      {state.error && <p className="text-xs text-destructive">{state.error}</p>}
+      {state.done && <p className="inline-flex items-center gap-1 text-xs text-stone-500"><Check className="size-3.5" /> Saved. Refresh to see the date.</p>}
+    </div>
+  );
 }
 
 export function ConfirmButton({ message, children }: { message: string; children: React.ReactNode }) {
@@ -241,7 +289,7 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
             <tr key={r.id} className="border-t border-border align-top">
               <td className="px-3 py-2.5">
                 <span className="font-medium">{r.name}</span>
-                <span className="block text-xs text-stone-400">{r.gst}{r.workType ? ` · ${r.workType} work` : ""}</span>
+                <span className="block text-xs text-stone-400">{r.gst}{r.workType ? ` · ${r.workType}` : ""}</span>
               </td>
               <td className="px-3 py-2.5 text-right tabular-nums">{nzd(r.big.fee)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums" title={cost(r.big) ?? ""}>

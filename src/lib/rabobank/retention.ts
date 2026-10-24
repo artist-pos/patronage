@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/rabobank/settings";
 import { sendFollowup, sendReminder } from "@/lib/rabobank/artist-email";
+import { formatNzDate } from "@/lib/rabobank/time";
 
 const BUCKET = "rabobank-pilot";
 export const RETENTION_DAYS = 30;
@@ -74,6 +75,7 @@ export async function runRetention(now = new Date()) {
   const report = { followups: 0, reminders: 0, deleted: 0, skippedNoEmail: 0, errors: [] as string[] };
   if (!settings.selection_closed_at) return report;
   const closed = new Date(settings.selection_closed_at).getTime();
+  const deleteDate = formatNzDate(new Date(closed + RETENTION_DAYS * DAY).toISOString());
   if (now.getTime() < closed) return report;
   const days = (now.getTime() - closed) / DAY;
   const admin = createAdminClient();
@@ -89,12 +91,12 @@ export async function runRetention(now = new Date()) {
       const contact = await contactFor(a.invite_id);
       if (!a.followup_sent_at) {
         if (!contact) { report.skippedNoEmail++; continue; }
-        await sendFollowup({ to: contact.email!, firstName: contact.first_name, token: contact.token });
+        await sendFollowup({ to: contact.email!, firstName: contact.first_name, token: contact.token, deleteDate });
         await admin.from("rabobank_artist").update({ followup_sent_at: now.toISOString() }).eq("id", a.id);
         report.followups++;
       } else if (days >= REMINDER_DAY && !a.reminder_sent_at) {
         if (!contact) { report.skippedNoEmail++; continue; }
-        await sendReminder({ to: contact.email!, firstName: contact.first_name, token: contact.token });
+        await sendReminder({ to: contact.email!, firstName: contact.first_name, token: contact.token, deleteDate });
         await admin.from("rabobank_artist").update({ reminder_sent_at: now.toISOString() }).eq("id", a.id);
         report.reminders++;
       }

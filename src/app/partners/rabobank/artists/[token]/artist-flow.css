@@ -35,6 +35,21 @@
 .rb-money .rb-write { flex: 1; }
 .rb-money .rb-nzd { font-size: 0.75rem; letter-spacing: 0.08em; color: var(--stone); }
 
+/* Q4 "Just some thoughts": quiet, above the writing, never competing with it. */
+.rb-takes { margin: 0 0 2rem; padding: 1rem 1.2rem 0.8rem; border-left: 2px solid rgba(255, 103, 0, 0.55); background: rgba(255, 255, 255, 0.55); border-radius: 0 14px 14px 0; max-width: 34rem; }
+.rb-takes-head { margin: 0 0 0.45rem; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--stone); }
+.rb-take { margin: 0 0 0.4rem; color: var(--ink-soft); font-size: 1rem; line-height: 1.6; min-height: 3.2em; transition: opacity 0.45s ease; }
+.rb-take[data-visible="false"] { opacity: 0; }
+.rb-takes .rb-link { font-size: 0.85rem; }
+
+/* The room render and the artist's featured work on the welcome page. */
+.rb-feature { max-width: 40rem; }
+.rb-feature img { display: block; width: 100%; height: auto; border-radius: 18px; box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06); }
+.rb-feature figcaption { margin-top: 0.7rem; color: var(--stone); font-size: 0.85rem; line-height: 1.5; }
+.rb-feature figcaption strong { color: var(--ink); font-weight: 500; }
+.rb-feature figcaption a { color: inherit; }
+.rb-direction { margin-top: 1.6rem; }
+
 /* "A couple of questions": an auto-numbered list of underlined lines. */
 .rb-qlist ol { list-style: none; margin: 0 0 0.6rem; padding: 0; display: grid; gap: 1.1rem; }
 .rb-qlist li { display: flex; align-items: baseline; gap: 0.7rem; }
