@@ -160,7 +160,6 @@ export function InviteForm({ invite }: { invite?: ArtistInvite }) {
       </div>
       <FeaturedSlot label="Work that caught my eye (1)" suffix="" onBusy={onBusy} initial={{ image: invite?.featured_image_url, title: invite?.featured_title, caption: invite?.featured_caption, source: invite?.featured_source_url }} />
       <FeaturedSlot label="Work that caught my eye (2)" suffix="_2" onBusy={onBusy} initial={{ image: invite?.featured_image_2_url, title: invite?.featured_title_2, caption: invite?.featured_caption_2, source: invite?.featured_source_url_2 }} />
-      <input name="site_url" placeholder="Their website" defaultValue={invite?.site_url ?? ""} className={input} maxLength={500} />
       <div className="flex items-center gap-3">
         <button disabled={pending || busy > 0} className="rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-85 disabled:opacity-50">
           {invite ? "Save invite" : "Create invite"}

@@ -420,7 +420,6 @@ export function ArtistFlow({
       { src: safeUrl(invite.featured_image_url), title: invite.featured_title, caption: invite.featured_caption, source: safeUrl(invite.featured_source_url) },
       { src: safeUrl(invite.featured_image_2_url ?? null), title: invite.featured_title_2, caption: invite.featured_caption_2, source: safeUrl(invite.featured_source_url_2 ?? null) },
     ].filter((f) => f.src);
-    const site = safeUrl(invite.site_url);
     const oneLabel = status.one === "saved" ? COPY.landing.continueOne : COPY.landing.startOne;
     const twoLabel = status.two === "saved" ? COPY.landing.continueTwo : status.two === "done" ? COPY.landing.editTwo : COPY.landing.startTwo;
     const nextIsOne = status.one !== "done" && open.partOneOpen;
@@ -462,11 +461,13 @@ export function ArtistFlow({
             ))}
           </div>
         )}
-        {site && <a href={site} target="_blank" rel="noopener noreferrer" className="rb-sitelink">{COPY.landing.siteLink}</a>}
 
         <section className="rb-section">
           <p className="rb-eyebrow">{COPY.landing.briefHeading}</p>
-          {COPY.landing.briefBody.split(/\n{2,}/).map((para, i) => <p key={i} className="rb-copy">{para}</p>)}
+          {COPY.landing.briefBody.split(/\n{2,}/).map((para, i) => {
+            const italic = /^_[\s\S]*_$/.test(para.trim());
+            return <p key={i} className="rb-copy">{italic ? <em>{para.trim().slice(1, -1)}</em> : para}</p>;
+          })}
           {deadlineAt && <p className="rb-deadline">{COPY.landing.deadline(formatNzDate(deadlineAt))}</p>}
           {hasDirection && (
             <div className="rb-direction">

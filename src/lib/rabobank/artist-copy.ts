@@ -28,14 +28,13 @@ export const COPY = {
     greeting: (firstName: string) => `Kia ora ${firstName},`,
     roomCaption: "The event space",
     featuredCredit: "Image from",
-    siteLink: "See more of your work",
     briefHeading: "The commission",
-    /** brief.md: the short creative direction. Paragraphs are split on blank lines. */
+    /** brief.md: the short creative direction. Paragraphs are split on blank lines; one wrapped in _underscores_ is set in italics. */
     briefBody: `Rabobank is refreshing their Te Puke branch. I have been tasked with developing a narrative and commissioning an artwork for their event space. It is a room used for events and informal meetings, bringing together clients, the community and staff.
 
 The work will hang on a dark blue wall, 3600mm wide by 2400mm high, centred on the wall. I would love you to quote for two sizes, 1800mm wide by 900mm high and 1600mm wide by 800mm high, excluding the frame. The work will be framed and installed at the branch, with the frame styling to be agreed with the successful artist.
 
-[BLAKE: short version of the creative direction goes here, two short paragraphs. One sentence on the idea the narrative is built around, what the work should do for the people in the room, and two or three words on tone. Then one sentence on what is open to the artist and what is fixed. The full document is attached as a PDF and linked by the "Read the creative direction (PDF)" button.]
+_The theme is Together. The bank was built through cooperation, and the event space is where that is most visible: people, knowledge, production and relationships coming together to make something none of them could achieve alone. I’m interested in a work that gives clients, the community and staff something to gather around, with enough presence to hold the wall from across the room. I’d like it to feel considered and rooted in this place, and comfortable in a banking environment without feeling corporate._
 
 Once your response has been received, the team at the Te Puke branch will have a chance to view your work and read a bit about you. I will get back to you regarding selection in early to mid November. The finished work, including framing, will be delivered and installed in January.`,
     directionButton: "Read the creative direction (PDF)",

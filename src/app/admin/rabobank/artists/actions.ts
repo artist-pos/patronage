@@ -45,7 +45,6 @@ function inviteFields(fd: FormData) {
     featured_title_2: text(fd, "featured_title_2", 200),
     featured_caption_2: text(fd, "featured_caption_2", 400),
     featured_source_url_2: url(fd, "featured_source_url_2"),
-    site_url: url(fd, "site_url"),
     // One thought per line; blank lines are ignored.
     thoughts: String(fd.get("thoughts") ?? "")
       .split(/\r?\n/)

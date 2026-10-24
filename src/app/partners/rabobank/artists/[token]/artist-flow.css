@@ -7,7 +7,6 @@
 .rb-section > .rb-eyebrow { margin-bottom: 1.1rem; }
 .rb-section .rb-copy:last-child { margin-bottom: 0; }
 .rb-deadline { color: var(--ink-soft); font-size: 0.95rem; margin: 1.2rem 0 0; }
-.rb-sitelink { display: inline-block; margin-top: 0.4rem; color: var(--ink); font-size: 0.9rem; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #d6d3d1; }
 .rb-figure figcaption a { color: inherit; }
 
 /* The two parts, described before either is started. */
