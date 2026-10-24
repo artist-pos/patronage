@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Clock } from "lucide-react";
 import { COPY } from "@/lib/rabobank/artist-copy";
 import { formatNzDate } from "@/lib/rabobank/time";
 import { safeUrl } from "@/lib/rabobank/shortlist";
@@ -327,9 +328,13 @@ export function ArtistFlow({
         <section className="rb-section">
           <p className="rb-eyebrow">{COPY.landing.partsHeading}</p>
           <div className="rb-parts">
-            {([[1, C1.title.replace(/^Part one: /, ""), C1.summary, status.one], [2, C2.title.replace(/^Part two: /, ""), C2.summary, status.two]] as const).map(([n, title, summary, s]) => (
+            {([[1, C1.title.replace(/^Part one: /, ""), C1.summary, status.one, C1.duration], [2, C2.title.replace(/^Part two: /, ""), C2.summary, status.two, C2.duration]] as const).map(([n, title, summary, s, duration]) => (
               <div key={n} className="rb-part">
-                <p className="rb-part-n">{COPY.landing.stageLabel(n)} <span className="rb-status" data-s={s}>{COPY.landing.status[s]}</span></p>
+                <p className="rb-part-n">
+                  {COPY.landing.stageLabel(n)}
+                  <span className="rb-status" data-s={s}>{COPY.landing.status[s]}</span>
+                  {duration && <span className="rb-status rb-time"><Clock aria-hidden="true" />{duration}</span>}
+                </p>
                 <h3>{title}</h3>
                 <p>{summary}</p>
               </div>

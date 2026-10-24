@@ -54,7 +54,9 @@ export const COPY = {
     short: "Part one",
     title: "Part one: Your response to the commission",
     summary:
-      "Tell me whether this suits you, how you'd approach it, and what you'd quote. This goes to me and to Mark at Rabobank. About ten minutes.",
+      "Tell me whether this suits you, how you'd approach it, and what you'd quote. This goes to me and to Mark at Rabobank.",
+    /** Shown as a clock pill beside the status. */
+    duration: "10 min" as string | null,
     q: {
       interested: { label: "Does this suit you?", help: P("partOne.interested.help") },
       questions: { label: P("partOne.questions.label"), help: P("partOne.questions.help") },
@@ -141,6 +143,8 @@ export const COPY = {
     title: "Part two: About you",
     summary:
       "A short biography, a photo and a few of your works, so the team at the Te Puke branch can get to know you. You can also choose to keep it as a Patronage profile.",
+    /** Set a time (e.g. "15 min") to show a clock pill for Part two too. */
+    duration: null as string | null,
     q: {
       photo: { label: "Photo of you", help: P("partTwo.photo.help") },
       name: { label: "Name as you'd like it shown", help: P("partTwo.name.help") },

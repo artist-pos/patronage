@@ -20,6 +20,8 @@
 .rb-status { font-size: 0.7rem; letter-spacing: 0.04em; text-transform: none; padding: 0.15rem 0.55rem; border-radius: 999px; background: #f5f5f4; color: var(--ink-soft); }
 .rb-status[data-s="saved"] { background: #fff4e5; color: #9a4a00; }
 .rb-status[data-s="done"] { background: #ecf7ef; color: #1f6b3a; }
+.rb-time { display: inline-flex; align-items: center; gap: 0.3rem; }
+.rb-time svg { width: 0.8rem; height: 0.8rem; }
 .rb-small { color: var(--ink-soft); font-size: 0.95rem; margin: 1.4rem 0 0; max-width: 34rem; }
 
 /* ---------- steps with more than one input ---------- */
