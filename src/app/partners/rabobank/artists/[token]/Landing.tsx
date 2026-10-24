@@ -12,6 +12,7 @@ export function Landing(props: {
   profile: ProfileState;
   takes: string[];
   hasDirection: boolean;
+  preview?: boolean;
 }) {
   return <ArtistFlow {...props} />;
 }

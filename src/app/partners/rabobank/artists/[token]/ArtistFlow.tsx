@@ -17,6 +17,7 @@ import { MAX_QUESTIONS, QUOTE_LIMITS, hasAnyAmount, numberQuestions, parseAmount
 import { BIO_WORDS, PROFILE_LIMITS, WORKS, wordCount, type ProfileDraft, type ProfileErrors, type WorkDraft } from "@/lib/rabobank/artist-profile";
 import { WallViewer } from "@/components/rabobank/WallViewer";
 import { Scene, Writing, prefersReducedMotion, useTween } from "../../survey/[token]/SurveyExperience";
+import { KiwiConfetti, prepareKiwiConfetti } from "../../survey/[token]/KiwiConfetti";
 import { removePhoto, removeWork, saveDeclineSuggestion, saveProfileDraft, saveQuoteDraft, submitProfile, submitQuote } from "./actions";
 import { readBackup, uploadImage, useAutosave, type SaveStatus } from "./ui";
 import "../../survey/[token]/survey.css";
@@ -208,6 +209,7 @@ export function ArtistFlow({
   profile,
   takes,
   hasDirection,
+  preview = false,
 }: {
   token: string;
   invite: ArtistInvite;
@@ -219,7 +221,10 @@ export function ArtistFlow({
   takes: string[];
   /** Whether a creative direction PDF has been uploaded. */
   hasDirection: boolean;
+  /** Admin walk-through: everything works except that nothing is saved or uploaded. */
+  preview?: boolean;
 }) {
+  const [burst, setBurst] = useState(0); // bumps to fire the kiwi-fetti
   const [writingApproach, setWritingApproach] = useState(false);
   const [status, setStatus] = useState<{ one: PartStatus; two: PartStatus }>(() => ({
     one: quote.status === "submitted" && !quote.unsubmitted ? "done" : quote.status === "none" ? "not_started" : "saved",
@@ -249,9 +254,9 @@ export function ArtistFlow({
     if (backup) requestAnimationFrame(() => setQ({ ...quote.draft, ...backup }));
   }, [token, quote.draft, quote.savedAt]);
 
-  const quoteSave = useAutosave(q, `rb-quote-${token}`, (v) => saveQuoteDraft(token, v), open.partOneOpen && mode === "one");
+  const quoteSave = useAutosave(q, `rb-quote-${token}`, (v) => saveQuoteDraft(token, v), !preview && open.partOneOpen && mode === "one");
   const snapshot = useMemo(() => ({ p, works }), [p, works]);
-  const profileSave = useAutosave(snapshot, `rb-profile-${token}`, (v) => saveProfileDraft(token, v.p, v.works), open.partTwoOpen && mode === "two");
+  const profileSave = useAutosave(snapshot, `rb-profile-${token}`, (v) => saveProfileDraft(token, v.p, v.works), !preview && open.partTwoOpen && mode === "two");
 
   const setQf = <K extends keyof QuoteDraft>(k: K, v: QuoteDraft[K]) => setQ((c) => ({ ...c, [k]: v }));
   const setPf = <K extends keyof ProfileDraft>(k: K, v: ProfileDraft[K]) => setP((c) => ({ ...c, [k]: v }));
@@ -304,7 +309,10 @@ export function ArtistFlow({
   async function sendPartOne() {
     setSending(true);
     setError(null);
-    const r = await submitQuote(token, q);
+    prepareKiwiConfetti(); // draw the fruit while the answers are on their way
+    const r = preview
+      ? await new Promise<{ ok: true; declined: boolean }>((done) => window.setTimeout(() => done({ ok: true, declined: q.interested === "no" }), 400))
+      : await submitQuote(token, q);
     setSending(false);
     if (!r.ok) {
       const first = r.fields && (Object.keys(r.fields) as (keyof QuoteErrors)[])[0];
@@ -314,6 +322,7 @@ export function ArtistFlow({
     }
     try { localStorage.removeItem(`rb-quote-${token}`); } catch { /* fine */ }
     setStatus((s) => ({ ...s, one: "done" }));
+    if (!r.declined) setBurst((n) => n + 1); // kiwi-fetti for a sent quote
     go(r.declined ? "declined" : "oneDone");
   }
 
@@ -335,7 +344,9 @@ export function ArtistFlow({
   async function sendPartTwo() {
     setSending(true);
     setError(null);
-    const r = await submitProfile(token, p, works, email);
+    const r = preview
+      ? await new Promise<{ ok: true; keepSent: boolean }>((done) => window.setTimeout(() => done({ ok: true, keepSent: p.visibility_choice === "keep" }), 400))
+      : await submitProfile(token, p, works, email);
     setSending(false);
     if (!r.ok) {
       const first = r.fields && (Object.keys(r.fields) as (keyof typeof twoField)[])[0];
@@ -353,6 +364,19 @@ export function ArtistFlow({
     if (!files?.length) return;
     setUploading(true);
     setError(null);
+    if (preview) {
+      // Nothing leaves the device in a preview: show the chosen images from memory.
+      if (kind === "photo") setPf("photo_url", URL.createObjectURL(files[0]));
+      else {
+        const add = Array.from(files).slice(0, WORKS.max - works.length).map((f, n) => {
+          const url = URL.createObjectURL(f);
+          return { id: `preview-${Date.now()}-${n}`, image_url: url, thumb_url: url, title: "", year: "", medium: "", size: "", note: "" };
+        });
+        setWorks((ws) => [...ws, ...add]);
+      }
+      setUploading(false);
+      return;
+    }
     if (kind === "work") {
       for (const f of Array.from(files).slice(0, WORKS.max - works.length)) {
         const r = await uploadImage<{ work: WorkDraft }>(token, "work", f);
@@ -660,7 +684,7 @@ export function ArtistFlow({
               {uploading ? COPY.saving.saving : Q.photo.button}
               <input type="file" accept={ACCEPT} onChange={(e) => { void addUpload("photo", e.target.files); e.target.value = ""; }} />
             </label>
-            {p.photo_url && <button type="button" className="rb-link" onClick={() => { setPf("photo_url", ""); void removePhoto(token); }}>{C2.work.remove}</button>}
+            {p.photo_url && <button type="button" className="rb-link" onClick={() => { setPf("photo_url", ""); if (!preview) void removePhoto(token); }}>{C2.work.remove}</button>}
           </div>
         );
         break;
@@ -723,7 +747,7 @@ export function ArtistFlow({
                     <div style={{ marginTop: "0.9rem" }}>
                       <Line id={`w-${i}-n`} value={w.note} onChange={(v) => setWork(w.id, "note", v)} label={`${C2.work.note} ${i + 1}`} placeholder={C2.work.note} maxLength={PROFILE_LIMITS.workNote} />
                     </div>
-                    <button type="button" className="rb-link" onClick={() => { setWorks((ws) => ws.filter((x) => x.id !== w.id)); void removeWork(token, w.id); }}>{C2.work.remove}</button>
+                    <button type="button" className="rb-link" onClick={() => { setWorks((ws) => ws.filter((x) => x.id !== w.id)); if (!preview) void removeWork(token, w.id); }}>{C2.work.remove}</button>
                   </div>
                 </div>
               ))}
@@ -846,6 +870,8 @@ export function ArtistFlow({
   return (
     <div className="rb" data-step={mode === "home" ? "home" : mode} data-phase={mode === "home" ? "intro" : "questions"} style={{ ["--p" as string]: tp }}>
       <Scene p={tp} />
+      {burst > 0 && <KiwiConfetti key={burst} />}
+      {preview && <p className="rb-preview" role="note">Preview · answers aren&rsquo;t saved</p>}
       <div className="rb-stage">
         <div className={`rb-col rb-${phase}${wide ? " rb-col--wide" : ""}`} key={`${mode}-${idx}`}>
           {body}
