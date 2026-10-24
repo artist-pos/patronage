@@ -13,7 +13,7 @@ import { formatNzDate } from "@/lib/rabobank/time";
 import { safeUrl } from "@/lib/rabobank/shortlist";
 import type { ArtistInvite, PartStatus } from "@/lib/rabobank/invites";
 import type { ProfileState, QuoteState } from "@/lib/rabobank/artist-data";
-import { QUOTE_LIMITS, parseAmount, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
+import { MAX_QUESTIONS, QUOTE_LIMITS, numberQuestions, parseAmount, questionLines, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
 import { BIO_WORDS, PROFILE_LIMITS, WORKS, wordCount, type ProfileDraft, type ProfileErrors, type WorkDraft } from "@/lib/rabobank/artist-profile";
 import { WallViewer } from "@/components/rabobank/WallViewer";
 import { Scene, Writing, prefersReducedMotion, useTween } from "../../survey/[token]/SurveyExperience";
@@ -65,6 +65,65 @@ function Money({ id, value, onChange, label, onEnter }: { id: string; value: str
       <span className="rb-cur" aria-hidden="true">$</span>
       <Line id={id} value={value} onChange={(v) => onChange(v.replace(/[^\d.,]/g, ""))} label={label} inputMode="decimal" onEnter={onEnter} />
       <span className="rb-nzd">NZD</span>
+    </div>
+  );
+}
+
+/**
+ * "A couple of questions" as an auto-numbered list: Enter starts the next
+ * question, Backspace on an empty line removes it.
+ */
+function QuestionList({ value, onChange, onDone }: { value: string; onChange: (v: string) => void; onDone: () => void }) {
+  const lines = questionLines(value);
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+  const [focusAt, setFocusAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (focusAt === null) return;
+    refs.current[focusAt]?.focus();
+    const id = requestAnimationFrame(() => setFocusAt(null));
+    return () => cancelAnimationFrame(id);
+  }, [focusAt]);
+  const update = (next: string[]) => onChange(numberQuestions(next));
+  const room = lines.length < MAX_QUESTIONS;
+  return (
+    <div className="rb-qlist">
+      <ol>
+        {lines.map((line, i) => (
+          <li key={i}>
+            <span className="rb-qnum" aria-hidden="true">{i + 1}.</span>
+            <div className="rb-write">
+              <input
+                ref={(el) => { refs.current[i] = el; }}
+                className="rb-textarea rb-textarea--small rb-input"
+                value={line}
+                aria-label={C1.q.questions.line(i + 1)}
+                placeholder={C1.q.questions.line(i + 1)}
+                maxLength={Math.floor(QUOTE_LIMITS.questions / MAX_QUESTIONS) - 4}
+                autoFocus={i === 0 && !line}
+                onChange={(e) => update(lines.map((l, j) => (j === i ? e.target.value : l)))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!line.trim()) return onDone();
+                    if (i === lines.length - 1 && room) { update([...lines, ""]); setFocusAt(i + 1); }
+                    else setFocusAt(Math.min(i + 1, lines.length - 1));
+                  } else if (e.key === "Backspace" && !line && lines.length > 1) {
+                    e.preventDefault();
+                    update(lines.filter((_, j) => j !== i));
+                    setFocusAt(Math.max(0, i - 1));
+                  }
+                }}
+              />
+              <span className="rb-rule" aria-hidden="true" />
+            </div>
+          </li>
+        ))}
+      </ol>
+      {room && lines[lines.length - 1].trim() && (
+        <button type="button" className="rb-link" onClick={() => { update([...lines, ""]); setFocusAt(lines.length); }}>
+          + {C1.q.questions.add}
+        </button>
+      )}
     </div>
   );
 }
@@ -174,7 +233,8 @@ export function ArtistFlow({
   const fee1800 = parseAmount(q.fee_1800x900);
   const amountOk = (s: string) => { const v = parseAmount(s); return v === null || (!Number.isNaN(v) && v >= 0); };
   const oneCanNext: Record<OneKey, boolean> = {
-    interested: !!q.interested,
+    // "Yes, with a couple of questions" needs at least one question typed.
+    interested: !!q.interested && (q.interested !== "yes_with_questions" || questionLines(q.questions_text).some((l) => l.trim())),
     deliver: q.deliver_by === "yes" || (q.deliver_by === "date" && !!q.deliver_date),
     workType: !!q.work_type,
     approach: !!q.approach_text.trim() && q.approach_text.length <= QUOTE_LIMITS.approach,
@@ -186,7 +246,7 @@ export function ArtistFlow({
   };
   const oneOptional = new Set<OneKey>(["framing", "install", "leadTime", "anythingElse"]);
   const oneField: Partial<Record<keyof QuoteDraft, number>> = {
-    interested: 0, deliver_by: 1, deliver_date: 1, work_type: 2, approach_text: 3, fee_1800x900: 4, fee_1600x800: 4,
+    interested: 0, questions_text: 0, deliver_by: 1, deliver_date: 1, work_type: 2, approach_text: 3, fee_1800x900: 4, fee_1600x800: 4,
     framing_cost: 5, install_cost: 6, lead_time_weeks: 7,
   };
 
@@ -387,8 +447,8 @@ export function ArtistFlow({
             <Pebbles name="interested" label={title} value={q.interested} options={C1.options.interested} onChange={(v) => setQf("interested", v)} />
             {q.interested === "yes_with_questions" && (
               <div className="rb-note">
-                <Sub htmlFor="rb-questions">{Q.questions.label}</Sub>
-                <Writing id="rb-questions" small value={q.questions_text} onChange={(v) => setQf("questions_text", v)} limit={QUOTE_LIMITS.questions} label={Q.questions.label} onEnter={enter} />
+                <Sub>{Q.questions.label}</Sub>
+                <QuestionList value={q.questions_text} onChange={(v) => setQf("questions_text", v)} onDone={enter} />
               </div>
             )}
           </>

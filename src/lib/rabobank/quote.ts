@@ -48,6 +48,19 @@ export const EMPTY_QUOTE: QuoteDraft = {
   based_in: "", lead_time_weeks: "", anything_else: "",
 };
 
+/**
+ * The "couple of questions" are kept as a numbered list ("1. ...\n2. ..."), which
+ * reads well in the admin and the CSV. These convert to and from plain lines.
+ */
+export const MAX_QUESTIONS = 5;
+export function questionLines(text: string): string[] {
+  return text ? text.split("\n").map((l) => l.replace(/^\s*\d+\.\s?/, "")) : [""];
+}
+export function numberQuestions(lines: string[]): string {
+  if (lines.length === 1 && !lines[0]) return "";
+  return lines.map((l, i) => `${i + 1}. ${l}`).join("\n");
+}
+
 /** "$1,800" or "1800.50" → 1800 / 1800.5. Empty → null. Anything else → NaN. */
 export function parseAmount(raw: string): number | null {
   const s = raw.replace(/[\s,$]|nzd/gi, "");
@@ -66,6 +79,7 @@ export function validateQuote(q: QuoteDraft): QuoteErrors {
   const e: QuoteErrors = {};
   if (!q.interested) e.interested = "required";
   if (q.interested === "no") return e; // the rest is skipped
+  if (q.interested === "yes_with_questions" && !questionLines(q.questions_text).some((l) => l.trim())) e.questions_text = "required";
 
   if (!q.deliver_by) e.deliver_by = "required";
   if (q.deliver_by === "date" && !q.deliver_date) e.deliver_date = "required";
