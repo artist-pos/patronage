@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const TABS = [
   { href: "/admin/rabobank", label: "Dates, links and survey" },
+  { href: "/admin/rabobank/artists", label: "Artists" },
   { href: "/admin/rabobank/shortlist", label: "Shortlist" },
   { href: "/admin/rabobank/reactions", label: "Reactions" },
   { href: "/admin/rabobank/log", label: "Event log" },

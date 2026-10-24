@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/send-activation-nudges",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/rabobank-retention",
+      "schedule": "0 22 * * *"
     }
   ]
 }

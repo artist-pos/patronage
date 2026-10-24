@@ -1,0 +1,35 @@
+/* Wall viewer, scoped to .wv and themed through --wv-* (Patronage: Geist, stone, black ink).
+   Light only, like the rest of the site; the dark blue is the wall's real colour. */
+.wv {
+  --wv-bg: #ffffff; --wv-ink: #1c1917; --wv-muted: #78716c; --wv-line: #e7e5e4;
+  --wv-wall: #1f3a5f; --wv-top: #f5f5f4; --wv-timber: #b86b25; --wv-art: #e3a35a; --wv-art-line: #7a3f0b;
+  --wv-person: #57534e; --wv-accent: #000;
+  --wv-font: var(--font-geist-sans), system-ui, sans-serif;
+  color-scheme: light;
+  padding: 1rem; background: var(--wv-bg); color: var(--wv-ink);
+  border: 1px solid var(--wv-line); border-radius: 14px; box-sizing: border-box; font-size: 15px; line-height: 1.5;
+  font-family: var(--wv-font);
+}
+.wv * { box-sizing: border-box; }
+.wv-head { margin: 0 0 12px; }
+.wv-head h3 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.wv-head p { margin: 4px 0 0; color: var(--wv-muted); font-size: 14px; max-width: 65ch; }
+.wv-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 0 0 12px; }
+.wv-seg { display: flex; }
+.wv-seg label { position: relative; border: 1px solid var(--wv-line); padding: 7px 12px; font-size: 14px; font-weight: 500; cursor: pointer; background: #fafaf9; }
+.wv-seg label:first-child { border-radius: 8px 0 0 8px; }
+.wv-seg label:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.wv-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.wv-seg label:has(input:checked) { background: var(--wv-accent); border-color: var(--wv-accent); color: #fff; }
+.wv-seg label:has(input:focus-visible), .wv-btn:focus-visible, .wv-chk input:focus-visible { outline: 3px solid #000faa; outline-offset: 2px; }
+.wv-chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+.wv-chk input { accent-color: #000; }
+.wv-btn { font: inherit; font-size: 14px; font-weight: 500; border: 1px solid var(--wv-line); background: var(--wv-bg); color: var(--wv-ink); padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+.wv-btn:hover { border-color: #a8a29e; }
+.wv-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.wv svg { display: block; width: 100%; height: auto; }
+.wv-drop svg { outline: 2px dashed var(--wv-timber); outline-offset: -4px; }
+.wv-cap { margin: 10px 0 0; font-size: 14px; }
+.wv-cap strong { font-weight: 600; }
+.wv-note { margin: 6px 0 0; font-size: 13px; color: var(--wv-muted); max-width: 70ch; }
+.wv-msg { margin: 6px 0 0; font-size: 13px; color: var(--wv-timber); min-height: 1.2em; }

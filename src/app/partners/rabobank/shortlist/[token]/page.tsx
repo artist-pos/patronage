@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { formatNz, windowState } from "@/lib/rabobank/time";
-import { DEFAULT_SHORTLIST_INTRO, getArtistCards } from "@/lib/rabobank/shortlist";
+import { DEFAULT_SHORTLIST_INTRO, getArtistCards, getStaffQuoteLines } from "@/lib/rabobank/shortlist";
 import { ShortlistView } from "./ShortlistView";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,8 @@ export default async function StaffShortlist({ params }: { params: Promise<{ tok
   const state = windowState(settings.shortlist_open_at, settings.shortlist_close_at);
   // Curator order, works and notes only. Fees and timelines are never loaded here.
   const artists = state === "open" ? await getArtistCards({ includeHidden: false }) : [];
+  // Quotes reach staff only through this single setting, off by default.
+  const quoteLines = settings.staff_see_quotes ? await getStaffQuoteLines(artists) : {};
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
@@ -31,7 +33,7 @@ export default async function StaffShortlist({ params }: { params: Promise<{ tok
           {settings.shortlist_close_at && (
             <p className="mb-8 text-sm text-muted-foreground">Closes {formatNz(settings.shortlist_close_at)}.</p>
           )}
-          <ShortlistView artists={artists} token={token} nameMode={settings.collect_first_name} />
+          <ShortlistView artists={artists} token={token} nameMode={settings.collect_first_name} quoteLines={quoteLines} />
         </>
       ) : (
         <p className="text-muted-foreground" role="status">

@@ -31,6 +31,13 @@ export interface ArtistCard {
   website_url: string | null;
   sort_order: number;
   visible: boolean;
+  // From the artist's own profile (migration 216); null for manually added artists.
+  invite_id: string | null;
+  photo_url: string | null;
+  bio: string | null;
+  instagram: string | null;
+  other_links: string | null;
+  staff_prompt_answer: string | null;
   works: Work[];
 }
 
@@ -44,7 +51,7 @@ export async function getArtistCards(opts: { includeHidden: boolean }): Promise<
   const admin = createAdminClient();
   let q = admin
     .from("rabobank_artist")
-    .select("id, name, region, medium, curator_note, website_url, sort_order, visible")
+    .select("id, name, region, medium, curator_note, website_url, sort_order, visible, invite_id, photo_url, bio, instagram, other_links, staff_prompt_answer")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (!opts.includeHidden) q = q.eq("visible", true);
@@ -62,6 +69,31 @@ export async function getArtistCards(opts: { includeHidden: boolean }): Promise<
     ...a,
     works: (works ?? []).filter((w) => w.artist_id === a.id),
   }));
+}
+
+/**
+ * Only called when Blake has turned on "staff see quotes". One plain line per
+ * shortlisted artist, e.g. "1800 x 900: $4,200 (excl. GST)".
+ */
+export async function getStaffQuoteLines(artists: ArtistCard[]): Promise<Record<string, string>> {
+  const byInvite = new Map(artists.filter((a) => a.invite_id).map((a) => [a.invite_id!, a.id]));
+  if (!byInvite.size) return {};
+  const { data } = await createAdminClient()
+    .from("rabobank_quote")
+    .select("invite_id, fee_1800x900, fee_1600x800, gst_inclusive")
+    .eq("status", "submitted")
+    .in("invite_id", [...byInvite.keys()]);
+  const money = (n: unknown) => "$" + Number(n).toLocaleString("en-NZ", { maximumFractionDigits: 2 });
+  const out: Record<string, string> = {};
+  for (const q of data ?? []) {
+    const gst = q.gst_inclusive ? "incl. GST" : "excl. GST";
+    const parts = [
+      q.fee_1800x900 !== null && `1800 x 900: ${money(q.fee_1800x900)}`,
+      q.fee_1600x800 !== null && `1600 x 800: ${money(q.fee_1600x800)}`,
+    ].filter(Boolean);
+    if (parts.length) out[byInvite.get(q.invite_id)!] = `${parts.join(" · ")} (${gst})`;
+  }
+  return out;
 }
 
 /** Client and admin only. */

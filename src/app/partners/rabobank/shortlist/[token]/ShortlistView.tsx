@@ -122,10 +122,13 @@ export function ShortlistView({
   artists,
   token,
   nameMode,
+  quoteLines,
 }: {
   artists: ArtistCard[];
   token: string;
   nameMode: NameMode;
+  /** Present only when Blake has turned on "staff see quotes". */
+  quoteLines?: Record<string, string>;
 }) {
   // "" on the server and until hydration, so the first paint is curator order
   // and the per-device shuffle applies straight after.
@@ -175,18 +178,40 @@ export function ShortlistView({
         const site = safeUrl(artist.website_url);
         return (
           <article key={artist.id} className="space-y-4" aria-labelledby={`artist-${artist.id}`}>
-            <header className="space-y-1">
-              <h2 id={`artist-${artist.id}`} className="text-xl font-semibold">{artist.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {[artist.region, artist.medium].filter(Boolean).join(" · ")}
-              </p>
-              {site && (
-                <a href={site} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                  View their website
-                </a>
+            <header className="flex items-start gap-4">
+              {artist.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={artist.photo_url} alt="" className="size-16 shrink-0 rounded-full object-cover" />
               )}
+              <div className="space-y-1">
+                <h2 id={`artist-${artist.id}`} className="text-xl font-semibold">{artist.name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {[artist.region, artist.medium].filter(Boolean).join(" · ")}
+                </p>
+                <p className="flex flex-wrap gap-x-4 text-sm">
+                  {site && (
+                    <a href={site} target="_blank" rel="noopener noreferrer" className="underline">
+                      View their website
+                    </a>
+                  )}
+                  {artist.instagram && (
+                    <a href={`https://instagram.com/${encodeURIComponent(artist.instagram)}`} target="_blank" rel="noopener noreferrer" className="underline">
+                      @{artist.instagram}
+                    </a>
+                  )}
+                </p>
+              </div>
             </header>
+            {artist.bio && <p className="whitespace-pre-line leading-relaxed">{artist.bio}</p>}
             {artist.curator_note && <p className="text-sm leading-relaxed">{artist.curator_note}</p>}
+            {artist.staff_prompt_answer && (
+              <blockquote className="border-l-2 border-foreground/20 pl-4 text-sm leading-relaxed">
+                <p className="mb-1 text-xs text-muted-foreground">What I&rsquo;d like someone to feel standing in front of my work</p>
+                {artist.staff_prompt_answer}
+              </blockquote>
+            )}
+            {artist.other_links && <p className="whitespace-pre-line break-words text-sm text-muted-foreground">{artist.other_links}</p>}
+            {quoteLines?.[artist.id] && <p className="text-sm text-muted-foreground">{quoteLines[artist.id]}</p>}
             <Gallery works={artist.works} artistName={artist.name} />
             {/* Wait for stored reactions so the buttons start in the right state. */}
             {mine === null && respondentId ? (
