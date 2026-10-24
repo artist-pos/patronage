@@ -43,7 +43,10 @@
 .rb-takes .rb-link { font-size: 0.85rem; }
 
 /* The room render and the artist's featured work on the welcome page. */
-.rb-feature { max-width: 40rem; }
+.rb-features { display: grid; gap: 1.25rem; max-width: 40rem; align-items: start; }
+.rb-features[data-count="2"] { max-width: 52rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 560px) { .rb-features[data-count="2"] { grid-template-columns: 1fr; } }
+.rb-feature { margin: 0; }
 .rb-feature img { display: block; width: 100%; height: auto; border-radius: 18px; box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06); }
 .rb-feature figcaption { margin-top: 0.7rem; color: var(--stone); font-size: 0.85rem; line-height: 1.5; }
 .rb-feature figcaption strong { color: var(--ink); font-weight: 500; }

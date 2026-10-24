@@ -4,7 +4,6 @@ import { getSettings } from "@/lib/rabobank/settings";
 import { getInviteByToken, recordOpen, windowsFor } from "@/lib/rabobank/invites";
 import { loadProfile, loadQuote } from "@/lib/rabobank/artist-data";
 import { COPY } from "@/lib/rabobank/artist-copy";
-import { getTakes } from "@/lib/rabobank/takes";
 import { Landing } from "./Landing";
 import { ClosedNotice, Shell } from "./Shell";
 
@@ -42,7 +41,7 @@ export default async function ArtistInvitePage({
     );
   }
 
-  const [quote, profile, takes] = await Promise.all([loadQuote(invite.id), loadProfile(invite), getTakes({ activeOnly: true })]);
+  const [quote, profile] = await Promise.all([loadQuote(invite.id), loadProfile(invite)]);
   return (
     <Landing
       token={token}
@@ -51,7 +50,7 @@ export default async function ArtistInvitePage({
       open={open}
       quote={quote}
       profile={profile}
-      takes={takes.map((t) => t.text)}
+      takes={invite.thoughts ?? []}
       hasDirection={!!settings.direction_pdf_path}
     />
   );

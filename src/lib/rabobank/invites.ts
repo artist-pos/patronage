@@ -31,6 +31,13 @@ export interface ArtistInvite {
   admin_notes: string | null;
   /** First open of the creative direction PDF (migration 217). */
   direction_opened_at?: string | null;
+  /** Blake's thoughts for this artist's Q4, one per entry (migration 217). */
+  thoughts?: string[] | null;
+  /** The second work that caught Blake's eye (migration 217). */
+  featured_image_2_url?: string | null;
+  featured_title_2?: string | null;
+  featured_caption_2?: string | null;
+  featured_source_url_2?: string | null;
   created_at: string;
 }
 

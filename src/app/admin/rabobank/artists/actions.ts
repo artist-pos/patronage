@@ -6,10 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { nzLocalToUtcIso } from "@/lib/rabobank/time";
 import { generateInviteToken } from "@/lib/rabobank/invites";
 import { deleteArtistProfile, runRetention } from "@/lib/rabobank/retention";
-import { COMMISSION_ID, getTakes } from "@/lib/rabobank/takes";
-
 export type AdminResult = { ok?: boolean; error?: string; message?: string } | null;
 const PATH = "/admin/rabobank/artists";
+const MAX_THOUGHTS = 12;
+const THOUGHT_MAX = 600;
 
 const text = (fd: FormData, name: string, max: number) => String(fd.get(name) ?? "").trim().slice(0, max) || null;
 const url = (fd: FormData, name: string) => {
@@ -41,7 +41,17 @@ function inviteFields(fd: FormData) {
     featured_title: text(fd, "featured_title", 200),
     featured_caption: text(fd, "featured_caption", 400),
     featured_source_url: url(fd, "featured_source_url"),
+    featured_image_2_url: url(fd, "featured_image_2_url"),
+    featured_title_2: text(fd, "featured_title_2", 200),
+    featured_caption_2: text(fd, "featured_caption_2", 400),
+    featured_source_url_2: url(fd, "featured_source_url_2"),
     site_url: url(fd, "site_url"),
+    // One thought per line; blank lines are ignored.
+    thoughts: String(fd.get("thoughts") ?? "")
+      .split(/\r?\n/)
+      .map((t) => t.trim().slice(0, THOUGHT_MAX))
+      .filter(Boolean)
+      .slice(0, MAX_THOUGHTS),
   };
 }
 
@@ -130,59 +140,6 @@ export async function closeSelection(): Promise<AdminResult> {
     ok: true,
     message: `Selection closed. ${report.followups} follow-up email${report.followups === 1 ? "" : "s"} sent${report.skippedNoEmail ? `, ${report.skippedNoEmail} without an email address` : ""}.`,
   };
-}
-
-/* ---------- Q4 thoughts ("Just some thoughts"), shown to every artist ---------- */
-
-export async function addTake(fd: FormData): Promise<void> {
-  if (!(await isAdmin())) return;
-  const body = text(fd, "text", 600);
-  if (!body) return;
-  const admin = createAdminClient();
-  const { data: last } = await admin
-    .from("rabobank_commission_take")
-    .select("sort_order")
-    .eq("commission_id", COMMISSION_ID)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  await admin.from("rabobank_commission_take").insert({ commission_id: COMMISSION_ID, text: body, sort_order: (last?.sort_order ?? -1) + 1 });
-  revalidatePath(PATH);
-}
-
-export async function updateTake(fd: FormData): Promise<void> {
-  if (!(await isAdmin())) return;
-  const body = text(fd, "text", 600);
-  if (!body) return;
-  await createAdminClient().from("rabobank_commission_take").update({ text: body }).eq("id", String(fd.get("id")));
-  revalidatePath(PATH);
-}
-
-export async function toggleTake(fd: FormData): Promise<void> {
-  if (!(await isAdmin())) return;
-  await createAdminClient().from("rabobank_commission_take").update({ active: fd.get("active") === "true" }).eq("id", String(fd.get("id")));
-  revalidatePath(PATH);
-}
-
-export async function deleteTake(fd: FormData): Promise<void> {
-  if (!(await isAdmin())) return;
-  await createAdminClient().from("rabobank_commission_take").delete().eq("id", String(fd.get("id")));
-  revalidatePath(PATH);
-}
-
-/** Swaps a thought with its neighbour, renumbering the list so the order is always clean. */
-export async function moveTake(fd: FormData): Promise<void> {
-  if (!(await isAdmin())) return;
-  const id = String(fd.get("id"));
-  const dir = fd.get("dir") === "up" ? -1 : 1;
-  const takes = await getTakes({ activeOnly: false });
-  const i = takes.findIndex((t) => t.id === id);
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= takes.length) return;
-  [takes[i], takes[j]] = [takes[j], takes[i]];
-  const admin = createAdminClient();
-  await Promise.all(takes.map((t, n) => admin.from("rabobank_commission_take").update({ sort_order: n }).eq("id", t.id)));
-  revalidatePath(PATH);
 }
 
 export async function adminDeleteProfile(fd: FormData): Promise<void> {

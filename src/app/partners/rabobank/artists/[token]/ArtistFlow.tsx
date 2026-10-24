@@ -415,8 +415,11 @@ export function ArtistFlow({
   );
 
   if (mode === "home") {
-    const featured = safeUrl(invite.featured_image_url);
-    const source = safeUrl(invite.featured_source_url);
+    // The (up to) two works that caught Blake's eye.
+    const featured = [
+      { src: safeUrl(invite.featured_image_url), title: invite.featured_title, caption: invite.featured_caption, source: safeUrl(invite.featured_source_url) },
+      { src: safeUrl(invite.featured_image_2_url ?? null), title: invite.featured_title_2, caption: invite.featured_caption_2, source: safeUrl(invite.featured_source_url_2 ?? null) },
+    ].filter((f) => f.src);
     const site = safeUrl(invite.site_url);
     const oneLabel = status.one === "saved" ? COPY.landing.continueOne : COPY.landing.startOne;
     const twoLabel = status.two === "saved" ? COPY.landing.continueTwo : status.two === "done" ? COPY.landing.editTwo : COPY.landing.startTwo;
@@ -442,19 +445,24 @@ export function ArtistFlow({
           </figure>
         </div>
 
-        {featured && (
-          <figure className="rb-feature">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={featured} alt={invite.featured_title ?? ""} />
-            <figcaption>
-              {invite.featured_title && <strong>{invite.featured_title}</strong>}
-              {invite.featured_caption && <>{invite.featured_title ? ". " : ""}{invite.featured_caption}</>}
-              {source && <><br />{COPY.landing.featuredCredit} <a href={source} target="_blank" rel="noopener noreferrer">{source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
-              {site && <><br /><a href={site} target="_blank" rel="noopener noreferrer">{COPY.landing.siteLink}</a></>}
-            </figcaption>
-          </figure>
+        {featured.length > 0 && (
+          <div className="rb-features" data-count={featured.length}>
+            {featured.map((f, i) => (
+              <figure key={i} className="rb-feature">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.src!} alt={f.title ?? ""} />
+                {(f.title || f.caption || f.source) && (
+                  <figcaption>
+                    {f.title && <strong>{f.title}</strong>}
+                    {f.caption && <>{f.title ? ". " : ""}{f.caption}</>}
+                    {f.source && <><br />{COPY.landing.featuredCredit} <a href={f.source} target="_blank" rel="noopener noreferrer">{f.source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
+          </div>
         )}
-        {!featured && site && <a href={site} target="_blank" rel="noopener noreferrer" className="rb-sitelink">{COPY.landing.siteLink}</a>}
+        {site && <a href={site} target="_blank" rel="noopener noreferrer" className="rb-sitelink">{COPY.landing.siteLink}</a>}
 
         <section className="rb-section">
           <p className="rb-eyebrow">{COPY.landing.briefHeading}</p>

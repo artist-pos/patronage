@@ -4,7 +4,6 @@ import { startTransition, useActionState, useMemo, useState } from "react";
 import { ArrowDownUp, Check, Copy } from "lucide-react";
 import type { ArtistInvite } from "@/lib/rabobank/invites";
 import type { SizeCost } from "@/lib/rabobank/artist-admin";
-import { TAKE_GUIDE } from "@/lib/rabobank/take-rules";
 import { closeSelection, saveArtistSettings, saveInvite, setShortlisted, type AdminResult } from "./actions";
 
 const input = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
@@ -15,22 +14,6 @@ function Note({ state, pending }: { state: AdminResult; pending: boolean }) {
   if (state?.error) return <span className="text-xs text-destructive">{state.error}</span>;
   if (state?.message) return <span className="inline-flex items-center gap-1 text-xs text-stone-500"><Check className="size-3.5" />{state.message}</span>;
   return null;
-}
-
-/** One thought: plain text with a live character guide, saved by a server action. */
-export function TakeEditor({ action, initial = "", submitLabel, id }: { action: (fd: FormData) => Promise<void>; initial?: string; submitLabel: string; id?: string }) {
-  const [value, setValue] = useState(initial);
-  const over = value.length > TAKE_GUIDE;
-  return (
-    <form action={async (fd) => { await action(fd); if (!id) setValue(""); }} className="space-y-1.5">
-      {id && <input type="hidden" name="id" value={id} />}
-      <textarea name="text" rows={3} value={value} onChange={(e) => setValue(e.target.value)} maxLength={600} className={input} placeholder="Two or three sentences about the work." />
-      <div className="flex items-center justify-between gap-3">
-        <span className={`text-xs ${over ? "text-amber-700" : "text-stone-400"}`}>{value.length} / about {TAKE_GUIDE}</span>
-        <button disabled={!value.trim() || value === initial} className="rounded-lg border border-border bg-white px-3 py-1 text-xs font-medium hover:border-stone-400 disabled:opacity-40">{submitLabel}</button>
-      </div>
-    </form>
-  );
 }
 
 /** Replaces the creative direction PDF (kept private; artists open it through their own link). */
@@ -91,24 +74,63 @@ export function CopyLinks({ email, instagram }: { email: string; instagram: stri
   );
 }
 
-export function InviteForm({ invite }: { invite?: ArtistInvite }) {
-  const [state, action, pending] = useActionState<AdminResult, FormData>(saveInvite, null);
-  const [image, setImage] = useState(invite?.featured_image_url ?? "");
+/** One of the two works that caught Blake's eye: an image plus its title, caption and credit. */
+function FeaturedSlot({ label, suffix, initial, onBusy }: {
+  label: string;
+  suffix: "" | "_2";
+  initial: { image: string | null | undefined; title: string | null | undefined; caption: string | null | undefined; source: string | null | undefined };
+  onBusy: (busy: boolean) => void;
+}) {
+  const [image, setImage] = useState(initial.image ?? "");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   async function upload(file: File | undefined) {
     if (!file) return;
     setUploading(true);
+    onBusy(true);
     setUploadError(null);
     const body = new FormData();
     body.set("file", file);
     const res = await fetch("/admin/rabobank/artists/upload", { method: "POST", body });
     const json = await res.json().catch(() => null);
     setUploading(false);
+    onBusy(false);
     if (res.ok && json?.url) setImage(json.url);
     else setUploadError(json?.error ?? "Upload failed.");
   }
+
+  // The first slot keeps the original (216) column names.
+  const names = suffix
+    ? { image: "featured_image_2_url", title: "featured_title_2", caption: "featured_caption_2", source: "featured_source_url_2" }
+    : { image: "featured_image_url", title: "featured_title", caption: "featured_caption", source: "featured_source_url" };
+  return (
+    <div className="space-y-1.5 rounded-lg border border-dashed border-border p-2.5">
+      <p className="text-xs font-medium text-stone-600">{label}</p>
+      {image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="max-h-32 rounded-md" />
+      )}
+      <input type="hidden" name={names.image} value={image} />
+      <div className="flex gap-3 text-xs">
+        <label className="inline-flex cursor-pointer underline underline-offset-4">
+          {uploading ? "Uploading…" : image ? "Replace image" : "Upload image"}
+          <input type="file" accept="image/*" className="sr-only" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        {image && <button type="button" className="text-stone-500 underline-offset-4 hover:underline" onClick={() => setImage("")}>Remove</button>}
+      </div>
+      {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+      <input name={names.title} placeholder="Title" defaultValue={initial.title ?? ""} className={input} maxLength={200} />
+      <input name={names.caption} placeholder="Short caption" defaultValue={initial.caption ?? ""} className={input} maxLength={400} />
+      <input name={names.source} placeholder="Image source link (credit)" defaultValue={initial.source ?? ""} className={input} maxLength={500} />
+    </div>
+  );
+}
+
+export function InviteForm({ invite }: { invite?: ArtistInvite }) {
+  const [state, action, pending] = useActionState<AdminResult, FormData>(saveInvite, null);
+  const [busy, setBusy] = useState(0);
+  const onBusy = (b: boolean) => setBusy((n) => n + (b ? 1 : -1));
 
   return (
     <form action={action} className="space-y-2.5">
@@ -126,25 +148,21 @@ export function InviteForm({ invite }: { invite?: ArtistInvite }) {
         </select>
       </div>
       <textarea name="why_paragraph" rows={4} placeholder="Why you're inviting them (shown under Kia ora)" defaultValue={invite?.why_paragraph ?? ""} className={input} maxLength={1500} />
-      <div className="space-y-1.5 rounded-lg border border-dashed border-border p-2.5">
-        <p className="text-xs font-medium text-stone-600">Featured work</p>
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="max-h-32 rounded-md" />
-        )}
-        <input type="hidden" name="featured_image_url" value={image} />
-        <label className="inline-flex cursor-pointer text-xs underline underline-offset-4">
-          {uploading ? "Uploading…" : image ? "Replace image" : "Upload image"}
-          <input type="file" accept="image/*" className="sr-only" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
-        </label>
-        {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
-        <input name="featured_title" placeholder="Title" defaultValue={invite?.featured_title ?? ""} className={input} maxLength={200} />
-        <input name="featured_caption" placeholder="Short caption" defaultValue={invite?.featured_caption ?? ""} className={input} maxLength={400} />
-        <input name="featured_source_url" placeholder="Image source link (credit)" defaultValue={invite?.featured_source_url ?? ""} className={input} maxLength={500} />
+      <div className="space-y-1">
+        <textarea
+          name="thoughts"
+          rows={5}
+          placeholder="Thoughts for their question 4 (Your approach). One per line, up to 12. Only this artist sees them, one at a time."
+          defaultValue={(invite?.thoughts ?? []).join("\n")}
+          className={input}
+          maxLength={12 * 610}
+        />
       </div>
+      <FeaturedSlot label="Work that caught my eye (1)" suffix="" onBusy={onBusy} initial={{ image: invite?.featured_image_url, title: invite?.featured_title, caption: invite?.featured_caption, source: invite?.featured_source_url }} />
+      <FeaturedSlot label="Work that caught my eye (2)" suffix="_2" onBusy={onBusy} initial={{ image: invite?.featured_image_2_url, title: invite?.featured_title_2, caption: invite?.featured_caption_2, source: invite?.featured_source_url_2 }} />
       <input name="site_url" placeholder="Their website" defaultValue={invite?.site_url ?? ""} className={input} maxLength={500} />
       <div className="flex items-center gap-3">
-        <button disabled={pending || uploading} className="rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-85 disabled:opacity-50">
+        <button disabled={pending || busy > 0} className="rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-85 disabled:opacity-50">
           {invite ? "Save invite" : "Create invite"}
         </button>
         <Note state={state} pending={pending} />
