@@ -26,7 +26,8 @@ export interface QuoteDraft {
   approach_text: string;
   fee_1800x900: string;
   fee_1600x800: string;
-  gst_inclusive: "" | "included" | "excluded";
+  /** The "GST included?" toggle. Unticked means the fees exclude GST. */
+  gst_inclusive: boolean;
   alt_size_note: string;
   framing_option: Who | "";
   framing_cost: string;
@@ -42,7 +43,7 @@ export interface QuoteDraft {
 export const EMPTY_QUOTE: QuoteDraft = {
   interested: "", questions_text: "", deliver_by: "", deliver_date: "", work_type: "",
   existing_work_images: [], approach_text: "", fee_1800x900: "", fee_1600x800: "",
-  gst_inclusive: "", alt_size_note: "", framing_option: "", framing_cost: "",
+  gst_inclusive: false, alt_size_note: "", framing_option: "", framing_cost: "",
   framing_recommendation: "", install_option: "", install_cost: "", install_recommendation: "",
   based_in: "", lead_time_weeks: "", anything_else: "",
 };
@@ -59,7 +60,7 @@ export type QuoteErrors = Partial<Record<keyof QuoteDraft, string>>;
 
 /**
  * Errors for a submit. Codes, not words, so copy stays in artist-copy.ts:
- * required, fee1800, amount, gst, tooLong.
+ * required, fee1800, amount, tooLong.
  */
 export function validateQuote(q: QuoteDraft): QuoteErrors {
   const e: QuoteErrors = {};
@@ -77,7 +78,6 @@ export function validateQuote(q: QuoteDraft): QuoteErrors {
   if (big === null) e.fee_1800x900 = "fee1800";
   else if (Number.isNaN(big) || big <= 0) e.fee_1800x900 = "amount";
   if (small !== null && (Number.isNaN(small) || small <= 0)) e.fee_1600x800 = "amount";
-  if ((big !== null || small !== null) && !q.gst_inclusive) e.gst_inclusive = "gst";
 
   for (const k of ["framing_cost", "install_cost"] as const) {
     const v = parseAmount(q[k]);
@@ -86,6 +86,9 @@ export function validateQuote(q: QuoteDraft): QuoteErrors {
   if (q.lead_time_weeks && !/^\d{1,3}$/.test(q.lead_time_weeks.trim())) e.lead_time_weeks = "amount";
   return e;
 }
+
+/** GST only means something once a fee is entered. */
+const big1800OrSmall = (q: QuoteDraft) => !!(q.fee_1800x900.trim() || q.fee_1600x800.trim());
 
 /** Converts a draft to the database row. Invalid numbers become null so a draft always saves. */
 export function quoteToRow(q: QuoteDraft) {
@@ -109,7 +112,7 @@ export function quoteToRow(q: QuoteDraft) {
     approach_text: text(q.approach_text, 700),
     fee_1800x900: num(q.fee_1800x900),
     fee_1600x800: num(q.fee_1600x800),
-    gst_inclusive: q.gst_inclusive === "" ? null : q.gst_inclusive === "included",
+    gst_inclusive: big1800OrSmall(q) ? q.gst_inclusive === true : null,
     alt_size_note: text(q.alt_size_note, QUOTE_LIMITS.altSize),
     framing_option: q.framing_option || null,
     framing_cost: cost(q.framing_cost),
@@ -138,7 +141,7 @@ export function rowToQuote(r: Partial<QuoteRow> | null | undefined): QuoteDraft 
     approach_text: s(r.approach_text),
     fee_1800x900: s(r.fee_1800x900),
     fee_1600x800: s(r.fee_1600x800),
-    gst_inclusive: r.gst_inclusive === null || r.gst_inclusive === undefined ? "" : r.gst_inclusive ? "included" : "excluded",
+    gst_inclusive: r.gst_inclusive === true,
     alt_size_note: s(r.alt_size_note),
     framing_option: (r.framing_option as Who) ?? "",
     framing_cost: s(r.framing_cost),

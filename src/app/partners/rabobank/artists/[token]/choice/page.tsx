@@ -19,14 +19,9 @@ export default async function ChoicePage({ params, searchParams }: { params: Pro
   const choice = c === "delete" ? "delete" : "keep";
   return (
     <Shell>
-      <div className="space-y-5">
-        <h1 className="text-4xl font-light tracking-tight">{COPY.followup.heading}</h1>
-        {invite.artist_id ? (
-          <ChoiceConfirm token={token} choice={choice} />
-        ) : (
-          <p className="leading-relaxed text-stone-600">{COPY.followup.deleted}</p>
-        )}
-      </div>
+      <p className="rb-eyebrow">{COPY.landing.eyebrow}</p>
+      <h1 className="rb-title">{COPY.followup.heading}</h1>
+      {invite.artist_id ? <ChoiceConfirm token={token} choice={choice} /> : <p className="rb-copy">{COPY.followup.deleted}</p>}
     </Shell>
   );
 }

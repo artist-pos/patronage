@@ -1,0 +1,84 @@
+/* Invited-artist flow. Builds on the staff survey's survey.css (same .rb root,
+   tokens, scene, pebbles, writing and actions); only what the survey lacks is here. */
+
+/* ---------- the welcome page: long, so it scrolls rather than centres ---------- */
+.rb[data-step="home"] .rb-stage { justify-content: flex-start; padding-top: clamp(2.5rem, 9vh, 6rem); }
+.rb-home { display: flex; flex-direction: column; gap: clamp(3.5rem, 8vh, 5.5rem); }
+.rb-section > .rb-eyebrow { margin-bottom: 1.1rem; }
+.rb-section .rb-copy:last-child { margin-bottom: 0; }
+.rb-deadline { color: var(--ink-soft); font-size: 0.95rem; margin: 1.2rem 0 0; }
+.rb-sitelink { display: inline-block; margin-top: 0.4rem; color: var(--ink); font-size: 0.9rem; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #d6d3d1; }
+.rb-figure figcaption a { color: inherit; }
+
+/* The two parts, described before either is started. */
+.rb-parts { display: grid; gap: 1.5rem; margin: 0 0 2.2rem; }
+@media (min-width: 760px) { .rb-parts { grid-template-columns: 1fr 1fr; gap: 3rem; } }
+.rb-part { border-top: 1px solid var(--line); padding-top: 1.3rem; }
+.rb-part-n { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--stone); margin: 0 0 0.6rem; display: flex; align-items: center; gap: 0.6rem; }
+.rb-part h3 { font-weight: 300; font-size: clamp(1.4rem, 1.1rem + 1vw, 1.85rem); line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 0.7rem; }
+.rb-part p { color: var(--ink-soft); line-height: 1.55; margin: 0; max-width: 30rem; }
+.rb-status { font-size: 0.7rem; letter-spacing: 0.04em; text-transform: none; padding: 0.15rem 0.55rem; border-radius: 999px; background: #f5f5f4; color: var(--ink-soft); }
+.rb-status[data-s="saved"] { background: #fff4e5; color: #9a4a00; }
+.rb-status[data-s="done"] { background: #ecf7ef; color: #1f6b3a; }
+.rb-small { color: var(--ink-soft); font-size: 0.95rem; margin: 1.4rem 0 0; max-width: 34rem; }
+
+/* ---------- steps with more than one input ---------- */
+.rb-fields { display: grid; gap: 1.6rem 2.2rem; margin: 0 0 1.4rem; }
+@media (min-width: 640px) { .rb-fields--2 { grid-template-columns: 1fr 1fr; } }
+.rb-sublabel { display: block; font-size: 0.8rem; letter-spacing: 0.04em; color: var(--stone); margin: 0 0 0.35rem; }
+.rb-sublabel em { font-style: normal; opacity: 0.75; }
+.rb-input { /* a single-line .rb-textarea */ min-height: 0 !important; }
+.rb-money { display: flex; align-items: baseline; gap: 0.35rem; }
+.rb-money .rb-cur { font-weight: 300; font-size: clamp(1.25rem, 0.95rem + 1.1vw, 1.65rem); color: var(--stone); }
+.rb-money .rb-write { flex: 1; }
+.rb-money .rb-nzd { font-size: 0.75rem; letter-spacing: 0.08em; color: var(--stone); }
+
+/* "GST included?" and consent: one tick, survey-styled. */
+.rb-check { display: inline-flex; align-items: center; gap: 0.7rem; cursor: pointer; font-size: 1rem; color: var(--ink); user-select: none; }
+.rb-check input { appearance: none; width: 1.35rem; height: 1.35rem; margin: 0; border: 1px solid #a8a29e; border-radius: 6px; background: #fff; display: grid; place-items: center; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; }
+.rb-check input:checked { background: var(--ink); border-color: var(--ink); }
+.rb-check input:checked::after { content: ""; width: 0.38rem; height: 0.7rem; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.rb-check input:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.rb-check--block { align-items: flex-start; }
+.rb-check--block input { margin-top: 0.15rem; flex: none; }
+
+.rb-consent { background: rgba(255, 255, 255, 0.7); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.2rem; color: var(--ink-soft); font-size: 0.95rem; line-height: 1.6; margin: 0 0 1.2rem; }
+.rb-consent p { margin: 0 0 0.7rem; }
+.rb-consent p:last-child { margin: 0; }
+
+/* ---------- uploads ---------- */
+.rb-thumbs { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0 0 1rem; }
+.rb-thumb { position: relative; }
+.rb-thumb img { display: block; height: 7rem; width: auto; border-radius: 12px; box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.08); }
+.rb-thumb .rb-link { font-size: 0.8rem; }
+.rb-add {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.2rem;
+  border: 1px dashed #a8a29e; border-radius: 14px; color: var(--ink-soft); cursor: pointer; font-size: 0.95rem; background: rgba(255, 255, 255, 0.6);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.rb-add:hover { border-color: var(--ink); color: var(--ink); }
+.rb-add[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.rb-add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.rb-photo { display: flex; align-items: center; gap: 1.2rem; margin: 0 0 1rem; }
+.rb-photo-ring { width: 6.5rem; height: 6.5rem; border-radius: 50%; overflow: hidden; flex: none; background: #f5f5f4; box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.08); }
+.rb-photo-ring img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.rb-works { display: grid; gap: 1.2rem; margin: 0 0 1.2rem; }
+.rb-workcard { display: grid; gap: 1rem; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: start; padding: 1rem; border-radius: 16px; background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.06); }
+.rb-workcard img { width: 100%; border-radius: 10px; display: block; }
+.rb-workcard .rb-fields { margin: 0; gap: 0.9rem 1.2rem; }
+.rb-workcard .rb-textarea { font-size: 1.05rem; }
+.rb-count { color: var(--stone); font-size: 0.85rem; margin: 0 0 0.4rem; }
+
+.rb-words { position: absolute; right: 0; bottom: -1.5rem; font-size: 0.8rem; color: var(--stone); }
+.rb-words[data-ok="false"] { color: #9a4a00; }
+.rb-save { color: var(--stone); font-size: 0.8rem; }
+
+@media (max-width: 640px) {
+  .rb[data-step="home"] .rb-stage { padding-top: max(2.5rem, 6vh); }
+  .rb-workcard { grid-template-columns: 1fr; }
+  .rb-workcard img { max-width: 12rem; }
+  .rb-home .rb-actions { position: sticky; bottom: 0; z-index: 2; margin-top: 0.5rem; padding: 1.25rem 0 calc(1rem + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(250, 250, 249, 0), var(--paper) 45%); }
+  .rb-home .rb-next { width: 100%; justify-content: center; min-height: 3.2rem; }
+}

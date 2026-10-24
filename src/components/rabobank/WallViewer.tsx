@@ -22,11 +22,11 @@ const Y = (mm: number) => FLOOR - mm;
 function mount(root: HTMLElement): () => void {
   const svg = root.querySelector("svg") as SVGSVGElement;
   const file = root.querySelector(".wv-file") as HTMLInputElement;
-  const add = root.querySelector(".wv-add") as HTMLButtonElement;
+  const add = root.querySelector(".wv-paint") as HTMLButtonElement;
   const clr = root.querySelector(".wv-clear") as HTMLButtonElement;
   const msg = root.querySelector(".wv-msg") as HTMLElement;
   const cap = root.querySelector(".wv-cap") as HTMLElement;
-  const styl = root.querySelector(".wv-styl") as HTMLInputElement;
+  const table = root.querySelector(".wv-table") as HTMLInputElement;
   const person = root.querySelector(".wv-person") as HTMLInputElement;
   let size: Size = "big";
   let imgUrl: string | null = null;
@@ -95,14 +95,26 @@ function mount(root: HTMLElement): () => void {
     for (let gx = 500; gx < WALL; gx += 500) E("line", { x1: gx, x2: gx, y1: Y(PAINT), y2: FLOOR, stroke: "#fff", "stroke-opacity": 0.07, "stroke-width": 4 });
     for (let gy = 500; gy < PAINT; gy += 500) E("line", { x1: 0, x2: WALL, y1: Y(gy), y2: Y(gy), stroke: "#fff", "stroke-opacity": 0.07, "stroke-width": 4 });
     E("line", { x1: -250, x2: WALL + 250, y1: FLOOR, y2: FLOOR, stroke: ink, "stroke-width": 10 });
-    /* table */
+    /* table, with its styling, when "Show Table" is on */
     const tx = (WALL - TW) / 2;
-    E("rect", { x: tx, y: Y(LEAN), width: TW, height: 40, fill: "var(--wv-timber)" });
-    [tx + 120, tx + TW - 160].forEach((lx) => E("rect", { x: lx, y: Y(LEAN) + 40, width: 40, height: LEAN - 40, fill: ink, opacity: 0.75 }));
+    if (table.checked) {
+      E("rect", { x: tx, y: Y(LEAN), width: TW, height: 40, fill: "var(--wv-timber)" });
+      [tx + 120, tx + TW - 160].forEach((lx) => E("rect", { x: lx, y: Y(LEAN) + 40, width: 40, height: LEAN - 40, fill: ink, opacity: 0.75 }));
+    }
     /* painting */
     const by = Y(BOT + oh);
     E("rect", { x, y: by, width: ow, height: oh, fill: "#15181b", stroke: "#000", "stroke-width": 4 });
     const px = x + FR, py = by + FR;
+    // The "Try your own artwork" button sits on the painting itself: place it over the
+    // canvas area in viewBox units (viewBox is -900 -200 5500 3500).
+    Object.assign(add.style, {
+      left: `${((px + 900) / 5500) * 100}%`,
+      top: `${((py + 200) / 3500) * 100}%`,
+      width: `${(s.w / 5500) * 100}%`,
+      height: `${(s.h / 3500) * 100}%`,
+    });
+    add.dataset.filled = imgUrl ? "true" : "false";
+    add.querySelector("span")!.textContent = imgUrl ? "Change artwork" : "Try your own artwork";
     if (imgUrl) {
       const d = E("defs", {}), cp = E("clipPath", { id: uid }, d);
       E("rect", { x: px, y: py, width: s.w, height: s.h }, cp);
@@ -112,9 +124,8 @@ function mount(root: HTMLElement): () => void {
     } else {
       E("rect", { x: px, y: py, width: s.w, height: s.h, fill: "var(--wv-art)", stroke: "var(--wv-art-line)", "stroke-width": 3 });
       E("path", { d: `M${px} ${py + s.h * 0.7} Q ${px + s.w * 0.35} ${py + s.h * 0.25} ${px + s.w} ${py + s.h * 0.55}`, fill: "none", stroke: "var(--wv-art-line)", "stroke-width": 10, opacity: 0.35 });
-      E("text", { x: px + s.w / 2, y: py + s.h / 2 + 24, "text-anchor": "middle", "font-size": 80, "font-weight": 600, fill: "var(--wv-art-line)", "font-family": font }).textContent = `${s.w} x ${s.h}`;
     }
-    if (styl.checked) props(tx, TW);
+    if (table.checked) props(tx, TW);
     /* dimensions */
     const lx = -170;
     E("line", { x1: lx, x2: lx, y1: Y(PAINT), y2: FLOOR, stroke: ink, "stroke-width": 5 });
@@ -158,7 +169,7 @@ function mount(root: HTMLElement): () => void {
   const offs: (() => void)[] = [];
   const on = (t: EventTarget, ev: string, fn: (e: Event) => void) => { t.addEventListener(ev, fn); offs.push(() => t.removeEventListener(ev, fn)); };
   root.querySelectorAll<HTMLInputElement>("input[name=wvsize]").forEach((r) => on(r, "change", () => { size = r.value as Size; draw(); }));
-  on(styl, "change", draw);
+  on(table, "change", draw);
   on(person, "change", draw);
   on(add, "click", () => file.click());
   on(file, "change", () => { setFile(file.files?.[0]); file.value = ""; });
@@ -191,19 +202,19 @@ export function WallViewer() {
           <label><input type="radio" name="wvsize" value="big" defaultChecked /><span>1800 x 900</span></label>
           <label><input type="radio" name="wvsize" value="small" /><span>1600 x 800</span></label>
         </div>
-        <label className="wv-chk"><input type="checkbox" className="wv-styl" defaultChecked /> Table styling</label>
+        <label className="wv-chk"><input type="checkbox" className="wv-table" defaultChecked /> Show Table</label>
         <label className="wv-chk"><input type="checkbox" className="wv-person" defaultChecked /> 1700mm person</label>
-        <button type="button" className="wv-btn wv-add">Try your own image</button>
         <button type="button" className="wv-btn wv-clear" hidden>Remove image</button>
         <input className="wv-file" type="file" accept="image/*" aria-label="Choose an image of your work" />
       </div>
-      <svg viewBox="-900 -200 5500 3500" role="img" aria-label="Scaled drawing of the wall with the painting at the chosen size" />
+      <div className="wv-canvas">
+        <svg viewBox="-900 -200 5500 3500" role="img" aria-label="Scaled drawing of the wall with the painting at the chosen size" />
+        <button type="button" className="wv-paint" data-filled="false">
+          <span>Try your own artwork</span>
+        </button>
+      </div>
       <p className="wv-cap" />
       <p className="wv-msg" aria-live="polite" />
-      <p className="wv-note">
-        Indicative only. The frame is shown at 40mm and its final style, and the hanging height, will be agreed with the successful
-        artist. Your image is shown on your device only and is never uploaded or stored.
-      </p>
     </section>
   );
 }

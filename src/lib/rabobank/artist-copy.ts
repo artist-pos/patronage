@@ -20,7 +20,8 @@ export const COPY = {
   },
 
   landing: {
-    greeting: (firstName: string) => `Kia ora ${firstName}`,
+    eyebrow: "Rabobank Te Puke · Event Space Artwork",
+    greeting: (firstName: string) => `Kia ora ${firstName},`,
     featuredCredit: P("landing.featuredCredit"),
     siteLink: P("landing.siteLink"),
     briefHeading: P("landing.briefHeading"),
@@ -31,9 +32,26 @@ export const COPY = {
     profileRequired: P("landing.profileRequired"),
     deadline: (date: string) => `${P("landing.deadlinePrefix")} ${date}`,
     status: { not_started: "Not started", saved: "Saved", done: "Done" },
+    stageLabel: (n: number) => `Part ${n}`,
+    startOne: "Start part 1",
+    continueOne: P("landing.continueOne"),
+    editOne: P("landing.editOne"),
+    startTwo: "Start part 2",
+    continueTwo: P("landing.continueTwo"),
+    editTwo: P("landing.editTwo"),
+  },
+
+  /** The question-by-question controls, as in the staff survey. */
+  flow: {
+    next: "Next",
+    back: "Back",
+    skip: "Skip",
+    hint: "or press Enter",
+    stepOf: (part: string, n: number, total: number) => `${part} · ${n} of ${total}`,
   },
 
   partOne: {
+    short: "Part one",
     title: "Part one: Your response to the commission",
     summary:
       "Tell me whether this suits you, how you'd approach it, and what you'd quote. This goes to me and to Mark at Rabobank. About ten minutes.",
@@ -52,9 +70,7 @@ export const COPY = {
         help: "Please quote the 1800 x 900. The 1600 x 800 is optional but helpful.",
         fee1800: "1800 x 900 mm",
         fee1600: "1600 x 800 mm",
-        gst: P("partOne.quote.gstLabel"),
-        gstIncluded: P("partOne.quote.gstIncluded"),
-        gstExcluded: P("partOne.quote.gstExcluded"),
+        gstToggle: "GST included?",
         altSize: "If a different size suits your work better, tell me.",
       },
       framing: {
@@ -107,7 +123,6 @@ export const COPY = {
       required: P("errors.required"),
       fee1800: P("errors.fee1800"),
       amount: P("errors.amount"),
-      gst: P("errors.gst"),
       tooLong: P("errors.tooLong"),
       closed: P("errors.closed"),
     },
@@ -122,6 +137,7 @@ export const COPY = {
   },
 
   partTwo: {
+    short: "Part two",
     title: "Part two: About you",
     summary:
       "A short biography, a photo and a few of your works, so the team at the Te Puke branch can get to know you. You can also choose to keep it as a Patronage profile.",

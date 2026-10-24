@@ -9,26 +9,26 @@ export function ChoiceConfirm({ token, choice }: { token: string; choice: "keep"
   const F = COPY.followup;
 
   if (state === "done") {
-    return <p className="text-lg leading-relaxed" role="status">{choice === "keep" ? COPY.done.keepSent : F.deleted}</p>;
+    return <p className="rb-copy" role="status">{choice === "keep" ? COPY.done.keepSent : F.deleted}</p>;
   }
   return (
-    <div className="space-y-4">
-      <p className="leading-relaxed">{choice === "keep" ? F.confirmKeep : F.confirmDelete}</p>
-      <button
-        type="button"
-        disabled={state === "busy"}
-        className={`inline-flex min-h-12 items-center justify-center rounded-lg px-6 font-medium disabled:opacity-50 ${
-          choice === "keep" ? "bg-black text-white hover:opacity-85" : "border border-red-700 text-red-700 hover:bg-red-50"
-        }`}
-        onClick={async () => {
-          setState("busy");
-          const r = choice === "keep" ? await confirmKeep(token) : await confirmDelete(token);
-          setState(r.ok ? "done" : "error");
-        }}
-      >
-        {choice === "keep" ? F.keepButton : F.deleteButton}
-      </button>
-      {state === "error" && <p className="text-sm text-red-700" role="alert">{COPY.partTwo.errors.upload}</p>}
-    </div>
+    <>
+      <p className="rb-copy">{choice === "keep" ? F.confirmKeep : F.confirmDelete}</p>
+      {state === "error" && <p className="rb-error" role="alert">{COPY.partTwo.errors.upload}</p>}
+      <div className="rb-actions">
+        <button
+          type="button"
+          className="rb-next"
+          disabled={state === "busy"}
+          onClick={async () => {
+            setState("busy");
+            const r = choice === "keep" ? await confirmKeep(token) : await confirmDelete(token);
+            setState(r.ok ? "done" : "error");
+          }}
+        >
+          {state === "busy" ? COPY.saving.saving : choice === "keep" ? F.keepButton : F.deleteButton}
+        </button>
+      </div>
+    </>
   );
 }

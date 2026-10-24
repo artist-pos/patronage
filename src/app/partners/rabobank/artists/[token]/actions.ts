@@ -79,7 +79,7 @@ export async function submitQuote(
 
 const emptyAfterDecline: Partial<QuoteDraft> = {
   questions_text: "", deliver_by: "", deliver_date: "", work_type: "", existing_work_images: [], approach_text: "",
-  fee_1800x900: "", fee_1600x800: "", gst_inclusive: "", alt_size_note: "", framing_option: "", framing_cost: "",
+  fee_1800x900: "", fee_1600x800: "", gst_inclusive: false, alt_size_note: "", framing_option: "", framing_cost: "",
   framing_recommendation: "", install_option: "", install_cost: "", install_recommendation: "", based_in: "",
   lead_time_weeks: "", anything_else: "",
 };

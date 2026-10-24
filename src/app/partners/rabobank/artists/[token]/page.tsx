@@ -42,9 +42,5 @@ export default async function ArtistInvitePage({
   }
 
   const [quote, profile] = await Promise.all([loadQuote(invite.id), loadProfile(invite)]);
-  return (
-    <Shell>
-      <Landing token={token} invite={invite} deadlineAt={settings.artist_deadline_at} open={open} quote={quote} profile={profile} />
-    </Shell>
-  );
+  return <Landing token={token} invite={invite} deadlineAt={settings.artist_deadline_at} open={open} quote={quote} profile={profile} />;
 }

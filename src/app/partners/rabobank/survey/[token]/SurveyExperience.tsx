@@ -35,15 +35,15 @@ type Step = { kind: "intro" } | { kind: "q"; q: Question } | { kind: "name" } | 
 
 /* ---------- small helpers ---------- */
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
-function finePointer(): boolean {
+export function finePointer(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
 }
 
 /** Eases a number toward a target, so the light and the path move rather than jump. */
-function useTween(target: number, ms = 2400): number {
+export function useTween(target: number, ms = 2400): number {
   const [value, setValue] = useState(target);
   const from = useRef(target);
   const current = useRef(target);
@@ -83,7 +83,7 @@ function bezierTo(p: [number, number][], t: number) {
 const TRAIL: [number, number][] = [[0, 78], [260, 8], [560, 122], [1000, 30]];
 
 /** A soft light that warms as you go, and the line that grows with you. */
-function Scene({ p }: { p: number }) {
+export function Scene({ p }: { p: number }) {
   const t = Math.max(0.002, Math.min(1, p));
   const { c1, c2, end } = bezierTo(TRAIL, t);
   const d = `M ${TRAIL[0][0]} ${TRAIL[0][1]} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${end[0]} ${end[1]}`;
@@ -100,7 +100,7 @@ function Scene({ p }: { p: number }) {
   );
 }
 
-function Writing({
+export function Writing({
   id, value, onChange, limit, label, small, onEnter, autoFocus, placeholder,
 }: {
   id: string; value: string; onChange: (v: string) => void; limit: number; label: string;

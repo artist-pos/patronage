@@ -1,35 +1,63 @@
-/* Wall viewer, scoped to .wv and themed through --wv-* (Patronage: Geist, stone, black ink).
-   Light only, like the rest of the site; the dark blue is the wall's real colour. */
+/* Wall viewer, scoped to .wv and themed through --wv-* to match the staff survey:
+   Geist, warm stone, black ink, survey-style pills. Light only, like the rest of the
+   site; the dark blue is the wall's real colour. */
 .wv {
   --wv-bg: #ffffff; --wv-ink: #1c1917; --wv-muted: #78716c; --wv-line: #e7e5e4;
   --wv-wall: #1f3a5f; --wv-top: #f5f5f4; --wv-timber: #b86b25; --wv-art: #e3a35a; --wv-art-line: #7a3f0b;
-  --wv-person: #57534e; --wv-accent: #000;
+  --wv-person: #57534e;
   --wv-font: var(--font-geist-sans), system-ui, sans-serif;
   color-scheme: light;
-  padding: 1rem; background: var(--wv-bg); color: var(--wv-ink);
-  border: 1px solid var(--wv-line); border-radius: 14px; box-sizing: border-box; font-size: 15px; line-height: 1.5;
-  font-family: var(--wv-font);
+  color: var(--wv-ink); font-family: var(--wv-font); font-size: 15px; line-height: 1.5;
 }
 .wv * { box-sizing: border-box; }
-.wv-head { margin: 0 0 12px; }
-.wv-head h3 { margin: 0; font-size: 1.05rem; font-weight: 600; }
-.wv-head p { margin: 4px 0 0; color: var(--wv-muted); font-size: 14px; max-width: 65ch; }
-.wv-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 0 0 12px; }
-.wv-seg { display: flex; }
-.wv-seg label { position: relative; border: 1px solid var(--wv-line); padding: 7px 12px; font-size: 14px; font-weight: 500; cursor: pointer; background: #fafaf9; }
-.wv-seg label:first-child { border-radius: 8px 0 0 8px; }
-.wv-seg label:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.wv-head { margin: 0 0 1.1rem; }
+.wv-head h3 { margin: 0; font-weight: 300; font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2.15rem); line-height: 1.2; letter-spacing: -0.022em; }
+.wv-head p { margin: 0.6rem 0 0; color: #57534e; font-size: 1.02rem; line-height: 1.55; max-width: 36rem; }
+.wv-bar { display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; align-items: center; margin: 0 0 1rem; }
+.wv-seg { display: flex; gap: 0.5rem; }
+.wv-seg label {
+  position: relative; display: block; padding: 0.55rem 1.05rem; font-size: 0.95rem; cursor: pointer;
+  color: #57534e; background: #f5f5f4; border: 1px solid var(--wv-line); border-radius: 18px;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.wv-seg label:hover { background: #e7e5e4; color: var(--wv-ink); }
 .wv-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
-.wv-seg label:has(input:checked) { background: var(--wv-accent); border-color: var(--wv-accent); color: #fff; }
-.wv-seg label:has(input:focus-visible), .wv-btn:focus-visible, .wv-chk input:focus-visible { outline: 3px solid #000faa; outline-offset: 2px; }
-.wv-chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
-.wv-chk input { accent-color: #000; }
-.wv-btn { font: inherit; font-size: 14px; font-weight: 500; border: 1px solid var(--wv-line); background: var(--wv-bg); color: var(--wv-ink); padding: 7px 12px; border-radius: 8px; cursor: pointer; }
-.wv-btn:hover { border-color: #a8a29e; }
+.wv-seg label:has(input:checked) { background: var(--wv-ink); border-color: var(--wv-ink); color: #fff; }
+.wv-seg label:has(input:focus-visible), .wv-btn:focus-visible, .wv-chk input:focus-visible, .wv-paint:focus-visible { outline: 3px solid #000faa; outline-offset: 3px; }
+.wv-chk { display: flex; gap: 0.45rem; align-items: center; font-size: 0.95rem; color: #57534e; cursor: pointer; }
+.wv-chk input { width: 1.05rem; height: 1.05rem; accent-color: #000; }
+.wv-btn { font: inherit; font-size: 0.9rem; border: 0; background: none; color: #78716c; padding: 0.4rem 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #d6d3d1; }
+.wv-btn:hover { color: var(--wv-ink); }
 .wv-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.wv-canvas {
+  position: relative; overflow: hidden; border-radius: 18px; background: var(--wv-bg);
+  box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06);
+}
 .wv svg { display: block; width: 100%; height: auto; }
-.wv-drop svg { outline: 2px dashed var(--wv-timber); outline-offset: -4px; }
-.wv-cap { margin: 10px 0 0; font-size: 14px; }
-.wv-cap strong { font-weight: 600; }
-.wv-note { margin: 6px 0 0; font-size: 13px; color: var(--wv-muted); max-width: 70ch; }
-.wv-msg { margin: 6px 0 0; font-size: 13px; color: var(--wv-timber); min-height: 1.2em; }
+.wv-drop .wv-canvas { box-shadow: 0 0 0 2px var(--wv-timber); }
+
+/* The upload lives on the painting itself. */
+.wv-paint {
+  position: absolute; display: flex; align-items: center; justify-content: center; padding: 0.4rem;
+  border: 0; background: transparent; cursor: pointer; font: inherit; color: var(--wv-art-line);
+}
+.wv-paint span {
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92); color: var(--wv-ink); font-size: clamp(0.72rem, 0.6rem + 0.5vw, 0.95rem); font-weight: 500;
+  box-shadow: 0 6px 18px -8px rgba(28, 25, 23, 0.5); max-width: 100%; text-align: center; line-height: 1.2;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+/* On a phone the painting is small: the label wraps to stay inside it. */
+@media (max-width: 640px) {
+  .wv-paint { padding: 0.2rem; }
+  .wv-paint span { padding: 0.3rem 0.55rem; border-radius: 10px; font-size: 0.68rem; }
+}
+.wv-paint:hover span { transform: translateY(-1px); background: #fff; }
+/* With their image in place, the label only shows on hover or focus, so the work reads clean. */
+.wv-paint[data-filled="true"] span { opacity: 0; transition: opacity 0.2s ease; }
+.wv-paint[data-filled="true"]:hover span, .wv-paint[data-filled="true"]:focus-visible span { opacity: 1; }
+
+.wv-cap { margin: 0.9rem 0 0; font-size: 0.9rem; color: #57534e; }
+.wv-cap strong { font-weight: 500; color: var(--wv-ink); }
+.wv-msg { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--wv-muted); min-height: 1.2em; }

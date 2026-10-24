@@ -1,26 +1,26 @@
 import { COPY } from "@/lib/rabobank/artist-copy";
+import { Scene } from "../../survey/[token]/SurveyExperience";
+import "../../survey/[token]/survey.css";
+import "./artist-flow.css";
 
-/** Page frame for the invited-artist pages: light only, phone first, Patronage mark at the foot. */
+/** Frame for the short artist pages (closed, keep-or-delete): the staff survey's look. */
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-[#fafaf9] text-stone-900 [color-scheme:light]">
-      <main className="mx-auto max-w-2xl space-y-14 px-4 pb-20 pt-10 sm:px-6 sm:pt-16">
-        {children}
-        <footer className="flex items-center gap-2 border-t border-stone-200 pt-6 text-[15px] font-semibold tracking-tight text-black">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Favicon_Bleed_512.png" alt="" width={22} height={22} />
-          Patronage
-        </footer>
-      </main>
+    <div className="rb" data-phase="questions" style={{ ["--p" as string]: 0.5 }}>
+      <Scene p={0.5} />
+      <div className="rb-stage">
+        <div className="rb-col rb-in">{children}</div>
+      </div>
     </div>
   );
 }
 
 export function ClosedNotice() {
   return (
-    <div className="space-y-3" role="status">
-      <h1 className="text-3xl font-light tracking-tight">{COPY.closed.heading}</h1>
-      <p className="leading-relaxed text-stone-600">{COPY.closed.body}</p>
+    <div role="status">
+      <p className="rb-eyebrow">{COPY.landing.eyebrow}</p>
+      <h1 className="rb-title">{COPY.closed.heading}</h1>
+      <p className="rb-copy">{COPY.closed.body}</p>
     </div>
   );
 }
