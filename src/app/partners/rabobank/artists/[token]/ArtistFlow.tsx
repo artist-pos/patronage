@@ -13,7 +13,7 @@ import { formatNzDate } from "@/lib/rabobank/time";
 import { safeUrl } from "@/lib/rabobank/shortlist";
 import type { ArtistInvite, PartStatus } from "@/lib/rabobank/invites";
 import type { ProfileState, QuoteState } from "@/lib/rabobank/artist-data";
-import { MAX_QUESTIONS, QUOTE_LIMITS, numberQuestions, parseAmount, questionLines, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
+import { MAX_QUESTIONS, QUOTE_LIMITS, hasAnyAmount, numberQuestions, parseAmount, questionLines, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
 import { BIO_WORDS, PROFILE_LIMITS, WORKS, wordCount, type ProfileDraft, type ProfileErrors, type WorkDraft } from "@/lib/rabobank/artist-profile";
 import { WallViewer } from "@/components/rabobank/WallViewer";
 import { Scene, Writing, prefersReducedMotion, useTween } from "../../survey/[token]/SurveyExperience";
@@ -23,7 +23,7 @@ import "../../survey/[token]/survey.css";
 import "./artist-flow.css";
 
 type Mode = "home" | "one" | "oneDone" | "two" | "twoDone" | "declined";
-const ONE = ["interested", "deliver", "scale", "approach", "quote", "framing", "install", "leadTime", "anythingElse"] as const;
+const ONE = ["interested", "deliver", "scale", "approach", "quote", "framing", "install", "anythingElse"] as const;
 const TWO = ["photo", "name", "bio", "links", "works", "prompt", "choice", "consent"] as const;
 type OneKey = (typeof ONE)[number];
 type TwoKey = (typeof TWO)[number];
@@ -72,20 +72,17 @@ function Money({ id, value, onChange, label, onEnter }: { id: string; value: str
 /**
  * "Just some thoughts": one of Blake's takes at a time, crossfading every ~8s
  * from a random start. Pauses while the artist is writing (paused) or while the
- * panel is hovered or focused. With reduced motion there is no auto-rotation,
- * only the button. Auto-changes are not announced; manual ones are.
+ * panel is hovered or focused. With reduced motion it holds one thought still.
+ * Changes are not announced to screen readers, so they never interrupt writing.
  */
 function TakesPanel({ takes, paused }: { takes: string[]; paused: boolean }) {
   const [i, setI] = useState(0);
   const [visible, setVisible] = useState(true);
   const [held, setHeld] = useState(false);
-  const [manual, setManual] = useState(false);
-  const step = useCallback((by: number, isManual: boolean) => {
+  const step = useCallback(() => {
     if (takes.length < 2) return;
-    setManual(isManual);
-    if (prefersReducedMotion()) { setI((n) => (n + by) % takes.length); return; }
     setVisible(false);
-    window.setTimeout(() => { setI((n) => (n + by) % takes.length); setVisible(true); }, 450);
+    window.setTimeout(() => { setI((n) => (n + 1) % takes.length); setVisible(true); }, 450);
   }, [takes.length]);
 
   // A random starting thought, chosen after load so the server and browser agree on first paint.
@@ -97,7 +94,7 @@ function TakesPanel({ takes, paused }: { takes: string[]; paused: boolean }) {
 
   useEffect(() => {
     if (paused || held || takes.length < 2 || prefersReducedMotion()) return;
-    const t = window.setInterval(() => step(1, false), 8000);
+    const t = window.setInterval(step, 8000);
     return () => window.clearInterval(t);
   }, [paused, held, step, takes.length]);
 
@@ -112,10 +109,7 @@ function TakesPanel({ takes, paused }: { takes: string[]; paused: boolean }) {
       onBlurCapture={() => setHeld(false)}
     >
       <p className="rb-takes-head">{C1.q.takes.heading}</p>
-      <p className="rb-take" data-visible={visible} aria-live={manual ? "polite" : "off"}>{takes[i % takes.length]}</p>
-      {takes.length > 1 && (
-        <button type="button" className="rb-link" onClick={() => step(1, true)}>{C1.q.takes.next}</button>
-      )}
+      <p className="rb-take" data-visible={visible} aria-live="off">{takes[i % takes.length]}</p>
     </aside>
   );
 }
@@ -252,7 +246,7 @@ export function ArtistFlow({
     if (restored.current) return;
     restored.current = true;
     const backup = readBackup<QuoteDraft>(`rb-quote-${token}`, quote.savedAt);
-    if (backup) requestAnimationFrame(() => setQ({ ...quote.draft, ...backup, gst_inclusive: backup.gst_inclusive === true }));
+    if (backup) requestAnimationFrame(() => setQ({ ...quote.draft, ...backup }));
   }, [token, quote.draft, quote.savedAt]);
 
   const quoteSave = useAutosave(q, `rb-quote-${token}`, (v) => saveQuoteDraft(token, v), open.partOneOpen && mode === "one");
@@ -296,16 +290,15 @@ export function ArtistFlow({
     deliver: q.deliver_by === "yes" || (q.deliver_by === "date" && !!q.deliver_date),
     scale: !!q.scale_experience,
     approach: !!q.approach_text.trim() && q.approach_text.length <= QUOTE_LIMITS.approach,
-    quote: fee1800 !== null && !Number.isNaN(fee1800) && fee1800 > 0 && amountOk(q.fee_1600x800),
+    quote: fee1800 !== null && !Number.isNaN(fee1800) && fee1800 > 0 && amountOk(q.fee_1600x800) && !!q.gst_treatment,
     framing: !!q.framing_option && amountOk(q.framing_cost),
     install: !!q.install_option && amountOk(q.install_cost),
-    leadTime: !!q.lead_time_weeks,
     anythingElse: true,
   };
-  const oneOptional = new Set<OneKey>(["framing", "install", "leadTime", "anythingElse"]);
+  const oneOptional = new Set<OneKey>(["framing", "install", "anythingElse"]);
   const oneField: Partial<Record<keyof QuoteDraft, number>> = {
     interested: 0, questions_text: 0, deliver_by: 1, deliver_date: 1, scale_experience: 2, approach_text: 3, fee_1800x900: 4, fee_1600x800: 4,
-    framing_cost: 5, install_cost: 6, lead_time_weeks: 7,
+    gst_treatment: 4, framing_cost: 5, install_cost: 6,
   };
 
   async function sendPartOne() {
@@ -356,7 +349,7 @@ export function ArtistFlow({
     go("twoDone");
   }
 
-  async function addUpload(kind: "quote_existing" | "photo" | "work", files: FileList | null) {
+  async function addUpload(kind: "photo" | "work", files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
     setError(null);
@@ -369,8 +362,7 @@ export function ArtistFlow({
     } else {
       const r = await uploadImage(token, kind, files[0]);
       if (!r.ok) setError(r.error);
-      else if (kind === "photo") setPf("photo_url", r.data.url);
-      else setQf("existing_work_images", [...q.existing_work_images, r.data.url].slice(0, 2));
+      else setPf("photo_url", r.data.url);
     }
     setUploading(false);
   }
@@ -512,7 +504,6 @@ export function ArtistFlow({
       quote: [Q.quote.label, Q.quote.help],
       framing: [Q.framing.label, Q.framing.help],
       install: [Q.install.label, Q.install.help],
-      leadTime: [Q.leadTime.label, Q.leadTime.help],
       anythingElse: [Q.anythingElse.label, Q.anythingElse.help],
     };
     const [title, help] = titles[key];
@@ -547,27 +538,6 @@ export function ArtistFlow({
         input = (
           <>
             <Pebbles name="scale" label={title} value={q.scale_experience} options={C1.options.scale} onChange={(v) => setQf("scale_experience", v)} />
-            {(
-              <div className="rb-note" style={{ marginTop: "2.2rem" }}>
-                <Sub optional>{Q.existingImages.label}</Sub>
-                <p className="rb-help">{Q.existingImages.help}</p>
-                <div className="rb-thumbs">
-                  {q.existing_work_images.map((url) => (
-                    <div key={url} className="rb-thumb">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" />
-                      <button type="button" className="rb-link" onClick={() => setQf("existing_work_images", q.existing_work_images.filter((u) => u !== url))}>{C2.work.remove}</button>
-                    </div>
-                  ))}
-                </div>
-                {q.existing_work_images.length < 2 && (
-                  <label className="rb-add" aria-disabled={uploading}>
-                    {uploading ? COPY.saving.saving : C2.work.add}
-                    <input type="file" accept={ACCEPT} onChange={(e) => { void addUpload("quote_existing", e.target.files); e.target.value = ""; }} />
-                  </label>
-                )}
-              </div>
-            )}
           </>
         );
         break;
@@ -594,10 +564,13 @@ export function ArtistFlow({
                 <Money id="rb-fee1600" value={q.fee_1600x800} onChange={(v) => setQf("fee_1600x800", v)} label={Q.quote.fee1600} onEnter={enter} />
               </div>
             </div>
-            <label className="rb-check">
-              <input type="checkbox" checked={q.gst_inclusive} onChange={(e) => setQf("gst_inclusive", e.target.checked)} />
-              {Q.quote.gstToggle}
-            </label>
+            {/* Required once any amount is entered. */}
+            {hasAnyAmount(q) && (
+              <div className="rb-note">
+                <Sub>{Q.quote.gst.label}</Sub>
+                <Pebbles name="gst" label={Q.quote.gst.label} value={q.gst_treatment} options={Q.quote.gst.options} onChange={(v) => setQf("gst_treatment", v)} />
+              </div>
+            )}
             <div className="rb-note" style={{ marginTop: "2rem" }}>
               <Sub htmlFor="rb-alt" optional>{Q.quote.altSize}</Sub>
               <Writing id="rb-alt" small value={q.alt_size_note} onChange={(v) => setQf("alt_size_note", v)} limit={QUOTE_LIMITS.altSize} label={Q.quote.altSize} onEnter={enter} />
@@ -638,13 +611,6 @@ export function ArtistFlow({
         );
         break;
       }
-      case "leadTime":
-        input = (
-          <div style={{ maxWidth: "12rem" }}>
-            <Line id="rb-weeks" value={q.lead_time_weeks} onChange={(v) => setQf("lead_time_weeks", v.replace(/[^\d]/g, "").slice(0, 3))} label={title} inputMode="numeric" placeholder="Weeks" onEnter={enter} />
-          </div>
-        );
-        break;
       case "anythingElse":
         input = <Writing id="rb-else" value={q.anything_else} onChange={(v) => setQf("anything_else", v)} limit={QUOTE_LIMITS.anythingElse} label={title} onEnter={enter} autoFocus />;
         break;

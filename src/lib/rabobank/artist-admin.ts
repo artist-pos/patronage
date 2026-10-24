@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSettings, type RabobankSettings } from "@/lib/rabobank/settings";
 import type { ArtistInvite, PartStatus } from "@/lib/rabobank/invites";
-import { exGst } from "@/lib/rabobank/quote";
+import { exGst, gstOf } from "@/lib/rabobank/quote";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- rows come straight from Supabase */
 
@@ -58,7 +58,7 @@ export async function loadArtistAdmin(): Promise<{ rows: AdminArtistRow[]; setti
     const submitted = quote?.status === "submitted";
     const partOne: PartStatus = submitted && !quote?.draft ? "done" : quote ? "saved" : "not_started";
     const partTwo: PartStatus = a?.state && ["complete", "private_only", "kept"].includes(a.state) ? "done" : a ? "saved" : "not_started";
-    const gst = submitted ? quote.gst_inclusive : null;
+    const gst = submitted ? gstOf(quote) : null;
     const big = submitted ? exGst(quote.fee_1800x900 === null ? null : Number(quote.fee_1800x900), gst) : null;
     const small = submitted ? exGst(quote.fee_1600x800 === null ? null : Number(quote.fee_1600x800), gst) : null;
     const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));

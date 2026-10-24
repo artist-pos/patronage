@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { isAdmin } from "@/lib/admin";
 import { loadArtistAdmin } from "@/lib/rabobank/artist-admin";
+import { GST_LABEL, gstOf } from "@/lib/rabobank/quote";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,11 @@ export async function GET() {
       questions: q?.questions_text ?? "",
       deliver_by: q?.deliver_by === "date" ? q.deliver_date ?? "" : q?.deliver_by ?? "",
       scale_experience: q?.scale_experience ?? "",
-      body_of_work_images: (q?.existing_work_images ?? []).join(" "),
       direction_opened_at: i.direction_opened_at ?? "",
       approach: q?.approach_text ?? "",
       fee_1800x900_as_entered: q?.fee_1800x900 ?? "",
       fee_1600x800_as_entered: q?.fee_1600x800 ?? "",
-      gst: q?.gst_inclusive === null || q?.gst_inclusive === undefined ? "" : q.gst_inclusive ? "included" : "excluded",
+      gst: (() => { const t = gstOf(q); return t ? GST_LABEL[t] : ""; })(),
       fee_1800x900_ex_gst: sizes.big.fee ?? "",
       fee_1600x800_ex_gst: sizes.small.fee ?? "",
       framing: q?.framing_option ?? "",
@@ -43,7 +43,6 @@ export async function GET() {
       indicative_total_1800x900: sizes.big.total ?? "",
       indicative_total_1600x800: sizes.small.total ?? "",
       alt_size_note: q?.alt_size_note ?? "",
-      lead_time_weeks: q?.lead_time_weeks ?? "",
       anything_else: q?.anything_else ?? "",
       decline_suggestion: i.decline_suggestion ?? "",
       shortlisted: a?.visible ? "yes" : "",

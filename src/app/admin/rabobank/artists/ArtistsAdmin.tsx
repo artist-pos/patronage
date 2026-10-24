@@ -238,18 +238,18 @@ type QuoteRowView = {
   gst: string;
   framing: string | null;
   install: string | null;
-  leadTime: number | null;
+  ready: { label: string; sort: string };
   workType: string | null;
   big: SizeCost;
   small: SizeCost;
 };
-type SortKey = "name" | "bigFee" | "bigTotal" | "smallFee" | "smallTotal" | "leadTime";
+type SortKey = "name" | "bigFee" | "bigTotal" | "smallFee" | "smallTotal" | "ready";
 const WHO: Record<string, string> = { self: "Artist", other: "Patronage", unsure: "Not sure" };
 
 export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "bigTotal", dir: 1 });
   const value = (r: QuoteRowView, k: SortKey): number | string | null =>
-    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "bigTotal" ? r.big.total : k === "smallFee" ? r.small.fee : k === "smallTotal" ? r.small.total : r.leadTime;
+    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "bigTotal" ? r.big.total : k === "smallFee" ? r.small.fee : k === "smallTotal" ? r.small.total : r.ready.sort;
   const sorted = useMemo(
     () =>
       [...rows].sort((a, b) => {
@@ -281,7 +281,7 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
             {th("smallFee", "1600 fee", true)}
             {th("smallTotal", "1600 total", true)}
             <th className="px-3 py-2 text-left font-medium">Frame / install</th>
-            {th("leadTime", "Weeks", true)}
+            {th("ready", "Ready by", true)}
           </tr>
         </thead>
         <tbody>
@@ -304,7 +304,7 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
               <td className="px-3 py-2.5 text-xs text-stone-600">
                 {WHO[r.framing ?? ""] ?? "–"} / {WHO[r.install ?? ""] ?? "–"}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{r.leadTime ?? "–"}</td>
+              <td className="px-3 py-2.5 text-right">{r.ready.label}</td>
             </tr>
           ))}
         </tbody>

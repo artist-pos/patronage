@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { GST_LABEL, gstOf } from "@/lib/rabobank/quote";
 
 export const REACTIONS = [
   { key: "speaks", label: "Speaks to me" },
@@ -80,13 +81,14 @@ export async function getStaffQuoteLines(artists: ArtistCard[]): Promise<Record<
   if (!byInvite.size) return {};
   const { data } = await createAdminClient()
     .from("rabobank_quote")
-    .select("invite_id, fee_1800x900, fee_1600x800, gst_inclusive")
+    .select("invite_id, fee_1800x900, fee_1600x800, gst_inclusive, gst_treatment")
     .eq("status", "submitted")
     .in("invite_id", [...byInvite.keys()]);
   const money = (n: unknown) => "$" + Number(n).toLocaleString("en-NZ", { maximumFractionDigits: 2 });
   const out: Record<string, string> = {};
   for (const q of data ?? []) {
-    const gst = q.gst_inclusive ? "incl. GST" : "excl. GST";
+    const treatment = gstOf(q);
+    const gst = treatment ? GST_LABEL[treatment] : "GST not stated";
     const parts = [
       q.fee_1800x900 !== null && `1800 x 900: ${money(q.fee_1800x900)}`,
       q.fee_1600x800 !== null && `1600 x 800: ${money(q.fee_1600x800)}`,

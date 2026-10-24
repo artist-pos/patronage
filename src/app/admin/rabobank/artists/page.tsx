@@ -6,6 +6,7 @@ import { formatNz, utcToNzLocalInput } from "@/lib/rabobank/time";
 import { inviteLink } from "@/lib/rabobank/invites";
 import { RETENTION_DAYS } from "@/lib/rabobank/retention";
 import { TAKE_REMINDER, getTakes } from "@/lib/rabobank/takes";
+import { GST_LABEL, gstOf, readyBy } from "@/lib/rabobank/quote";
 import { addTake, adminDeleteProfile, deleteInvite, deleteTake, markInvited, moveTake, saveNotes, toggleTake, updateTake } from "./actions";
 import { CloseSelection, ConfirmButton, CopyLinks, DirectionUpload, InviteForm, QuoteTable, SettingsForm, ShortlistToggle, TakeEditor } from "./ArtistsAdmin";
 
@@ -154,10 +155,10 @@ export default async function RabobankArtistsAdmin() {
               rows={quoted.map((r) => ({
                 id: r.invite.id,
                 name: r.invite.full_name ?? r.invite.first_name,
-                gst: r.quote.gst_inclusive === null ? "" : r.quote.gst_inclusive ? "entered incl. GST" : "entered excl. GST",
+                gst: (() => { const t = gstOf(r.quote); return t ? `entered ${GST_LABEL[t]}` : ""; })(),
                 framing: r.quote.framing_option,
                 install: r.quote.install_option,
-                leadTime: r.quote.lead_time_weeks,
+                ready: readyBy(r.quote),
                 workType: ({ often: "made this scale often", some: "made this scale once or twice", largest: "would be their largest" } as Record<string, string>)[r.quote.scale_experience] ?? null,
                 big: r.sizes.big,
                 small: r.sizes.small,

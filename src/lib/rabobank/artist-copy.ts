@@ -86,21 +86,24 @@ Once your response has been received, the team at the Te Puke branch will have a
         label: "Have you made work at this scale before?",
         help: "There is no wrong answer. It helps me understand the handling and delivery involved, and Rabobank will want to know.",
       },
-      existingImages: {
-        label: "Is there a body of your work this would grow out of?",
-        help: "Optional. Add up to two images of work that points toward what you would make. They show the likely look, and they are not a proposal of an existing piece.",
-      },
       approach: {
         label: "Your approach",
         help: "Having read the creative direction, how would you respond to the space? A few sentences on the idea, the medium, and roughly how it would look.",
       },
-      takes: { heading: "Just some thoughts", next: "Another thought" },
+      takes: { heading: "Just some thoughts" },
       quote: {
         label: "Your quote, excluding framing and installation",
         help: "Please quote the 1800 x 900. The 1600 x 800 is optional but helpful.",
         fee1800: "1800 x 900 mm",
         fee1600: "1600 x 800 mm",
-        gstToggle: "GST included?",
+        gst: {
+          label: "These amounts are",
+          options: [
+            ["plus", "Plus GST"],
+            ["incl", "Including GST"],
+            ["none", "I am not GST registered, so no GST applies"],
+          ],
+        },
         altSize: "If a different size suits your work better, tell me.",
       },
       framing: {
@@ -115,10 +118,6 @@ Once your response has been received, the team at the Te Puke branch will have a
         cost: "Indicative cost, if you know it",
         recommendation: "Anyone you would recommend?",
         basedIn: "Where you are based",
-      },
-      leadTime: {
-        label: "How many weeks do you need from appointment to a finished work?",
-        help: "From the day you are appointed to a finished work. A rough number is fine.",
       },
       anythingElse: {
         label: "Anything else that affects price or timing",
@@ -159,6 +158,7 @@ Once your response has been received, the team at the Te Puke branch will have a
       required: "Please answer this question to continue.",
       fee1800: "Please enter your quote for the 1800 x 900, or choose No thanks if this is not for you.",
       amount: "Please enter an amount in dollars, using numbers only.",
+      gst: "Please tell me how GST applies to these amounts.",
       tooLong: "That is a little over the limit. Please shorten it to continue.",
       closed: "This page has closed for responses. If you need more time, please email me.",
     },

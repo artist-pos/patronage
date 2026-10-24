@@ -7,6 +7,11 @@
 alter table public.rabobank_quote
   add column if not exists scale_experience text check (scale_experience in ('often', 'some', 'largest'));
 
+-- "These amounts are": plus GST, including GST, or not GST registered. Replaces
+-- the yes/no toggle; gst_inclusive (216) is still written, true only for 'incl'.
+alter table public.rabobank_quote
+  add column if not exists gst_treatment text check (gst_treatment in ('plus', 'incl', 'none'));
+
 -- When the artist first opened the creative direction PDF, for the admin list.
 alter table public.rabobank_artist_invite
   add column if not exists direction_opened_at timestamptz;

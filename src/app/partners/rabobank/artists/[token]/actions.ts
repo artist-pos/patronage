@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/rabobank/settings";
 import { getInviteByToken, touch, windowsFor, type ArtistInvite } from "@/lib/rabobank/invites";
 import { ensureArtist } from "@/lib/rabobank/artist-data";
-import { QUOTE_LIMITS, quoteToRow, validateQuote, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
+import { EMPTY_QUOTE, QUOTE_LIMITS, quoteToRow, validateQuote, type QuoteDraft, type QuoteErrors } from "@/lib/rabobank/quote";
 import {
   PROFILE_LIMITS,
   cleanHandle,
@@ -65,7 +65,7 @@ export async function submitQuote(
 
   const declined = draft.interested === "no";
   // A decline keeps only the answer; nothing else from the form is stored.
-  const row = declined ? { ...quoteToRow({ ...draft, ...emptyAfterDecline }), interested: "no" as const } : quoteToRow(draft);
+  const row = declined ? quoteToRow({ ...EMPTY_QUOTE, interested: "no" }) : quoteToRow(draft);
   const now = new Date().toISOString();
   const admin = createAdminClient();
   const { error } = await admin
@@ -76,13 +76,6 @@ export async function submitQuote(
   await touch(got.invite.id, declined ? { declined_at: now, part_one_submitted_at: now } : { part_one_submitted_at: now, declined_at: null });
   return { ok: true, declined };
 }
-
-const emptyAfterDecline: Partial<QuoteDraft> = {
-  questions_text: "", deliver_by: "", deliver_date: "", scale_experience: "", existing_work_images: [], approach_text: "",
-  fee_1800x900: "", fee_1600x800: "", gst_inclusive: false, alt_size_note: "", framing_option: "", framing_cost: "",
-  framing_recommendation: "", install_option: "", install_cost: "", install_recommendation: "", based_in: "",
-  lead_time_weeks: "", anything_else: "",
-};
 
 export async function saveDeclineSuggestion(token: string, text: string): Promise<Result> {
   const invite = await getInviteByToken(token);

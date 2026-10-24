@@ -14,21 +14,23 @@ export const GST_RATE = 0.15;
 
 export type Interested = "yes" | "yes_with_questions" | "no";
 export type Who = "self" | "other" | "unsure";
+/** "These amounts are": plus GST, including GST, or not GST registered. */
+export type GstTreatment = "plus" | "incl" | "none";
 
 /** What the form holds. Amounts stay as typed strings until saved. */
 export interface QuoteDraft {
   interested: Interested | "";
   questions_text: string;
+  /** Q2: "Can you complete the work by early to mid January?" yes, or a date. */
   deliver_by: "yes" | "date" | "";
   deliver_date: string;
   /** Q3: "Have you made work at this scale before?" */
   scale_experience: "often" | "some" | "largest" | "";
-  existing_work_images: string[];
   approach_text: string;
   fee_1800x900: string;
   fee_1600x800: string;
-  /** The "GST included?" toggle. Unticked means the fees exclude GST. */
-  gst_inclusive: boolean;
+  /** Required once any amount is entered. */
+  gst_treatment: GstTreatment | "";
   alt_size_note: string;
   framing_option: Who | "";
   framing_cost: string;
@@ -37,16 +39,14 @@ export interface QuoteDraft {
   install_cost: string;
   install_recommendation: string;
   based_in: string;
-  lead_time_weeks: string;
   anything_else: string;
 }
 
 export const EMPTY_QUOTE: QuoteDraft = {
   interested: "", questions_text: "", deliver_by: "", deliver_date: "", scale_experience: "",
-  existing_work_images: [], approach_text: "", fee_1800x900: "", fee_1600x800: "",
-  gst_inclusive: false, alt_size_note: "", framing_option: "", framing_cost: "",
-  framing_recommendation: "", install_option: "", install_cost: "", install_recommendation: "",
-  based_in: "", lead_time_weeks: "", anything_else: "",
+  approach_text: "", fee_1800x900: "", fee_1600x800: "", gst_treatment: "", alt_size_note: "",
+  framing_option: "", framing_cost: "", framing_recommendation: "", install_option: "", install_cost: "",
+  install_recommendation: "", based_in: "", anything_else: "",
 };
 
 /**
@@ -70,11 +70,15 @@ export function parseAmount(raw: string): number | null {
   return Number(s);
 }
 
+/** Any amount typed anywhere in the quote, which is when GST needs an answer. */
+export const hasAnyAmount = (q: QuoteDraft) =>
+  [q.fee_1800x900, q.fee_1600x800, q.framing_cost, q.install_cost].some((s) => s.trim() !== "");
+
 export type QuoteErrors = Partial<Record<keyof QuoteDraft, string>>;
 
 /**
  * Errors for a submit. Codes, not words, so copy stays in artist-copy.ts:
- * required, fee1800, amount, tooLong.
+ * required, fee1800, amount, gst, tooLong.
  */
 export function validateQuote(q: QuoteDraft): QuoteErrors {
   const e: QuoteErrors = {};
@@ -93,17 +97,14 @@ export function validateQuote(q: QuoteDraft): QuoteErrors {
   if (big === null) e.fee_1800x900 = "fee1800";
   else if (Number.isNaN(big) || big <= 0) e.fee_1800x900 = "amount";
   if (small !== null && (Number.isNaN(small) || small <= 0)) e.fee_1600x800 = "amount";
+  if (hasAnyAmount(q) && !q.gst_treatment) e.gst_treatment = "gst";
 
   for (const k of ["framing_cost", "install_cost"] as const) {
     const v = parseAmount(q[k]);
     if (v !== null && (Number.isNaN(v) || v < 0)) e[k] = "amount";
   }
-  if (q.lead_time_weeks && !/^\d{1,3}$/.test(q.lead_time_weeks.trim())) e.lead_time_weeks = "amount";
   return e;
 }
-
-/** GST only means something once a fee is entered. */
-const big1800OrSmall = (q: QuoteDraft) => !!(q.fee_1800x900.trim() || q.fee_1600x800.trim());
 
 /** Converts a draft to the database row. Invalid numbers become null so a draft always saves. */
 export function quoteToRow(q: QuoteDraft) {
@@ -116,18 +117,19 @@ export function quoteToRow(q: QuoteDraft) {
     return v === null || Number.isNaN(v) || v < 0 ? null : v;
   };
   const text = (s: string, max: number) => s.trim().slice(0, max) || null;
-  const weeks = Number.parseInt(q.lead_time_weeks, 10);
+  const gst = hasAnyAmount(q) && q.gst_treatment ? q.gst_treatment : null;
   return {
     interested: q.interested || null,
     questions_text: text(q.questions_text, QUOTE_LIMITS.questions),
     deliver_by: q.deliver_by || null,
     deliver_date: q.deliver_by === "date" && /^\d{4}-\d{2}-\d{2}$/.test(q.deliver_date) ? q.deliver_date : null,
     scale_experience: q.scale_experience || null,
-    existing_work_images: q.existing_work_images.slice(0, 2),
     approach_text: text(q.approach_text, 700),
     fee_1800x900: num(q.fee_1800x900),
     fee_1600x800: num(q.fee_1600x800),
-    gst_inclusive: big1800OrSmall(q) ? q.gst_inclusive === true : null,
+    gst_treatment: gst,
+    // Kept in step for anything reading the older column: true only when the amounts include GST.
+    gst_inclusive: gst === null ? null : gst === "incl",
     alt_size_note: text(q.alt_size_note, QUOTE_LIMITS.altSize),
     framing_option: q.framing_option || null,
     framing_cost: cost(q.framing_cost),
@@ -136,7 +138,6 @@ export function quoteToRow(q: QuoteDraft) {
     install_cost: cost(q.install_cost),
     install_recommendation: text(q.install_recommendation, QUOTE_LIMITS.recommendation),
     based_in: text(q.based_in, QUOTE_LIMITS.basedIn),
-    lead_time_weeks: Number.isFinite(weeks) && weeks >= 0 && weeks <= 104 ? weeks : null,
     anything_else: text(q.anything_else, QUOTE_LIMITS.anythingElse),
   };
 }
@@ -152,11 +153,10 @@ export function rowToQuote(r: Partial<QuoteRow> | null | undefined): QuoteDraft 
     deliver_by: (r.deliver_by as "yes" | "date") ?? "",
     deliver_date: s(r.deliver_date),
     scale_experience: (r.scale_experience as QuoteDraft["scale_experience"]) ?? "",
-    existing_work_images: r.existing_work_images ?? [],
     approach_text: s(r.approach_text),
     fee_1800x900: s(r.fee_1800x900),
     fee_1600x800: s(r.fee_1600x800),
-    gst_inclusive: r.gst_inclusive === true,
+    gst_treatment: (r.gst_treatment as GstTreatment) ?? "",
     alt_size_note: s(r.alt_size_note),
     framing_option: (r.framing_option as Who) ?? "",
     framing_cost: s(r.framing_cost),
@@ -165,13 +165,36 @@ export function rowToQuote(r: Partial<QuoteRow> | null | undefined): QuoteDraft 
     install_cost: s(r.install_cost),
     install_recommendation: s(r.install_recommendation),
     based_in: s(r.based_in),
-    lead_time_weeks: s(r.lead_time_weeks),
     anything_else: s(r.anything_else),
   };
 }
 
-/** A fee as excluding GST, for comparing like with like. */
-export function exGst(amount: number | null, gstInclusive: boolean | null): number | null {
+/** A fee as excluding GST, for comparing like with like. Only "including GST" amounts change. */
+export function exGst(amount: number | null, treatment: string | null): number | null {
   if (amount === null) return null;
-  return gstInclusive ? Math.round((amount / (1 + GST_RATE)) * 100) / 100 : amount;
+  return treatment === "incl" ? Math.round((amount / (1 + GST_RATE)) * 100) / 100 : amount;
 }
+
+/** The GST answer on a saved row, falling back to the older yes/no column. */
+export function gstOf(row: { gst_treatment?: string | null; gst_inclusive?: boolean | null } | null | undefined): GstTreatment | null {
+  if (!row) return null;
+  if (row.gst_treatment === "plus" || row.gst_treatment === "incl" || row.gst_treatment === "none") return row.gst_treatment;
+  return row.gst_inclusive === true ? "incl" : row.gst_inclusive === false ? "plus" : null;
+}
+
+/** "Ready by" for the admin: January (the target), or the date they gave. */
+export function readyBy(row: { deliver_by?: string | null; deliver_date?: string | null } | null | undefined): { label: string; sort: string } {
+  if (!row?.deliver_by) return { label: "–", sort: "9" };
+  if (row.deliver_by === "yes") return { label: "January", sort: "0" };
+  const d = row.deliver_date ? new Date(`${row.deliver_date}T00:00:00Z`) : null;
+  return d
+    ? { label: d.toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }), sort: row.deliver_date! }
+    : { label: "Later, no date", sort: "8" };
+}
+
+/** How the admin and staff label the amounts. */
+export const GST_LABEL: Record<GstTreatment, string> = {
+  plus: "plus GST",
+  incl: "incl. GST",
+  none: "not GST registered",
+};
