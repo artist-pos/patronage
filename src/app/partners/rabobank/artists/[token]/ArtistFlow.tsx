@@ -344,6 +344,7 @@ export function ArtistFlow({
   async function sendPartTwo() {
     setSending(true);
     setError(null);
+    prepareKiwiConfetti();
     const r = preview
       ? await new Promise<{ ok: true; keepSent: boolean }>((done) => window.setTimeout(() => done({ ok: true, keepSent: p.visibility_choice === "keep" }), 400))
       : await submitProfile(token, p, works, email);
@@ -357,6 +358,7 @@ export function ArtistFlow({
     try { localStorage.removeItem(`rb-profile-${token}`); } catch { /* fine */ }
     setKeepSent(r.keepSent);
     setStatus((s) => ({ ...s, two: "done" }));
+    setBurst((n) => n + 1);
     go("twoDone");
   }
 
@@ -399,7 +401,7 @@ export function ArtistFlow({
     <>
       {error && <p className="rb-error" role="alert">{error}</p>}
       <div className="rb-actions">
-        <button type="button" className="rb-next" disabled={sending || (!canNext && !(last && optional))} onClick={onNext}>
+        <button type="button" className="rb-next" disabled={sending || (!canNext && !optional)} onClick={onNext}>
           {sending ? COPY.saving.saving : last ? (mode === "one" ? C1.submit : C2.submit) : COPY.flow.next}
           <span className="rb-arrow" aria-hidden="true" />
         </button>
@@ -407,12 +409,6 @@ export function ArtistFlow({
         <span className="rb-quiet">
           <SaveText s={save} />
           <button type="button" className="rb-link" onClick={onBack}>{COPY.flow.back}</button>
-          {optional && !last && (
-            <>
-              <span aria-hidden="true">·</span>
-              <button type="button" className="rb-link" onClick={onNext}>{COPY.flow.skip}</button>
-            </>
-          )}
         </span>
       </div>
     </>
@@ -517,7 +513,7 @@ export function ArtistFlow({
       if (!oneCanNext[key] && !oneOptional.has(key)) return;
       go("one", idx + 1);
     };
-    const enter = () => { if (oneCanNext[key] || last) next(); };
+    const enter = () => { if (oneCanNext[key] || oneOptional.has(key) || last) next(); };
     const back = () => (idx === 0 ? go("home") : go("one", idx - 1));
     const Q = C1.q;
     const titles: Record<OneKey, [string, string | undefined]> = {
@@ -657,7 +653,7 @@ export function ArtistFlow({
       if (!twoCanNext[key] && !twoOptional.has(key)) return;
       go("two", idx + 1);
     };
-    const enter = () => { if (twoCanNext[key]) next(); };
+    const enter = () => { if (twoCanNext[key] || twoOptional.has(key)) next(); };
     const back = () => (idx === 0 ? go("home") : go("two", idx - 1));
     const Q = C2.q;
     const titles: Record<TwoKey, [string, string | undefined]> = {
