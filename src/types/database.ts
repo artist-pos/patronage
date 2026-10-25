@@ -179,6 +179,11 @@ export interface Opportunity {
   // Claim tokens (migration 059 / 067)
   claim_token: string | null;
   claim_email: string | null;
+  /** Migration 222: who to address claim outreach to, and how the org takes applications today. */
+  claim_contact_name?: string | null;
+  claim_current_tool?: string | null;
+  /** Migration 222: where the listing came from — decides Scraper Queue vs Submissions. */
+  origin?: 'scraper' | 'submission' | 'admin';
   claim_token_expires_at: string | null;
   // Claim invite tracking (migration 090)
   claim_invite_sent_at: string | null;
@@ -401,6 +406,10 @@ export interface Profile {
   received_grants: string[];
   marketing_subscription: boolean | null;
   weekly_digest: boolean | null;
+  /** Migration 218: email me before opportunities I saved close. Defaults on. */
+  deadline_reminders?: boolean;
+  /** Migration 220: weekly "your profile was viewed N times" email. Defaults on. */
+  profile_view_emails?: boolean;
   /** Secret in the digest footer link, so a signed-out account holder can
    *  unsubscribe (migration 185). Since 185 weekly_digest above is the only
    *  record of the subscription; the subscribers table holds addresses with
