@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import { loadArtistAdmin } from "@/lib/rabobank/artist-admin";
 import { formatNz, utcToNzLocalInput } from "@/lib/rabobank/time";
 import { inviteLink } from "@/lib/rabobank/invites";
@@ -60,6 +60,14 @@ export default async function RabobankArtistsAdmin() {
                       <div className="space-y-5 border-t border-border bg-stone-50/60 px-5 py-5">
                         <div className="flex flex-wrap items-center gap-3">
                           <CopyLinks email={inviteLink(r.invite.token, "email")} instagram={inviteLink(r.invite.token, "instagram")} />
+                          <a
+                            href={`/partners/rabobank/preview/artist/${r.invite.id}`}
+                            target="_blank"
+                            rel="noopener"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium hover:border-stone-400"
+                          >
+                            <Eye className="size-3.5" /> Preview as {r.invite.first_name}
+                          </a>
                           {!r.invite.invited_at && (
                             <form action={markInvited}>
                               <input type="hidden" name="id" value={r.invite.id} />

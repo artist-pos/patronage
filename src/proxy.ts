@@ -27,10 +27,13 @@ export async function proxy(request: NextRequest) {
   // analytics and indexing. They never touch Supabase auth here, and the root
   // layout reads x-rabobank-bare to render without Header, PostHog or Vercel
   // scripts. The admin screens live under /admin/rabobank and are not affected.
-  // The one exception is the admin survey preview: it renders bare too, but it
-  // has to check who's signed in, so it goes through the normal session refresh.
+  // The exceptions are the admin previews (the survey, and each artist's invite):
+  // they render bare too, but have to check who's signed in, so they go through
+  // the normal session refresh.
   const bare = request.nextUrl.pathname.startsWith("/partners/rabobank");
-  const bareWithSession = request.nextUrl.pathname === "/partners/rabobank/preview";
+  const bareWithSession =
+    request.nextUrl.pathname === "/partners/rabobank/preview" ||
+    request.nextUrl.pathname.startsWith("/partners/rabobank/preview/");
   const next = () => {
     if (!bare) return NextResponse.next({ request });
     const headers = new Headers(request.headers);

@@ -9,6 +9,22 @@ export const runtime = "nodejs";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
+/** The current PDF, for admins (the artist preview links here so no artist's open is recorded). */
+export async function GET() {
+  if (!(await isAdmin())) return new NextResponse("Not found", { status: 404 });
+  const path = (await getSettings()).direction_pdf_path;
+  if (!path) return new NextResponse("No PDF uploaded yet.", { status: 404 });
+  const { data, error } = await createAdminClient().storage.from("rabobank-private").download(path);
+  if (error || !data) return new NextResponse("Not available", { status: 503 });
+  return new NextResponse(await data.arrayBuffer(), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'inline; filename="creative-direction.pdf"',
+      "Cache-Control": "private, no-store",
+    },
+  });
+}
+
 /** Replaces the creative direction PDF in the private bucket. */
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Not authorised." }, { status: 401 });

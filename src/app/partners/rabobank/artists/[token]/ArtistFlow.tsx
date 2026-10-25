@@ -471,7 +471,7 @@ export function ArtistFlow({
           {deadlineAt && <p className="rb-deadline">{COPY.landing.deadline(formatNzDate(deadlineAt))}</p>}
           {hasDirection && (
             <div className="rb-direction">
-              <a className="rb-work" href={`/partners/rabobank/artists/${token}/direction`} target="_blank" rel="noopener">
+              <a className="rb-work" href={preview ? "/admin/rabobank/artists/direction" : `/partners/rabobank/artists/${token}/direction`} target="_blank" rel="noopener">
                 {COPY.landing.directionButton} <span className="rb-arrow" aria-hidden="true" />
               </a>
             </div>
