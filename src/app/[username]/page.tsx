@@ -7,7 +7,10 @@ import { isProfileComplete } from "@/lib/profile-completion";
 import { getArtistUpdates } from "@/lib/feed";
 import { isFollowing } from "@/lib/follows";
 import { getArtistProjects } from "@/lib/projects";
-import { Globe, Instagram } from "lucide-react";
+import { ChevronDown, Globe, Instagram } from "lucide-react";
+import { RichText } from "@/components/ui/RichText";
+import { ReadMore } from "@/components/ui/ReadMore";
+import { stripRichText } from "@/lib/rich-text";
 import { MessageButton } from "@/components/profile/MessageButton";
 import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
@@ -99,10 +102,11 @@ export async function generateMetadata({ params }: Props) {
   // Bio truncated to 155 chars; fallback builds a keyword-rich sentence from
   // available data. An organisation gets its own fallback — "portfolio... CV"
   // describes an artist, not a funding body or gallery.
-  const description = profile.bio
-    ? profile.bio.length > 155
-      ? profile.bio.slice(0, 152) + "…"
-      : profile.bio
+  const plainBio = profile.bio ? stripRichText(profile.bio) : "";
+  const description = plainBio
+    ? plainBio.length > 155
+      ? plainBio.slice(0, 152) + "…"
+      : plainBio
     : isOrgMeta
       ? `${displayName} on Patronage — arts organisation${profile.country ? ` in ${profile.country}` : ""}. Browse the artists and opportunities connected to them.`
       : disciplineStr && profile.country
@@ -773,7 +777,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         ...(!maskPatron && profile.avatar_url && {
           [isOrgProfile ? "logo" : "image"]: profile.avatar_url,
         }),
-        ...(!maskPatron && profile.bio && { description: profile.bio }),
+        ...(!maskPatron && profile.bio && { description: stripRichText(profile.bio) }),
         ...(!maskPatron && !isOrgProfile && jsonLdDisciplines.length > 0 && {
           jobTitle: jsonLdDisciplines.join(", "),
           knowsAbout: jsonLdDisciplines,
@@ -802,7 +806,13 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProfileViewLogger profileId={profile.id} username={profile.username} isOwner={isOwner} />
+      <ProfileViewLogger
+        profileId={profile.id}
+        username={profile.username}
+        isOwner={isOwner}
+        role={profile.role}
+        unclaimed={profile.account_status === "shadow"}
+      />
 
       {/* ══ v2 Artist header — full-bleed cover with overlaid name,
              action bar, bio + selected press. No tabs, no avatar block. ══ */}
@@ -1072,9 +1082,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       </p>
                     )}
                     {profile.bio && (
-                      <p className="max-w-[62ch] whitespace-pre-wrap text-[17px] leading-[1.72] text-[color:var(--fg-muted)]">
-                        {profile.bio}
-                      </p>
+                      <ReadMore
+                        lines={8}
+                        className="max-w-[62ch] whitespace-pre-wrap text-[17px] leading-[1.72] text-[color:var(--fg-muted)]"
+                      >
+                        <RichText text={profile.bio} />
+                      </ReadMore>
                     )}
                     {publicAvailableWorks.length > 0 && (
                       <p className="mt-4">
@@ -1158,8 +1171,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           isOwner={isOwner}
           canMessage={canMessageProfile}
           messageHint={user && viewerIsArtist && !profile.is_minor && !canMessageProfile
-            ? `Message ${displayName} once they follow you — share your profile link to connect.`
+            ? `You can message ${displayName} once you've saved or applied to one of their opportunities.`
             : undefined}
+          isAuthenticated={!!user}
           verified={!!(profile.bio && profile.avatar_url) && profile.account_status !== "shadow"}
           unclaimed={profile.account_status === "shadow"}
           activeOpps={profileOpportunities}
@@ -1243,9 +1257,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       Currently accepting commissions
                     </p>
                     {profile.commission_info && (
-                      <p className="text-sm leading-relaxed text-[color:var(--fg-muted)]">
-                        {profile.commission_info}
-                      </p>
+                      <details className="group">
+                        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                          Commission details
+                          <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                        </summary>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--fg-muted)]">
+                          <RichText text={profile.commission_info} />
+                        </p>
+                      </details>
                     )}
                     {!isOwner && !profile.is_minor && <MessageButton otherUserId={profile.id} label="Enquire" variant="solid" />}
                     {isOwner && (

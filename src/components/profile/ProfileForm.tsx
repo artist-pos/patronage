@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SaveConfirmation } from "@/components/ui/SaveConfirmation";
+import { RichTextArea } from "@/components/ui/RichTextArea";
 import { MediumInput } from "./MediumInput";
 import { DisciplineInput } from "./DisciplineInput";
 import { LocationPicker } from "./LocationPicker";
@@ -87,14 +88,12 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
 
       <div className="space-y-2">
         <Label htmlFor="bio">Artist statement</Label>
-        <textarea
+        <RichTextArea
           id="bio"
           name="bio"
           defaultValue={profile?.bio ?? ""}
           rows={4}
           placeholder={isArtist ? "A short description of your practice…" : "Describe your mission or interest in supporting the arts…"}
-          className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
-          onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
         />
       </div>
 
@@ -249,14 +248,12 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
             <Label htmlFor="commission_info">
               Commission details <span className="text-xs text-muted-foreground font-normal">(optional)</span>
             </Label>
-            <textarea
+            <RichTextArea
               id="commission_info"
               name="commission_info"
               defaultValue={profile?.commission_info ?? ""}
               rows={3}
               placeholder="What you take commissions for, typical lead time, price guidance…"
-              className="w-full border border-black bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none resize-none overflow-hidden"
-              onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
             />
           </div>
         </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Globe, Instagram } from "lucide-react";
 import { MessageButton } from "@/components/profile/MessageButton";
+import { PartnerEnquireButton, PartnerClaimPrompt } from "@/components/profile/PartnerEnquireButton";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
@@ -154,6 +155,7 @@ interface PartnerProps {
   /** An admin-made profile nobody has claimed yet. It has not partnered with
    *  Patronage, so anything that says it has is left off. */
   unclaimed?: boolean;
+  isAuthenticated?: boolean;
   activeOpps: Opportunity[];
   pastOpps: PastOpportunityRow[];
   commissionedArtists: ArtistTileData[];
@@ -174,7 +176,7 @@ interface PartnerProps {
 
 export function PartnerProfileView({
   profile, displayName, isOwner, canMessage, messageHint, verified, unclaimed = false,
-  activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
+  isAuthenticated = false, activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
   regionLink, regionArtists = [],
 }: PartnerProps) {
   const cover = profile.featured_image_url
@@ -262,6 +264,15 @@ export function PartnerProfileView({
                 {profile.bio}
               </p>
             )}
+            {unclaimed && !isOwner && (
+              <div className="mb-2.5">
+                <PartnerClaimPrompt
+                  profileId={profile.id}
+                  username={profile.username}
+                  displayName={displayName}
+                />
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3.5">
               {loc && (
                 <span className="font-mono text-xs text-[color:var(--fg-subtle)]">{loc}</span>
@@ -281,10 +292,15 @@ export function PartnerProfileView({
                 Edit Profile
               </Link>
             )}
-            {canMessage && !regionLink && (
-              <MessageButton otherUserId={profile.id} label="Enquire about a programme" variant="solid" />
+            {!isOwner && !regionLink && (unclaimed || canMessage || !isAuthenticated) && (
+              <PartnerEnquireButton
+                profileId={profile.id}
+                username={profile.username}
+                displayName={displayName}
+                mode={unclaimed ? "unclaimed" : canMessage ? "member" : "signed_out"}
+              />
             )}
-            {!canMessage && messageHint && !regionLink && (
+            {!unclaimed && !canMessage && isAuthenticated && messageHint && !regionLink && (
               <span className="text-xs text-muted-foreground max-w-[220px] leading-snug">
                 {messageHint}
               </span>
@@ -373,12 +389,13 @@ export function PartnerProfileView({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="mb-1 truncate text-base font-medium">{opp.title}</p>
+                      <p className="mb-1 line-clamp-3 text-base font-medium leading-snug sm:line-clamp-2">{opp.title}</p>
                       <p className="font-mono text-xs text-[color:var(--fg-muted)]">
                         {[opp.type, opp.city ?? opp.country].filter(Boolean).join(" · ")}
                       </p>
+                      <p className={`mt-0.5 font-mono text-xs font-medium sm:hidden ${d.cls}`}>{d.label}</p>
                     </div>
-                    <p className={`shrink-0 text-right font-mono text-xs font-medium ${d.cls}`}>
+                    <p className={`hidden shrink-0 text-right font-mono text-xs font-medium sm:block ${d.cls}`}>
                       {d.label}
                     </p>
                   </Link>
@@ -407,7 +424,7 @@ export function PartnerProfileView({
                       />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-medium">{opp.title}</p>
+                      <p className="line-clamp-2 text-[15px] font-medium leading-snug">{opp.title}</p>
                       <p className="mt-[3px] font-mono text-xs text-[color:var(--fg-subtle)]">
                         {[opp.deadline ? new Date(opp.deadline).getFullYear() : null, opp.type]
                           .filter(Boolean)
