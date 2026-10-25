@@ -15,7 +15,7 @@ export const PROFILE_LIMITS = {
   workNote: 500,
 } as const;
 
-export const BIO_WORDS = { min: 80, max: 150 } as const;
+export const BIO_WORDS = { min: 1, max: 150 } as const; // required, up to 150 words
 export const WORKS = { min: 4, max: 8 } as const;
 
 export interface WorkDraft {

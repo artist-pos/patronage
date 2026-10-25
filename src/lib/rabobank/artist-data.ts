@@ -49,10 +49,20 @@ export interface ProfileState {
   exists: boolean;
 }
 
+/** A first-visit profile: name and Instagram start from what Blake put on the invite. */
+export function freshProfile(invite: ArtistInvite): ProfileState {
+  return {
+    draft: { ...EMPTY_PROFILE, name: invite.full_name ?? "", instagram: invite.instagram_handle ? `@${invite.instagram_handle}` : "" },
+    works: [],
+    state: null,
+    exists: false,
+  };
+}
+
 export async function loadProfile(invite: ArtistInvite): Promise<ProfileState> {
   const admin = createAdminClient();
   if (!invite.artist_id) {
-    return { draft: { ...EMPTY_PROFILE, name: invite.full_name ?? "" }, works: [], state: null, exists: false };
+    return freshProfile(invite);
   }
   const [{ data: a }, { data: works }] = await Promise.all([
     admin.from("rabobank_artist").select("*").eq("id", invite.artist_id).maybeSingle(),
@@ -62,7 +72,7 @@ export async function loadProfile(invite: ArtistInvite): Promise<ProfileState> {
       .eq("artist_id", invite.artist_id)
       .order("sort_order", { ascending: true }),
   ]);
-  if (!a) return { draft: { ...EMPTY_PROFILE, name: invite.full_name ?? "" }, works: [], state: null, exists: false };
+  if (!a) return freshProfile(invite);
   return {
     draft: {
       photo_url: a.photo_url ?? "",
