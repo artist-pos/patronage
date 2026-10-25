@@ -115,6 +115,30 @@ function TakesPanel({ takes, paused }: { takes: string[]; paused: boolean }) {
   );
 }
 
+/** A work that caught Blake's eye. Its ratio sets its share of the row, so a pair sits at one height. */
+function FeaturedWork({ src, title, caption, source }: { src: string | null; title: string | null | undefined; caption: string | null | undefined; source: string | null }) {
+  const [ratio, setRatio] = useState(1);
+  if (!src) return null;
+  return (
+    <figure className="rb-feature" style={{ "--ratio": ratio } as React.CSSProperties}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={title ?? ""}
+        ref={(img) => { if (img?.complete && img.naturalHeight && img.naturalWidth / img.naturalHeight !== ratio) setRatio(img.naturalWidth / img.naturalHeight); }}
+        onLoad={(e) => setRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+      />
+      {(title || caption || source) && (
+        <figcaption>
+          {title && <strong>{title}</strong>}
+          {caption && <>{title ? ". " : ""}{caption}</>}
+          {source && <><br />{COPY.landing.featuredCredit} <a href={source} target="_blank" rel="noopener noreferrer">{source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
 /**
  * "A couple of questions" as an auto-numbered list: Enter starts the next
  * question, Backspace on an empty line removes it.
@@ -446,19 +470,7 @@ export function ArtistFlow({
 
         {featured.length > 0 && (
           <div className="rb-features" data-count={featured.length}>
-            {featured.map((f, i) => (
-              <figure key={i} className="rb-feature">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.src!} alt={f.title ?? ""} />
-                {(f.title || f.caption || f.source) && (
-                  <figcaption>
-                    {f.title && <strong>{f.title}</strong>}
-                    {f.caption && <>{f.title ? ". " : ""}{f.caption}</>}
-                    {f.source && <><br />{COPY.landing.featuredCredit} <a href={f.source} target="_blank" rel="noopener noreferrer">{f.source.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</a></>}
-                  </figcaption>
-                )}
-              </figure>
-            ))}
+            {featured.map((f, i) => <FeaturedWork key={i} {...f} />)}
           </div>
         )}
 

@@ -42,11 +42,15 @@
 .rb-takes .rb-link { font-size: 0.85rem; }
 
 /* The room render and the artist's featured work on the welcome page. */
-.rb-features { display: grid; gap: 1.25rem; max-width: 40rem; align-items: start; }
-.rb-features[data-count="2"] { max-width: 52rem; grid-template-columns: 1fr 1fr; }
-@media (max-width: 560px) { .rb-features[data-count="2"] { grid-template-columns: 1fr; } }
-.rb-feature { margin: 0; }
-.rb-feature img { display: block; width: 100%; height: auto; border-radius: 18px; box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06); }
+/* Desktop: one row, every work the same height. Each figure grows by its own
+   width/height ratio (--ratio, set once the image loads), so widths vary. */
+.rb-features { display: flex; gap: 1.25rem; max-width: 52rem; align-items: flex-start; }
+.rb-feature { margin: 0; flex: var(--ratio, 1) 1 0; min-width: 0; }
+.rb-features[data-count="1"] .rb-feature { flex: 0 1 auto; max-width: 40rem; }
+@media (max-width: 560px) { .rb-features { flex-direction: column; } .rb-feature, .rb-features[data-count="1"] .rb-feature { flex: none; width: 100%; } }
+.rb-feature img { display: block; width: 100%; height: auto; border-radius: 4px; box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06); }
+/* Tighter corners on every image of the artist page (the staff survey keeps its own). */
+.rb-home .rb-figure > img:first-child { border-radius: 4px; }
 .rb-feature figcaption { margin-top: 0.7rem; color: var(--stone); font-size: 0.85rem; line-height: 1.5; }
 .rb-feature figcaption strong { color: var(--ink); font-weight: 500; }
 .rb-feature figcaption a { color: inherit; }
@@ -74,7 +78,7 @@
 /* ---------- uploads ---------- */
 .rb-thumbs { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0 0 1rem; }
 .rb-thumb { position: relative; }
-.rb-thumb img { display: block; height: 7rem; width: auto; border-radius: 12px; box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.08); }
+.rb-thumb img { display: block; height: 7rem; width: auto; border-radius: 3px; box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.08); }
 .rb-thumb .rb-link { font-size: 0.8rem; }
 .rb-add {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.2rem;
@@ -91,7 +95,7 @@
 
 .rb-works { display: grid; gap: 1.2rem; margin: 0 0 1.2rem; }
 .rb-workcard { display: grid; gap: 1rem; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: start; padding: 1rem; border-radius: 16px; background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 1px rgba(28, 25, 23, 0.06); }
-.rb-workcard img { width: 100%; border-radius: 10px; display: block; }
+.rb-workcard img { width: 100%; border-radius: 3px; display: block; }
 .rb-workcard .rb-fields { margin: 0; gap: 0.9rem 1.2rem; }
 .rb-workcard .rb-textarea { font-size: 1.05rem; }
 .rb-count { color: var(--stone); font-size: 0.85rem; margin: 0 0 0.4rem; }
