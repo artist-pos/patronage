@@ -10,8 +10,9 @@ import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { FeaturedImageUploader } from "@/components/profile/FeaturedImageUploader";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import { DigestToggle } from "@/components/profile/DigestToggle";
+import { ReminderToggle } from "@/components/profile/ReminderToggle";
+import { ProfileViewsToggle } from "@/components/profile/ProfileViewsToggle";
 import { PrivacySection } from "@/components/profile/PrivacySection";
-import { RichOpportunityModal } from "@/components/profile/RichOpportunityModal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -178,7 +179,12 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                       Post an open call, commission, grant, or other opportunity for artists. Listings appear on your public profile.
                     </p>
                   </div>
-                  <RichOpportunityModal triggerLabel="List an Opportunity" />
+                  <Link
+                    href="/partner/opportunities/new"
+                    className="inline-flex h-9 items-center bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                  >
+                    List an opportunity
+                  </Link>
                 </section>
               )}
 
@@ -225,6 +231,8 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                   initial={profile.weekly_digest ?? (isArtist ? true : false)}
                   autoSync={isArtist && profile.weekly_digest === null}
                 />
+                <ReminderToggle initial={profile.deadline_reminders ?? true} />
+                {isArtist && <ProfileViewsToggle initial={profile.profile_view_emails ?? true} />}
               </section>
 
               {/* Patron — privacy settings (Phase 10: simplified master toggle) */}

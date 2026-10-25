@@ -110,6 +110,38 @@ export async function updateProfilePrivacyBulk(
   return {};
 }
 
+export async function updateProfileViewEmails(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ profile_view_emails: enabled })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateDeadlineReminders(
+  enabled: boolean
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ deadline_reminders: enabled })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function updateDigestSubscription(
   subscribed: boolean
 ): Promise<{ error?: string }> {

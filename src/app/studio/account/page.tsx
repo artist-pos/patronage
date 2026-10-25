@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
 import { DigestToggle } from "@/components/profile/DigestToggle";
+import { ReminderToggle } from "@/components/profile/ReminderToggle";
+import { ProfileViewsToggle } from "@/components/profile/ProfileViewsToggle";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import type { Metadata } from "next";
 
@@ -27,6 +29,8 @@ export default async function StudioAccountPage() {
           initial={fullProfile.weekly_digest ?? true}
           autoSync={fullProfile.weekly_digest === null}
         />
+        <ReminderToggle initial={fullProfile.deadline_reminders ?? true} />
+        <ProfileViewsToggle initial={fullProfile.profile_view_emails ?? true} />
       </section>
 
       <section className="space-y-4 border-t border-black pt-10">

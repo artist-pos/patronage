@@ -5,11 +5,15 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Unsubscribe" };
 
 interface Props {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; list?: string }>;
 }
 
 export default async function UnsubscribePage({ searchParams }: Props) {
-  const { token } = await searchParams;
+  const { token, list } = await searchParams;
+  // ?list=reminders stops only saved-deadline reminders; the digest is untouched.
+  const remindersOnly = list === "reminders";
+  // ?list=views stops only the Monday profile-views email.
+  const viewsOnly = list === "views";
 
   let status: "success" | "missing" | "not_found" | "error" = "missing";
 
@@ -40,9 +44,41 @@ export default async function UnsubscribePage({ searchParams }: Props) {
     } else if (profile) {
       const { error: flagErr } = await admin
         .from("profiles")
-        .update({ weekly_digest: false, marketing_subscription: false })
+        .update(
+          remindersOnly
+            ? { deadline_reminders: false }
+            : viewsOnly
+              ? { profile_view_emails: false }
+              : {
+                  weekly_digest: false,
+                  marketing_subscription: false,
+                  deadline_reminders: false,
+                  profile_view_emails: false,
+                }
+        )
         .eq("id", (profile as { id: string }).id);
       status = flagErr ? "error" : "success";
+    } else if (viewsOnly) {
+      // Profile-view emails belong to account holders; there is no other list to leave.
+      status = "not_found";
+    } else if (remindersOnly) {
+      // Email-only reminders (219): the token stops every reminder for that address.
+      const { data: reminder, error: reminderErr } = await admin
+        .from("email_reminders")
+        .select("email")
+        .eq("unsubscribe_token", token)
+        .maybeSingle();
+      if (reminderErr) {
+        status = "error";
+      } else if (!reminder) {
+        status = "not_found";
+      } else {
+        const { error: delErr } = await admin
+          .from("email_reminders")
+          .delete()
+          .eq("email", (reminder as { email: string }).email);
+        status = delErr ? "error" : "success";
+      }
     } else {
       const { data: sub, error: fetchErr } = await admin
         .from("subscribers")
@@ -74,7 +110,11 @@ export default async function UnsubscribePage({ searchParams }: Props) {
 
           {status === "success" && (
             <p className="text-sm text-muted-foreground">
-              You&apos;ve been removed from the weekly digest. You won&apos;t receive any further emails.
+              {remindersOnly
+                ? "You won't get deadline reminders for saved opportunities any more. The weekly digest is unchanged."
+                : viewsOnly
+                  ? "You won't get the weekly profile-views email any more. Everything else is unchanged."
+                  : "You've been removed from the weekly digest, deadline reminders and profile-view emails. You won't receive any further marketing emails."}
             </p>
           )}
 
