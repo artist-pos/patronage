@@ -36,6 +36,8 @@ interface Props {
   /** When set, renders a secondary link below the form to skip signup entirely. */
   skipLabel?: string;
   onSkip?: () => void;
+  /** Renders in the page flow as a gate: no overlay, no scroll lock, no close. */
+  inline?: boolean;
 }
 
 /**
@@ -59,12 +61,14 @@ export default function SignupPromptModal({
   onClose,
   skipLabel,
   onSkip,
+  inline = false,
 }: Props) {
   const titleId = useId();
   const [selected, setSelected] = useState<DisciplineEnum[]>([]);
   const firstPickTracked = useRef(false);
 
   useEffect(() => {
+    if (inline) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
@@ -116,24 +120,32 @@ export default function SignupPromptModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-white/20 p-4 backdrop-blur-md"
-      onClick={dismiss}
+      className={
+        inline
+          ? "col-span-full flex justify-center py-6"
+          : "fixed inset-0 z-50 flex items-center justify-center bg-white/20 p-4 backdrop-blur-md"
+      }
+      onClick={inline ? undefined : dismiss}
     >
       <div
-        role="dialog"
-        aria-modal="true"
+        role={inline ? "region" : "dialog"}
+        aria-modal={inline ? undefined : "true"}
         aria-labelledby={titleId}
-        className="relative max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto border border-black bg-background p-6 sm:p-8"
+        className={`relative w-full max-w-md border border-black bg-background p-6 sm:p-8 ${
+          inline ? "" : "max-h-[calc(100svh-2rem)] overflow-y-auto"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Close"
-          className="absolute right-3 top-3 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {!inline && (
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Close"
+            className="absolute right-3 top-3 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
 
         <p id={titleId} className="pr-6 text-lg font-semibold leading-snug">
           {heading}
@@ -170,6 +182,7 @@ export default function SignupPromptModal({
             <AuthForm
               mode="signup"
               role="artist"
+              compact
               next={next}
               analyticsSource={source}
               submitClassName="w-full bg-brand text-white hover:bg-brand/90"

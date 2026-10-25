@@ -3,6 +3,7 @@
 import { Fragment } from "react";
 import { OpportunityCard } from "./OpportunityCard";
 import { OpportunitySignupModalTrigger } from "./OpportunitySignupModalTrigger";
+import { OpportunityGate } from "./OpportunityGate";
 import type { Opportunity, OpportunityWithMatch } from "@/types/database";
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   view?: "gallery" | "list";
   priorityOffset?: number;
   isAuthenticated?: boolean;
+  /** Opportunities withheld from a signed-out visitor. When set, the gate replaces the signup popup. */
+  lockedCount?: number;
 }
 
 // Roughly the 5th row of a 3-column grid — deep enough to be a deliberate
@@ -17,18 +20,19 @@ interface Props {
 // couple of cards.
 const SIGNUP_MODAL_TRIGGER_AFTER = 15;
 
-export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false }: Props) {
+export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false, lockedCount = 0 }: Props) {
   if (view === "list") {
     return (
       <div className="border-t border-black">
         {opportunities.map((opp, i) => (
           <OpportunityCard key={opp.id} opp={opp} view="list" priority={i < 6} isAuthenticated={isAuthenticated} />
         ))}
+        {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} />}
       </div>
     );
   }
 
-  const showSignupModalTrigger = !isAuthenticated && opportunities.length > SIGNUP_MODAL_TRIGGER_AFTER;
+  const showSignupModalTrigger = !isAuthenticated && lockedCount === 0 && opportunities.length > SIGNUP_MODAL_TRIGGER_AFTER;
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -40,6 +44,7 @@ export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 
           {showSignupModalTrigger && i === SIGNUP_MODAL_TRIGGER_AFTER - 1 && <OpportunitySignupModalTrigger />}
         </Fragment>
       ))}
+      {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} />}
     </div>
   );
 }

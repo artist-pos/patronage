@@ -29,6 +29,10 @@ const DESCRIPTION =
   "A free e-portfolio and opportunity directory for NZ and Australian artists. Manage your CV, portfolio, and discover grants, jobs, and residencies in one place.";
 
 export const metadata: Metadata = {
+  // iOS Safari wraps anything that looks like a phone number, date or address
+  // in a link before React hydrates, which trips hydration error #418 (217 of
+  // ~250 PostHog hits were Mobile Safari). Opportunity cards are full of dates.
+  formatDetection: { telephone: false, date: false, email: false, address: false },
   title: {
     default: TITLE,
     template: "%s | Patronage",

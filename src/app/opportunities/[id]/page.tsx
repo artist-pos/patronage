@@ -10,6 +10,9 @@ import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditO
 import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
 import { SaveButton } from "@/components/opportunities/SaveButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
+import { ExitIntentPrompt } from "@/components/opportunities/ExitIntentPrompt";
+import { RemindMeCapture } from "@/components/opportunities/RemindMeCapture";
+import { summariseOpportunity } from "@/lib/opportunity-summary";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { ExternalApplyCTASection } from "@/components/opportunities/ExternalApplyCTASection";
 import { OpportunityHeroImage } from "@/components/opportunities/OpportunityHeroImage";
@@ -200,7 +203,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: canonicalPath },
+    alternates: {
+      canonical: canonicalPath,
+      // The same facts as clean Markdown, for assistants and tools that read it.
+      types: { "text/markdown": `${canonicalPath}/md` },
+    },
     openGraph: {
       title: shareTitle,
       description: shareDescription,
@@ -594,6 +601,11 @@ export default async function OpportunityPage({ params }: Props) {
         "@id": canonicalUrl,
         name: opp.title,
         url: opp.url ?? canonicalUrl,
+        mainEntityOfPage: canonicalUrl,
+        datePublished: opp.created_at,
+        inLanguage: "en-NZ",
+        isAccessibleForFree: true,
+        publisher: { "@type": "Organization", name: "Patronage", url: SITE_URL },
         ...(oppDescription && { description: oppDescription }),
         ...(opp.featured_image_url && { image: opp.featured_image_url }),
         ...typeFields,
@@ -642,6 +654,7 @@ export default async function OpportunityPage({ params }: Props) {
       />
       {/* ViewTracker fires client-side after idle — does not affect pre-render */}
       <ViewTracker opportunityId={opp.id} />
+      {!viewerUser && !isClosed && <ExitIntentPrompt opportunityId={opp.id} />}
 
       {/* Admin preview banner — only shown when accessing a non-published opp */}
       {isAdminPreview && (
@@ -835,6 +848,9 @@ export default async function OpportunityPage({ params }: Props) {
             className={ACTION_BTN}
           />
         </div>
+        {!viewerUser && !isClosed && opp.deadline && deadline && (
+          <RemindMeCapture opportunityId={opp.id} deadlineLabel={deadline} />
+        )}
         {isClosed && (
           <p className="mt-3 text-[13px] text-[color:var(--fg-muted)]">
             {opp.archived_at
@@ -854,6 +870,14 @@ export default async function OpportunityPage({ params }: Props) {
             </p>
           </div>
         )}
+      </div>
+
+      {/* ── At a glance — the facts as plain sentences, quotable on their own ── */}
+      <div className="mb-8 max-w-[62ch] space-y-1">
+        <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">
+          At a glance
+        </h2>
+        <p className="text-[14.5px] leading-[1.7]">{summariseOpportunity(opp, todayStr).join(" ")}</p>
       </div>
 
       {/* ── Description — STATIC ────────────────────────────────────────── */}

@@ -36,6 +36,9 @@ interface Props {
   analyticsSource?: string;
   /** Signup only — when set, an "Already have an account? Sign in" line links here. */
   loginHref?: string;
+  /** Signup only — email + password, no name field or terms checkbox. The name
+   *  is asked at the profile step and consent is stated beside the button. */
+  compact?: boolean;
 }
 
 interface FieldErrors {
@@ -68,7 +71,7 @@ function rememberSignupSource(source: string | undefined, role: string | undefin
   }
 }
 
-export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, submitClassName, submitLabel, analyticsSource, loginHref }: Props) {
+export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, submitClassName, submitLabel, analyticsSource, loginHref, compact = false }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -108,7 +111,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
 
   function validate(): boolean {
     const errs: FieldErrors = {};
-    if (mode === "signup") {
+    if (mode === "signup" && !compact) {
       if (!name.trim()) errs.name = "Enter your name.";
       if (!agreed) errs.terms = "Agree to the terms and privacy policy to continue.";
     }
@@ -164,7 +167,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
         const result = await withRetry(() =>
           signUpAction({
             email, password, role, next, turnstileToken, loadedAt,
-            name: name.trim(), acceptedTerms: agreed,
+            name: name.trim(), acceptedTerms: compact ? true : agreed, deferName: compact,
             [HONEYPOT_FIELD]: honeypot,
           })
         );
@@ -246,7 +249,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
 
       {/* Email / password */}
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {mode === "signup" && (
+        {mode === "signup" && !compact && (
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
@@ -306,7 +309,15 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             <p className="text-sm text-muted-foreground">Must be at least 8 characters long.</p>
           ) : null}
         </div>
-        {mode === "signup" && (
+        {mode === "signup" && compact && (
+          <p className="text-xs text-muted-foreground">
+            By creating an account you agree to the{" "}
+            <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
+            <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
+            We&rsquo;ll email you occasionally about opportunities and Patronage; every email has an unsubscribe link.
+          </p>
+        )}
+        {mode === "signup" && !compact && (
           <div className="space-y-1.5">
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <input

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { HUB_CONTENT, HUB_COUNTRY_MAP, HUB_TYPE_LABEL } from "@/lib/hub-content";
 import { getRegions } from "@/lib/regions";
 import { MIN_INDEXABLE_LISTINGS, REGIONAL_HUB_TYPES, getRegionalHubCounts } from "@/lib/regional-hubs";
+import { DISCIPLINE_HUBS, getDisciplineHubCounts } from "@/lib/discipline-hubs";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 
@@ -29,7 +30,22 @@ const HUB_COUNTRY_SLUGS = Object.keys(HUB_TYPE_LABEL).flatMap((type) =>
 // stamping every URL with "now" on each request teaches crawlers to ignore the
 // field. The sub-sitemaps carry real dates.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [regions, hubCounts] = await Promise.all([getRegions(), getRegionalHubCounts()]);
+  const [regions, hubCounts, disciplineCounts] = await Promise.all([
+    getRegions(),
+    getRegionalHubCounts(),
+    getDisciplineHubCounts(),
+  ]);
+
+  // Type x discipline pages ("photography residencies"), same thin-page threshold.
+  const disciplineHubs = REGIONAL_HUB_TYPES.flatMap((type) =>
+    Object.keys(DISCIPLINE_HUBS)
+      .filter((d) => (disciplineCounts[type]?.[d] ?? 0) >= MIN_INDEXABLE_LISTINGS)
+      .map((d) => ({
+        url: `${BASE_URL}/opportunities/${type}/${d}`,
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      }))
+  );
 
   // Type x region pages, only where there is enough live to be worth a result
   // (the pages themselves carry noindex below the same threshold).
@@ -111,5 +127,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Opportunity hub pages (type × region) ─────────────────────────────────
     ...regionalHubs,
+
+    // ── Opportunity hub pages (type × discipline) ─────────────────────────────
+    ...disciplineHubs,
   ];
 }

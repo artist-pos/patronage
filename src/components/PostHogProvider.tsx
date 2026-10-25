@@ -165,6 +165,31 @@ function PostHogSignupCompleted() {
   return null;
 }
 
+const INTERNAL_ROLES = ["admin", "owner"];
+
+/**
+ * Our own visits are not traffic. Anyone signed in as an admin or owner stops
+ * being captured, and the opt-out persists in this browser, so their signed-out
+ * visits afterwards are excluded too. Visit any page with ?internal=1 to opt a
+ * browser out without signing in (incognito, a phone).
+ */
+function PostHogInternalFilter() {
+  const searchParams = useSearchParams();
+  const ph = usePostHog();
+
+  useEffect(() => {
+    if (searchParams.get("internal") === "1") ph.opt_out_capturing();
+  }, [searchParams, ph]);
+
+  return null;
+}
+
+async function optOutIfInternal(ph: ReturnType<typeof usePostHog>, userId: string) {
+  const supabase = createClient();
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (data?.role && INTERNAL_ROLES.includes(data.role)) ph.opt_out_capturing();
+}
+
 function PostHogIdentify() {
   const ph = usePostHog();
 
@@ -172,12 +197,16 @@ function PostHogIdentify() {
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) ph.identify(user.id, { email: user.email });
+      if (user) {
+        ph.identify(user.id, { email: user.email });
+        optOutIfInternal(ph, user.id).catch(() => {});
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         ph.identify(session.user.id, { email: session.user.email });
+        optOutIfInternal(ph, session.user.id).catch(() => {});
       } else if (event === "SIGNED_OUT") {
         ph.reset();
       }
@@ -200,6 +229,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       </Suspense>
       <Suspense fallback={null}>
         <ReferralTracker />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PostHogInternalFilter />
       </Suspense>
       <PostHogIdentify />
       {children}

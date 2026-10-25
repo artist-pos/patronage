@@ -62,6 +62,8 @@ export async function signUpAction(input: {
   loadedAt?: number;
   name?: string;
   acceptedTerms?: boolean;
+  /** Compact signup: the name is collected at the profile step instead. */
+  deferName?: boolean;
   [HONEYPOT_FIELD]?: string;
 }): Promise<AuthResult> {
   // Bots that blindly fill every field trip the honeypot — pretend success
@@ -85,7 +87,7 @@ export async function signUpAction(input: {
     return { error: "Password must be at least 8 characters." };
   }
   const name = (input.name ?? "").trim().slice(0, 120);
-  if (!name) {
+  if (!name && input.deferName !== true) {
     return { error: "Enter your name." };
   }
   if (input.acceptedTerms !== true) {
@@ -94,7 +96,7 @@ export async function signUpAction(input: {
 
   // Patterns only scripts produce (random-string names, Gmail dot-trick
   // addresses). Pretend success so they don't retry with cleaner values.
-  if (looksLikeGibberishName(name)) {
+  if (name && looksLikeGibberishName(name)) {
     await recordBlocked("signup_blocked", { reason: "gibberish_name" });
     return { needsEmailConfirmation: false };
   }
@@ -137,7 +139,7 @@ export async function signUpAction(input: {
       emailRedirectTo,
       // Read back by /onboarding/role to seed profiles.full_name, so the
       // profile step never has to ask for it again.
-      data: { full_name: name },
+      data: name ? { full_name: name } : {},
     },
   });
   if (error) return { error: friendlyAuthError(error.message) };

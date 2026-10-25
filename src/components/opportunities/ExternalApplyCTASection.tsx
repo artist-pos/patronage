@@ -6,6 +6,7 @@ import { track } from "@vercel/analytics";
 import { trackEvent } from "@/lib/analytics";
 import { withUtm } from "@/lib/utm";
 import { BlakeNote } from "@/components/auth/BlakeNote";
+import { PROMPT_SEEN_SESSION_KEY } from "./ExitIntentPrompt";
 
 const SignupPromptModal = dynamic(() => import("@/components/auth/SignupPromptModal"), { ssr: false });
 
@@ -42,6 +43,11 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
     trackEvent("opportunity_click", { opportunity_id: opportunityId, title, organiser });
     pendingUrl.current = withUtm(href, { campaign: "opportunity_listing", content: opportunityId });
     setOpen(true);
+    try {
+      sessionStorage.setItem(PROMPT_SEEN_SESSION_KEY, "1");
+    } catch {
+      // Storage blocked — the exit prompt may show too; harmless.
+    }
     trackEvent("before_you_go_modal_shown", { opportunity_id: opportunityId });
   }
 

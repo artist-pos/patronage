@@ -126,7 +126,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
   /* ── List row ── */
   if (view === "list") {
     const row = (
-      <div className={`group flex items-center gap-4 border-b bg-card px-3 py-3 transition-colors hover:bg-[color:var(--tint)] ${opp.is_featured ? "border-b-2 border-foreground" : "border-border"}`}>
+      <div className={`group flex items-center gap-3 border-b bg-card px-3 py-3 transition-colors sm:gap-4 hover:bg-[color:var(--tint)] ${opp.is_featured ? "border-b-2 border-foreground" : "border-border"}`}>
         {/* Thumbnail */}
         <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-border bg-white">
           {opp.featured_image_url ? (
@@ -148,11 +148,18 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         </div>
 
         {/* Title + organiser */}
+        {/* On mobile the title gets two lines and the deadline moves under it,
+            so "Strategic P…" doesn't lose the part that says what the role is. */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold leading-snug group-hover:underline underline-offset-2">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug group-hover:underline underline-offset-2 sm:line-clamp-1">
             {opp.title}
           </p>
           <p className="truncate font-mono text-xs text-muted-foreground">{opp.organiser}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xs sm:hidden">
+            <span>{opp.type}</span>
+            <span aria-hidden className="text-muted-foreground">·</span>
+            <span className={`whitespace-nowrap ${daysCls}`}>{days}</span>
+          </p>
         </div>
 
         {/* Type tag */}
@@ -173,7 +180,7 @@ export function OpportunityCard({ opp, isPreview = false, view = "gallery", prio
         )}
 
         {/* Days left */}
-        <span className={`shrink-0 whitespace-nowrap font-mono text-xs ${daysCls}`}>
+        <span className={`hidden shrink-0 whitespace-nowrap font-mono text-xs sm:block ${daysCls}`}>
           {days}
         </span>
 

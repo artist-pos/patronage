@@ -58,12 +58,12 @@ Organisations can receive applications for their opportunities through Patronage
 
 ## Canonical URLs
 
-- Opportunities: https://patronage.nz/opportunities/[slug]
+- Opportunities: https://patronage.nz/opportunities/[slug] (the same listing as clean Markdown: https://patronage.nz/opportunities/[slug]/md)
 - Opportunity hubs by type: https://patronage.nz/opportunities/grants, /residencies, /open-calls, /prizes, /jobs
 - Artist and organisation profiles: https://patronage.nz/[username]
 - Regional artist pages: https://patronage.nz/artists/[region]
 - Artists by country or discipline: https://patronage.nz/artists/[country-or-discipline]
-- Opportunities listing: https://patronage.nz/opportunities
+- Opportunities listing: https://patronage.nz/opportunities (signed-out visitors and crawlers see the first 15 only; for the full set use the hubs above, sitemap-opportunities.xml, or /api/public/opportunities)
 - Artists listing: https://patronage.nz/artists
 - Partners: https://patronage.nz/partners
 - Resources: https://patronage.nz/resources

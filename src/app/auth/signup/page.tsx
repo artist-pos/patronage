@@ -121,6 +121,7 @@ export default async function SignupPage({ searchParams }: Props) {
           mode="signup"
           next={resolvedNext}
           role={role}
+          compact={role === "artist"}
           initialEmail={invitedEmail}
           loginHref={next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login"}
         />

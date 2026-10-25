@@ -20,6 +20,8 @@
  * duplicated, and insights are matched on name.
  */
 
+export {};
+
 const HOST = process.env.POSTHOG_HOST ?? "https://us.posthog.com";
 const API_KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 const PROJECT_ID = process.env.POSTHOG_PROJECT_ID;
@@ -193,6 +195,31 @@ const SIGNUP_INSIGHTS: InsightSpec[] = [
     description:
       "Which surface each signup came from: the grid modal, the before-you-go prompt, or the signup page itself.",
     query: weeklyTrend([{ id: "signup_form_submitted" }], "source"),
+  },
+  {
+    name: "Opportunities gate — funnel",
+    description:
+      "The inline gate after the 15th opportunity for signed-out visitors (replaced the card-15 popup on /opportunities). Seen → picked a discipline → submitted → account set up.",
+    query: funnel([
+      { id: "opportunities_gate_view", name: "Gate seen" },
+      { id: "opportunities_gate_first_pick", name: "Picked a discipline" },
+      { id: "signup_form_submitted", name: "Submitted", where: { source: "opportunities_gate" } },
+      { id: "signup_completed", name: "Account set up" },
+    ]),
+  },
+  {
+    name: "Partner enquiries and claims per week",
+    description:
+      "Clicks on the partner page's enquire button by mode (member / signed_out / unclaimed), plus introduction and claim requests sent.",
+    query: trend(
+      [
+        { id: "partner_enquire_click", name: "Enquire clicked" },
+        { id: "partner_introduction_requested", name: "Introduction requested" },
+        { id: "partner_claim_click", name: "Claim clicked" },
+        { id: "partner_claim_requested", name: "Claim requested" },
+      ],
+      { interval: "week" }
+    ),
   },
   {
     name: "Card-15 signup modal — funnel",

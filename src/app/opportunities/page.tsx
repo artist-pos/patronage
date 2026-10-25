@@ -126,6 +126,12 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const gridOpps =
     tab === "for-you" ? forYouOpps : featuredOpp ? allOpps.filter((o) => o.id !== featuredOpp.id) : allOpps;
 
+  // Signed-out visitors see the first FREE_OPPORTUNITIES; the rest are cut here
+  // on the server so they never reach the client, and a gate takes their place.
+  const FREE_OPPORTUNITIES = 15;
+  const gatedOpps = !user && tab === "all" ? gridOpps.slice(0, FREE_OPPORTUNITIES) : gridOpps;
+  const lockedCount = gridOpps.length - gatedOpps.length;
+
   // ── Links built on the server: tabs, stat shortcuts, clearing a chip ──
   const hrefWith = (changes: Record<string, string | null>, dropFilters = false) => {
     const q = new URLSearchParams();
@@ -325,7 +331,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                     No opportunities match those filters. New listings are added regularly.
                   </p>
                 ) : (
-                  <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={!!user} />
+                  <MasonryGrid opportunities={gatedOpps} view={view} isAuthenticated={!!user} lockedCount={lockedCount} />
                 )}
               </div>
             </div>
