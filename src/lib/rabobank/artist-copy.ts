@@ -37,7 +37,7 @@ The work will hang on a dark blue wall, 3600mm wide by 2400mm high, centred on t
 
 _The theme is Together. The bank was built through cooperation, and the event space is where that is most visible: people, knowledge, production and relationships coming together to make something none of them could achieve alone. I’m interested in a work that gives clients, the community and staff something to gather around, with enough presence to hold the wall from across the room. I’d like it to feel considered and rooted in this place, and comfortable in a banking environment without feeling corporate._
 
-Once your response has been received, the team at the Te Puke branch will have a chance to view your work and read a bit about you. I will get back to you regarding selection in early to mid November. The finished work, including framing, will be delivered and installed in January.`,
+Once your response has been received, the team at the Te Puke branch will have a chance to view your work and learn a bit about you. I will get back to you in early to mid November. The finished work, including framing, will be delivered and installed in January.`,
     directionButton: "Read the creative direction (PDF)",
     wallHeading: "The wall",
     partsHeading: "Your response",
