@@ -7,6 +7,8 @@ import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLi
 import { OrganiserField } from "@/components/opportunities/OrganiserField";
 import type { ApplicationLink, Opportunity, OppTypeEnum } from "@/types/database";
 import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
+import { ARTIST_PAYMENT_OPTIONS, CAPTION_MAX, CURRENCIES } from "@/lib/opportunity-fields";
+import { CAREER_STAGE_TAGS, COUNTRIES, DISCIPLINES, OPP_TYPES, showField } from "@/lib/opportunity-constants";
 
 // ── AI Parser ─────────────────────────────────────────────────────────────────
 
@@ -43,7 +45,7 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
   const patch: Patch = {};
   if (parsed.title) patch.title = parsed.title;
   if (parsed.organisation) patch.organiser = parsed.organisation;
-  if (parsed.caption) patch.caption = parsed.caption.slice(0, 160);
+  if (parsed.caption) patch.caption = parsed.caption.slice(0, CAPTION_MAX);
   if (parsed.full_description) patch.full_description = parsed.full_description;
   if (parsed.type && (OPP_TYPE_VALUES as readonly string[]).includes(parsed.type))
     patch.type = parsed.type as OppTypeEnum;
@@ -57,7 +59,10 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
   if (parsed.disciplines?.length) patch.sub_categories = parsed.disciplines;
   if (parsed.career_stage?.length) patch.career_stage = parsed.career_stage;
   if (parsed.tags?.length) patch.tags = parsed.tags;
-  if (parsed.application_url) patch.url = parsed.application_url;
+  if (parsed.application_url) {
+    patch.url = parsed.application_url;
+    patch.application_links = [{ label: "Apply on Official Site", url: parsed.application_url }];
+  }
   if (parsed.email) patch.contact_email = parsed.email;
   // Attribution: only ever set, never cleared — a re-parse that fails to recognise
   // the domain shouldn't wipe a source picked by hand.
@@ -214,21 +219,10 @@ export interface Patch {
   contact_email?: string | null;
   source?: string | null;
   source_url?: string | null;
+  artist_payment_type?: string | null;
+  travel_support?: boolean | null;
+  travel_support_details?: string | null;
 }
-
-const OPP_TYPES: OppTypeEnum[] = [
-  "Grant", "Residency", "Commission", "Open Call", "Prize",
-  "Display", "Job / Employment", "Studio / Space", "Public Art",
-];
-
-const COUNTRIES = ["NZ", "AUS", "Global", "UK", "US", "EU"];
-
-const DISCIPLINES = [
-  "Visual Art", "Photography", "Sculpture", "Craft", "Film", "Music",
-  "Dance", "Performance", "Writing", "Poetry", "Architecture", "Design",
-];
-
-const CAREER_STAGES = ["Student", "Emerging", "Mid-Career", "Established"];
 
 interface Props {
   opp: Opportunity;
@@ -443,7 +437,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
                 onChange={(e) => onChange({ entry_fee_currency: e.target.value })}
                 className="border border-black bg-background px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
               >
-                {["NZD", "AUD", "USD", "GBP", "EUR"].map((c) => <option key={c}>{c}</option>)}
+                {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
               </select>
               <input
                 type="number"
@@ -458,18 +452,63 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
           </div>
         </div>
 
+        {/* Artist payment + travel / accommodation: the same transparency fields as every other listing form */}
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Artist payment <span className="text-stone-500">optional</span></label>
+            <select
+              value={opp.artist_payment_type ?? ""}
+              onChange={(e) => onChange({ artist_payment_type: e.target.value || null })}
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black sm:max-w-xs"
+            >
+              <option value="">– None / N/A –</option>
+              {ARTIST_PAYMENT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+
+          {showField(opp.type ?? "Grant", "accommodation") && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Travel / accommodation support <span className="text-stone-500">optional</span></label>
+              <div className="flex gap-3">
+                {([{ val: null, label: "Unknown" }, { val: true, label: "Yes" }, { val: false, label: "No" }] as const).map(({ val, label }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => onChange({ travel_support: val })}
+                    className={`text-sm px-3 py-1.5 border transition-colors ${
+                      (opp.travel_support ?? null) === val
+                        ? "border-black bg-black text-white"
+                        : "border-stone-200 hover:border-black"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {opp.travel_support && (
+                <input
+                  type="text"
+                  value={opp.travel_support_details ?? ""}
+                  onChange={(e) => onChange({ travel_support_details: e.target.value || null })}
+                  placeholder="e.g. flights + accommodation covered"
+                  className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              )}
+            </div>
+          )}
+        </div>
         {/* Caption */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Short summary <span className="text-stone-500">optional — shown on cards</span></label>
           <input
             type="text"
-            maxLength={160}
+            maxLength={CAPTION_MAX}
             value={opp.caption ?? ""}
             onChange={(e) => onChange({ caption: e.target.value || null })}
-            placeholder="One-line summary (max 160 characters)"
+            placeholder={`One-line summary (max ${CAPTION_MAX} characters)`}
             className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
           />
-          <p className="text-sm text-stone-500 text-right">{(opp.caption ?? "").length}/160</p>
+          <p className="text-sm text-stone-500 text-right">{(opp.caption ?? "").length}/{CAPTION_MAX}</p>
         </div>
 
         {/* Description */}
@@ -674,7 +713,7 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         <div className="space-y-2">
           <label className="text-sm font-medium">Career stage <span className="text-stone-500">optional — leave blank for all</span></label>
           <div className="flex flex-wrap gap-2">
-            {CAREER_STAGES.map((s) => (
+            {CAREER_STAGE_TAGS.map((s) => (
               <button
                 key={s}
                 type="button"

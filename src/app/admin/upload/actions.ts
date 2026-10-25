@@ -1,19 +1,9 @@
 "use server";
 
 import { insertOpportunities } from "@/lib/opportunities";
-import type { OppTypeEnum, CountryEnum, Opportunity } from "@/types/database";
-
-type ValidRow = Omit<Opportunity, "id" | "is_active" | "created_at">;
-
-const VALID_TYPES = new Set<OppTypeEnum>([
-  "Grant",
-  "Residency",
-  "Commission",
-  "Open Call",
-  "Prize",
-  "Display",
-]);
-const VALID_COUNTRIES = new Set<CountryEnum>(["NZ", "AUS", "Global"]);
+import { isAdmin } from "@/lib/admin";
+import { buildCsvOpportunity } from "@/lib/opportunity-csv";
+import type { OpportunityInsert } from "@/types/database";
 
 export interface RowResult {
   row: number;
@@ -25,22 +15,26 @@ export interface RowResult {
 export async function uploadCsvAction(
   rows: Record<string, string>[]
 ): Promise<RowResult[]> {
-  const results: RowResult[] = [];
-  const valid: ValidRow[] = [];
+  if (!(await isAdmin())) {
+    return rows.map((r, i) => ({ row: i + 2, title: r.title ?? "(no title)", status: "error", message: "Not authorised." }));
+  }
 
-  rows.forEach((raw, i) => {
+  const results: RowResult[] = [];
+  const valid: Record<string, unknown>[] = [];
+
+  for (const [i, raw] of rows.entries()) {
     const rowNum = i + 2; // 1-indexed + header row
-    const parsed = buildRow(raw);
+    const parsed = await buildCsvOpportunity(raw);
     if ("error" in parsed) {
       results.push({ row: rowNum, title: raw.title ?? "(no title)", status: "error", message: parsed.error });
     } else {
-      valid.push(parsed as ValidRow);
-      results.push({ row: rowNum, title: parsed.title, status: "ok" });
+      valid.push(parsed.row);
+      results.push({ row: rowNum, title: String(parsed.row.title), status: "ok" });
     }
-  });
+  }
 
   if (valid.length > 0) {
-    const { error } = await insertOpportunities(valid);
+    const { error } = await insertOpportunities(valid as unknown as OpportunityInsert[]);
     if (error) {
       // Mark all valid rows as failed
       return results.map((r) =>
@@ -50,33 +44,4 @@ export async function uploadCsvAction(
   }
 
   return results;
-}
-
-function buildRow(raw: Record<string, string>) {
-  const title = raw.title?.trim();
-  const organiser = raw.organiser?.trim();
-  const type = raw.type?.trim() as OppTypeEnum;
-  const country = raw.country?.trim() as CountryEnum;
-
-  if (!title) return { error: "Missing required field: title" };
-  if (!organiser) return { error: "Missing required field: organiser" };
-  if (!VALID_TYPES.has(type))
-    return { error: `Invalid type "${raw.type}". Must be one of: ${[...VALID_TYPES].join(", ")}` };
-  if (!VALID_COUNTRIES.has(country))
-    return { error: `Invalid country "${raw.country}". Must be one of: ${[...VALID_COUNTRIES].join(", ")}` };
-
-  const deadline = raw.deadline?.trim() || null;
-  // Basic ISO date validation
-  if (deadline && !/^\d{4}-\d{2}-\d{2}$/.test(deadline))
-    return { error: `Invalid deadline format "${deadline}". Use YYYY-MM-DD` };
-
-  return {
-    title,
-    organiser,
-    description: raw.description?.trim() || null,
-    type,
-    country,
-    deadline,
-    url: raw.url?.trim() || null,
-  };
 }

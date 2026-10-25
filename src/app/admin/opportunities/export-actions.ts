@@ -20,6 +20,31 @@ export interface ClaimExportRow {
   /** Already has an owner — a claim link would be rejected as "Already claimed". */
   alreadyOwned: boolean;
   claimTokenExpiresAt: string | null;
+  /** Saved outreach details (migration 222), so they're typed once and reused. */
+  email: string;
+  contactName: string;
+  currentTool: string;
+}
+
+/** Remember what was typed in the export panel against each listing. */
+export async function saveClaimOutreachDetails(
+  items: Array<{ id: string; email: string; contactName: string; currentTool: string }>
+): Promise<{ error?: string }> {
+  if (!(await isAdmin())) return { error: "Not authorised." };
+  const supabase = await createClient();
+  for (const i of items) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        claim_email: i.email.trim().toLowerCase(),
+        claim_contact_name: i.contactName.trim(),
+        claim_current_tool: i.currentTool.trim(),
+      })
+      .eq("id", i.id);
+    if (error) return { error: error.message };
+  }
+  revalidatePath("/admin/opportunities");
+  return {};
 }
 
 /**
@@ -41,7 +66,7 @@ export async function prepareClaimExport(
 
   const { data: opps, error } = await supabase
     .from("opportunities")
-    .select("id, title, organiser, description, slug, profile_id, claim_token, claim_token_expires_at")
+    .select("id, title, organiser, description, slug, profile_id, claim_token, claim_token_expires_at, claim_email, contact_email, claim_contact_name, claim_current_tool")
     .in("id", ids);
 
   if (error) return { error: error.message };
@@ -58,6 +83,9 @@ export async function prepareClaimExport(
         title: o.title ?? "",
         description: o.description ?? "",
         listingUrl: `${SITE_URL}/opportunities/${o.slug ?? o.id}`,
+        email: o.claim_email ?? o.contact_email ?? "",
+        contactName: o.claim_contact_name ?? "",
+        currentTool: o.claim_current_tool ?? "",
       };
 
       // Already owned — claimListing() would reject the link, so don't touch

@@ -2,10 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { normaliseOpportunityWrite } from "@/lib/opportunity-fields";
+import type { OpportunityPayload } from "@/lib/opportunity-payload";
 import { validPartnerProfileId } from "@/lib/organiser-link";
 import { isAdmin } from "@/lib/admin";
-import type { ApplicationLink } from "@/types/database";
 
 // The only columns a listing owner may write. Anything else in the payload is
 // dropped, so status, payment and featured flags can't be set from the client.
@@ -39,91 +39,33 @@ async function getOpportunityForPartner(id: string) {
 
 export async function updateOpportunityPartner(
   id: string,
-  data: {
-    title?: string;
-    organiser?: string;
-    organiser_profile_id?: string | null;
-    caption?: string | null;
-    full_description?: string | null;
-    url?: string | null;
-    application_links?: ApplicationLink[] | null;
-    contact_email?: string | null;
-    type?: string;
-    country?: string;
-    city?: string | null;
-    featured_image_url?: string | null;
-    secondary_image_url?: string | null;
-    sub_categories?: string[] | null;
-    career_stage?: string[] | null;
-    tags?: string[] | null;
-    opens_at?: string | null;
-    deadline?: string | null;
-    funding_range?: string | null;
-    entry_fee?: number | null;         // amount in entry_fee_currency (server converts to NZD)
-    entry_fee_currency?: string | null;
+  data: Partial<Omit<OpportunityPayload, "is_featured" | "is_recurring" | "recurrence_pattern" | "recurrence_open_day" | "recurrence_close_day" | "recurrence_end_date">> & {
     entry_fee_local?: number | null;
-    grant_type?: string | null;
-    recipients_count?: number | null;
-    artist_payment_type?: string | null;
-    travel_support?: boolean | null;
-    travel_support_details?: string | null;
-    routing_type?: string | null;
-    source?: string | null;
-    source_url?: string | null;
-    show_badges_in_submission?: boolean;
-    pipeline_config?: object | null;
   }
 ) {
   const { supabase, user, opp } = await getOpportunityForPartner(id);
 
-  // Resolve entry fee currency conversion if needed
-  const updateData = Object.fromEntries(
+  // Partners can only change the fields in PARTNER_EDITABLE.
+  const picked = Object.fromEntries(
     Object.entries(data).filter(([key]) => PARTNER_EDITABLE.has(key))
-  ) as typeof data;
+  );
+
+  // Same normalisation as every other editor: link rows, source, contact email
+  // and foreign-currency entry fees.
+  const updateData: Record<string, unknown> = await normaliseOpportunityWrite(picked);
 
   // A partner can only attribute their own listing to their own account;
   // admins (listing on behalf of an organisation, including shadow accounts)
   // can link any partner account.
   if ("organiser_profile_id" in updateData) {
-    const wanted = updateData.organiser_profile_id;
+    const wanted = updateData.organiser_profile_id as string | null | undefined;
     const allowed = !!wanted && (wanted === user.id || (await isAdmin()));
     const resolvedPid = allowed ? await validPartnerProfileId(wanted) : null;
     updateData.organiser_profile_id = resolvedPid;
     if (resolvedPid && (await isAdmin())) {
-      (updateData as Record<string, unknown>).profile_id = resolvedPid;
+      updateData.profile_id = resolvedPid;
     }
   }
-
-  // Drop blank link rows the editor keeps around for in-progress typing.
-  if (Array.isArray(updateData.application_links)) {
-    updateData.application_links = updateData.application_links.filter(
-      (l) => l && (l.url?.trim() || l.label?.trim())
-    );
-  }
-
-  // Only keys the registry knows about can be stored — an unrecognised one
-  // would render no attribution anyway, so treat it as "not sourced".
-  if ("source" in updateData) {
-    updateData.source = getOpportunitySource(updateData.source) ? updateData.source : null;
-  }
-
-  const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();
-  if (data.entry_fee != null && currency !== "NZD") {
-    try {
-      const rateRes = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=NZD`);
-      const rateData = await rateRes.json() as { rates?: { NZD?: number } };
-      const rate = rateData.rates?.NZD ?? 1;
-      updateData.entry_fee = Math.round(data.entry_fee * rate * 100) / 100;
-      updateData.entry_fee_local = data.entry_fee;
-      updateData.entry_fee_currency = currency;
-    } catch {
-      // keep as-is on failure
-    }
-  } else if (currency === "NZD") {
-    updateData.entry_fee_local = null;
-    updateData.entry_fee_currency = null;
-  }
-
   // Partners cannot publish: status, is_active, is_featured and recurring fields
   // are not in PARTNER_EDITABLE, and the protect_opportunity_columns trigger
   // refuses an owner's draft -> published change. Only an admin approves.

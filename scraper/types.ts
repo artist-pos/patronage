@@ -36,6 +36,7 @@ export interface ScrapedOpportunity {
   funding_range: string | null;
   full_description: string | null; // structured description with "Heading:" section lines
   featured_image_url: string | null;
+  contact_email?: string | null; // organiser's enquiries address, only if printed on the page
   disciplines: string[];   // discipline_enum values — extracted by AI or inherited from source
 }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sourceKeyForText, sourceKeyForUrl } from "@/lib/opportunity-sources";
+import { detectApplicationTool } from "@/lib/application-tool";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
@@ -27,7 +28,7 @@ Given raw text from an opportunity page, extract ALL available fields into JSON.
 
 RULES:
 - NZ spelling (organisation, programme, recognised, colour)
-- caption: one sentence, max 160 chars, plain language, explains what it IS
+- caption: one sentence, max 300 chars, plain language, explains what it IS
 - full_description: warm, clear, practical. Not institutional jargon.
 - Dates: YYYY-MM-DD format
 - funding values: include currency e.g. "$5,000 - $25,000 NZD"
@@ -42,7 +43,7 @@ Return ONLY valid JSON, no markdown fences:
 {
   "title": "string",
   "organisation": "string",
-  "caption": "string (max 160 chars)",
+  "caption": "string (max 300 chars)",
   "type": "string",
   "country": "NZ" | "AUS" | "Global",
   "opens_at": "YYYY-MM-DD or null",
@@ -54,8 +55,9 @@ Return ONLY valid JSON, no markdown fences:
   "career_stage": ["string"],
   "tags": ["string"],
   "full_description": "string",
-  "email": "string or null",
-  "application_url": "string or null",
+  "email": "string or null — the organiser's own enquiries or applications address, exactly as printed on the page. Never guess or construct one.",
+  "contact_name": "string or null — a named person to address enquiries to, only if the page names one (e.g. 'Sam Taylor, Programme Manager' -> 'Sam Taylor'). Null otherwise.",
+  "application_url": "string or null — where applicants actually apply (a form, portal or application page), not the page you are reading unless it is the application itself",
   "type_specific": {}
 }`;
 
@@ -108,6 +110,8 @@ export async function POST(req: NextRequest) {
   // know and shouldn't guess.
   let sourceKey: string | null = null;
   let sourcePageUrl: string | null = null;
+  // Raw page, kept so the application tool can be spotted from the links on it.
+  let pageHtml = "";
 
   if (type === "url") {
     const url = formData.get("url") as string;
@@ -121,6 +125,7 @@ export async function POST(req: NextRequest) {
       });
       if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`);
       const html = await pageRes.text();
+      pageHtml = html;
       const text = stripHtml(html);
       content = [{ type: "text", text: `URL: ${url}\n\n${text}` }];
     } catch (err) {
@@ -132,6 +137,7 @@ export async function POST(req: NextRequest) {
     if (!text?.trim()) return NextResponse.json({ error: "Text required" }, { status: 400 });
     // Pasted page text usually still carries the canonical URL or share links.
     sourceKey = sourceKeyForText(text);
+    pageHtml = text;
     content = [{ type: "text", text: text.slice(0, 15000) }];
   } else if (type === "file") {
     const file = formData.get("file") as File;
@@ -197,7 +203,17 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = JSON.parse(cleaned);
     // Overwrite rather than merge — these two fields are ours, not the model's.
-    return NextResponse.json({ ...parsed, source: sourceKey, source_url: sourcePageUrl });
+    return NextResponse.json({
+      ...parsed,
+      source: sourceKey,
+      source_url: sourcePageUrl,
+      // Suggested, like everything else here: the form shows it and a person saves it.
+      application_tool: detectApplicationTool(
+        parsed.application_url,
+        pageHtml,
+        !!parsed.email && !parsed.application_url
+      ),
+    });
   } catch {
     return NextResponse.json({ error: "Invalid JSON from Claude", raw: rawText.slice(0, 500) }, { status: 502 });
   }

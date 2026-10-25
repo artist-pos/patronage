@@ -177,8 +177,18 @@ export async function claimEntity(
       .eq("id", profile.id);
 
     if (profileError) {
-      // If id transfer fails (profile already exists), just link via token
-      // The shadow profile stays but we mark the token claimed
+      // Most often the claiming user already has a profile of their own, so the
+      // shadow profile's id can't move to them. Marking the token claimed here
+      // would burn the link and send them to a dashboard that owns nothing.
+      console.error("[claim] shadow profile transfer failed", {
+        profileId: profile.id,
+        userId,
+        error: profileError.message,
+      });
+      return {
+        error:
+          "We couldn't move this page to your account, usually because it already has a profile. Email hello@patronage.nz and we'll sort it out. Your link is still valid.",
+      };
     }
   }
 

@@ -29,7 +29,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
 
   const [template, setTemplate] = useState<Template>("claim_only");
   const [recipientEmail, setRecipientEmail] = useState(opp.claim_invite_email ?? opp.claim_email ?? "");
-  const [recipientName, setRecipientName] = useState(opp.organiser ?? "");
+  const [recipientName, setRecipientName] = useState(opp.claim_contact_name ?? opp.organiser ?? "");
   const [subject, setSubject] = useState(buildTemplateSubject("claim_only", opp.title));
   const [body, setBody] = useState("");
   const [bodyDirty, setBodyDirty] = useState(false);

@@ -11,6 +11,7 @@ import {
 } from "@/lib/commerce-pricing";
 import { notifyOpportunitySubmission } from "@/lib/email";
 import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { CAPTION_MAX, normaliseOpportunityWrite } from "@/lib/opportunity-fields";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
@@ -124,6 +125,96 @@ export async function submitActivationEnquiry(data: {
   return {};
 }
 
+/**
+ * Introduction request for an unclaimed (shadow) partner profile. Nobody owns
+ * the profile, so a DM would land in a thread no one reads — this goes to the
+ * Patronage inbox instead, where it doubles as a warm lead for claiming it.
+ */
+export async function requestPartnerIntroduction(data: {
+  profileId: string;
+  name: string;
+  email: string;
+  message: string;
+  /** "claim" = the sender says they belong to the organisation and wants the page. */
+  kind?: "introduction" | "claim";
+  turnstileToken?: string;
+  loadedAt?: number;
+  [HONEYPOT_FIELD]?: string;
+}): Promise<{ error?: string }> {
+  if (data[HONEYPOT_FIELD] || isSubmittedTooFast(data.loadedAt)) return {};
+  const isClaim = data.kind === "claim";
+
+  const name = data.name.trim().slice(0, 120);
+  const email = data.email.trim().slice(0, 200);
+  const message = data.message.trim().slice(0, 4000);
+  if (!name || !email || !message) return { error: "Name, email, and message are required." };
+
+  const ip = await getClientIp();
+  if (await isTorExit(ip)) {
+    await recordBlocked("form_blocked", { reason: "tor", form: "partner_introduction" });
+    return {};
+  }
+  if (!(await checkRateLimit(`partner-intro:${ip}`, 3, 3600))) {
+    return { error: "Too many requests from this network. Please try again later." };
+  }
+  if (!(await verifyTurnstile(data.turnstileToken, ip))) {
+    return { error: "Verification failed. Please refresh and try again." };
+  }
+
+  const admin = createAdminClient();
+  const { data: partner } = await admin
+    .from("profiles")
+    .select("full_name, username, account_status, role")
+    .eq("id", data.profileId)
+    .maybeSingle();
+  if (!partner || partner.role !== "partner") return { error: "Partner not found." };
+
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM ?? "Patronage <hello@patronage.nz>";
+  if (!key) return { error: "Email not configured." };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+  const partnerName = partner.full_name ?? partner.username ?? "a partner";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;">
+  <h2 style="font-size:16px;font-weight:600;margin:0 0 16px;">${isClaim ? "Claim request" : "Introduction request"}: ${esc(partnerName)}</h2>
+  <p style="font-size:13px;color:#555;margin:0 0 16px;">
+    ${isClaim
+      ? "Someone says they belong to this unclaimed partner. Check their email domain against the organisation before sending a claim link."
+      : "Sent from the profile of an unclaimed partner. Send them a claim link and make the introduction."}
+    Profile: <a href="${site}/${esc(partner.username ?? "")}">${site}/${esc(partner.username ?? "")}</a>
+  </p>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:6px 0;font-weight:600;width:140px;">Name</td><td>${esc(name)}</td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Email</td><td><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Signed in</td><td>${user ? "Yes" : "No"}</td></tr>
+  </table>
+  <div style="margin-top:16px;padding:12px;background:#f9f9f9;border-left:3px solid #000;">
+    <p style="margin:0;font-size:14px;line-height:1.6;">${esc(message).replace(/\n/g, "<br>")}</p>
+  </div>
+</body>
+</html>`;
+
+  const { error } = await new Resend(key).emails.send({
+    from,
+    to: "hello@patronage.nz",
+    replyTo: email,
+    subject: `${isClaim ? "Claim request" : "Introduction request"} for ${partnerName} from ${name}`,
+    html,
+  });
+
+  if (error) return { error: (error as { message?: string }).message ?? "Failed to send." };
+  return {};
+}
+
 export interface SubmissionState {
   success?: boolean;
   error?: string;
@@ -187,18 +278,26 @@ export async function submitOpportunityAction(
   let pipelineConfig = null;
   try { pipelineConfig = JSON.parse(pipelineConfigRaw); } catch { pipelineConfig = null; }
 
+  // Application links arrive as JSON; the same normaliser every editor uses
+  // cleans them, derives `url`, validates the contact email and converts a
+  // foreign-currency entry fee to NZD.
+  let applicationLinksRaw: unknown = [];
+  try { applicationLinksRaw = JSON.parse((formData.get("application_links") as string) || "[]"); } catch { applicationLinksRaw = []; }
   const localAmount = entryFeeRaw !== "" && entryFeeRaw != null ? parseFloat(entryFeeRaw) : null;
-  let entryFeeNZD = localAmount;
-  if (localAmount !== null && entryFeeCurrency !== "NZD") {
-    try {
-      const rateRes = await fetch(`https://api.frankfurter.app/latest?from=${entryFeeCurrency}&to=NZD`);
-      const rateData = await rateRes.json() as { rates?: { NZD?: number } };
-      const rate = rateData.rates?.NZD ?? 1;
-      entryFeeNZD = Math.round(localAmount * rate * 100) / 100;
-    } catch {
-      // fallback: store local amount as-is
-    }
-  }
+  const normalised = await normaliseOpportunityWrite<{
+    application_links: unknown[];
+    url: string | null;
+    contact_email: string | null;
+    entry_fee: number | null;
+    entry_fee_currency: string | null;
+    entry_fee_local?: number | null;
+  }>({
+    application_links: Array.isArray(applicationLinksRaw) ? applicationLinksRaw : [],
+    url: (formData.get("url") as string)?.trim() || null,
+    contact_email: (formData.get("contact_email") as string) || null,
+    entry_fee: localAmount,
+    entry_fee_currency: entryFeeCurrency,
+  });
 
   const isFeatured = isFeaturedRaw === "true";
   const isPipeline = routingType === "pipeline";
@@ -214,18 +313,22 @@ export async function submitOpportunityAction(
     is_active: false,
     title,
     organiser,
-    caption: captionRaw ? captionRaw.slice(0, 160) : null,
+    origin: "submission",
+    caption: captionRaw ? captionRaw.slice(0, CAPTION_MAX) : null,
     full_description: (formData.get("full_description") as string)?.trim() || null,
     type: (formData.get("type") as string) || "Grant",
     country: (formData.get("country") as string) || "NZ",
     city: (formData.get("city") as string)?.trim() || null,
     opens_at: opens_at || null,
     deadline: deadline || null,
-    url: (formData.get("url") as string)?.trim() || null,
+    url: normalised.url,
+    application_links: normalised.application_links,
+    contact_email: normalised.contact_email,
+    artist_payment_type: (formData.get("artist_payment_type") as string)?.trim() || null,
     funding_range: (formData.get("funding_range") as string)?.trim() || null,
-    entry_fee: entryFeeNZD,
-    entry_fee_currency: entryFeeCurrency !== "NZD" ? entryFeeCurrency : null,
-    entry_fee_local: entryFeeCurrency !== "NZD" ? localAmount : null,
+    entry_fee: normalised.entry_fee,
+    entry_fee_currency: normalised.entry_fee_currency,
+    entry_fee_local: normalised.entry_fee_local,
     sub_categories: subCategories,
     career_stage: careerStage,
     tags,
@@ -235,7 +338,7 @@ export async function submitOpportunityAction(
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,
     profile_id: user?.id ?? null,
-    travel_support: travelSupportRaw === "true" ? true : null,
+    travel_support: travelSupportRaw === "true" ? true : travelSupportRaw === "false" ? false : null,
     travel_support_details: (formData.get("travel_support_details") as string)?.trim() || null,
     routing_type: routingType,
     source: sourceKey,

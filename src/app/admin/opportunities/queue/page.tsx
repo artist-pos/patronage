@@ -11,6 +11,8 @@ async function getQueueOpportunities(status: string): Promise<Opportunity[]> {
     .from("opportunities")
     .select("*")
     .eq("status", status)
+    // Only what the scraper found. Real submissions are reviewed under /admin/submissions.
+    .eq("origin", "scraper")
     .order("deadline", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(200);

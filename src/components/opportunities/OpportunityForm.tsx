@@ -20,6 +20,8 @@ import { ApplicationLinksEditor } from "@/components/opportunities/ApplicationLi
 import { OrganiserField } from "@/components/opportunities/OrganiserField";
 import type { ApplicationLink, Opportunity, PipelineQuestion, PipelineConfig, RecurrencePattern } from "@/types/database";
 import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
+import { ARTIST_PAYMENT_OPTIONS, CAPTION_MAX, CURRENCIES } from "@/lib/opportunity-fields";
+import { CURRENT_TOOL_OPTIONS } from "@/lib/claim-outreach";
 import {
   FORM_TYPES,
   DISCIPLINES,
@@ -52,6 +54,12 @@ export interface OpportunityFormData {
   source: string;
   sourceUrl: string;
   applicationLinks: ApplicationLink[];
+  /** Public enquiries / apply-by-email address (opportunities.contact_email). */
+  contactEmail: string;
+  /** Admin only: who we email about claiming an aggregated listing, and how they take applications today. */
+  claimEmail: string;
+  claimContactName: string;
+  claimCurrentTool: string;
   type: string;
   country: string;
   city: string;
@@ -105,6 +113,10 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     source: "",
     sourceUrl: "",
     applicationLinks: [],
+    contactEmail: "",
+    claimEmail: "",
+    claimContactName: "",
+    claimCurrentTool: "",
     type: "Grant",
     country: "NZ",
     city: "",
@@ -177,6 +189,10 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
       : opp.url
       ? [{ label: "Apply on Official Site", url: opp.url }]
       : [],
+    contactEmail: opp.contact_email ?? "",
+    claimEmail: opp.claim_email ?? "",
+    claimContactName: opp.claim_contact_name ?? "",
+    claimCurrentTool: opp.claim_current_tool ?? "",
     type: opp.type ?? "Grant",
     country: opp.country ?? "NZ",
     city: opp.city ?? "",
@@ -348,7 +364,10 @@ interface ParsedOpportunity {
   tags?: string[];
   full_description?: string;
   email?: string;
+  contact_name?: string | null;
   application_url?: string;
+  /** Suggested from where the apply link points (lib/application-tool). */
+  application_tool?: string | null;
   /** Set by /api/parse-opportunity from the domain, not by the model. */
   source?: string | null;
   source_url?: string | null;
@@ -368,7 +387,7 @@ function mapParsedToFormData(parsed: ParsedOpportunity): Partial<OpportunityForm
   const updates: Partial<OpportunityFormData> = {};
   if (parsed.title) updates.title = parsed.title;
   if (parsed.organisation) updates.organiser = parsed.organisation;
-  if (parsed.caption) updates.caption = parsed.caption.slice(0, 160);
+  if (parsed.caption) updates.caption = parsed.caption.slice(0, CAPTION_MAX);
   if (parsed.full_description) updates.fullDescription = parsed.full_description;
   if (parsed.type && FORM_TYPES.some((t) => t.value === parsed.type)) updates.type = parsed.type;
   if (parsed.country && ["NZ", "AUS", "Global"].includes(parsed.country)) updates.country = parsed.country;
@@ -382,8 +401,18 @@ function mapParsedToFormData(parsed: ParsedOpportunity): Partial<OpportunityForm
   }
   if (parsed.career_stage?.length) updates.selectedCareerStages = parsed.career_stage;
   if (parsed.tags?.length) updates.selectedTags = parsed.tags;
-  if (parsed.email) updates.submitterEmail = parsed.email;
-  if (parsed.application_url) updates.url = parsed.application_url;
+  // The address printed on the organiser's page is the listing's contact, and the
+  // natural first guess for claim outreach. (It used to land in the submitter field.)
+  if (parsed.email) {
+    updates.contactEmail = parsed.email;
+    updates.claimEmail = parsed.email;
+  }
+  if (parsed.contact_name) updates.claimContactName = parsed.contact_name;
+  if (parsed.application_tool) updates.claimCurrentTool = parsed.application_tool;
+  if (parsed.application_url) {
+    updates.url = parsed.application_url;
+    updates.applicationLinks = [{ label: "Apply on Official Site", url: parsed.application_url }];
+  }
   // Attribution: only ever set here, never cleared — a re-parse that fails to
   // recognise the domain shouldn't wipe a source the admin picked by hand.
   if (parsed.source) updates.source = parsed.source;
@@ -1131,18 +1160,18 @@ export function OpportunityForm({
           />
         </Field>
 
-        <Field label={mode === "admin" ? "Caption, shown on card (max 500 chars)" : "Caption (shown on card, max 160 characters)"}>
+        <Field label={`Caption (shown on card, max ${CAPTION_MAX} characters)`}>
           <textarea
             value={value.caption}
             onChange={(e) => set({ caption: e.target.value })}
             rows={2}
-            maxLength={mode === "admin" ? 500 : 160}
+            maxLength={CAPTION_MAX}
             placeholder="One-sentence summary of the opportunity…"
             className={`${FIELD} resize-none overflow-hidden`}
             onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
           />
           <p className="text-xs text-muted-foreground tabular-nums text-right">
-            {value.caption.length}/{mode === "admin" ? 500 : 160}
+            {value.caption.length}/{CAPTION_MAX}
           </p>
         </Field>
 
@@ -1212,7 +1241,7 @@ export function OpportunityForm({
                 style={{ width: "5.5rem", flexShrink: 0 }}
                 className={FIELD}
               >
-                {["NZD", "AUD", "USD", "EUR", "GBP", "CAD"].map((c) => (
+                {CURRENCIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -1273,54 +1302,47 @@ export function OpportunityForm({
           </Field>
         )}
 
+        <Field label="Artist payment">
+          <select
+            value={value.artistPaymentType}
+            onChange={(e) => set({ artistPaymentType: e.target.value })}
+            className={FIELD}
+          >
+            <option value="">– None / N/A –</option>
+            {ARTIST_PAYMENT_OPTIONS.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
+
         {showField(value.type, "accommodation") && (
-          mode === "admin" ? (
-            <Field label="Travel / Accommodation Support">
-              <div className="flex gap-3">
-                {([{ val: null, label: "Unknown" }, { val: true, label: "Yes" }, { val: false, label: "No" }] as const).map(({ val, label }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => set({ travelSupport: val })}
-                    className={`text-xs px-3 py-1.5 border leading-none transition-colors ${
-                      value.travelSupport === val
-                        ? "border-black bg-black text-white"
-                        : "border-black hover:bg-muted"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {value.travelSupport && (
-                <input
-                  type="text"
-                  value={value.travelSupportDetails}
-                  onChange={(e) => set({ travelSupportDetails: e.target.value })}
-                  placeholder="e.g. flights + accommodation covered"
-                  className={`${FIELD} mt-2`}
-                />
-              )}
-            </Field>
-          ) : (
-            <Field label="Accommodation">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={value.travelSupport === true}
-                  onChange={(e) => set({ travelSupport: e.target.checked || null })}
-                />
-                <span className="text-sm">Accommodation included</span>
-              </label>
+          <Field label="Travel / Accommodation Support">
+            <div className="flex gap-3">
+              {([{ val: null, label: "Unknown" }, { val: true, label: "Yes" }, { val: false, label: "No" }] as const).map(({ val, label }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => set({ travelSupport: val })}
+                  className={`text-xs px-3 py-1.5 border leading-none transition-colors ${
+                    value.travelSupport === val
+                      ? "border-black bg-black text-white"
+                      : "border-black hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {value.travelSupport && (
               <input
                 type="text"
                 value={value.travelSupportDetails}
                 onChange={(e) => set({ travelSupportDetails: e.target.value })}
-                placeholder="e.g. Private studio apartment provided"
+                placeholder="e.g. flights + accommodation covered"
                 className={`${FIELD} mt-2`}
               />
-            </Field>
-          )
+            )}
+          </Field>
         )}
       </Section>
 
@@ -1483,14 +1505,71 @@ export function OpportunityForm({
       {/* ── Section 6: Application links (free/external listings only) ─── */}
       {/* Each labelled link becomes its own button on the public listing. Pipeline
           applications route entirely through Patronage, so this doesn't apply. */}
-      {value.routingType !== "pipeline" && (
-        <Section label="Application">
+      <Section label="Application">
+        {value.routingType !== "pipeline" && (
           <Field label="Application links">
             <ApplicationLinksEditor
               links={value.applicationLinks}
               onChange={setLinks}
             />
           </Field>
+        )}
+        <Field label="Contact email (optional)">
+          <input
+            type="email"
+            value={value.contactEmail}
+            onChange={(e) => set({ contactEmail: e.target.value })}
+            placeholder="applications@organisation.nz"
+            className={FIELD}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Shown on the listing as an apply-by-email option when there is no application link.
+          </p>
+        </Field>
+      </Section>
+
+      {/* ── Claim outreach (admin only): required before an aggregated listing goes live ── */}
+      {canLinkOrganiser && (
+        <Section label="Claim outreach (not shown publicly)">
+          <p className="-mt-3 mb-4 text-xs text-muted-foreground">
+            Who we email about claiming this listing, and how they take applications today. Autofill suggests
+            these from the page; check them, then save.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3">
+            <Field label="Claim email">
+              <input
+                type="email"
+                value={value.claimEmail}
+                onChange={(e) => set({ claimEmail: e.target.value })}
+                placeholder="hello@organisation.nz"
+                className={FIELD}
+              />
+            </Field>
+            <Field label="Contact name">
+              <input
+                type="text"
+                value={value.claimContactName}
+                onChange={(e) => set({ claimContactName: e.target.value })}
+                placeholder="Name, or ‘team’"
+                className={FIELD}
+              />
+            </Field>
+            <Field label="Current application tool">
+              <input
+                type="text"
+                list="claim-current-tools"
+                value={value.claimCurrentTool}
+                onChange={(e) => set({ claimCurrentTool: e.target.value })}
+                placeholder="Google Form, email…"
+                className={FIELD}
+              />
+              <datalist id="claim-current-tools">
+                {CURRENT_TOOL_OPTIONS.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </Field>
+          </div>
         </Section>
       )}
 
@@ -1660,55 +1739,6 @@ export function OpportunityForm({
           </div>
         </div>
       </div>
-
-      {/* ── Transparency (admin mode only) ────────────────────────────── */}
-      {mode === "admin" && (
-        <div className="space-y-4 border border-black/20 p-4 bg-muted/20 mt-8">
-          <p className="text-xs font-semibold uppercase tracking-widest">Transparency</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">
-                {value.entryFeeCurrency && value.entryFeeCurrency !== "NZD" ? `Entry Fee (${value.entryFeeCurrency})` : "Entry Fee"}
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={value.entryFeeCurrency}
-                  onChange={(e) => set({ entryFeeCurrency: e.target.value })}
-                  style={{ width: "5.5rem", flexShrink: 0 }}
-                  className={FIELD}
-                >
-                  {["NZD", "AUD", "USD", "EUR", "GBP", "CAD"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={value.entryFee}
-                  onChange={(e) => set({ entryFee: e.target.value })}
-                  placeholder="0 = Free, blank = unknown"
-                  className={FIELD}
-                  style={{ flex: 1, minWidth: 0 }}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest">Artist Payment</label>
-              <select
-                value={value.artistPaymentType}
-                onChange={(e) => set({ artistPaymentType: e.target.value })}
-                className={FIELD}
-              >
-                <option value="">– None / N/A –</option>
-                <option value="Honorarium">Honorarium</option>
-                <option value="Commission">Commission</option>
-                <option value="Stipend">Stipend</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
 
     </>
   );

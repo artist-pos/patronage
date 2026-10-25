@@ -2,20 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { X, AlertCircle } from "lucide-react";
-import { prepareClaimExport, type ClaimExportRow } from "@/app/admin/opportunities/export-actions";
+import { prepareClaimExport, saveClaimOutreachDetails, type ClaimExportRow } from "@/app/admin/opportunities/export-actions";
+import { CURRENT_TOOL_OPTIONS as TOOL_OPTIONS, missingOutreachDetails } from "@/lib/claim-outreach";
 import type { Opportunity } from "@/types/database";
-
-/** Suggestions only — the field is free text, type anything. */
-const TOOL_OPTIONS = [
-  "Website form",
-  "Google Form",
-  "Email",
-  "CRM",
-  "Submittable",
-  "SmartyGrants",
-  "Post / phone",
-  "Unknown",
-];
 
 const EXPIRY_OPTIONS = [14, 30, 60, 90];
 
@@ -70,11 +59,11 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
           if (!next[r.id]) {
             next[r.id] = {
               orgName: r.organiser,
-              contactName: "",
-              email: "",
+              contactName: r.contactName,
+              email: r.email,
               listingName: r.title,
               description: flatten(r.description),
-              currentTool: "",
+              currentTool: r.currentTool,
               subjectSmiley: false,
             };
           }
@@ -110,8 +99,24 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
     });
   }
 
-  function exportCSV() {
-    if (!rows) return;
+  async function exportCSV() {
+    if (!rows || incompleteRows.length > 0) return;
+
+    // Remember what was typed against each listing so it is only ever typed once.
+    const saved = await saveClaimOutreachDetails(
+      rows
+        .filter((r) => !r.alreadyOwned)
+        .map((r) => ({
+          id: r.id,
+          email: inputs[r.id].email,
+          contactName: inputs[r.id].contactName,
+          currentTool: inputs[r.id].currentTool,
+        }))
+    );
+    if (saved.error) {
+      setError(saved.error);
+      return;
+    }
 
     const headers = [
       "org_name",
@@ -155,7 +160,15 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
     onExported(`Exported ${rows.length} listing${rows.length !== 1 ? "s" : ""} to CSV.`);
   }
 
-  const missingEmail = rows?.filter((r) => !inputs[r.id]?.email.trim()).length ?? 0;
+  // Every listing we'd actually send a link for needs a contact, a name and a tool.
+  const incompleteRows =
+    rows?.filter((r) => {
+      if (r.alreadyOwned) return false;
+      const i = inputs[r.id];
+      if (!i) return false;
+      return missingOutreachDetails({ email: i.email, contactName: i.contactName, currentTool: i.currentTool }).length > 0;
+    }) ?? [];
+  const missingEmail = incompleteRows.length;
   const newTokens = rows?.filter((r) => r.tokenIsNew).length ?? 0;
   const ownedCount = rows?.filter((r) => r.alreadyOwned).length ?? 0;
   const firstExpiry = rows?.find((r) => r.claimTokenExpiresAt)?.claimTokenExpiresAt;
@@ -303,8 +316,8 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                             <input
                               value={i.contactName}
                               onChange={(e) => update(r.id, { contactName: e.target.value })}
-                              placeholder="Blank = general inbox"
-                              className={cell}
+                              placeholder="Name, or ‘team’ for a general inbox"
+                              className={`${cell} ${!r.alreadyOwned && !i.contactName.trim() ? "border-amber-300" : ""}`}
                             />
                           </td>
                           <td className="py-2 pr-3">
@@ -346,7 +359,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                               value={i.currentTool}
                               onChange={(e) => update(r.id, { currentTool: e.target.value })}
                               placeholder="Website form, Google Form…"
-                              className={cell}
+                              className={`${cell} ${!r.alreadyOwned && !i.currentTool.trim() ? "border-amber-300" : ""}`}
                             />
                           </td>
                           <td className="py-2 pr-3">
@@ -405,8 +418,8 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
                 {missingEmail > 0 && (
                   <span className="flex items-center gap-1 text-amber-700">
                     <AlertCircle className="w-3 h-3" />
-                    {missingEmail} row{missingEmail !== 1 ? "s" : ""} without an email — they&rsquo;ll
-                    export blank.
+                    {missingEmail} row{missingEmail !== 1 ? "s" : ""} still need{missingEmail === 1 ? "s" : ""} a
+                    contact email, a name and how they take applications. Fill those in to export.
                   </span>
                 )}
               </div>
@@ -425,7 +438,7 @@ export function ClaimExportPanel({ opps, onClose, onExported }: Props) {
           </button>
           <button
             type="button"
-            disabled={!rows || loading}
+            disabled={!rows || loading || incompleteRows.length > 0}
             onClick={exportCSV}
             className="text-xs bg-black text-white px-4 py-2 hover:bg-black/80 transition-colors disabled:opacity-50"
           >

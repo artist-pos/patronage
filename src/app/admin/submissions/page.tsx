@@ -39,9 +39,11 @@ export default async function AdminSubmissionsPage() {
     .from("opportunities")
     .select("id, title, organiser, caption, full_description, type, country, city, deadline, url, funding_amount, funding_range, featured_image_url, grant_type, recipients_count, submitter_email, status, created_at, routing_type, pipeline_paid_at, profile_id")
     .in("status", ["pending", "rejected"])
+    // Scraped listings are reviewed in the Scraper Queue, not here.
+    .neq("origin", "scraper")
     .order("created_at", { ascending: false });
 
-  const submissions = (data ?? []) as Submission[];
+  const submissions = (data ?? []) as unknown as Submission[];
 
   // For open calls: how many earlier ones has this organisation run?
   const priorRounds = new Map<string, number>();

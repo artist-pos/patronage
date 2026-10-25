@@ -250,11 +250,21 @@ export async function upsertOpportunity(
 
     // ── Insert new ────────────────────────────────────────────────────────────
     const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
-    const { data: inserted, error } = await supabase
+    let { data: inserted, error } = await supabase
         .from("opportunities")
-        .insert({ ...record, status: "pending", is_active: true })
+        .insert({ ...record, status: "pending", is_active: true, origin: "scraper" })
         .select("id")
         .single();
+
+    // Migration 222 adds `origin`. Until it has been run, insert without it rather
+    // than losing the whole scrape.
+    if (error && /origin/i.test(error.message)) {
+        ({ data: inserted, error } = await supabase
+            .from("opportunities")
+            .insert({ ...record, status: "pending", is_active: true })
+            .select("id")
+            .single());
+    }
 
     if (error) {
         console.error(`  Insert error: ${error.message}`);
@@ -379,10 +389,16 @@ function buildRecord(
 
     const subCategories = (opp as any).sub_categories ?? [];
 
+    // Only an address that looks like one, and only when found: a later scrape that
+    // misses it must not blank an address an earlier pass (or a person) set.
+    const rawEmail = (opp.contact_email ?? "").trim().toLowerCase();
+    const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) && rawEmail.length <= 200 ? rawEmail : null;
+
     return {
+        ...(contactEmail && { contact_email: contactEmail }),
         title: opp.title.slice(0, 255),
         organiser: opp.organiser.slice(0, 255),
-        caption: opp.caption?.slice(0, 400) ?? null,
+        caption: opp.caption?.slice(0, 300) ?? null,
         full_description: opp.full_description?.slice(0, 3000) ?? null,
         type: normaliseType(opp.type),
         country: mapCountry(opp.country),

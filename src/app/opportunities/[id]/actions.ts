@@ -9,89 +9,22 @@ import { after } from "next/server";
 import { sendApplicationConfirmation } from "@/lib/email";
 import { assignNewApplication } from "@/lib/review-assignment";
 import { TERMS_ACCEPTED_KEY } from "@/lib/application-terms";
-import { getOpportunitySource } from "@/lib/opportunity-sources";
+import { normaliseOpportunityWrite } from "@/lib/opportunity-fields";
+import type { OpportunityPayload } from "@/lib/opportunity-payload";
 import { validPartnerProfileId } from "@/lib/organiser-link";
 import type { ApplicationLink, OpportunityApplicationDraft, PipelineConfig } from "@/types/database";
 
 export async function updateOpportunityAdmin(
   id: string,
-  data: {
-    title?: string;
-    organiser?: string;
-    organiser_profile_id?: string | null;
-    caption?: string | null;
-    full_description?: string | null;
-    url?: string | null;
-    application_links?: ApplicationLink[] | null;
-    type?: string;
-    country?: string;
-    city?: string | null;
-    featured_image_url?: string | null;
-    secondary_image_url?: string | null;
-    sub_categories?: string[] | null;
-    career_stage?: string[] | null;
-    tags?: string[] | null;
-    opens_at?: string | null;
-    deadline?: string | null;
-    funding_range?: string | null;
-    entry_fee?: number | null;         // amount in entry_fee_currency; server converts to NZD
-    entry_fee_currency?: string | null;
-    entry_fee_local?: number | null;
-    grant_type?: string | null;
-    recipients_count?: number | null;
-    artist_payment_type?: string | null;
-    travel_support?: boolean | null;
-    travel_support_details?: string | null;
-    routing_type?: string | null;
-    source?: string | null;
-    source_url?: string | null;
-    show_badges_in_submission?: boolean;
-    is_featured?: boolean;
-    pipeline_config?: object | null;
-    is_recurring?: boolean;
-    recurrence_pattern?: string | null;
-    recurrence_open_day?: number | null;
-    recurrence_close_day?: number | null;
-    recurrence_end_date?: string | null;
-  }
+  data: Partial<OpportunityPayload> & { entry_fee_local?: number | null }
 ) {
   if (!(await isAdmin())) throw new Error("Not authorised");
   const admin = createAdminClient();
 
-  const updateData = { ...data };
+  const updateData: Record<string, unknown> = await normaliseOpportunityWrite({ ...data });
 
   if ("organiser_profile_id" in updateData) {
-    updateData.organiser_profile_id = await validPartnerProfileId(updateData.organiser_profile_id);
-  }
-
-  // Drop blank link rows the editor keeps around for in-progress typing.
-  if (Array.isArray(updateData.application_links)) {
-    updateData.application_links = updateData.application_links.filter(
-      (l) => l && (l.url?.trim() || l.label?.trim())
-    );
-  }
-
-  // Only keys the registry knows about can be stored — an unrecognised one
-  // would render no attribution anyway, so treat it as "not sourced".
-  if ("source" in updateData) {
-    updateData.source = getOpportunitySource(updateData.source) ? updateData.source : null;
-  }
-
-  const currency = (data.entry_fee_currency ?? "NZD").toUpperCase();
-  if (data.entry_fee != null && currency !== "NZD") {
-    try {
-      const rateRes = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=NZD`);
-      const rateData = await rateRes.json() as { rates?: { NZD?: number } };
-      const rate = rateData.rates?.NZD ?? 1;
-      updateData.entry_fee_local = data.entry_fee;
-      updateData.entry_fee = Math.round(data.entry_fee * rate * 100) / 100;
-      updateData.entry_fee_currency = currency;
-    } catch {
-      // keep as-is on failure
-    }
-  } else if (currency === "NZD") {
-    updateData.entry_fee_local = null;
-    updateData.entry_fee_currency = null;
+    updateData.organiser_profile_id = await validPartnerProfileId(updateData.organiser_profile_id as string | null | undefined);
   }
 
   const { error } = await admin.from("opportunities").update(updateData).eq("id", id);

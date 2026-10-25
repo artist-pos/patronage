@@ -15,6 +15,7 @@ import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, has
 import { fetchSitemap, resolveSitemapUrl, filterByLastmodAge } from "./lib/sitemap.js";
 import { fetchWpPosts } from "./lib/wp.js";
 import { isAllowedByRobots } from "./lib/robots.js";
+import { enrichFromOutbound } from "./lib/enrich.js";
 import { filterLinks } from "./lib/filter-links.js";
 import type { Source, ScrapedOpportunity } from "./types.js";
 
@@ -191,11 +192,16 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
 
         const opps = await extractFromPage(fetchResult.text, entry.loc, source.country, { strictGeo: source.strictGeo });
         const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, entry.loc) : null;
-        for (const opp of opps) {
-          if (outbound) opp.url = outbound;
-          else if (!opp.url) opp.url = entry.loc;
+        for (const found of opps) {
+          let opp = found;
+          let outboundImage: string | null = null;
+          if (outbound) {
+            opp.url = outbound;
+            // The aggregator page is a summary; the organiser's own page has the detail.
+            ({ opp, ogImage: outboundImage } = await enrichFromOutbound(opp, outbound, source));
+          } else if (!opp.url) opp.url = entry.loc;
           const enriched = applySourceMeta(opp, source);
-          await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? null, entry.loc);
+          await upsert(enriched, enriched.featured_image_url ?? outboundImage ?? fetchResult.ogImage ?? null, entry.loc);
         }
         // Store hash for next run (update the in-memory cache entry too)
         if (norm && cache.urls.has(norm)) {
@@ -316,11 +322,15 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           const opps = await extractFromPage(fetchResult.text, link, source.country, { strictGeo: source.strictGeo });
           // For aggregator sources, prefer the outbound provider link over the aggregator URL
           const outbound = source.isAggregator ? pickOutboundLink(fetchResult.text, link) : null;
-          for (const opp of opps) {
-            if (outbound) opp.url = outbound;
-            else if (!opp.url) opp.url = link;
+          for (const found of opps) {
+            let opp = found;
+            let outboundImage: string | null = null;
+            if (outbound) {
+              opp.url = outbound;
+              ({ opp, ogImage: outboundImage } = await enrichFromOutbound(opp, outbound, source));
+            } else if (!opp.url) opp.url = link;
             const enriched = applySourceMeta(opp, source);
-            await upsert(enriched, enriched.featured_image_url ?? fetchResult.ogImage ?? ogImage ?? null, link);
+            await upsert(enriched, enriched.featured_image_url ?? outboundImage ?? fetchResult.ogImage ?? ogImage ?? null, link);
           }
         } catch (err) {
           if (err instanceof InsufficientCreditsError) throw err;

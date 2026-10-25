@@ -6,6 +6,7 @@ import { updateOpportunityAdmin } from "@/app/opportunities/[id]/actions";
 import type { Opportunity } from "@/types/database";
 import { OpportunityForm, oppToFormData, type OpportunityFormData } from "@/components/opportunities/OpportunityForm";
 import { createClient } from "@/lib/supabase/client";
+import { buildOpportunityPayload } from "@/lib/opportunity-payload";
 
 interface Props {
   opp: Opportunity;
@@ -43,58 +44,24 @@ export function AdminEditOpportunityModal({ opp, forceOpen, onForceClose }: Prop
   async function handleSave() {
     setSaving(true);
     try {
-      const allTags = [
-        ...formData.selectedDisciplines,
-        ...formData.selectedCareerStages,
-        ...formData.selectedTags,
-      ];
-
-      const pipelineConfig = formData.routingType === "pipeline" ? {
+      // Spread the stored pipeline_config first: this form only edits the
+      // questions, documents and terms PDF, and rebuilding from scratch wiped
+      // everything else (stages, post-selection setup, template) on every save.
+      const pipelineConfig = {
+        ...(opp.pipeline_config as object | null),
         questions: formData.questions,
         artist_documents: formData.artistDocs,
         terms_pdf_url: formData.termsPdfUrl,
-      } : null;
+      };
 
-      const appLinks = formData.applicationLinks.filter((l) => l.url.trim() || l.label.trim());
-
-      await updateOpportunityAdmin(opp.id, {
-        title: formData.title.trim() || opp.title,
-        organiser: formData.organiser.trim() || opp.organiser,
-        ...(formData.organiserLinkTouched ? { organiser_profile_id: formData.organiserProfileId } : {}),
-        caption: formData.caption.trim() || null,
-        full_description: formData.fullDescription.trim() || null,
-        url: appLinks.find((l) => l.url.trim())?.url.trim() || null,
-        application_links: appLinks,
-        type: formData.type,
-        country: formData.country,
-        city: formData.city.trim() || null,
-        opens_at: formData.opensAt || null,
-        deadline: formData.deadline || null,
-        funding_range: formData.fundingRange.trim() || null,
-        featured_image_url: formData.featuredImageUrl.trim() || null,
-        secondary_image_url: formData.secondaryImageUrl.trim() || null,
-        sub_categories: formData.selectedDisciplines.length > 0 ? formData.selectedDisciplines : null,
-        career_stage: formData.selectedCareerStages.length > 0 ? formData.selectedCareerStages : null,
-        tags: formData.selectedTags.length > 0 ? formData.selectedTags : null,
-        entry_fee: formData.entryFee !== "" ? parseFloat(formData.entryFee) : null,
-        entry_fee_currency: formData.entryFeeCurrency || "NZD",
-        grant_type: formData.grantType.trim() || null,
-        recipients_count: formData.recipientsCount ? parseInt(formData.recipientsCount) : null,
-        artist_payment_type: formData.artistPaymentType || null,
-        travel_support: formData.travelSupport,
-        travel_support_details: formData.travelSupportDetails.trim() || null,
-        routing_type: formData.routingType,
-        source: formData.source || null,
-        source_url: formData.sourceUrl.trim() || null,
-        show_badges_in_submission: formData.showBadges,
-        is_featured: formData.isFeatured,
-        pipeline_config: pipelineConfig,
-        is_recurring: formData.isRecurring,
-        recurrence_pattern: formData.isRecurring && formData.recurrencePattern ? formData.recurrencePattern : null,
-        recurrence_open_day: formData.isRecurring && formData.recurrenceOpenDay ? parseInt(formData.recurrenceOpenDay) : null,
-        recurrence_close_day: formData.isRecurring && formData.recurrenceCloseDay ? parseInt(formData.recurrenceCloseDay) : null,
-        recurrence_end_date: formData.isRecurring && formData.recurrenceEndDate ? formData.recurrenceEndDate : null,
-      });
+      await updateOpportunityAdmin(
+        opp.id,
+        buildOpportunityPayload(formData, {
+          admin: true,
+          fallback: { title: opp.title, organiser: opp.organiser },
+          pipelineConfig,
+        })
+      );
       setToast("Saved");
       setTimeout(() => {
         setToast(null);

@@ -5,8 +5,12 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { uploadCsvAction, type RowResult } from "@/app/admin/upload/actions";
 
-const REQUIRED_COLS = ["title", "organiser", "type", "country"];
-const ALL_COLS = [...REQUIRED_COLS, "description", "deadline", "url"];
+import { CSV_OPTIONAL_COLS, CSV_REQUIRED_COLS } from "@/lib/opportunity-csv";
+import { OPP_TYPES } from "@/lib/opportunity-constants";
+import { CURRENT_TOOL_OPTIONS } from "@/lib/claim-outreach";
+
+const REQUIRED_COLS: readonly string[] = CSV_REQUIRED_COLS;
+const ALL_COLS: string[] = [...CSV_REQUIRED_COLS, ...CSV_OPTIONAL_COLS];
 
 export function CsvUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,13 +77,19 @@ export function CsvUploader() {
           ))}
         </p>
         <p className="text-xs">
-          Valid <strong>type</strong> values: Grant, Residency, Commission, Open
-          Call, Prize, Display
+          Valid <strong>type</strong> values: {OPP_TYPES.join(", ")}
           <br />
           Valid <strong>country</strong> values: NZ, AUS, Global
           <br />
-          <strong>deadline</strong> format: YYYY-MM-DD (leave blank for open
+          <strong>deadline</strong> and <strong>opens_at</strong> format: YYYY-MM-DD (leave blank for open
           deadline)
+          <br />
+          <strong>claim_email</strong>, <strong>claim_contact_name</strong> (or &ldquo;team&rdquo; for a general
+          inbox) and <strong>claim_current_tool</strong> ({CURRENT_TOOL_OPTIONS.join(", ")}) are required for every
+          row: they feed claim outreach, the same as in the Scraper Queue.
+          <br />
+          <strong>disciplines</strong>, <strong>career_stage</strong> and <strong>tags</strong> take values
+          separated by semicolons. <strong>travel_support</strong>: yes or no.
         </p>
       </div>
 

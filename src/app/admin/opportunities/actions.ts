@@ -109,6 +109,7 @@ export async function createDraftUnclaimedListing(): Promise<Opportunity> {
       status: "draft_unclaimed",
       is_active: false,
       routing_type: "external",
+      origin: "admin",
     })
     .select()
     .single();

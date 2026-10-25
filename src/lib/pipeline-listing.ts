@@ -26,6 +26,9 @@ export const PIPELINE_LISTING_FIELDS = [
   "funding_range",
   "entry_fee",
   "entry_fee_currency",
+  "artist_payment_type",
+  "travel_support",
+  "travel_support_details",
 ] as const;
 
 /** Keep only known listing fields from an untrusted localStorage payload. */

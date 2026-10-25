@@ -68,6 +68,7 @@ Each item in the array:
   "url": "direct link to the opportunity page, or null — if the content includes an outbound link to the organiser's own application page, return that URL instead of the page URL you're reading",
   "funding_range": "e.g. 'Up to $10,000 NZD' or '$5,000–$25,000' or null",
   "full_description": "Structured plain-text description for the detail page. Use short section headings on their own line, always ending with a colon (e.g. 'Eligibility:', 'Prize:', 'How to Apply:', 'About the Residency:', 'Who can apply:'). Headings must be Title Case followed by colon — never ALL CAPS, never without colon. Write content after each heading as plain text on the next line(s). No markdown bold/italic. Max 1500 characters. Null if the source page has no substantive detail beyond the caption.",
+  "contact_email": "string or null — the ORGANISER'S own enquiries or applications email address, copied exactly as printed on the page (e.g. residency@gallery.org.nz). Never guess, construct or infer an address. Null if none is printed, if it belongs to the website or aggregator that published the listing rather than the organiser, or if the page says not to contact them.",
   "sub_categories": ["string array — relevant tags for discipline, medium, career stage, identity, focus. Include whatever applies from the content. Examples: Painting, Sculpture, Photography, Ceramics, Digital, Printmaking, Drawing, Textile, Film & Video, Performance, Installation, Sound, Poetry, Writing, Mixed Media, Early Career, Emerging, Mid-Career, Established, Māori, Pasifika, Indigenous, First Nations, Youth, Women, LGBTQ+, International, Travel, Research, Community, Environmental, Public Art, Experimental. Add any other relevant tags not in this list."],
   "disciplines": ["string array from: visual_art, music, poetry, writing, dance, film, photography, craft, performance, other"],
   "geo_eligibility": "nz" | "aus" | "worldwide_explicit" | "worldwide_likely",
@@ -104,6 +105,8 @@ export interface ExtractOptions {
      * eligibility (or NZ/AUS), dropping "worldwide_likely" inferences.
      */
     strictGeo?: boolean;
+    /** Override the extraction model (the aggregator enrichment pass can use a stronger one). */
+    model?: string;
 }
 
 type ParsedOpp = ScrapedOpportunity & { confidence?: string; geo_eligibility?: string };
@@ -134,8 +137,8 @@ export function applyExtractionFilters(parsed: ParsedOpp[], opts: ExtractOptions
         .map((o) => ({
             ...o,
             country: mapCountryForDb(o.country),
-            // Ensure caption doesn't exceed DB limit
-            caption: o.caption?.slice(0, 400) ?? null,
+            // Same cap as every opportunity form (CAPTION_MAX in src/lib/opportunity-fields.ts)
+            caption: o.caption?.slice(0, 300) ?? null,
         }));
 }
 
@@ -155,7 +158,7 @@ export async function extractFromPage(
         const response = await withRateLimit(
             () =>
                 client.messages.create({
-                    model: "claude-haiku-4-5-20251001",
+                    model: opts.model ?? "claude-haiku-4-5-20251001",
                     max_tokens: 4096,
                     system: SYSTEM,
                     messages: [{ role: "user", content: prompt }],

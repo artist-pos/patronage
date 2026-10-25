@@ -6,12 +6,14 @@ export interface TemplateVars {
   opportunityTitle: string;
   claimUrl: string;
   listingUrl?: string;
+  /** A true, specific line about how the listing is doing, e.g. "4 creatives have clicked through to apply." */
+  engagement?: string;
 }
 
 export function buildClaimOnlyBody(vars: TemplateVars): string {
   return `Kia ora ${vars.recipientName},
 
-I've added ${vars.organiserName}'s ${vars.opportunityTitle} to Patronage, a platform connecting NZ and Australian creatives with funding opportunities. Creatives are already finding it.
+I've added ${vars.organiserName}'s ${vars.opportunityTitle} to Patronage, a platform connecting NZ and Australian creatives with funding opportunities. ${vars.engagement ?? "Creatives are already finding it."}
 
 If you'd like to take ownership of the listing, the link below lets you claim it. You'll be able to edit details, update the deadline, and see how many creatives are viewing it. The listing stays live either way.
 

@@ -9,6 +9,7 @@ import {
   type OpportunityFormData,
 } from "@/components/opportunities/OpportunityForm";
 import { updateOpportunityPartner } from "./actions";
+import { buildOpportunityPayload } from "@/lib/opportunity-payload";
 import { submitDraftForReview } from "@/app/partner/opportunities/new/actions";
 import type { Opportunity, PostSelectionConfig, PostSelectionDocField, PipelineConfig } from "@/types/database";
 import { Lightbulb, Plus, Trash2, GripVertical } from "lucide-react";
@@ -106,50 +107,17 @@ export function PartnerEditForm({ opp }: Props) {
     // Spread the current pipeline_config first — this tab doesn't manage
     // terms_pdf_url, portfolio_pick_count, pipeline_stages, or template, and
     // reconstructing from scratch here silently wiped them on every save.
-    const pipelineConfig =
-      d.routingType === "pipeline"
-        ? {
-            ...(opp.pipeline_config as PipelineConfig | null),
-            questions: d.questions,
-            artist_documents: d.artistDocs,
-            post_selection: postSel,
-          }
-        : null;
-
-    const appLinks = d.applicationLinks.filter((l) => l.url.trim() || l.label.trim());
-
-    return {
-      title: d.title.trim() || opp.title,
-      organiser: d.organiser.trim() || opp.organiser,
-      ...(d.organiserLinkTouched ? { organiser_profile_id: d.organiserProfileId } : {}),
-      caption: d.caption.trim() || null,
-      full_description: d.fullDescription.trim() || null,
-      url: appLinks.find((l) => l.url.trim())?.url.trim() || null,
-      application_links: appLinks,
-      type: d.type,
-      country: d.country,
-      city: d.city.trim() || null,
-      opens_at: d.opensAt || null,
-      deadline: d.deadline || null,
-      funding_range: d.fundingRange.trim() || null,
-      featured_image_url: d.featuredImageUrl.trim() || null,
-      secondary_image_url: d.secondaryImageUrl.trim() || null,
-      sub_categories: d.selectedDisciplines.length > 0 ? d.selectedDisciplines : null,
-      career_stage: d.selectedCareerStages.length > 0 ? d.selectedCareerStages : null,
-      tags: d.selectedTags.length > 0 ? d.selectedTags : null,
-      entry_fee: d.entryFee !== "" ? parseFloat(d.entryFee) : null,
-      entry_fee_currency: d.entryFeeCurrency || "NZD",
-      grant_type: d.grantType.trim() || null,
-      recipients_count: d.recipientsCount ? parseInt(d.recipientsCount) : null,
-      artist_payment_type: d.artistPaymentType || null,
-      travel_support: d.travelSupport,
-      travel_support_details: d.travelSupportDetails.trim() || null,
-      routing_type: d.routingType,
-      source: d.source || null,
-      source_url: d.sourceUrl.trim() || null,
-      show_badges_in_submission: d.showBadges,
-      pipeline_config: pipelineConfig,
+    const pipelineConfig = {
+      ...(opp.pipeline_config as PipelineConfig | null),
+      questions: d.questions,
+      artist_documents: d.artistDocs,
+      post_selection: postSel,
     };
+
+    return buildOpportunityPayload(d, {
+      fallback: { title: opp.title, organiser: opp.organiser },
+      pipelineConfig,
+    });
   }
 
   async function handleSave() {

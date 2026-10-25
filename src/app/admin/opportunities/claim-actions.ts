@@ -1,62 +1,18 @@
 "use server";
 
-import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
-
-async function logClaimInviteToCRM(
-  email: string,
-  organiserName: string,
-  opportunityTitle: string
-): Promise<void> {
-  const admin = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data: existing } = await admin
-    .from("outreach_contacts")
-    .select("id, status")
-    .eq("email", email.trim())
-    .maybeSingle();
-
-  if (existing) {
-    await Promise.all([
-      admin.from("outreach_activity").insert({
-        contact_id: existing.id,
-        activity_type: "email_sent",
-        description: `Claim invite sent for opportunity: ${opportunityTitle}`,
-      }),
-      admin.from("outreach_contacts").update({
-        last_activity_date: today,
-        ...(existing.status === "not_started" ? { status: "contacted" } : {}),
-      }).eq("id", existing.id),
-    ]);
-  } else {
-    const { data: newContact } = await admin
-      .from("outreach_contacts")
-      .insert({
-        company: organiserName || email.split("@")[1] || "Unknown",
-        email: email.trim(),
-        status: "contacted",
-        channel: "intro_email",
-        sent_from: "patronage",
-        last_activity_date: today,
-        first_contact_date: today,
-        category: "other",
-      })
-      .select("id")
-      .single();
-
-    if (newContact) {
-      await admin.from("outreach_activity").insert({
-        contact_id: newContact.id,
-        activity_type: "email_sent",
-        description: `Claim invite sent for opportunity: ${opportunityTitle}`,
-      });
-    }
-  }
-}
+import {
+  CLAIM_FROM,
+  bodyToHtml,
+  buildOptOutFooter,
+  getNext9amNZST,
+  getResend,
+  isEmailOptedOut,
+  logClaimInviteToCRM,
+} from "@/lib/claim-invite";
 import {
   buildClaimOnlyBody,
   buildClaimPipelineBody,
@@ -64,59 +20,6 @@ import {
   buildClaimUrl,
   type TemplateVars,
 } from "./claim-templates";
-
-const FROM = "Blake Aitken <blake@patronage.nz>";
-
-function getResend(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is not set");
-  return new Resend(key);
-}
-
-// ── Next 9am NZST helper ──────────────────────────────────────────────────────
-
-function getNext9amNZST(): string {
-  const now = new Date();
-  const nzTime = new Date(now.toLocaleString("en-US", { timeZone: "Pacific/Auckland" }));
-  const nzHour = nzTime.getHours();
-  const target = new Date(nzTime);
-  if (nzHour >= 9) {
-    target.setDate(target.getDate() + 1);
-  }
-  target.setHours(9, 0, 0, 0);
-  const offset = nzTime.getTime() - now.getTime();
-  const utcTarget = new Date(target.getTime() - offset);
-  return utcTarget.toISOString();
-}
-
-// ── Plain-text → HTML conversion ─────────────────────────────────────────────
-
-function bodyToHtml(text: string, claimUrl?: string, listingUrl?: string): string {
-  const escaped = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  // Replace the bare claim URL line with a styled CTA button
-  let processed = escaped;
-  if (claimUrl) {
-    const escapedUrl = claimUrl.replace(/&/g, "&amp;");
-    const button = `<div style="margin:24px 0"><a href="${escapedUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;font-size:14px;font-family:sans-serif;letter-spacing:0.01em">Claim listing →</a></div>`;
-    processed = processed.replace(escapedUrl, button);
-  }
-
-  // Auto-link any remaining URLs
-  const linked = processed.replace(
-    /(https?:\/\/[^\s<"]+)/g,
-    (url) => `<a href="${url}" style="color:#000;text-decoration:underline">${url}</a>`
-  );
-
-  const footer = listingUrl
-    ? `<br><p style="margin:16px 0 0;font-size:12px;color:#888"><a href="${listingUrl}" style="color:#888;text-decoration:underline">View listing on Patronage →</a></p>`
-    : "";
-
-  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;font-size:14px;line-height:1.7">${linked.replace(/\n/g, "<br>")}${footer}</body></html>`;
-}
 
 // ── Track claim link open ─────────────────────────────────────────────────────
 
@@ -155,6 +58,10 @@ export async function sendClaimInvite(
 ): Promise<{ error?: string; scheduledFor?: string }> {
   if (!(await isAdmin())) return { error: "Not authorised." };
 
+  if (await isEmailOptedOut(input.recipientEmail)) {
+    return { error: "This address has opted out of claim invites." };
+  }
+
   const supabase = await createClient();
 
   const { data: opp } = await supabase
@@ -184,10 +91,10 @@ export async function sendClaimInvite(
   const scheduledAt = input.scheduleFor9am ? getNext9amNZST() : undefined;
 
   const { error: sendError } = await resend.emails.send({
-    from: FROM,
+    from: CLAIM_FROM,
     to: input.recipientEmail,
     subject: input.subject,
-    html: bodyToHtml(input.body, claimUrl, listingUrl),
+    html: bodyToHtml(`${input.body}\n\n${buildOptOutFooter(claimToken)}`, claimUrl, listingUrl),
     ...(scheduledAt ? { scheduledAt } : {}),
   });
 
@@ -229,6 +136,7 @@ export async function sendSingleBulkInvite(
   scheduleFor9am: boolean
 ): Promise<{ error?: string }> {
   if (!item.recipientEmail.trim()) return { error: "No email" };
+  if (await isEmailOptedOut(item.recipientEmail)) return { error: "Opted out" };
 
   const supabase = await createClient();
 
@@ -259,10 +167,10 @@ export async function sendSingleBulkInvite(
 
   const resend = getResend();
   const { error: sendError } = await resend.emails.send({
-    from: FROM,
+    from: CLAIM_FROM,
     to: item.recipientEmail,
     subject,
-    html: bodyToHtml(body, claimUrl, listingUrl),
+    html: bodyToHtml(`${body}\n\n${buildOptOutFooter(claimToken)}`, claimUrl, listingUrl),
     ...(scheduledAt ? { scheduledAt } : {}),
   });
 

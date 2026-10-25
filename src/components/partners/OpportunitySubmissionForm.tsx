@@ -106,9 +106,7 @@ export function OpportunitySubmissionForm({
     return data.publicUrl;
   }
 
-  // sub_categories = disciplines only; career_stage and tags go to separate columns
-  const allTags = formData.selectedDisciplines;
-  // All tags combined for preview display
+  // All tags combined for preview display (stored separately: sub_categories = disciplines only)
   const allTagsForPreview = [
     ...formData.selectedDisciplines,
     ...formData.selectedCareerStages,
@@ -235,6 +233,9 @@ export function OpportunitySubmissionForm({
         <input type="hidden" name="caption"                    value={formData.caption} />
         <input type="hidden" name="full_description"           value={formData.fullDescription} />
         <input type="hidden" name="url"                        value={formData.url} />
+        <input type="hidden" name="application_links"          value={JSON.stringify(formData.applicationLinks)} />
+        <input type="hidden" name="contact_email"              value={formData.contactEmail} />
+        <input type="hidden" name="artist_payment_type"        value={formData.artistPaymentType} />
         <input type="hidden" name="type"                       value={formData.type} />
         <input type="hidden" name="country"                    value={formData.country} />
         <input type="hidden" name="city"                       value={formData.city} />
@@ -243,14 +244,14 @@ export function OpportunitySubmissionForm({
         <input type="hidden" name="funding_range"              value={formData.fundingRange} />
         <input type="hidden" name="featured_image_url"         value={formData.featuredImageUrl} />
         <input type="hidden" name="secondary_image_url"        value={formData.secondaryImageUrl} />
-        <input type="hidden" name="sub_categories"             value={allTags.join(",")} />
+        <input type="hidden" name="sub_categories"             value={formData.selectedDisciplines.join(",")} />
         <input type="hidden" name="career_stage"               value={formData.selectedCareerStages.join(",")} />
         <input type="hidden" name="tags"                       value={formData.selectedTags.join(",")} />
         <input type="hidden" name="entry_fee"                  value={formData.entryFee} />
         <input type="hidden" name="entry_fee_currency"         value={formData.entryFeeCurrency ?? "NZD"} />
         <input type="hidden" name="grant_type"                 value={formData.grantType} />
         <input type="hidden" name="recipients_count"           value={formData.recipientsCount} />
-        <input type="hidden" name="travel_support"             value={formData.travelSupport === true ? "true" : ""} />
+        <input type="hidden" name="travel_support"             value={formData.travelSupport === true ? "true" : formData.travelSupport === false ? "false" : ""} />
         <input type="hidden" name="travel_support_details"     value={formData.travelSupportDetails} />
         <input type="hidden" name="routing_type"               value={formData.routingType} />
         <input type="hidden" name="source"                     value={formData.source} />
