@@ -36,7 +36,7 @@ function inviteFields(fd: FormData) {
     email: text(fd, "email", 200)?.toLowerCase() ?? null,
     instagram_handle: text(fd, "instagram_handle", 60)?.replace(/^@+/, "") ?? null,
     channel: fd.get("channel") === "instagram" ? "instagram" : "email",
-    why_paragraph: text(fd, "why_paragraph", 1500),
+    why_paragraph: text(fd, "why_paragraph", 1500)?.replace(/\r\n?/g, "\n") ?? null,
     featured_image_url: url(fd, "featured_image_url"),
     featured_title: text(fd, "featured_title", 200),
     featured_caption: text(fd, "featured_caption", 400),

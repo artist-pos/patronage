@@ -71,7 +71,7 @@ function Money({ id, value, onChange, label, onEnter }: { id: string; value: str
 }
 
 /**
- * "Just some thoughts": one of Blake's takes at a time, crossfading every ~8s
+ * "Just a thought": one of Blake's takes at a time, crossfading every ~8s
  * from a random start. Pauses while the artist is writing (paused) or while the
  * panel is hovered or focused. With reduced motion it holds one thought still.
  * Changes are not announced to screen readers, so they never interrupt writing.
@@ -454,7 +454,8 @@ export function ArtistFlow({
           <div>
             <p className="rb-eyebrow">{COPY.landing.eyebrow}</p>
             <h1 className="rb-title">{COPY.landing.greeting(invite.first_name)}</h1>
-            {invite.why_paragraph?.split(/\n{2,}/).map((para, i) => <p key={i} className="rb-copy">{para}</p>)}
+            {/* Blake's paragraph breaks kept as typed: a blank line starts a paragraph, a single break stays a line break. */}
+            {invite.why_paragraph?.replace(/\r\n?/g, "\n").trim().split(/\n\s*\n/).map((para, i) => <p key={i} className="rb-copy rb-letter">{para.trim()}</p>)}
           </div>
           <figure className="rb-figure">
             {/* eslint-disable-next-line @next/next/no-img-element */}

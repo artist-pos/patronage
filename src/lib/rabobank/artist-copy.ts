@@ -89,7 +89,7 @@ Once your response has been received, the team at the Te Puke branch will have a
         label: "Your approach",
         help: "Having read the creative direction, how would you respond to the space? A few sentences on the idea, the medium, and roughly how it would look.",
       },
-      takes: { heading: "Just some thoughts" },
+      takes: { heading: "Just a thought" },
       quote: {
         label: "Your quote, excluding framing and installation",
         help: "Please quote the 1800 x 900. The 1600 x 800 is optional but helpful.",
