@@ -470,9 +470,12 @@ export function ArtistFlow({
         </div>
 
         {featured.length > 0 && (
-          <div className="rb-features" data-count={featured.length}>
-            {featured.map((f, i) => <FeaturedWork key={i} {...f} />)}
-          </div>
+          <section className="rb-section">
+            <p className="rb-eyebrow">{COPY.landing.featuredHeading}</p>
+            <div className="rb-features" data-count={featured.length}>
+              {featured.map((f, i) => <FeaturedWork key={i} {...f} />)}
+            </div>
+          </section>
         )}
 
         <section className="rb-section">
@@ -842,6 +845,13 @@ export function ArtistFlow({
         <p className="rb-copy">{COPY.done.body}</p>
         <p className="rb-copy">{COPY.done.next}</p>
         {keepSent && <p className="rb-already">{COPY.done.keepSent}</p>}
+        {/* The same sign-off as the staff survey's sent screen. */}
+        <div className="rb-signoff">
+          <p className="rb-sign">&mdash; {COPY.done.signName}</p>
+          <a className="rb-work" href={COPY.done.signUrl} target="_blank" rel="noopener">
+            {COPY.done.signLink} <span className="rb-arrow" aria-hidden="true" />
+          </a>
+        </div>
         <p className="rb-patronage">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/Favicon_Bleed_512.png" alt="" width={22} height={22} />

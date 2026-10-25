@@ -27,6 +27,7 @@ export const COPY = {
     eyebrow: "Rabobank Te Puke · Event Space Artwork",
     greeting: (firstName: string) => `Kia ora ${firstName},`,
     roomCaption: "The event space",
+    featuredHeading: "The works that caught my eye",
     featuredCredit: "Image from",
     briefHeading: "The commission",
     /** brief.md: the short creative direction. Paragraphs are split on blank lines; one wrapped in _underscores_ is set in italics. */
@@ -245,6 +246,9 @@ To see, correct or delete anything we hold about you, email {contactEmail}.`,
     next: "I will be in touch in early to mid November, whether or not you are chosen. If you need to change anything before then, you can use the same link and edit your answers.",
     keepSent:
       "I have sent a sign-in link to your email so you can edit your Patronage profile whenever you like. It can take a minute to arrive, and it is worth checking your junk folder.",
+    signName: "Blake Aitken",
+    signLink: "View my work",
+    signUrl: "https://patronage.nz/blakeaitken?utm_source=rabobank_artists&utm_medium=invite&utm_campaign=rabobank_te_puke",
   },
 
   saving: { saving: "Saving", saved: "Saved", offline: "You are offline. Your changes will save when you reconnect." },

@@ -50,6 +50,9 @@
 @media (max-width: 560px) { .rb-features { flex-direction: column; } .rb-feature, .rb-features[data-count="1"] .rb-feature { flex: none; width: 100%; } }
 .rb-feature img { display: block; width: 100%; height: auto; border-radius: 4px; box-shadow: 0 30px 60px -34px rgba(28, 25, 23, 0.55), 0 0 0 1px rgba(28, 25, 23, 0.06); }
 .rb-letter { white-space: pre-line; }
+/* No word-by-word closing line here, so the sign-off and mark follow the copy straight away. */
+.rb:is([data-step="oneDone"], [data-step="twoDone"], [data-step="declined"]) .rb-in .rb-signoff { animation-delay: 0.7s; }
+.rb:is([data-step="oneDone"], [data-step="twoDone"], [data-step="declined"]) .rb-in .rb-patronage { animation-delay: 0.9s; }
 /* Tighter corners on every image of the artist page (the staff survey keeps its own). */
 .rb-home .rb-figure > img:first-child { border-radius: 4px; }
 .rb-feature figcaption { margin-top: 0.7rem; color: var(--stone); font-size: 0.85rem; line-height: 1.5; }
