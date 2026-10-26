@@ -80,15 +80,28 @@ export async function keepAsPatronageProfile(userId: string, userEmail: string |
   }
 
   if (artist.state !== "kept") {
+    // Atomic claim: concurrent requests (link prefetch, double navigation) race
+    // here, and only the one that flips the state may copy the works.
+    const { data: claimed } = await admin
+      .from("rabobank_artist")
+      .update({ state: "kept", visibility_choice: "keep", kept_profile_id: userId })
+      .eq("id", artist.id)
+      .neq("state", "kept")
+      .select("id");
+    if (!claimed?.length) return { ok: true as const, username };
+
     const { data: works } = await admin
       .from("rabobank_work")
       .select("image_url, thumb_url, title, year, medium, size, note, sort_order")
       .eq("artist_id", artist.id)
       .order("sort_order", { ascending: true });
-    const { count } = await admin.from("artworks").select("id", { count: "exact", head: true }).eq("profile_id", userId);
-    if (works?.length) {
+    const { data: have } = await admin.from("artworks").select("url").eq("profile_id", userId);
+    const haveUrls = new Set((have ?? []).map((a) => a.url));
+    const count = have?.length ?? 0;
+    const fresh = (works ?? []).filter((w) => !haveUrls.has(w.image_url));
+    if (fresh.length) {
       const { error } = await admin.from("artworks").insert(
-        works.map((w, i) => ({
+        fresh.map((w, i) => ({
           profile_id: userId,
           creator_id: userId,
           current_owner_id: userId,
@@ -100,16 +113,16 @@ export async function keepAsPatronageProfile(userId: string, userEmail: string |
           dimensions: w.size,
           description: w.note,
           is_available: false,
-          position: (count ?? 0) + i,
+          position: count + i,
           source: "self_registered",
         }))
       );
-      if (error) return { ok: false as const, error: error.message };
+      if (error) {
+        // Release the claim so a retry can copy the works.
+        await admin.from("rabobank_artist").update({ state: artist.state, kept_profile_id: null }).eq("id", artist.id);
+        return { ok: false as const, error: error.message };
+      }
     }
-    await admin
-      .from("rabobank_artist")
-      .update({ state: "kept", visibility_choice: "keep", kept_profile_id: userId })
-      .eq("id", artist.id);
   }
   return { ok: true as const, username };
 }
