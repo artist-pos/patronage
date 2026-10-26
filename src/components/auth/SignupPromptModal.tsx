@@ -38,6 +38,8 @@ interface Props {
   onSkip?: () => void;
   /** Renders in the page flow as a gate: no overlay, no scroll lock, no close. */
   inline?: boolean;
+  /** Shows the signup form straight away and skips the discipline chips (onboarding asks for those). */
+  formFirst?: boolean;
 }
 
 /**
@@ -62,6 +64,7 @@ export default function SignupPromptModal({
   skipLabel,
   onSkip,
   inline = false,
+  formFirst = false,
 }: Props) {
   const titleId = useId();
   const [selected, setSelected] = useState<DisciplineEnum[]>([]);
@@ -85,7 +88,7 @@ export default function SignupPromptModal({
   // Kept current on every answer rather than on a single "submit" moment —
   // AuthForm owns its own submit, so there's no one click to hang this off.
   useEffect(() => {
-    if (selected.length === 0) return;
+    if (selected.length === 0 && !formFirst) return;
     const ctx: SignupContext = {
       source,
       ...(opportunityId && { opportunityId }),
@@ -98,7 +101,7 @@ export default function SignupPromptModal({
       // Blocked storage — attribution degrades, signup still works.
     }
     stashSignupContext(ctx);
-  }, [source, opportunityId, selected]);
+  }, [source, opportunityId, selected, formFirst]);
 
   function dismiss() {
     trackEvent(`${eventPrefix}_dismissed`, {
@@ -116,7 +119,30 @@ export default function SignupPromptModal({
     }
   }
 
-  const hasPicked = selected.length > 0;
+  const hasPicked = selected.length > 0 || formFirst;
+
+  const chips = (
+    <div className={`${chipsLabel || formFirst ? "mt-2.5" : "mt-5"} flex flex-wrap gap-1.5`}>
+      {CHIP_DISCIPLINES.map(({ value, label }) => {
+        const active = selected.includes(value);
+        return (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => toggle(value)}
+            className={`border px-2.5 py-1.5 font-mono text-xs transition-colors ${
+              active
+                ? "border-foreground bg-foreground text-white"
+                : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div
@@ -152,33 +178,14 @@ export default function SignupPromptModal({
         </p>
         <div className="mt-1.5 text-sm leading-[1.55] text-muted-foreground">{intro}</div>
 
-        {chipsLabel && <p className="mt-6 text-sm font-medium">{chipsLabel}</p>}
-        <div className={`${chipsLabel ? "mt-2.5" : "mt-5"} flex flex-wrap gap-1.5`}>
-          {CHIP_DISCIPLINES.map(({ value, label }) => {
-            const active = selected.includes(value);
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => toggle(value)}
-                className={`border px-2.5 py-1.5 font-mono text-xs transition-colors ${
-                  active
-                    ? "border-foreground bg-foreground text-white"
-                    : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        {!formFirst && chipsLabel && <p className="mt-6 text-sm font-medium">{chipsLabel}</p>}
+        {!formFirst && chips}
 
         {/* Revealed only once something's picked — the ask lands after a bit
             of investment instead of upfront. */}
         {hasPicked && (
           <div className="mt-6 animate-[pin-in_400ms_ease] border-t border-border pt-6">
-            {note && <div className="mb-6 text-sm leading-[1.6]">{note}</div>}
+            {note && !formFirst && <div className="mb-6 text-sm leading-[1.6]">{note}</div>}
             <AuthForm
               mode="signup"
               role="artist"
@@ -188,6 +195,7 @@ export default function SignupPromptModal({
               submitClassName="w-full bg-brand text-white hover:bg-brand/90"
               submitLabel={submitLabel}
             />
+            {note && formFirst && <div className="mt-6 text-sm leading-[1.6]">{note}</div>}
           </div>
         )}
 

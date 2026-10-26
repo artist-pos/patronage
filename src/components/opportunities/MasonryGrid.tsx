@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import { OpportunityCard } from "./OpportunityCard";
 import { OpportunitySignupModalTrigger } from "./OpportunitySignupModalTrigger";
-import { OpportunityGate } from "./OpportunityGate";
+import { OpportunityGate, type LockedSummary } from "./OpportunityGate";
 import type { Opportunity, OpportunityWithMatch } from "@/types/database";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   isAuthenticated?: boolean;
   /** Opportunities withheld from a signed-out visitor. When set, the gate replaces the signup popup. */
   lockedCount?: number;
+  lockedSummary?: LockedSummary;
 }
 
 // Roughly the 5th row of a 3-column grid — deep enough to be a deliberate
@@ -20,14 +21,14 @@ interface Props {
 // couple of cards.
 const SIGNUP_MODAL_TRIGGER_AFTER = 15;
 
-export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false, lockedCount = 0 }: Props) {
+export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false, lockedCount = 0, lockedSummary }: Props) {
   if (view === "list") {
     return (
       <div className="border-t border-black">
         {opportunities.map((opp, i) => (
           <OpportunityCard key={opp.id} opp={opp} view="list" priority={i < 6} isAuthenticated={isAuthenticated} />
         ))}
-        {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} />}
+        {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} summary={lockedSummary} />}
       </div>
     );
   }
@@ -44,7 +45,7 @@ export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 
           {showSignupModalTrigger && i === SIGNUP_MODAL_TRIGGER_AFTER - 1 && <OpportunitySignupModalTrigger />}
         </Fragment>
       ))}
-      {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} />}
+      {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} summary={lockedSummary} />}
     </div>
   );
 }

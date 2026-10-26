@@ -131,6 +131,17 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const FREE_OPPORTUNITIES = 15;
   const gatedOpps = !user && tab === "all" ? gridOpps.slice(0, FREE_OPPORTUNITIES) : gridOpps;
   const lockedCount = gridOpps.length - gatedOpps.length;
+  // Aggregate-only teaser for the gate: what closes soon, plus card shapes.
+  // No titles, organisers or links, so nothing identifying the locked listings is sent.
+  const lockedOpps = gridOpps.slice(gatedOpps.length);
+  const fortnightAhead = new Date(`${today}T00:00:00Z`);
+  fortnightAhead.setUTCDate(fortnightAhead.getUTCDate() + 14);
+  const fortnight = fortnightAhead.toISOString().split("T")[0];
+  const lockedSummary = {
+    closingSoon: lockedOpps.filter((o) => !!o.deadline && o.deadline >= today && o.deadline <= fortnight).length,
+    // Shapes for the blurred cards under the gate: type, country and deadline only.
+    teasers: lockedOpps.slice(0, 9).map((o) => ({ type: o.type as string, country: o.country, deadline: o.deadline })),
+  };
 
   // ── Links built on the server: tabs, stat shortcuts, clearing a chip ──
   const hrefWith = (changes: Record<string, string | null>, dropFilters = false) => {
@@ -331,7 +342,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                     No opportunities match those filters. New listings are added regularly.
                   </p>
                 ) : (
-                  <MasonryGrid opportunities={gatedOpps} view={view} isAuthenticated={!!user} lockedCount={lockedCount} />
+                  <MasonryGrid opportunities={gatedOpps} view={view} isAuthenticated={!!user} lockedCount={lockedCount} lockedSummary={lockedSummary} />
                 )}
               </div>
             </div>

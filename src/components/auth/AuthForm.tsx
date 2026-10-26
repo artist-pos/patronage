@@ -309,14 +309,6 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
             <p className="text-sm text-muted-foreground">Must be at least 8 characters long.</p>
           ) : null}
         </div>
-        {mode === "signup" && compact && (
-          <p className="text-xs text-muted-foreground">
-            By creating an account you agree to the{" "}
-            <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
-            <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
-            We&rsquo;ll email you occasionally about opportunities and Patronage; every email has an unsubscribe link.
-          </p>
-        )}
         {mode === "signup" && !compact && (
           <div className="space-y-1.5">
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
@@ -366,12 +358,22 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           )}
           {dividerBlock}
           {googleBlock}
-          <p className="text-center text-xs text-muted-foreground">
-            By continuing with Google you agree to the{" "}
-            <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
-            <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
-            We&rsquo;ll email you occasionally about Patronage; you can stop that at any time.
-          </p>
+          {compact ? (
+            // One consent line covering both the form and Google, shown after both.
+            <p className="text-xs text-muted-foreground">
+              By continuing you agree to the{" "}
+              <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
+              <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
+              We&rsquo;ll email you occasionally about opportunities and Patronage; every email has an unsubscribe link.
+            </p>
+          ) : (
+            <p className="text-center text-xs text-muted-foreground">
+              By continuing with Google you agree to the{" "}
+              <Link href="/terms" target="_blank" className="underline underline-offset-2">terms</Link> and{" "}
+              <Link href="/privacy" target="_blank" className="underline underline-offset-2">privacy policy</Link>.
+              We&rsquo;ll email you occasionally about Patronage; you can stop that at any time.
+            </p>
+          )}
         </>
       )}
     </div>
