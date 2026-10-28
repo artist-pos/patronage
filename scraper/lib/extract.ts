@@ -153,6 +153,58 @@ export function applyExtractionFilters(parsed: ParsedOpp[], opts: ExtractOptions
         }));
 }
 
+/**
+ * Pull the JSON array out of a model reply. The model is told to return only an
+ * array but sometimes adds a preamble or a trailing note — and a greedy
+ * "first [ to last ]" match then swallows the note's brackets and fails to parse,
+ * silently dropping the page. Instead, scan for balanced arrays (ignoring
+ * brackets inside strings) and take the first one that parses.
+ *
+ * Returns null when the reply has no array at all (a legitimate empty result);
+ * throws when brackets are present but nothing parses (a real failure, so the
+ * caller's failure tally still sees it). Pure — exported for tests.
+ */
+export function parseJsonArray(text: string): unknown[] | null {
+    let firstError: unknown = null;
+    let sawCandidate = false;
+
+    for (let start = text.indexOf("["); start !== -1; start = text.indexOf("[", start + 1)) {
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        let end = -1;
+        for (let i = start; i < text.length; i++) {
+            const ch = text[i];
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (ch === "\\") escaped = true;
+                else if (ch === '"') inString = false;
+            } else if (ch === '"') {
+                inString = true;
+            } else if (ch === "[") {
+                depth++;
+            } else if (ch === "]" && --depth === 0) {
+                end = i;
+                break;
+            }
+        }
+        if (end === -1) continue; // unterminated from here — try a later "["
+
+        sawCandidate = true;
+        try {
+            const value = JSON.parse(text.slice(start, end + 1));
+            if (Array.isArray(value)) return value;
+        } catch (err) {
+            firstError ??= err;
+        }
+    }
+
+    if (sawCandidate && firstError) throw firstError;
+    // An unterminated array (e.g. a reply cut off at max_tokens) is a failure, not "no results"
+    if (text.includes("[") && !sawCandidate) throw new Error("Model reply contained an unterminated JSON array");
+    return null;
+}
+
 export async function extractFromPage(
     text: string,
     sourceUrl: string,
@@ -186,10 +238,8 @@ export async function extractFromPage(
         jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
 
         // Find the JSON array
-        const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) return [];
-
-        const parsed = JSON.parse(jsonMatch[0]) as ParsedOpp[];
+        const parsed = parseJsonArray(jsonStr) as ParsedOpp[] | null;
+        if (!parsed) return [];
         return applyExtractionFilters(parsed, opts);
     } catch (err: any) {
         const msg = err instanceof Error ? err.message : String(err);
