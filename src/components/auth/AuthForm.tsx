@@ -1,7 +1,7 @@
 "use client";
 
 import { SIGNUP_SOURCE_SESSION_KEY } from "@/lib/signup-source";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -46,7 +46,13 @@ interface FieldErrors {
   email?: string;
   password?: string;
   terms?: string;
+  captcha?: string;
 }
+
+const CAPTCHA_PROMPT_MSG = "Tick “Verify you are human” above to continue.";
+const CAPTCHA_BLOCKED_MSG =
+  "We couldn’t load the verification check. If you use an ad or tracker blocker, pause it for this page and refresh.";
+const CAPTCHA_EXPIRED_MSG = "Verification expired. Tick “Verify you are human” again.";
 
 const NETWORK_ERROR_MSG =
   "Couldn't reach the server. Check your connection and try again.";
@@ -81,7 +87,29 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
   const loadedAt = useFormLoadedAt();
+
+  const needsCaptcha = mode === "signup" && CAPTCHA_CONFIGURED;
+
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+    setFieldErrors((f) => ({ ...f, captcha: undefined }));
+  }, []);
+  const handleCaptchaError = useCallback(() => {
+    setTurnstileToken("");
+    setFieldErrors((f) => ({ ...f, captcha: CAPTCHA_BLOCKED_MSG }));
+  }, []);
+  const handleCaptchaExpire = useCallback(() => {
+    setTurnstileToken("");
+    setFieldErrors((f) => ({ ...f, captcha: CAPTCHA_EXPIRED_MSG }));
+  }, []);
+  /** Turnstile tokens are single-use — after any rejected submission, start a fresh challenge. */
+  function resetCaptcha() {
+    if (!needsCaptcha) return;
+    setTurnstileToken("");
+    setCaptchaReset((n) => n + 1);
+  }
 
   const supabase = createClient();
 
@@ -125,6 +153,8 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
     } else if (mode === "signup" && password.length < 8) {
       errs.password = "Password must be at least 8 characters.";
     }
+    // Keep a more specific blocked/expired message if the widget already set one
+    if (needsCaptcha && !turnstileToken) errs.captcha = fieldErrors.captcha ?? CAPTCHA_PROMPT_MSG;
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -173,6 +203,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
         );
         if (result.error) {
           setError(result.error);
+          resetCaptcha();
         } else {
           // Signup now returns a session (190), so the account is usable
           // immediately and the address is proved afterwards from the
@@ -210,6 +241,7 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
       }
     } catch {
       setError(NETWORK_ERROR_MSG);
+      if (mode === "signup") resetCaptcha();
     }
 
     setLoading(false);
@@ -335,12 +367,22 @@ export function AuthForm({ mode, next = "/profile/edit", role, initialEmail, sub
           </div>
         )}
         {mode === "signup" && <HoneypotField />}
-        {mode === "signup" && <TurnstileWidget onVerify={setTurnstileToken} />}
+        {mode === "signup" && (
+          <TurnstileWidget
+            onVerify={handleCaptchaVerify}
+            onError={handleCaptchaError}
+            onExpire={handleCaptchaExpire}
+            resetSignal={captchaReset}
+          />
+        )}
+        {fieldErrors.captcha && <p id="captcha-error" role="alert" className="text-sm text-destructive">{fieldErrors.captcha}</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
+        {/* Never disabled for a missing captcha: a greyed-out button with no
+            explanation reads as broken (and stays that way if a blocker stops the widget). */}
         <Button
           type="submit"
           className={submitClassName ?? "w-full"}
-          disabled={loading || (mode === "signup" && CAPTCHA_CONFIGURED && !turnstileToken)}
+          disabled={loading}
         >
           {loading
             ? "Please wait…"
