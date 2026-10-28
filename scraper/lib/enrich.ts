@@ -1,5 +1,5 @@
 import { fetchPageContent } from "./fetch.js";
-import { extractFromPage } from "./extract.js";
+import { extractFromPage, FatalExtractionError } from "./extract.js";
 import { isAllowedByRobots } from "./robots.js";
 import { normTitle, normOrganiser, tokenSortRatio } from "./dedupe.js";
 import type { ScrapedOpportunity, Source } from "../types.js";
@@ -92,7 +92,7 @@ export async function enrichFromOutbound(
     return { opp: mergeOpportunity(opp, { ...match, url: opp.url }), ogImage: page.ogImage };
   } catch (err) {
     // Never lose the listing because the organiser's site is down or odd.
-    if (err instanceof Error && err.name === "InsufficientCreditsError") throw err;
+    if (err instanceof FatalExtractionError) throw err;
     return { opp, ogImage: null };
   }
 }

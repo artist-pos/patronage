@@ -2,10 +2,21 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedOpportunity, RssItem } from "../types.js";
 import { withRateLimit, estimateTokens } from "./rate-limiter.js";
 
-export class InsufficientCreditsError extends Error {
+/** Extraction can't succeed for any page this run — callers must stop, not skip the page. */
+export class FatalExtractionError extends Error {}
+
+export class InsufficientCreditsError extends FatalExtractionError {
   constructor() {
     super("Anthropic API credits exhausted — add credits and re-run");
     this.name = "InsufficientCreditsError";
+  }
+}
+
+/** The API key was rejected (401). Retrying every remaining page just wastes the run. */
+export class ExtractionAuthError extends FatalExtractionError {
+  constructor(detail: string) {
+    super(`Anthropic API rejected the key — check the ANTHROPIC_API_KEY secret (${detail})`);
+    this.name = "ExtractionAuthError";
   }
 }
 
@@ -185,6 +196,10 @@ export async function extractFromPage(
         // Credit exhaustion is fatal for the whole run — propagate immediately
         if (msg.includes("credit balance is too low")) {
             throw new InsufficientCreditsError();
+        }
+        // A rejected key fails every call identically — fail on the first one
+        if (err?.status === 401 || msg.includes("authentication_error")) {
+            throw new ExtractionAuthError(msg.slice(0, 120));
         }
         extractStats.failures++;
         console.error(`  Extract error for ${sourceUrl}:`, msg);
