@@ -14,11 +14,12 @@ export const sources: Source[] = [
   // ── Tier 1: International Aggregators (highest yield per scrape) ──────────
   // One good aggregator > 50 individual gallery pages.
 
-  // NAVA rebuilt their site off WordPress (July 2026) — WP REST is dead.
-  // Sitemap-first with a lastmod window; opportunity URLs live under /job-opportunities/.
-  // NAVA's sitemap has no <lastmod> and lists opportunity pages back to 2019 —
-  // the year-scoped pattern keeps discovery to current listings.
-  { name: "NAVA Opportunities", url: "https://visualarts.net.au", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "/sitemap.xml", linkPattern: /\/(job-)?opportunities\/20(2[6-9]|3[0-9])\//, detailBudget: 40, isAggregator: true },
+  // NAVA Opportunities — DISABLED (found 2026-10-28). NAVA rebuilt their site off
+  // WordPress in July 2026 and every /job-opportunities/ page now 302s to a members-only
+  // login (auth.visualarts.net.au, Kinde OAuth), so detail fetches die with "Maximum
+  // number of redirects exceeded" and the source burned its whole detailBudget for zero
+  // yield. Restore only with a NAVA member session or a public feed:
+  // { name: "NAVA Opportunities", url: "https://visualarts.net.au", country: "AUS", isListPage: true, followLinks: true, sitemapUrl: "/sitemap.xml", linkPattern: /\/(job-)?opportunities\/20(2[6-9]|3[0-9])\//, detailBudget: 40, isAggregator: true },
   { name: "Contemporary Performance", url: "https://contemporaryperformance.com", country: "Global", disciplines: ["performance"], feedUrl: "/wp-json/wp/v2/posts", isAggregator: true },
   // a-n The Artists Information Company rebranded to Artists Now (artistsnow.com);
   // full opportunities listing is members-only — public jobs page only.
