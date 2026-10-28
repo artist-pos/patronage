@@ -10,7 +10,7 @@ import {
   closeBrowser,
   sleep,
 } from "./lib/fetch.js";
-import { extractFromPage, extractFromRssItem, InsufficientCreditsError, extractStats } from "./lib/extract.js";
+import { extractFromPage, extractFromRssItem, FatalExtractionError, extractStats } from "./lib/extract.js";
 import { upsertOpportunity, loadDedupeCache, normalizeUrl, touchOpportunity, hashContent, dedupeStats, type DedupeCache } from "./lib/upsert.js";
 import { fetchSitemap, resolveSitemapUrl, filterByLastmodAge } from "./lib/sitemap.js";
 import { fetchWpPosts } from "./lib/wp.js";
@@ -24,6 +24,8 @@ const PAGINATION_RATE_LIMIT_MS = 1_000; // lighter delay between list pages vs d
 const SOURCE_TIMEOUT_MS = 900_000;      // 15 min — the 6-min cap was killing the deepest (highest-yield) sources mid-run
 const WP_MAX_AGE_DAYS = parseInt(process.env.WP_MAX_AGE_DAYS ?? "120", 10); // skip WP posts not modified in this window
 const SITEMAP_MAX_AGE_DAYS = parseInt(process.env.SITEMAP_MAX_AGE_DAYS ?? "365", 10);
+const MAX_IDENTICAL_FETCH_FAILURES = 8; // identical errors in a row → the rest of the source will fail the same way
+const FAIL_FAST_MIN_ATTEMPTS = 10;      // this many extraction calls with zero successes → API/key outage, stop the run
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer!));
 }
 
+/** Tracks identical back-to-back failures within one source (e.g. a login wall or WAF block). */
+function failureStreak() {
+  let last = "";
+  let count = 0;
+  return {
+    reset() { last = ""; count = 0; },
+    /** Record a failure; true once the streak says the rest of the source is a lost cause. */
+    hit(msg: string) { count = msg === last ? count + 1 : 1; last = msg; return count >= MAX_IDENTICAL_FETCH_FAILURES; },
+  };
+}
+
 /** Return the Nth quarter of an array (tierNum is 1-based). */
 function getChunk<T>(arr: T[], tierNum: number, totalTiers = 4): T[] {
   const size = Math.ceil(arr.length / totalTiers);
@@ -61,6 +74,7 @@ interface SourceResult {
 
 async function processSource(source: Source, cache: DedupeCache): Promise<SourceResult> {
   let inserted = 0, updated = 0, skipped = 0, errors = 0;
+  const streak = failureStreak();
 
   async function upsert(opp: ScrapedOpportunity, image: string | null, seenAtUrl?: string | null) {
     const result = await upsertOpportunity(opp, source.url, image, {
@@ -174,6 +188,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           ifModifiedSince: meta?.last_seen_at ?? null,
         });
 
+        streak.reset();
         if (fetchResult.notModified) {
           await touchOpportunity(entry.loc, { etag: fetchResult.etag });
           skipped++;
@@ -208,9 +223,14 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
           cache.urls.set(norm, { last_seen_at: new Date().toISOString(), etag: fetchResult.etag, hash: contentHash });
         }
       } catch (err) {
-        if (err instanceof InsufficientCreditsError) throw err;
-        console.error(`    ✗ ${entry.loc}: ${err instanceof Error ? err.message : String(err)}`);
+        if (err instanceof FatalExtractionError) throw err;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`    ✗ ${entry.loc}: ${msg}`);
         errors++;
+        if (streak.hit(msg)) {
+          console.error(`    ⛔ ${MAX_IDENTICAL_FETCH_FAILURES} identical failures in a row — abandoning ${source.name}`);
+          break;
+        }
       }
       await sleep(RATE_LIMIT_MS);
     }
@@ -304,6 +324,7 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
             ifModifiedSince: meta?.last_seen_at ?? null,
           });
 
+          streak.reset();
           if (fetchResult.notModified) {
             await touchOpportunity(link, { etag: fetchResult.etag });
             skipped++;
@@ -333,9 +354,14 @@ async function processSource(source: Source, cache: DedupeCache): Promise<Source
             await upsert(enriched, enriched.featured_image_url ?? outboundImage ?? fetchResult.ogImage ?? ogImage ?? null, link);
           }
         } catch (err) {
-          if (err instanceof InsufficientCreditsError) throw err;
-          console.error(`    ✗ ${link}: ${err instanceof Error ? err.message : String(err)}`);
+          if (err instanceof FatalExtractionError) throw err;
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`    ✗ ${link}: ${msg}`);
           errors++;
+          if (streak.hit(msg)) {
+            console.error(`    ⛔ ${MAX_IDENTICAL_FETCH_FAILURES} identical failures in a row — abandoning ${source.name}`);
+            break;
+          }
         }
         await sleep(RATE_LIMIT_MS);
       }
@@ -390,6 +416,7 @@ async function main() {
   const cache = await loadDedupeCache();
 
   let inserted = 0, updated = 0, skipped = 0, errors = 0, timedOut = 0;
+  let fatal: string | null = null; // set when the run can't succeed (bad key, no credits, API outage)
   const perSource: Record<string, SourceResult & { failed?: string }> = {};
 
   for (const [i, source] of activeSources.entries()) {
@@ -404,9 +431,10 @@ async function main() {
       skipped  += result.skipped;
       errors   += result.errors;
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
+      if (err instanceof FatalExtractionError) {
+        fatal = err.message;
         console.error(`\n💳 ${err.message}`);
-        console.error("   Stopping immediately — no point continuing without credits.\n");
+        console.error("   Stopping immediately — every remaining source would fail the same way.\n");
         break;
       }
       const msg = err instanceof Error ? err.message : String(err);
@@ -418,6 +446,14 @@ async function main() {
         console.error(`  ✗ Failed: ${msg}`);
         errors++;
       }
+    }
+
+    // Fail fast: a run where not a single extraction call has ever succeeded is an
+    // outage, not a quiet week — don't spend the 80-minute budget finding that out.
+    if (extractStats.attempts >= FAIL_FAST_MIN_ATTEMPTS && extractStats.failures === extractStats.attempts) {
+      fatal = `all ${extractStats.attempts} extraction calls so far failed`;
+      console.error(`\n❌ ${fatal} — aborting the run.\n`);
+      break;
     }
 
     if (i < activeSources.length - 1) await sleep(RATE_LIMIT_MS);
@@ -462,6 +498,12 @@ async function main() {
       }, null, 2)
     );
     console.log(`📄 Stats → ${statsPath}`);
+  }
+
+  // A fatal abort must fail CI even when too few calls ran to trip the rate check below
+  if (fatal) {
+    console.error(`\n❌ Run aborted: ${fatal}`);
+    process.exit(1);
   }
 
   // Fail the run loudly when most extraction calls failed. Otherwise a total
