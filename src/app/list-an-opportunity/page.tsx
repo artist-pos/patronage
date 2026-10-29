@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getServerUser } from "@/lib/supabase/get-server-user";
+import { getActingOrg } from "@/lib/partner-org";
 import { OpportunityTipForm } from "@/components/opportunities/OpportunityTipForm";
 
 export const metadata: Metadata = {
@@ -37,16 +37,16 @@ function Points({ items }: { items: string[] }) {
 }
 
 export default async function ListAnOpportunityPage() {
-  const { supabase, user } = await getServerUser();
+  const { supabase, user, orgId } = await getActingOrg();
 
   // Pricing copy has to match what they will actually be charged: the first
   // pipeline round is free, every round after it is paid.
   let pipelineFirstRoundUsed = false;
-  if (user) {
+  if (user && orgId) {
     const { count } = await supabase
       .from("opportunities")
       .select("id", { count: "exact", head: true })
-      .eq("profile_id", user.id)
+      .eq("profile_id", orgId)
       .eq("routing_type", "pipeline")
       .not("pipeline_paid_at", "is", null);
     pipelineFirstRoundUsed = (count ?? 0) > 0;

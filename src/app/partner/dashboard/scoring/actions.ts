@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNudgeEmail } from "@/lib/email";
 import { saveScores } from "@/app/review/actions";
+import { isOrgMember } from "@/lib/partner-org";
 import type { RubricCriterion, ApplicationScore } from "@/types/database";
 
 async function authoriseReviewer(opportunityId: string, requireEditor = false) {
@@ -17,7 +18,7 @@ async function authoriseReviewer(opportunityId: string, requireEditor = false) {
   ]);
 
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
-  if (opp?.profile_id !== user.id && !isAdmin) {
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp?.profile_id))) {
     const { data: collab } = await supabase
       .from("opportunity_collaborators")
       .select("role")

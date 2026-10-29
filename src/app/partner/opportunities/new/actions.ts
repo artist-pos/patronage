@@ -8,16 +8,17 @@ import { updateOpportunityPartner } from "@/app/partner/opportunities/[id]/edit/
 import { pickFreeListingFields } from "@/lib/free-listing";
 import { pickPipelineListingFields } from "@/lib/pipeline-listing";
 import { PIPELINE_TEMPLATES, type TemplateKey } from "@/lib/pipeline-templates";
+import { getActingOrg, isOrgMember } from "@/lib/partner-org";
 
 export async function createOpportunityDraft(type: "free" | "pipeline"): Promise<{ id: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  const { supabase, user, orgId } = await getActingOrg();
+  if (!user || !orgId) redirect("/auth/login");
 
+  // Listings belong to the organisation being managed, not the person clicking.
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, username")
-    .eq("id", user.id)
+    .eq("id", orgId)
     .single();
 
   const organiser = profile?.full_name ?? profile?.username ?? "";
@@ -32,7 +33,7 @@ export async function createOpportunityDraft(type: "free" | "pipeline"): Promise
       country: "NZ",
       status: "draft",
       routing_type: type === "pipeline" ? "pipeline" : "external",
-      profile_id: user.id,
+      profile_id: orgId,
       is_active: false,
       is_featured: false,
       show_badges_in_submission: false,
@@ -128,7 +129,7 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
     .maybeSingle();
 
   if (!opp) return { error: "Listing not found" };
-  if (opp.profile_id !== user.id) return { error: "Not authorised" };
+  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
   if (opp.status !== "draft" && opp.status !== "draft_unclaimed") {
     return { error: "This listing has already been submitted." };
   }
@@ -141,7 +142,7 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
     .from("opportunities")
     .update({ status: "pending" })
     .eq("id", id)
-    .eq("profile_id", user.id);
+    .eq("profile_id", opp.profile_id);
 
   if (updateError) return { error: updateError.message };
 

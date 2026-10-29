@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isOrgMember } from "@/lib/partner-org";
 import { createCheckoutSession } from "@/lib/stripe";
 import {
   PIPELINE_ACTIVATION_PRICE_CENTS,
@@ -28,14 +29,14 @@ export async function initiatePipelineActivation(
     .eq("id", opportunityId)
     .maybeSingle();
   if (!opp) return { error: "Opportunity not found." };
-  if (opp.profile_id !== user.id) return { error: "Only the listing partner can activate." };
+  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Only the listing partner can activate." };
   if (opp.pipeline_paid_at) return { error: "Open call access is already active for this listing." };
 
   const { data: payment, error: insertError } = await admin
     .from("pipeline_entry_payments")
     .insert({
       opportunity_id: opp.id,
-      partner_id: user.id,
+      partner_id: opp.profile_id,
       amount_cents: PIPELINE_ACTIVATION_PRICE_CENTS,
       currency: PRICING_CURRENCY,
     })

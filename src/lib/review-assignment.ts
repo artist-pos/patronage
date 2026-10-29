@@ -4,7 +4,7 @@ import type { PipelineConfig } from "@/types/database";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-/** Editors on the opportunity, or the owner when there are none. */
+/** Editors on the opportunity, or the organisation's owners (its own login and members) when there are none. */
 export async function eligibleReviewers(admin: Admin, opportunityId: string, ownerId: string | null): Promise<string[]> {
   const { data } = await admin
     .from("opportunity_collaborators")
@@ -13,7 +13,9 @@ export async function eligibleReviewers(admin: Admin, opportunityId: string, own
     .eq("role", "editor");
   const ids = (data ?? []).map((r) => r.profile_id as string);
   if (ids.length > 0) return ids;
-  return ownerId ? [ownerId] : [];
+  if (!ownerId) return [];
+  const { data: members } = await admin.from("partner_members").select("user_id").eq("partner_id", ownerId);
+  return [ownerId, ...(members ?? []).map((m) => m.user_id as string)];
 }
 
 /**

@@ -5,6 +5,24 @@ import { parseAgeFields } from "@/lib/age";
 import { redirect } from "next/navigation";
 import { isSelectableCountry } from "@/lib/constants/countries";
 import { validLocalBoardId } from "@/lib/local-boards";
+import { resolveEditTarget } from "@/lib/partner-org";
+
+/**
+ * Saves the form. Someone's own profile is upserted (it may not exist yet during
+ * onboarding). An organisation always exists already, and a member may update it
+ * but not insert it, so that path is a plain update.
+ */
+async function writeProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  targetId: string,
+  forOrg: boolean,
+  profileData: Record<string, unknown>,
+) {
+  if (!forOrg) return supabase.from("profiles").upsert(profileData);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, ...fields } = profileData;
+  return supabase.from("profiles").update(fields).eq("id", targetId);
+}
 
 async function maybeSetVerifiedAt(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -55,6 +73,11 @@ export async function upsertProfileAction(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated." };
+
+  // A form that edits an organisation names it; members may save it.
+  const targetId = await resolveEditTarget(supabase, user.id, formData.get("org_id"));
+  if (!targetId) return { error: "You don't have access to that organisation." };
+  const forOrg = targetId !== user.id;
 
   const username = (formData.get("username") as string)?.trim().toLowerCase();
   const full_name = (formData.get("full_name") as string)?.trim() || null;
@@ -108,7 +131,7 @@ export async function upsertProfileAction(
     .from("profiles")
     .select("id")
     .eq("username", username)
-    .neq("id", user.id)
+    .neq("id", targetId)
     .maybeSingle();
 
   if (existing) return { fieldErrors: { username: "Username already taken." } };
@@ -121,7 +144,7 @@ export async function upsertProfileAction(
     return { fieldErrors: { country: "Select a valid country." } };
 
   const profileData: Record<string, unknown> = {
-    id: user.id,
+    id: targetId,
     username,
     full_name,
     bio,
@@ -158,7 +181,7 @@ export async function upsertProfileAction(
       (formData.get("commission_info") as string)?.trim() || null;
   }
 
-  const { error } = await supabase.from("profiles").upsert(profileData);
+  const { error } = await writeProfile(supabase, targetId, forOrg, profileData);
 
   if (error) return { error: error.message };
 
@@ -166,11 +189,11 @@ export async function upsertProfileAction(
   const { data: savedProfile } = await supabase
     .from("profiles")
     .select("role, avatar_url")
-    .eq("id", user.id)
+    .eq("id", targetId)
     .maybeSingle();
   await maybeSetVerifiedAt(
     supabase,
-    user.id,
+    targetId,
     savedProfile?.role ?? null,
     bio,
     savedProfile?.avatar_url ?? null,
@@ -181,7 +204,7 @@ export async function upsertProfileAction(
   // step without the role page having set it (e.g. Google OAuth with a
   // pre-selected role that bypassed applyRole). Only fires when the flag is
   // still false to avoid clobbering an explicit opt-out.
-  if (user.email) {
+  if (user.email && !forOrg) {
     await supabase
       .from("profiles")
       .update({ marketing_subscription: true, weekly_digest: true })
@@ -202,6 +225,11 @@ export async function updateProfileAction(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated." };
+
+  // A form that edits an organisation names it; members may save it.
+  const targetId = await resolveEditTarget(supabase, user.id, formData.get("org_id"));
+  if (!targetId) return { error: "You don't have access to that organisation." };
+  const forOrg = targetId !== user.id;
 
   const username = (formData.get("username") as string)?.trim().toLowerCase();
   const full_name = (formData.get("full_name") as string)?.trim() || null;
@@ -235,7 +263,7 @@ export async function updateProfileAction(
     .from("profiles")
     .select("id")
     .eq("username", username)
-    .neq("id", user.id)
+    .neq("id", targetId)
     .maybeSingle();
 
   if (existing) return { fieldErrors: { username: "Username already taken." } };
@@ -244,7 +272,7 @@ export async function updateProfileAction(
     return { fieldErrors: { country: "Select a valid country." } };
 
   const profileData: Record<string, unknown> = {
-    id: user.id,
+    id: targetId,
     username,
     full_name,
     bio,
@@ -276,17 +304,17 @@ export async function updateProfileAction(
       (formData.get("commission_info") as string)?.trim() || null;
   }
 
-  const { error } = await supabase.from("profiles").upsert(profileData);
+  const { error } = await writeProfile(supabase, targetId, forOrg, profileData);
   if (error) return { error: error.message };
 
   const { data: savedProfile } = await supabase
     .from("profiles")
     .select("role, avatar_url")
-    .eq("id", user.id)
+    .eq("id", targetId)
     .maybeSingle();
   await maybeSetVerifiedAt(
     supabase,
-    user.id,
+    targetId,
     savedProfile?.role ?? null,
     bio,
     savedProfile?.avatar_url ?? null,

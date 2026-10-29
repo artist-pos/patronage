@@ -13,6 +13,7 @@ import {
   type ScoreRow,
 } from "@/lib/review-scoring";
 import { eligibleReviewers, rebalanceAssignments } from "@/lib/review-assignment";
+import { isOrgMember } from "@/lib/partner-org";
 import type { PipelineConfig } from "@/types/database";
 
 type Level = "owner" | "editor" | "viewer";
@@ -30,7 +31,7 @@ async function teamAccess(opportunityId: string) {
   ]);
   if (!opp) return null;
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
-  let level: Level | null = isAdmin || opp.profile_id === user.id ? "owner" : null;
+  let level: Level | null = isAdmin || (await isOrgMember(admin, user.id, opp.profile_id)) ? "owner" : null;
   if (!level) {
     const { data: collab } = await admin
       .from("opportunity_collaborators")

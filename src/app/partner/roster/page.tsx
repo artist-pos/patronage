@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getServerUser } from "@/lib/supabase/get-server-user";
+import { getActingOrg } from "@/lib/partner-org";
 import { canKeepRoster, orgCategory } from "@/lib/org-categories";
 import { RosterManager, type RosterEntry } from "./RosterManager";
 import { InviteUpload } from "./InviteUpload";
@@ -36,14 +36,14 @@ export const metadata: Metadata = {
  * at all.
  */
 export default async function PartnerRosterPage() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirect("/auth/login?next=/partner/roster");
+  const { supabase, user, orgId } = await getActingOrg();
+  if (!user || !orgId) redirect("/auth/login?next=/partner/roster");
   const { data: profileRow } = await supabase
     .from("profiles")
     .select(`id, role, org_category, full_name, username, region_id, regions(name),
             org_invite_subject, org_invite_headline, org_invite_subhead,
             org_invite_message, org_invite_reply_to`)
-    .eq("id", user.id)
+    .eq("id", orgId)
     .single();
 
   const profile = profileRow as {
