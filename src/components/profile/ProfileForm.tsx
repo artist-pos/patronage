@@ -28,9 +28,11 @@ interface Props {
   artsOrgs: ArtsOrganisation[];
   /** When true, stay on the page after saving instead of redirecting. */
   stayOnPage?: boolean;
+  /** Set when a member is editing an organisation they were added to, not their own profile. */
+  orgId?: string;
 }
 
-export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPage }: Props) {
+export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPage, orgId }: Props) {
   const isArtist = role === "artist" || role === "owner";
   const [state, action, isPending] = useActionState<ProfileFormState, FormData>(
     stayOnPage ? updateProfileAction : upsertProfileAction,
@@ -50,6 +52,7 @@ export function ProfileForm({ profile, role, cities, boards, artsOrgs, stayOnPag
 
   return (
     <form action={action} className="space-y-6">
+      {orgId && <input type="hidden" name="org_id" value={orgId} />}
       {state.error && (
         <p className="text-sm text-destructive">{state.error}</p>
       )}

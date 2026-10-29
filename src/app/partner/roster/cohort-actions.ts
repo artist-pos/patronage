@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { getActingOrg } from "@/lib/partner-org";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateCohortCode } from "@/lib/cohorts";
 
@@ -11,17 +11,14 @@ import { generateCohortCode } from "@/lib/cohorts";
  * since a server action is a public endpoint.
  */
 async function requireOrg(): Promise<{ orgId?: string; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated." };
+  const { user, orgId } = await getActingOrg();
+  if (!user || !orgId) return { error: "Not authenticated." };
 
-  const { data } = await createAdminClient().from("profiles").select("role").eq("id", user.id).single();
+  const { data } = await createAdminClient().from("profiles").select("role").eq("id", orgId).single();
   if ((data as { role: string } | null)?.role !== "partner") {
     return { error: "Only organisations can keep cohorts." };
   }
-  return { orgId: user.id };
+  return { orgId };
 }
 
 export async function createCohort(input: { name: string; year?: number | null }): Promise<{ error?: string }> {

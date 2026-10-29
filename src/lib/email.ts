@@ -1601,6 +1601,32 @@ export async function sendCollaboratorInvite({
   });
 }
 
+/** Tell someone they have been added as an owner of a partner organisation. */
+export async function sendOrgMemberInvite({
+  to,
+  inviterName,
+  orgName,
+  link,
+}: {
+  to: string;
+  inviterName: string;
+  orgName: string;
+  link: string;
+}): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${inviterName} added you to ${orgName} on Patronage`,
+    html: partnerNoticeHtml({
+      heading: `You're now an owner of ${orgName}`,
+      body: `<p style="margin:0 0 12px;font-size:15px;"><strong>${escHtml(inviterName)}</strong> has added you to <strong>${escHtml(orgName)}</strong> on Patronage. You can manage the organisation's profile and settings, its listings and applications, and its artists.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">You don't need to choose a password. Use the button below to go straight in. If the link has expired, sign in with this email address and you'll find ${escHtml(orgName)} in your account.</p>`,
+      ctaUrl: link,
+      ctaLabel: "Open the organisation",
+    }),
+  });
+}
+
 /** One email a day telling the organiser how many applications have arrived. */
 export async function sendPartnerApplicationSummary({
   partnerEmail,

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isOrgMember } from "@/lib/partner-org";
 import { createCheckoutSession } from "@/lib/stripe";
 import {
   PRICING_CURRENCY,
@@ -32,13 +33,13 @@ export async function initiateFeaturedListing(
     .eq("id", opportunityId)
     .maybeSingle();
   if (!opp) return { error: "Opportunity not found." };
-  if (opp.profile_id !== user.id) return { error: "Only the listing partner can feature." };
+  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Only the listing partner can feature." };
 
   const { data: payment, error: insertError } = await admin
     .from("featured_listing_payments")
     .insert({
       opportunity_id: opp.id,
-      partner_id: user.id,
+      partner_id: opp.profile_id,
       amount_cents: plan.amountCents,
       currency: PRICING_CURRENCY,
       feature_days: plan.days,

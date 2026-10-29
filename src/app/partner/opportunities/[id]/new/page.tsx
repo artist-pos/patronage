@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WizardShell } from "@/components/partner/wizard/WizardShell";
 import { getRubricCriteria, getPartnerDocuments } from "./actions";
+import { isOrgMember } from "@/lib/partner-org";
 import type { Opportunity, PartnerDocument } from "@/types/database";
 import type { LocalCriterion } from "@/components/partner/wizard/RubricBuilder";
 
@@ -25,13 +26,12 @@ export default async function NewOpportunityWizardPage({ params, searchParams }:
       .from("opportunities")
       .select("*")
       .eq("id", id)
-      .eq("profile_id", user.id)
       .single(),
     getRubricCriteria(id),
     getPartnerDocuments(id),
   ]);
 
-  if (!oppResult.data) redirect("/studio");
+  if (!oppResult.data || !(await isOrgMember(supabase, user.id, oppResult.data.profile_id))) redirect("/studio");
 
   const opp = oppResult.data as Opportunity;
   const isPipeline = typeParam === "pipeline" || opp.routing_type === "pipeline";

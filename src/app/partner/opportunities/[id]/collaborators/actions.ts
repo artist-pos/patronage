@@ -8,6 +8,7 @@ import { findAuthUserIdByEmail } from "@/lib/supabase/find-user-by-email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { slugify } from "@/lib/slugify";
 import { rebalanceAssignments } from "@/lib/review-assignment";
+import { isOrgMember } from "@/lib/partner-org";
 import type { OpportunityCollaborator } from "@/types/database";
 
 /** Fetch all collaborators for an opportunity (owner or admin only). */
@@ -25,7 +26,7 @@ export async function getCollaborators(
 
   const isAdmin = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdmin) return { error: "Not authorised" };
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   const { data, error } = await supabase
     .from("opportunity_collaborators")
@@ -89,13 +90,15 @@ export async function inviteCollaborator(
 
   const isAdmin = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdmin) return { error: "Not authorised" };
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   const admin = createAdminClient();
   let inviteeId = await findAuthUserIdByEmail(admin, email);
   let created = false;
 
-  if (inviteeId === opp.profile_id) return { error: "This person already owns this opportunity." };
+  if (inviteeId && (await isOrgMember(admin, inviteeId, opp.profile_id))) {
+    return { error: "This person already owns this opportunity." };
+  }
 
   // Someone who has applied to this call can't also review it.
   if (inviteeId) {
@@ -169,7 +172,7 @@ export async function resendCollaboratorInvite(opportunityId: string, collaborat
   ]);
   const isAdmin = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdmin) return { error: "Not authorised" };
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   const admin = createAdminClient();
   const { data: collab } = await admin
@@ -251,7 +254,7 @@ export async function removeCollaborator(
 
   const isAdmin = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdmin) return { error: "Not authorised" };
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   const { data: removed } = await supabase
     .from("opportunity_collaborators")
@@ -295,7 +298,7 @@ export async function updateCollaboratorRole(
 
   const isAdmin = profileData?.role === "admin" || profileData?.role === "owner";
   if (!opp) return { error: "Opportunity not found" };
-  if (opp.profile_id !== user.id && !isAdmin) return { error: "Not authorised" };
+  if (!isAdmin && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   const { error } = await supabase
     .from("opportunity_collaborators")

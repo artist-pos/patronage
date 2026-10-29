@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { readReviewConfig } from "@/lib/review-scoring";
 import { rebalanceAssignments } from "@/lib/review-assignment";
+import { isOrgMember } from "@/lib/partner-org";
 import type { PipelineConfig } from "@/types/database";
 
 /**
@@ -32,7 +33,7 @@ export async function saveScores(
   if (!opp || !app) return { error: "Application not found." };
 
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
-  const isOwner = isAdmin || opp.profile_id === user.id;
+  const isOwner = isAdmin || (await isOrgMember(admin, user.id, opp.profile_id));
   if (!isOwner) {
     const { data: collab } = await admin
       .from("opportunity_collaborators")
@@ -112,7 +113,7 @@ export async function recuseFromApplication(opportunityId: string, applicationId
     admin.from("opportunity_applications").select("id").eq("id", applicationId).eq("opportunity_id", opportunityId).maybeSingle(),
   ]);
   if (!opp || !app) return { error: "Application not found." };
-  if (opp.profile_id !== user.id && !collab) return { error: "You're not on this review team." };
+  if (!collab && !(await isOrgMember(admin, user.id, opp.profile_id))) return { error: "You're not on this review team." };
 
   const { error } = await admin
     .from("application_recusals")

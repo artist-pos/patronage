@@ -14,6 +14,8 @@ interface Props {
     | "donation_url"
     | "donation_enabled"
   >;
+  /** Set when a member is editing an organisation they were added to. */
+  orgId?: string;
 }
 
 /**
@@ -42,7 +44,7 @@ const ORG_OPTIONS: { value: OrganisationType; label: string; hint: string }[] = 
  * Charities fill charitable_registration + donation_url then submit; admin
  * flips donation_enabled once they've verified the registration number.
  */
-export function PartnerOrgFields({ profile }: Props) {
+export function PartnerOrgFields({ profile, orgId }: Props) {
   const [orgType, setOrgType] = useState<OrganisationType | "">(profile.organisation_type ?? "");
   const [orgCategory, setOrgCategory] = useState<OrgCategory | "">(profile.org_category ?? "");
   const [registration, setRegistration] = useState(profile.charitable_registration ?? "");
@@ -62,6 +64,7 @@ export function PartnerOrgFields({ profile }: Props) {
         orgCategory: (orgCategory || null) as OrgCategory | null,
         charitableRegistration: registration,
         donationUrl,
+        orgId,
       });
       if (result.error) {
         setError(result.error);

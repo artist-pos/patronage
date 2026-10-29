@@ -4,6 +4,7 @@ import { OpportunityShell } from "@/components/partner/OpportunityShell";
 import type { Metadata } from "next";
 import type { CustomField, PipelineConfig, OpportunityCollaborator } from "@/types/database";
 import { isAdmin } from "@/lib/admin";
+import { isOrgMember } from "@/lib/partner-org";
 import { loadPipelineApplications } from "@/lib/pipeline-applications";
 import { readReviewConfig } from "@/lib/review-scoring";
 
@@ -32,7 +33,7 @@ export default async function PartnerOpportunityPage({ params, searchParams }: P
 
   if (!oppData) notFound();
 
-  const isOwner = oppData.profile_id === user.id || !!adminUser;
+  const isOwner = !!adminUser || (await isOrgMember(supabase, user.id, oppData.profile_id));
   let canEdit = isOwner;
 
   if (!isOwner) {

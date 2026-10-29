@@ -6,6 +6,7 @@ import { normaliseOpportunityWrite } from "@/lib/opportunity-fields";
 import type { OpportunityPayload } from "@/lib/opportunity-payload";
 import { validPartnerProfileId } from "@/lib/organiser-link";
 import { isAdmin } from "@/lib/admin";
+import { isOrgMember } from "@/lib/partner-org";
 
 // The only columns a listing owner may write. Anything else in the payload is
 // dropped, so status, payment and featured flags can't be set from the client.
@@ -32,7 +33,7 @@ async function getOpportunityForPartner(id: string) {
     .single();
 
   if (!opp) throw new Error("Listing not found");
-  if (opp.profile_id !== user.id) throw new Error("Not authorised");
+  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) throw new Error("Not authorised");
 
   return { supabase, user, opp };
 }
@@ -43,7 +44,7 @@ export async function updateOpportunityPartner(
     entry_fee_local?: number | null;
   }
 ) {
-  const { supabase, user, opp } = await getOpportunityForPartner(id);
+  const { supabase, opp } = await getOpportunityForPartner(id);
 
   // Partners can only change the fields in PARTNER_EDITABLE.
   const picked = Object.fromEntries(
@@ -59,7 +60,7 @@ export async function updateOpportunityPartner(
   // can link any partner account.
   if ("organiser_profile_id" in updateData) {
     const wanted = updateData.organiser_profile_id as string | null | undefined;
-    const allowed = !!wanted && (wanted === user.id || (await isAdmin()));
+    const allowed = !!wanted && (wanted === opp.profile_id || (await isAdmin()));
     const resolvedPid = allowed ? await validPartnerProfileId(wanted) : null;
     updateData.organiser_profile_id = resolvedPid;
     if (resolvedPid && (await isAdmin())) {
@@ -73,7 +74,7 @@ export async function updateOpportunityPartner(
     .from("opportunities")
     .update(updateData)
     .eq("id", id)
-    .eq("profile_id", (await supabase.auth.getUser()).data.user!.id);
+    .eq("profile_id", opp.profile_id);
 
   if (error) throw new Error(error.message);
 

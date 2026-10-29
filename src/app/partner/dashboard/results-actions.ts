@@ -13,6 +13,7 @@ import {
   sendResultEmails,
 } from "@/lib/email";
 import { createCampaignForSelection } from "@/lib/campaigns";
+import { isOrgMember } from "@/lib/partner-org";
 import type { PipelineConfig } from "@/types/database";
 
 type NotifType = "shortlisted" | "rejected" | "selected" | "approved_pending_assets";
@@ -76,7 +77,7 @@ async function ownerAccess(opportunityId: string) {
   ]);
   if (!opp) return null;
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
-  if (!isAdmin && opp.profile_id !== user.id) return null;
+  if (!isAdmin && !(await isOrgMember(admin, user.id, opp.profile_id))) return null;
   return { admin, user, opp };
 }
 

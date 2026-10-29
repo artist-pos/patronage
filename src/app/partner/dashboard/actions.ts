@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendPaymentConfirmed } from "@/lib/email";
 import { transitionError } from "@/lib/decisions";
+import { isOrgMember } from "@/lib/partner-org";
 import type { PostSelectionConfig, PipelineConfig } from "@/types/database";
 
 type ApplicationStatus =
@@ -26,7 +27,7 @@ async function canEditOpportunity(
   ownerId: string | null,
   isAdminUser: boolean,
 ): Promise<boolean> {
-  if (isAdminUser || ownerId === userId) return true;
+  if (isAdminUser || (await isOrgMember(supabase, userId, ownerId))) return true;
   const { data: collab } = await supabase
     .from("opportunity_collaborators")
     .select("role")
@@ -329,7 +330,7 @@ async function assertOpportunityOwner(opportunityId: string) {
   ]);
 
   if (!opp) return { error: "Opportunity not found" as string, supabase: null, user: null, opp: null };
-  if (opp.profile_id !== user.id && !isAdminUser) {
+  if (!isAdminUser && !(await isOrgMember(supabase, user.id, opp.profile_id))) {
     return { error: "Not authorised" as string, supabase: null, user: null, opp: null };
   }
 

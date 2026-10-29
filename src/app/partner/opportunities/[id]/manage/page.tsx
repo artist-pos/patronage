@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
+import { isOrgMember } from "@/lib/partner-org";
 import type { Metadata } from "next";
 import { ManageShell } from "@/components/partner/ManageShell";
 import { PartnerEditForm } from "@/app/partner/opportunities/[id]/edit/PartnerEditForm";
@@ -37,7 +38,7 @@ export default async function ManagePage({ params, searchParams }: Props) {
 
   if (!opp) notFound();
 
-  const isOwner = opp.profile_id === user.id;
+  const isOwner = await isOrgMember(supabase, user.id, opp.profile_id);
   if (!isOwner && !adminUser) {
     const { data: collab } = await supabase
       .from("opportunity_collaborators")

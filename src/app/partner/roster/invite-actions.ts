@@ -1,7 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
-import { createClient } from "@/lib/supabase/server";
+import { getActingOrg } from "@/lib/partner-org";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildArtistInviteEmail, type OrgInviteCopy } from "@/lib/email";
 import {
@@ -44,11 +44,8 @@ interface Org {
  * and this one can send thousands of emails carrying someone else's name.
  */
 async function requireOrg(): Promise<{ org?: Org; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated." };
+  const { user, orgId } = await getActingOrg();
+  if (!user || !orgId) return { error: "Not authenticated." };
 
   const admin = createAdminClient();
   const { data } = await admin
@@ -56,7 +53,7 @@ async function requireOrg(): Promise<{ org?: Org; error?: string }> {
     .select(`id, full_name, username, role, org_category, region_id, local_board_id, regions(name),
             org_invite_subject, org_invite_headline, org_invite_subhead,
             org_invite_message, org_invite_reply_to`)
-    .eq("id", user.id)
+    .eq("id", orgId)
     .single();
 
   const p = data as {

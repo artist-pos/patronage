@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { OrganisationType } from "@/types/database";
 import { isOrgCategory, type OrgCategory } from "@/lib/org-categories";
+import { resolveEditTarget } from "@/lib/partner-org";
 
 // "gallery" stays accepted so existing rows can be re-saved unchanged, even
 // though the UI no longer offers it on this axis — it is a function, not a
@@ -15,6 +16,8 @@ interface PartnerOrgInput {
   orgCategory?: OrgCategory | null;
   charitableRegistration?: string | null;
   donationUrl?: string | null;
+  /** The organisation being edited, when it is not the caller's own profile. */
+  orgId?: string;
 }
 
 /**
@@ -33,11 +36,15 @@ export async function updatePartnerOrgFields(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  // Ensure caller is a partner (or admin acting on their own profile).
+  // A member editing an organisation names it; otherwise this is the caller's own profile.
+  const targetId = await resolveEditTarget(supabase, user.id, input.orgId);
+  if (!targetId) return { error: "You don't have access to that organisation." };
+
+  // Ensure the target is a partner profile.
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, donation_enabled")
-    .eq("id", user.id)
+    .eq("id", targetId)
     .maybeSingle();
   if (!profile) return { error: "Profile not found." };
   if (profile.role !== "partner") {
@@ -72,14 +79,14 @@ export async function updatePartnerOrgFields(
   const { error } = await supabase
     .from("profiles")
     .update(patch)
-    .eq("id", user.id);
+    .eq("id", targetId);
   if (error) return { error: error.message };
 
   revalidatePath("/onboarding");
   const { data: updated } = await supabase
     .from("profiles")
     .select("username")
-    .eq("id", user.id)
+    .eq("id", targetId)
     .maybeSingle();
   if (updated?.username) revalidatePath(`/${updated.username}`);
   return {};

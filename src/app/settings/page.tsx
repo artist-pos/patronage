@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
+import { getMemberOrgIds } from "@/lib/partner-org";
 import { getCitiesWithRegions, getArtsOrganisations, getLocalBoards } from "@/lib/regions";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { PartnerOrgFields } from "@/components/profile/PartnerOrgFields";
@@ -18,7 +19,8 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Settings" };
 
 interface PageProps {
-  searchParams: Promise<{ tab?: string; welcome?: string }>;
+  /** `org` edits an organisation the user was added to, instead of their own profile. */
+  searchParams: Promise<{ tab?: string; welcome?: string; org?: string }>;
 }
 
 // CV & Press and Groups now live exclusively in /studio/profile
@@ -31,10 +33,16 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 export default async function SettingsPage({ searchParams }: PageProps) {
-  const { user } = await getServerUser();
+  const { supabase, user } = await getServerUser();
   if (!user) redirect("/auth/login");
 
   const params = await searchParams;
+
+  // Members of an organisation manage its profile here (?org=<id>). Anything
+  // else is the user's own settings.
+  const memberOrgIds = await getMemberOrgIds(supabase, user.id);
+  const editingOrgId = params.org && memberOrgIds.includes(params.org) ? params.org : null;
+  const targetId = editingOrgId ?? user.id;
 
   // Redirect old CV/Press and Groups bookmarks to /studio/profile
   if (params.tab === "cv-press" || params.tab === "collectives") {
@@ -43,7 +51,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
 
   // The location taxonomy does not depend on the profile, so it loads beside it.
   const [profile, cities, boards, artsOrgs] = await Promise.all([
-    getProfileById(user.id),
+    getProfileById(targetId),
     getCitiesWithRegions(),
     getLocalBoards(),
     getArtsOrganisations(),
@@ -54,7 +62,8 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const isArtist  = role === "artist" || role === "owner";
   const isPartner = role === "partner";
 
-  const tabs = SETTINGS_TABS;
+  // The Account tab (digest, danger zone) belongs to the person, not the organisation.
+  const tabs: readonly Tab[] = editingOrgId ? ["profile"] : SETTINGS_TABS;
   const rawTab = params.tab ?? "profile";
   const activeTab: Tab = (tabs as readonly string[]).includes(rawTab)
     ? rawTab as Tab
@@ -77,7 +86,9 @@ export default async function SettingsPage({ searchParams }: PageProps) {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your profile, preferences, and account.
+            {editingOrgId
+              ? <>Managing {profile.full_name ?? profile.username}. <Link href="/partner/members" className="underline underline-offset-2">Members</Link></>
+              : "Manage your profile, preferences, and account."}
           </p>
         </div>
         <Link
@@ -93,7 +104,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
         {tabs.map((t) => (
           <Link
             key={t}
-            href={t === "profile" ? "/settings" : `/settings?tab=${t}`}
+            href={t === "profile" ? (editingOrgId ? `/settings?org=${editingOrgId}` : "/settings") : `/settings?tab=${t}`}
             className={`px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
               activeTab === t
                 ? "font-semibold border-b-2 border-black -mb-px"
@@ -111,7 +122,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
           {tabs.map((t) => (
             <Link
               key={t}
-              href={t === "profile" ? "/settings" : `/settings?tab=${t}`}
+              href={t === "profile" ? (editingOrgId ? `/settings?org=${editingOrgId}` : "/settings") : `/settings?tab=${t}`}
               className={`flex items-center px-3 py-2 text-sm rounded-sm transition-colors ${
                 activeTab === t
                   ? "bg-muted font-medium text-foreground"
@@ -140,7 +151,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                         Square headshot shown on your public profile. Cropped and resized to 400 × 400 px.
                       </p>
                     </div>
-                    <AvatarUploader profileId={user.id} />
+                    <AvatarUploader profileId={targetId} />
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-0.5">
@@ -149,15 +160,16 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                         Displayed as the background of your directory card. Landscape works best.
                       </p>
                     </div>
-                    <FeaturedImageUploader profileId={user.id} />
+                    <FeaturedImageUploader profileId={targetId} />
                   </div>
                 </section>
 
                 <section className="space-y-6 border-t border-border pt-10 lg:border-t-0 lg:pt-0">
                   <h2 className="text-base font-semibold">Profile details</h2>
-                  <ProfileForm profile={profile} role={role} cities={cities} boards={boards} artsOrgs={artsOrgs} />
+                  <ProfileForm profile={profile} role={role} cities={cities} boards={boards} artsOrgs={artsOrgs} orgId={editingOrgId ?? undefined} />
                   {isPartner && (
                     <PartnerOrgFields
+                      orgId={editingOrgId ?? undefined}
                       profile={{
                         organisation_type: profile.organisation_type,
                         org_category: profile.org_category,

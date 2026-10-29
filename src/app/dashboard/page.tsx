@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getMemberOrgIds } from "@/lib/partner-org";
 import { getSavedOpportunities, categorizeSaved } from "@/lib/saved-opportunities";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
@@ -21,7 +22,7 @@ interface PageProps {
     period?: string;
     /** opportunities sub-filter: all | saved | closing | applied | expired */
     of?: string;
-    /** Admins can look at the organiser dashboard with ?view=partner. */
+    /** Admins can look at the organiser dashboard with ?view=partner; members of an organisation use ?view=org. */
     view?: string;
   }>;
 }
@@ -64,8 +65,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   // Organisers (and admins looking in) get their listings here.
   const { data: viewer } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const isStaff = viewer?.role === "admin" || viewer?.role === "owner";
-  if (viewer?.role === "reviewer") redirect("/review");
-  if (viewer?.role === "partner" || (isStaff && params.view === "partner")) {
+  // People added to a partner organisation manage it from here. A guest
+  // reviewer who was added as a member lands on the organisation, not the review queue.
+  const isOrgMemberUser = (await getMemberOrgIds(supabase, user.id)).length > 0;
+  if (viewer?.role === "reviewer" && !isOrgMemberUser) redirect("/review");
+  if (
+    viewer?.role === "partner" ||
+    (isOrgMemberUser && (viewer?.role === "reviewer" || params.view === "org")) ||
+    (isStaff && params.view === "partner")
+  ) {
     return (
       <ListingUiShell>
         <PartnerDashboard />

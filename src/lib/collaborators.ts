@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { isOrgMember } from "@/lib/partner-org";
 
 export type CollaboratorPermission = "view" | "edit";
 
@@ -30,7 +31,7 @@ export async function canAccessOpportunity(
     .eq("id", opportunityId)
     .single();
 
-  if (opp?.profile_id === userId) return true;
+  if (await isOrgMember(supabase, userId, opp?.profile_id)) return true;
 
   // Check if user is a collaborator
   const { data: collab } = await supabase

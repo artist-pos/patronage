@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getServerUser } from "@/lib/supabase/get-server-user";
+import { getActingOrg } from "@/lib/partner-org";
 import { nextStep, type NextTarget } from "@/lib/next-step";
 
 const STATUS_COLOURS: Record<string, string> = {
@@ -60,13 +60,15 @@ function Sparkline({ data }: { data: number[] }) {
 
 /** The organiser's home: every opportunity they run, with applications at a glance. */
 export async function PartnerDashboard() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirect("/auth/login");
+  // orgId is the organisation being managed: the user's own partner profile, or
+  // one they were added to as a member.
+  const { supabase, user, orgId, memberOrgIds } = await getActingOrg();
+  if (!user || !orgId) redirect("/auth/login");
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, full_name, username")
-    .eq("id", user.id)
+    .eq("id", orgId)
     .single();
 
   const userRole = profile?.role;
@@ -74,6 +76,13 @@ export async function PartnerDashboard() {
 
   const isAdminUser = userRole === "admin" || userRole === "owner";
   const displayName = profile?.full_name ?? profile?.username ?? "there";
+
+  // Organisations this person can switch between (their own partner login and any they were added to).
+  const { data: orgRows } = isAdminUser
+    ? { data: [] }
+    : await supabase.from("profiles").select("id, full_name, username, role").in("id", [user.id, ...memberOrgIds]);
+  const orgOptions = ((orgRows ?? []) as Array<{ id: string; full_name: string | null; username: string; role: string }>)
+    .filter((o) => o.role === "partner");
 
   let collaboratorOppIds: string[] = [];
   if (!isAdminUser) {
@@ -109,7 +118,7 @@ export async function PartnerDashboard() {
     ]);
   } else {
     const ownOrCollab = collaboratorOppIds.length > 0
-      ? `profile_id.eq.${user.id},id.in.(${collaboratorOppIds.join(",")})`
+      ? `profile_id.eq.${orgId},id.in.(${collaboratorOppIds.join(",")})`
       : undefined;
 
     [{ data: opportunities }, { data: submissions }, { data: allListings }] = await Promise.all([
@@ -124,12 +133,12 @@ export async function PartnerDashboard() {
             .from("opportunities")
             .select("*, profiles!opportunities_profile_id_fkey(full_name, username)")
             .eq("routing_type", "pipeline")
-            .eq("profile_id", user.id)
+            .eq("profile_id", orgId)
             .order("created_at", { ascending: false }),
       supabase
         .from("opportunities")
         .select("id, title, type, deadline, status, routing_type, created_at")
-        .eq("profile_id", user.id)
+        .eq("profile_id", orgId)
         .in("status", ["pending", "rejected"])
         .order("created_at", { ascending: false }),
       ownOrCollab
@@ -141,7 +150,7 @@ export async function PartnerDashboard() {
         : supabase
             .from("opportunities")
             .select("*, profiles!opportunities_profile_id_fkey(full_name, username)")
-            .eq("profile_id", user.id)
+            .eq("profile_id", orgId)
             .order("created_at", { ascending: false }),
     ]);
   }
@@ -252,7 +261,7 @@ export async function PartnerDashboard() {
         reviewers: 1,
         sent: sentByOpp.get(opp.id) ?? 0,
       });
-      const isCollab = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== user.id;
+      const isCollab = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== orgId;
       return { opp, step, isCollab };
     })
     .filter((t) => t.step.action && (!t.isCollab || t.step.action.target === "review"))
@@ -275,8 +284,37 @@ export async function PartnerDashboard() {
           {isAdminUser && (
             <p className="text-sm text-stone-500">Admin view — all partner pipelines across the platform.</p>
           )}
+          {orgOptions.length > 1 && (
+            <p className="text-sm text-stone-500">
+              Managing {displayName}. Switch to:{" "}
+              {orgOptions.filter((o) => o.id !== orgId).map((o, i) => (
+                <span key={o.id}>
+                  {i > 0 && " · "}
+                  <Link href={`/partner/switch?org=${o.id}`} className="underline underline-offset-2 hover:text-black">
+                    {o.full_name ?? o.username}
+                  </Link>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          {!isAdminUser && (
+            <>
+              <Link
+                href="/partner/members"
+                className="border border-border px-5 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-black hover:text-black"
+              >
+                Members
+              </Link>
+              <Link
+                href={orgId === user.id ? "/settings" : `/settings?org=${orgId}`}
+                className="border border-border px-5 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-black hover:text-black"
+              >
+                Organisation settings
+              </Link>
+            </>
+          )}
           {/* Entry point for the roster and the bulk invite tool. They live in
               their own space rather than settings, but nobody would look for
               them there without a door on the dashboard. */}
@@ -358,7 +396,7 @@ export async function PartnerDashboard() {
                 total: 0, pending: 0, shortlisted: 0, selected: 0,
                 byStatus: {}, lastAppAt: null, dailyBuckets: [],
               };
-              const isCollaboratorOpp = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== user.id;
+              const isCollaboratorOpp = !isAdminUser && collaboratorOppIds.includes(opp.id) && opp.profile_id !== orgId;
               const partnerName = isAdminUser
                 ? (opp.profiles as { full_name: string | null; username: string } | null)?.full_name
                   ?? (opp.profiles as { full_name: string | null; username: string } | null)?.username
@@ -533,7 +571,7 @@ export async function PartnerDashboard() {
                       : "text-stone-500";
                     const statusLabel = listing.archived_at ? "archived" : listing.status === "draft_unclaimed" ? "draft" : listing.status;
                     const isPipeline = listing.routing_type === "pipeline" && (listing.status === "published" || listing.status === "unlisted");
-                    const isCollaboratorListing = !isAdminUser && collaboratorOppIds.includes(listing.id) && listing.profile_id !== user.id;
+                    const isCollaboratorListing = !isAdminUser && collaboratorOppIds.includes(listing.id) && listing.profile_id !== orgId;
                     return (
                       <tr key={listing.id} className="border-b border-black/5 last:border-0">
                         <td className="py-2.5 px-3 font-medium">{listing.title || <span className="text-stone-400 italic">Untitled</span>}</td>

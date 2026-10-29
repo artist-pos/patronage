@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isOrgMember } from "@/lib/partner-org";
 import type { RubricCriterion, PartnerDocument } from "@/types/database";
 import type { LocalCriterion } from "@/components/partner/wizard/RubricBuilder";
 
@@ -60,7 +61,7 @@ export async function saveRubricCriteria(
     .eq("id", opportunityId)
     .single();
 
-  if (!opp || opp.profile_id !== user.id) return { error: "Not authorised" };
+  if (!opp || !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
 
   // Delete existing non-locked criteria, then upsert
   await supabase
@@ -111,7 +112,7 @@ export async function updateCriterionWording(
   const { data: opp } = await supabase.from("opportunities").select("profile_id").eq("id", opportunityId).single();
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const isAdminUser = profile?.role === "admin" || profile?.role === "owner";
-  if (!opp || (opp.profile_id !== user.id && !isAdminUser)) return { error: "Not authorised" };
+  if (!opp || (!isAdminUser && !(await isOrgMember(supabase, user.id, opp.profile_id)))) return { error: "Not authorised" };
 
   const trimmed = label.trim();
   if (!trimmed) return { error: "A criterion needs a name." };

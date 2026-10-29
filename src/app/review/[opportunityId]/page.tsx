@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerUser } from "@/lib/supabase/get-server-user";
+import { isOrgMember } from "@/lib/partner-org";
 import { loadPipelineApplications } from "@/lib/pipeline-applications";
 import { readReviewConfig } from "@/lib/review-scoring";
 import { APPLICATION_BIO_KEY } from "@/lib/application-bio";
@@ -37,7 +38,7 @@ export default async function ReviewPage({ params }: Props) {
     admin.from("opportunity_collaborators").select("role").eq("opportunity_id", opportunityId).eq("profile_id", user.id).maybeSingle(),
   ]);
   const isAdmin = profile?.role === "admin" || profile?.role === "owner";
-  const isOwner = isAdmin || opp.profile_id === user.id;
+  const isOwner = isAdmin || (await isOrgMember(admin, user.id, opp.profile_id));
   if (!isOwner && !collab) {
     return (
       <div className="mx-auto max-w-md px-6 py-24 space-y-2 text-center">

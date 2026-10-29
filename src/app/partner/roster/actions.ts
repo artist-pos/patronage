@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { getActingOrg } from "@/lib/partner-org";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canKeepRoster, defaultRelationship, orgCategory } from "@/lib/org-categories";
@@ -33,17 +33,15 @@ interface Caller {
  * public endpoint, and this one publishes claims about named people.
  */
 async function requireRosterOrg(): Promise<{ caller?: Caller; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated." };
+  const { user, orgId } = await getActingOrg();
+  if (!user || !orgId) return { error: "Not authenticated." };
 
+  // getActingOrg only returns an organisation the caller belongs to.
   const admin = createAdminClient();
   const { data } = await admin
     .from("profiles")
     .select("id, role, org_category, full_name, username")
-    .eq("id", user.id)
+    .eq("id", orgId)
     .single();
 
   const p = data as {
