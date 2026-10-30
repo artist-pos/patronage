@@ -36,6 +36,7 @@ interface Candidate {
   contact_email: string | null;
   claim_email: string | null;
   claim_contact_name: string | null;
+  claim_current_tool: string | null;
   created_at: string;
   view_count: number | null;
 }
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
   // the scraper's dedupe has had a pass at it.
   const { data, error } = await admin
     .from("opportunities")
-    .select("id, title, organiser, contact_email, claim_email, claim_contact_name, created_at, view_count")
+    .select("id, title, organiser, contact_email, claim_email, claim_contact_name, claim_current_tool, created_at, view_count")
     .eq("status", "published")
     .eq("is_active", true)
     .is("profile_id", null)
@@ -141,11 +142,12 @@ export async function GET(req: NextRequest) {
         ? `${clicks === 1 ? "One creative has" : `${clicks} creatives have`} already clicked through to apply.`
         : undefined;
 
-    // Fresh token for each send, valid 14 days.
+    // Fresh token for each send, valid 30 days: replies like Grace Butler's
+    // ("I'll need to put it to the Foundation") come back weeks later.
     const token = crypto.randomUUID();
     const { error: tokenErr } = await admin
       .from("opportunities")
-      .update({ claim_token: token, claim_token_expires_at: new Date(Date.now() + 14 * 86_400_000).toISOString() })
+      .update({ claim_token: token, claim_token_expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString() })
       .eq("id", c.id);
     if (tokenErr) {
       failed++;
@@ -157,11 +159,12 @@ export async function GET(req: NextRequest) {
     const listingUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz"}/opportunities/${c.id}`;
     const organiser = c.organiser?.trim() || c.title;
     const body = buildClaimOnlyBody({
-      recipientName: c.claim_contact_name?.trim() || organiser,
+      recipientName: c.claim_contact_name?.trim() || "team",
       organiserName: organiser,
       opportunityTitle: c.title,
       claimUrl,
       engagement,
+      currentTool: c.claim_current_tool,
     });
 
     const { error: sendErr } = await resend.emails.send({

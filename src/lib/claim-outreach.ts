@@ -21,9 +21,25 @@ export interface OutreachDetails {
   currentTool: string;
 }
 
-/** Aggregated = found by the scraper, no organisation behind it yet. */
+/**
+ * Aggregated = no organisation behind it yet: scraped, a community tip, or made
+ * or submitted by an admin. These need outreach details before approval. An
+ * organisation that submits its own listing already has an account, so doesn't.
+ */
 export function isAggregated(opp: Pick<Opportunity, "origin" | "profile_id">): boolean {
-  return opp.origin === "scraper" && !opp.profile_id;
+  return opp.origin !== "submission" && !!opp.origin && !opp.profile_id;
+}
+
+/** What a listing still needs before approval: empty for one an organisation sent in itself. */
+export function outreachMissingFor(
+  o: Pick<Opportunity, "origin" | "profile_id" | "claim_email" | "claim_contact_name" | "claim_current_tool">
+): string[] {
+  if (!isAggregated(o)) return [];
+  return missingOutreachDetails({
+    email: o.claim_email ?? "",
+    contactName: o.claim_contact_name ?? "",
+    currentTool: o.claim_current_tool ?? "",
+  });
 }
 
 /** What's still missing before an aggregated listing can be approved or exported. */

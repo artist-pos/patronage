@@ -6,7 +6,9 @@ import { sendPartnerFeeRequest, sendPartnerListingDecision } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
-import { toSlug, isSlugBad } from "@/lib/opportunity-slug";
+import { slugForPublish } from "@/lib/opportunity-publish";
+import { isAggregated, missingOutreachDetails } from "@/lib/claim-outreach";
+import type { Opportunity } from "@/types/database";
 import { resolveRejectionReasons, summariseRejection, type RejectionReason } from "@/lib/listing-rejection";
 
 async function guard() {
@@ -55,37 +57,47 @@ async function tellPartner(
   }
 }
 
-export async function approveSubmission(submissionId: string, options: { waiveFee?: boolean } = {}) {
+export async function approveSubmission(submissionId: string, options: { waiveFee?: boolean } = {}): Promise<{ error?: string }> {
   await guard();
   const supabase = await createClient();
 
-  // Fetch current state so we can fix bad slugs generated when the title was blank at submit time.
+  // Fetch current state so the slug can be rebuilt from the edited details.
   const { data: opp } = await supabase
     .from("opportunities")
-    .select("slug, title, organiser, deadline, routing_type, pipeline_paid_at")
+    .select("id, slug, title, organiser, deadline, status, routing_type, pipeline_paid_at, origin, profile_id, claim_email, claim_contact_name, claim_current_tool")
     .eq("id", submissionId)
     .eq("status", "pending")
     .single();
+
+  // Tips and admin listings have nobody behind them yet: the claim email needs
+  // someone to write to before they go live.
+  if (opp && isAggregated(opp as Pick<Opportunity, "origin" | "profile_id">)) {
+    const missing = missingOutreachDetails({
+      email: opp.claim_email ?? "",
+      contactName: opp.claim_contact_name ?? "",
+      currentTool: opp.claim_current_tool ?? "",
+    });
+    if (missing.length > 0) return { error: `Add the ${missing.join(", ")} before approving.` };
+  }
 
   // Pipeline listings must have the activation fee paid before they can go live —
   // the partner is routed to /activate when they submit, but that doesn't block
   // the row from sitting in this queue unpaid, so enforce it here too.
   if (opp?.routing_type === "pipeline" && !opp.pipeline_paid_at) {
     if (!options.waiveFee) {
-      throw new Error("This open call hasn't paid the publishing fee. Approve with the fee waived, or request payment.");
+      return { error: "This open call hasn't paid the publishing fee. Approve with the fee waived, or request payment." };
     }
     // Waiving is an admin decision, recorded the same way a payment is.
     const { error: waiveError } = await createAdminClient()
       .from("opportunities")
       .update({ pipeline_paid_at: new Date().toISOString() })
       .eq("id", submissionId);
-    if (waiveError) throw new Error(waiveError.message);
+    if (waiveError) return { error: waiveError.message };
   }
 
   const updates: Record<string, unknown> = { status: "published", is_active: true };
-  if (opp && isSlugBad(opp.slug)) {
-    updates.slug = toSlug(opp.title ?? "", opp.organiser ?? null, opp.deadline ?? null);
-  }
+  const slug = opp ? await slugForPublish(createAdminClient(), opp) : null;
+  if (slug) updates.slug = slug;
 
   const { error } = await supabase
     .from("opportunities")
@@ -93,13 +105,14 @@ export async function approveSubmission(submissionId: string, options: { waiveFe
     .eq("id", submissionId)
     .eq("status", "pending");
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   await tellPartner(submissionId, true);
 
   revalidatePath("/admin/submissions");
   revalidatePath("/opportunities");
   revalidatePath(`/opportunities/${submissionId}`);
+  return {};
 }
 
 /** Ask the organiser to pay the publishing fee. The listing stays in review until they do. */

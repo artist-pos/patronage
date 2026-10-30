@@ -73,6 +73,7 @@ export async function submitOpportunityTip(data: {
   const { error } = await supabase.from("opportunities").insert({
     title: name,
     organiser: "Community Tip",
+    origin: "tip",
     url: sourceLink,
     source: sourceKey,
     source_url: sourceKey ? sourceLink : null,

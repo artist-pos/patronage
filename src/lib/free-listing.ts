@@ -20,6 +20,7 @@ export const FREE_LISTING_FIELDS = [
   "country",
   "city",
   "featured_image_url",
+  "secondary_image_url",
   "sub_categories",
   "career_stage",
   "tags",
@@ -28,9 +29,13 @@ export const FREE_LISTING_FIELDS = [
   "funding_range",
   "entry_fee",
   "entry_fee_currency",
+  "grant_type",
+  "recipients_count",
   "artist_payment_type",
   "travel_support",
   "travel_support_details",
+  "source",
+  "source_url",
 ] as const;
 
 /** Keep only known listing fields from an untrusted localStorage payload. */

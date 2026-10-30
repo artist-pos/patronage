@@ -8,7 +8,7 @@ import { OrganiserField } from "@/components/opportunities/OrganiserField";
 import type { ApplicationLink, Opportunity, OppTypeEnum } from "@/types/database";
 import { OPPORTUNITY_SOURCES } from "@/lib/opportunity-sources";
 import { ARTIST_PAYMENT_OPTIONS, CAPTION_MAX, CURRENCIES } from "@/lib/opportunity-fields";
-import { CAREER_STAGE_TAGS, COUNTRIES, DISCIPLINES, OPP_TYPES, showField } from "@/lib/opportunity-constants";
+import { CAREER_STAGE_TAGS, CONTRACT_TYPES, COUNTRIES, DISCIPLINES, GRANT_SUBTYPES, OPP_TYPES, getFundingFieldMeta, showField } from "@/lib/opportunity-constants";
 
 // ── AI Parser ─────────────────────────────────────────────────────────────────
 
@@ -207,6 +207,8 @@ export interface Patch {
   funding_range?: string | null;
   entry_fee?: number | null;
   entry_fee_currency?: string | null;
+  grant_type?: string | null;
+  recipients_count?: number | null;
   caption?: string | null;
   full_description?: string | null;
   application_links?: ApplicationLink[] | null;
@@ -420,12 +422,12 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
         {/* Funding + fee row */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Funding / prize value <span className="text-stone-500">optional</span></label>
+            <label className="text-sm font-medium">{getFundingFieldMeta(opp.type ?? "Grant").label.replace(/ \(optional\)$/, "")} <span className="text-stone-500">optional</span></label>
             <input
               type="text"
               value={opp.funding_range ?? ""}
               onChange={(e) => onChange({ funding_range: e.target.value || null })}
-              placeholder="e.g. $5,000 – $10,000 NZD"
+              placeholder={getFundingFieldMeta(opp.type ?? "Grant").placeholder}
               className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
             />
           </div>
@@ -451,6 +453,66 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             </div>
           </div>
         </div>
+
+        {/* Type-specific details: the same fields, shown for the same types, as OpportunityForm */}
+        {(showField(opp.type ?? "Grant", "recipients") || showField(opp.type ?? "Grant", "grantSubtype") ||
+          showField(opp.type ?? "Grant", "duration") || showField(opp.type ?? "Grant", "contractType")) && (
+          <div className="grid grid-cols-2 gap-4">
+            {showField(opp.type ?? "Grant", "recipients") && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  {opp.type === "Prize" ? "Number of winners" : "Number of recipients"} <span className="text-stone-500">optional</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={opp.recipients_count ?? ""}
+                  onChange={(e) => onChange({ recipients_count: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="e.g. 3"
+                  className={FIELD_CLS}
+                />
+              </div>
+            )}
+            {showField(opp.type ?? "Grant", "grantSubtype") && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Grant type <span className="text-stone-500">optional</span></label>
+                <select
+                  value={opp.grant_type ?? ""}
+                  onChange={(e) => onChange({ grant_type: e.target.value || null })}
+                  className={FIELD_CLS}
+                >
+                  <option value="">– Select –</option>
+                  {GRANT_SUBTYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+            {showField(opp.type ?? "Grant", "duration") && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Duration <span className="text-stone-500">optional</span></label>
+                <input
+                  type="text"
+                  value={opp.grant_type ?? ""}
+                  onChange={(e) => onChange({ grant_type: e.target.value || null })}
+                  placeholder="e.g. 3 months"
+                  className={FIELD_CLS}
+                />
+              </div>
+            )}
+            {showField(opp.type ?? "Grant", "contractType") && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Contract type <span className="text-stone-500">optional</span></label>
+                <select
+                  value={opp.grant_type ?? ""}
+                  onChange={(e) => onChange({ grant_type: e.target.value || null })}
+                  className={FIELD_CLS}
+                >
+                  <option value="">– Select –</option>
+                  {CONTRACT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Artist payment + travel / accommodation: the same transparency fields as every other listing form */}
         <div className="space-y-5">

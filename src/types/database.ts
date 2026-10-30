@@ -183,7 +183,9 @@ export interface Opportunity {
   claim_contact_name?: string | null;
   claim_current_tool?: string | null;
   /** Migration 222: where the listing came from — decides Scraper Queue vs Submissions. */
-  origin?: 'scraper' | 'submission' | 'admin';
+  origin?: 'scraper' | 'submission' | 'admin' | 'tip';
+  /** Who sent it in, for tips and signed-out submissions. */
+  submitter_email?: string | null;
   claim_token_expires_at: string | null;
   // Claim invite tracking (migration 090)
   claim_invite_sent_at: string | null;

@@ -36,9 +36,11 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const currentTool = opp.claim_current_tool ?? null;
+
   // Build initial body on mount
   useEffect(() => {
-    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl };
+    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl, currentTool };
     setBody(buildClaimOnlyBody(vars));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -47,7 +49,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
     if (bodyDirty) {
       if (!confirm("Switching template will replace your edits. Continue?")) return;
     }
-    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl };
+    const vars = { recipientName: recipientName || "there", organiserName, opportunityTitle: opp.title, claimUrl, currentTool };
     const newBody = t === "claim_only" ? buildClaimOnlyBody(vars) : buildClaimPipelineBody(vars);
     setTemplate(t);
     setSubject(buildTemplateSubject(t, opp.title));
@@ -59,7 +61,7 @@ export function ClaimInvitePanel({ opp, onClose, onSent }: Props) {
   function handleNameChange(name: string) {
     setRecipientName(name);
     if (!bodyDirty) {
-      const vars = { recipientName: name || "there", organiserName, opportunityTitle: opp.title, claimUrl };
+      const vars = { recipientName: name || "there", organiserName, opportunityTitle: opp.title, claimUrl, currentTool };
       const newBody = template === "claim_only" ? buildClaimOnlyBody(vars) : buildClaimPipelineBody(vars);
       setBody(newBody);
     }

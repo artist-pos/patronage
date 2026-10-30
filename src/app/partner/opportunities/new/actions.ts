@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isAdmin } from "@/lib/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { notifyOpportunitySubmission } from "@/lib/email";
@@ -137,6 +139,18 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
   if (!opp.organiser?.trim()) return { error: "Please add an organiser name before submitting" };
 
   const isPipeline = opp.routing_type === "pipeline";
+
+  // An admin listing someone else's opportunity: it belongs to nobody until the
+  // organisation claims it, and needs claim outreach details at review.
+  if (!isPipeline && (await isAdmin())) {
+    const { error: adminError } = await createAdminClient()
+      .from("opportunities")
+      .update({ status: "pending", origin: "admin", profile_id: null })
+      .eq("id", id);
+    if (adminError) return { error: adminError.message };
+    revalidatePath("/admin/submissions");
+    return { redirectTo: "/admin/submissions" };
+  }
 
   const { error: updateError } = await supabase
     .from("opportunities")

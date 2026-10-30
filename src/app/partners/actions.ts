@@ -17,6 +17,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { isSubmittedTooFast } from "@/lib/form-timing";
 import { isTorExit, recordBlocked } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
+import { isAdmin } from "@/lib/admin";
 import { Resend } from "resend";
 
 // ── Admin: update an activation type row ─────────────────────────────────────
@@ -308,12 +309,16 @@ export async function submitOpportunityAction(
     return { error: "Sign in to submit a Featured or Pipeline listing." };
   }
 
+  // An admin listing someone else's opportunity: it belongs to nobody until the
+  // organisation claims it, and needs claim outreach details at review.
+  const byAdmin = !!user && !isFeatured && !isPipeline && (await isAdmin());
+
   const { data: inserted, error } = await supabase.from("opportunities").insert({
     status: "pending",
     is_active: false,
     title,
     organiser,
-    origin: "submission",
+    origin: byAdmin ? "admin" : "submission",
     caption: captionRaw ? captionRaw.slice(0, CAPTION_MAX) : null,
     full_description: (formData.get("full_description") as string)?.trim() || null,
     type: (formData.get("type") as string) || "Grant",
@@ -337,7 +342,7 @@ export async function submitOpportunityAction(
     grant_type: (formData.get("grant_type") as string)?.trim() || null,
     recipients_count: recipientsRaw ? parseInt(recipientsRaw) : null,
     submitter_email: (formData.get("submitter_email") as string)?.trim() || null,
-    profile_id: user?.id ?? null,
+    profile_id: byAdmin ? null : user?.id ?? null,
     travel_support: travelSupportRaw === "true" ? true : travelSupportRaw === "false" ? false : null,
     travel_support_details: (formData.get("travel_support_details") as string)?.trim() || null,
     routing_type: routingType,

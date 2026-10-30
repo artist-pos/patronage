@@ -2,246 +2,24 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
-import {
-  OpportunityForm,
-  oppToFormData,
-  type OpportunityFormData,
-} from "@/components/opportunities/OpportunityForm";
 import {
   approveOpportunity,
   rejectOpportunity,
   approveAll,
   rejectAll,
-  updateQueueOpportunity,
-  saveOutreachDetails,
 } from "./actions";
+import { isAggregated } from "@/lib/claim-outreach";
 import {
-  CURRENT_TOOL_OPTIONS,
-  isAggregated,
-  missingOutreachDetails,
-} from "@/lib/claim-outreach";
-import { buildOpportunityPayload } from "@/lib/opportunity-payload";
-import { detectApplicationTool } from "@/lib/application-tool";
+  ListingEditor,
+  OutreachFields,
+  PreviewLink,
+  outreachMissing,
+} from "@/components/admin/ListingReviewTools";
 import type { Opportunity } from "@/types/database";
-
-/** The outreach fields as the server stores them, so the card reflects a save made in the full editor. */
-function outreachPatch(d: OpportunityFormData): Partial<Opportunity> {
-  return {
-    claim_email: d.claimEmail.trim().toLowerCase() || null,
-    claim_contact_name: d.claimContactName.trim() || null,
-    claim_current_tool: d.claimCurrentTool.trim() || null,
-  };
-}
-
-/** Aggregated listings need contact details before they can go live. */
-function outreachMissing(o: Opportunity): string[] {
-  if (!isAggregated(o)) return [];
-  return missingOutreachDetails({
-    email: o.claim_email ?? "",
-    contactName: o.claim_contact_name ?? "",
-    currentTool: o.claim_current_tool ?? "",
-  });
-}
-
-/**
- * Who to contact about an aggregated listing, and how they take applications
- * today. Required before approval: it feeds the claim CSV, the invite panel and
- * the daily claim emails.
- */
-function OutreachFields({ opp, onSaved }: { opp: Opportunity; onSaved: (patch: Partial<Opportunity>) => void }) {
-  const [email, setEmail] = useState(opp.claim_email ?? opp.contact_email ?? "");
-  const [name, setName] = useState(opp.claim_contact_name ?? "");
-  // Nothing saved yet: offer a guess from the apply link, which only counts once saved.
-  const [tool, setTool] = useState(opp.claim_current_tool ?? detectApplicationTool(opp.url, "", !!opp.contact_email && !opp.url) ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const missing = outreachMissing(opp);
-  const dirty =
-    email.trim() !== (opp.claim_email ?? "") ||
-    name.trim() !== (opp.claim_contact_name ?? "") ||
-    tool.trim() !== (opp.claim_current_tool ?? "") ||
-    (!opp.claim_email && !!email.trim());
-  const cell = "w-full border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:border-black";
-
-  async function save() {
-    setSaving(true);
-    setError(null);
-    const result = await saveOutreachDetails(opp.id, { email, contactName: name, currentTool: tool });
-    setSaving(false);
-    if (result.error) { setError(result.error); return; }
-    onSaved({
-      claim_email: email.trim().toLowerCase(),
-      claim_contact_name: name.trim(),
-      claim_current_tool: tool.trim(),
-    });
-  }
-
-  return (
-    <div className={`mt-3 border p-2.5 ${missing.length ? "border-amber-300 bg-amber-50/40" : "border-border"}`}>
-      <p className="mb-2 text-xs font-medium">
-        Outreach details{" "}
-        <span className="font-normal text-muted-foreground">
-          {missing.length ? `· needed before approval: ${missing.join(", ")}` : "· saved"}
-        </span>
-      </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Contact email"
-          aria-label="Contact email"
-          className={cell}
-        />
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name, or ‘team’ for a general inbox"
-          aria-label="Contact name"
-          className={cell}
-        />
-        <input
-          list="queue-current-tools"
-          value={tool}
-          onChange={(e) => setTool(e.target.value)}
-          placeholder="How they take applications now"
-          aria-label="Current application tool"
-          className={cell}
-        />
-      </div>
-      <datalist id="queue-current-tools">
-        {CURRENT_TOOL_OPTIONS.map((t) => (
-          <option key={t} value={t} />
-        ))}
-      </datalist>
-      <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !dirty}
-          className="border border-black px-2.5 py-1 text-xs transition-colors hover:bg-black hover:text-white disabled:opacity-40"
-        >
-          {saving ? "Saving…" : "Save details"}
-        </button>
-        {error && <span className="text-xs text-destructive">{error}</span>}
-      </div>
-    </div>
-  );
-}
 
 interface Props {
   opps: Opportunity[];
   tab: string;
-}
-
-function AdminQueueEditForm({
-  opp,
-  onDone,
-  onSaved,
-}: {
-  opp: Opportunity;
-  onDone: () => void;
-  onSaved: (patch: Partial<Opportunity>) => void;
-}) {
-  const [formData, setFormData] = useState<OpportunityFormData>(() => oppToFormData(opp));
-  const [saving, setSaving] = useState(false);
-  const [approving, setApproving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const supabase = createClient();
-
-  function update(updates: Partial<OpportunityFormData>) {
-    setFormData((prev) => ({ ...prev, ...updates }));
-  }
-
-  async function handleImgUpload(file: File): Promise<string | null> {
-    const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
-    const { error } = await supabase.storage
-      .from("opportunity-images")
-      .upload(path, file, { contentType: file.type, upsert: false });
-    if (error) return null;
-    const { data } = supabase.storage.from("opportunity-images").getPublicUrl(path);
-    return data.publicUrl;
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateQueueOpportunity(opp.id, buildOpportunityPayload(formData, { admin: true }));
-      onSaved(outreachPatch(formData));
-      setToast("Saved");
-      setTimeout(() => setToast(null), 5000);
-    } catch {
-      setToast("Save failed");
-      setTimeout(() => setToast(null), 4000);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleSaveAndApprove() {
-    setApproving(true);
-    try {
-      await updateQueueOpportunity(opp.id, buildOpportunityPayload(formData, { admin: true }));
-      onSaved(outreachPatch(formData));
-      const result = await approveOpportunity(opp.id);
-      if (result.error) {
-        setToast(result.error);
-        setTimeout(() => setToast(null), 6000);
-        setApproving(false);
-        return;
-      }
-      onDone();
-    } catch {
-      setToast("Failed to save and approve");
-      setTimeout(() => setToast(null), 4000);
-      setApproving(false);
-    }
-  }
-
-  return (
-    <div className="border-t border-border mt-4 pt-4">
-      <OpportunityForm
-        value={formData}
-        onChange={update}
-        mode="admin"
-        onImgUpload={handleImgUpload}
-      />
-
-      <div className="flex items-center justify-between pt-4 border-t border-black/20 mt-4">
-        <div className="flex items-center gap-3">
-          {toast && (
-            <p className={`text-xs ${toast === "Saved" ? "text-green-600" : "text-destructive"}`}>
-              {toast}
-            </p>
-          )}
-          <button
-            onClick={onDone}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            disabled={saving || approving}
-            className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-40"
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </button>
-          <button
-            onClick={handleSaveAndApprove}
-            disabled={saving || approving || !formData.title.trim() || !formData.organiser.trim()}
-            className="text-xs border border-black bg-black text-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40"
-          >
-            {approving ? "Publishing…" : "Save & Approve"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 type SortMode = "deadline" | "scraped" | "confidence";
@@ -515,6 +293,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                     >
                       {editingId === opp.id ? "Close" : "Edit"}
                     </button>
+                    <PreviewLink id={opp.id} className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center" />
                     {opp.url && (
                       <a
                         href={opp.url}
@@ -522,7 +301,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                         rel="noopener noreferrer"
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
                       >
-                        View →
+                        Source →
                       </a>
                     )}
                   </>
@@ -540,19 +319,27 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
             </div>
 
             {isAggregated(opp) && (
-              <OutreachFields
-                key={`${opp.claim_email}|${opp.claim_contact_name}|${opp.claim_current_tool}`}
-                opp={opp}
-                onSaved={(patch) => patchOpp(opp.id, patch)}
-              />
+              <div className="mt-3">
+                <OutreachFields
+                  key={`${opp.claim_email}|${opp.claim_contact_name}|${opp.claim_current_tool}`}
+                  opp={opp}
+                  listId={`queue-tools-${opp.id}`}
+                  onSaved={(patch) => patchOpp(opp.id, patch)}
+                />
+              </div>
             )}
 
             {/* Full inline edit form */}
             {editingId === opp.id && (
-              <AdminQueueEditForm
+              <ListingEditor
                 opp={opp}
                 onDone={() => setEditingId(null)}
                 onSaved={(patch) => patchOpp(opp.id, patch)}
+                onApprove={async () => {
+                  const result = await approveOpportunity(opp.id);
+                  if (!result.error) removeIds([opp.id]);
+                  return result;
+                }}
               />
             )}
           </div>

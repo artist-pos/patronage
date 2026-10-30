@@ -463,7 +463,9 @@ export default async function OpportunityPage({ params }: Props) {
   // Redirect UUID-based URLs to the canonical slug URL.
   // Prevents Google from indexing the same page at two different URLs.
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-  if (isUuid && opp.slug) redirect(`/opportunities/${opp.slug}`);
+  // Not for an admin previewing an unpublished listing: its slug is still a
+  // placeholder until approval, so the preview stays on the id URL.
+  if (isUuid && opp.slug && !isAdminPreview) redirect(`/opportunities/${opp.slug}`);
 
   const fundingLabel =
     opp.funding_range?.trim() ||
@@ -653,7 +655,7 @@ export default async function OpportunityPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* ViewTracker fires client-side after idle — does not affect pre-render */}
-      <ViewTracker opportunityId={opp.id} />
+      {!isAdminPreview && <ViewTracker opportunityId={opp.id} />}
       {!viewerUser && !isClosed && <ExitIntentPrompt opportunityId={opp.id} />}
 
       {/* Admin preview banner — only shown when accessing a non-published opp */}
