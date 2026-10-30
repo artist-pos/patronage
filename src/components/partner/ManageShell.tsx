@@ -16,7 +16,8 @@ const SECTIONS: Section[] = [
   { id: "rubric",         label: "Scoring rubric",    pipelineOnly: true },
   { id: "post-selection", label: "Post-selection",    pipelineOnly: true },
   { id: "commerce",       label: "Commerce" },
-  { id: "collaborators",  label: "Collaborators" },
+  // Collaborators review and score applications, which only an open call has.
+  { id: "collaborators",  label: "Collaborators",     pipelineOnly: true },
 ];
 
 interface Props {
@@ -70,12 +71,14 @@ export function ManageShell({ opp, isPipeline, opportunityId, children }: Props)
             <h1 className="text-sm font-semibold truncate">{opp.title || "Untitled listing"}</h1>
             <span className="text-sm text-stone-500 shrink-0 capitalize">{opp.status}</span>
           </div>
-          <Link
-            href={`/partner/dashboard/${opportunityId}`}
-            className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors shrink-0"
-          >
-            View applications →
-          </Link>
+          {isPipeline && (
+            <Link
+              href={`/partner/dashboard/${opportunityId}`}
+              className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors shrink-0"
+            >
+              View applications →
+            </Link>
+          )}
         </div>
       </div>
 

@@ -52,6 +52,7 @@ export async function saveOutreachDetails(
   if (error) return { error: error.message };
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/admin/submissions");
+  revalidatePath("/admin/opportunities");
   return {};
 }
 

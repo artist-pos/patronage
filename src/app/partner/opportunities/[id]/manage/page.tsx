@@ -53,7 +53,7 @@ export default async function ManagePage({ params, searchParams }: Props) {
   const isPipeline = opp.routing_type === "pipeline";
 
   const [{ collaborators = [] }, criteria, documents] = await Promise.all([
-    getCollaborators(id),
+    isPipeline ? getCollaborators(id) : Promise.resolve({ collaborators: [] }),
     isPipeline ? getRubricCriteria(id) : Promise.resolve([] as RubricCriterion[]),
     isPipeline ? getPartnerDocuments(id) : Promise.resolve([] as PartnerDocument[]),
   ]);
@@ -140,15 +140,17 @@ export default async function ManagePage({ params, searchParams }: Props) {
         </section>
       )}
 
-      {/* Collaborators */}
-      <section id="collaborators" className="scroll-mt-20 space-y-4">
-        <SectionHeader label="Collaborators" desc="Invite reviewers and editors to this listing." />
-        <CollaboratorsPanel
-          opportunityId={id}
-          initialCollaborators={collaborators}
-          isOwner={canManageCollaborators}
-        />
-      </section>
+      {/* Collaborators (pipeline only): every collaborator permission is about applications */}
+      {isPipeline && (
+        <section id="collaborators" className="scroll-mt-20 space-y-4">
+          <SectionHeader label="Collaborators" desc="Invite reviewers and editors to this listing." />
+          <CollaboratorsPanel
+            opportunityId={id}
+            initialCollaborators={collaborators}
+            isOwner={canManageCollaborators}
+          />
+        </section>
+      )}
     </ManageShell>
   );
 }

@@ -42,6 +42,22 @@ export function outreachMissingFor(
   });
 }
 
+/**
+ * A live listing nobody owns that the daily claim email can't reach yet, because
+ * its outreach details are missing. Covers every origin: listings approved before
+ * the details were required at review have none.
+ */
+export function liveOutreachMissing(
+  o: Pick<Opportunity, "status" | "is_active" | "profile_id" | "claim_email" | "claim_contact_name" | "claim_current_tool">
+): string[] {
+  if (o.status !== "published" || !o.is_active || o.profile_id) return [];
+  return missingOutreachDetails({
+    email: o.claim_email ?? "",
+    contactName: o.claim_contact_name ?? "",
+    currentTool: o.claim_current_tool ?? "",
+  });
+}
+
 /** What's still missing before an aggregated listing can be approved or exported. */
 export function missingOutreachDetails(d: Partial<OutreachDetails>): string[] {
   const missing: string[] = [];

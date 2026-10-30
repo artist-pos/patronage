@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState, useMemo } from "react";
+import { Fragment, useTransition, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModal";
-import { X, Mail, Search, Star, Settings } from "lucide-react";
+import { X, Mail, Search, Star, Settings, Pencil } from "lucide-react";
+import { OutreachFields } from "@/components/admin/ListingReviewTools";
+import { liveOutreachMissing } from "@/lib/claim-outreach";
 import { ClaimInvitePanel } from "@/components/admin/ClaimInvitePanel";
 import { BulkClaimPanel } from "@/components/admin/BulkClaimPanel";
 import { ClaimExportPanel } from "@/components/admin/ClaimExportPanel";
@@ -151,6 +153,13 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
   // "all" | "none" (not sourced) | a registry key
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  // Live, unowned listings the daily claim email can't reach until these are filled in.
+  const [outreachOnly, setOutreachOnly] = useState(false);
+  const [outreachOpenId, setOutreachOpenId] = useState<string | null>(null);
+  const [outreachPatches, setOutreachPatches] = useState<Record<string, Partial<Opportunity>>>({});
+  const withPatch = (o: Opportunity): Opportunity => (outreachPatches[o.id] ? { ...o, ...outreachPatches[o.id] } : o);
+  const outreachGaps = (o: Opportunity) => liveOutreachMissing(withPatch(o));
+  const needsOutreachCount = opps.filter((o) => outreachGaps(o).length > 0).length;
 
   // Only offer sources that actually appear in the table, plus "not sourced" —
   // this filter exists to pull one board's listings up for cross-referencing.
@@ -293,6 +302,8 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
     if (claimFilter !== "all" && getClaimStatus(o) !== claimFilter) return false;
     if (countryFilter !== "all" && (o.country || "—") !== countryFilter) return false;
     if (sourceFilter !== "all" && (o.source ?? "none") !== sourceFilter) return false;
+    // Keep a row on screen while its panel is open, even once its details are saved.
+    if (outreachOnly && outreachGaps(o).length === 0 && outreachOpenId !== o.id) return false;
     if (q && !o.title?.toLowerCase().includes(q) && !o.organiser?.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -366,6 +377,21 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               ))}
             </select>
           )}
+
+          <button
+            type="button"
+            onClick={() => setOutreachOnly((v) => !v)}
+            title="Live listings nobody owns, missing the email, name or current tool the daily claim email needs"
+            className={`text-xs px-2.5 py-1.5 border transition-colors ${
+              outreachOnly
+                ? "border-black bg-black text-white"
+                : needsOutreachCount > 0
+                ? "border-amber-300 bg-amber-50 text-amber-800 hover:border-amber-500"
+                : "border-border text-muted-foreground hover:border-black"
+            }`}
+          >
+            Needs outreach details ({needsOutreachCount})
+          </button>
 
           {filteredOpps.length !== opps.length && (
             <span className="text-xs text-muted-foreground">
@@ -457,10 +483,12 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
               const isClaimSelected = claimTargetId === o.id;
               const hasToken = !!(claimState[o.id]?.token);
               const isChecked = selected.has(o.id);
+              const gaps = outreachGaps(o);
+              const outreachOpen = outreachOpenId === o.id;
 
               return (
+                <Fragment key={o.id}>
                 <tr
-                  key={o.id}
                   className={`border-b border-border transition-colors ${isClaimSelected ? "bg-blue-50/40" : isChecked ? "bg-muted/30" : ""}`}
                 >
                   <td className="py-3 pr-3">
@@ -482,6 +510,30 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       {o.title}
                     </Link>
                     <span className="text-muted-foreground block truncate">{o.organiser}</span>
+                    <span className="mt-0.5 flex items-center gap-2">
+                      <a
+                        href={`/opportunities/${o.slug ?? o.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                      >
+                        View ↗
+                      </a>
+                      {(gaps.length > 0 || outreachOpen) && (
+                        <button
+                          type="button"
+                          onClick={() => setOutreachOpenId(outreachOpen ? null : o.id)}
+                          title={gaps.length ? `Missing: ${gaps.join(", ")}` : undefined}
+                          className={`rounded-full px-2 py-0.5 transition-colors ${
+                            outreachOpen
+                              ? "bg-black text-white"
+                              : "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300 hover:ring-amber-500"
+                          }`}
+                        >
+                          {outreachOpen ? "Close outreach ▴" : "+ Outreach details ▾"}
+                        </button>
+                      )}
+                    </span>
                     {isSlugBad(o.slug) && (
                       <span className="flex items-center gap-1.5 text-destructive">
                         <span className="truncate">Bad slug: {o.slug ?? "(none)"}</span>
@@ -519,6 +571,14 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                   </td>
                   <td className="py-3 pr-4">
                     <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        title="Edit listing, including claim outreach details"
+                        onClick={() => setEditTarget(withPatch(o))}
+                        className="inline-flex items-center justify-center h-7 w-7 border border-border hover:border-black transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       <Link
                         href={`/partner/opportunities/${o.id}/manage`}
                         title="Manage listing (settings, applications, etc.)"
@@ -591,6 +651,23 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                     </Link>
                   </td>
                 </tr>
+                {outreachOpen && (
+                  <tr className="border-b border-border bg-stone-50/60">
+                    <td />
+                    <td colSpan={10} className="py-3 pr-4">
+                      <OutreachFields
+                        opp={withPatch(o)}
+                        listId={`table-tools-${o.id}`}
+                        onSaved={(patch) => {
+                          setOutreachPatches((prev) => ({ ...prev, [o.id]: { ...prev[o.id], ...patch } }));
+                          setOutreachOpenId(null);
+                          showToast(`Outreach details saved for ${o.title}`);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -789,13 +866,24 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
         />
       )}
 
-      {/* Edit modal — triggered after creating a new draft */}
+      {/* Edit modal: the pencil on a row, or straight after creating a new draft */}
       {editTarget && (
         <AdminEditOpportunityModal
           key={editTarget.id}
           opp={editTarget}
           forceOpen
-          onForceClose={() => setEditTarget(null)}
+          onForceClose={() => {
+            // The modal saves straight to the server: drop any local outreach
+            // patch for this row and reload, so the table shows what was saved.
+            const id = editTarget.id;
+            setOutreachPatches((prev) => {
+              const next = { ...prev };
+              delete next[id];
+              return next;
+            });
+            setEditTarget(null);
+            router.refresh();
+          }}
         />
       )}
 
