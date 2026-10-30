@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { inviteMember, removeMember, searchProfiles, type ProfileSuggestion } from "./actions";
+import { inviteArtistToRoster } from "../roster/actions";
 
 export interface MemberRow {
   userId: string;
@@ -16,9 +17,15 @@ interface Props {
   orgId: string;
   orgName: string;
   members: MemberRow[];
+  /** What to call these people. The admin screen says "owner" so it isn't confused with a roster of members. */
+  noun?: "member" | "owner";
+  /** Admin screen only: lets an owner be put on the roster in one click. */
+  roster?: { onRosterIds: string[] };
 }
 
-export function MembersManager({ orgId, orgName, members }: Props) {
+export function MembersManager({ orgId, orgName, members, noun = "member", roster }: Props) {
+  const Noun = noun === "owner" ? "Owner" : "Member";
+  const [rostered, setRostered] = useState<string[]>(roster?.onRosterIds ?? []);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -82,10 +89,23 @@ export function MembersManager({ orgId, orgName, members }: Props) {
     });
   }
 
+  function addToRoster(member: MemberRow) {
+    setError(null);
+    start(async () => {
+      const result = await inviteArtistToRoster({ artistId: member.userId, listNow: true }, orgId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setRostered((r) => [...r, member.userId]);
+      flash(`${member.name} is now on the roster.`);
+    });
+  }
+
   return (
     <div className="space-y-10">
       <section className="space-y-3">
-        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Add a member</h2>
+        <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">Add {noun === "owner" ? "an owner" : "a member"}</h2>
         <p className="max-w-xl text-sm text-stone-600">
           Everyone here has full access to {orgName}: its profile and settings, listings, applications, artists and
           payments. Only add people you trust with all of that.
@@ -132,7 +152,7 @@ export function MembersManager({ orgId, orgName, members }: Props) {
             disabled={pending || !email.trim()}
             className="h-10 rounded-lg bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-50"
           >
-            {pending ? "Adding…" : "Add member"}
+            {pending ? "Adding…" : `Add ${noun}`}
           </button>
         </form>
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -141,7 +161,7 @@ export function MembersManager({ orgId, orgName, members }: Props) {
 
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-widest text-stone-400">
-          Members ({members.length})
+          {Noun}s ({members.length})
         </h2>
         <ul className="max-w-xl divide-y divide-border rounded-xl border border-border bg-white">
           {members.map((m) => (
@@ -158,14 +178,29 @@ export function MembersManager({ orgId, orgName, members }: Props) {
                   Organisation login
                 </span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => remove(m)}
-                  disabled={pending}
-                  className="shrink-0 text-xs text-stone-500 underline underline-offset-2 hover:text-black disabled:opacity-50"
-                >
-                  {m.isYou ? "Leave" : "Remove"}
-                </button>
+                <span className="flex shrink-0 items-center gap-4">
+                  {roster &&
+                    (rostered.includes(m.userId) ? (
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">On roster</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addToRoster(m)}
+                        disabled={pending}
+                        className="text-xs text-stone-500 underline underline-offset-2 hover:text-black disabled:opacity-50"
+                      >
+                        Add to roster
+                      </button>
+                    ))}
+                  <button
+                    type="button"
+                    onClick={() => remove(m)}
+                    disabled={pending}
+                    className="text-xs text-stone-500 underline underline-offset-2 hover:text-black disabled:opacity-50"
+                  >
+                    {m.isYou ? "Leave" : "Remove"}
+                  </button>
+                </span>
               )}
             </li>
           ))}

@@ -524,7 +524,10 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   let partnerRegionArtists: Array<{ artist: ProfileWithImage; location: string | null }> = [];
   if (!isArtistProfile && profile.role === "partner") {
     partnerRoster = await getOrgRoster(profile.id);
-    partnerOwners = await getPublicOrgOwners(profile.id);
+    // Owners already on the roster appear there, so they aren't shown twice.
+    partnerOwners = (await getPublicOrgOwners(profile.id)).filter(
+      (o) => !partnerRoster.artists.some((a) => a.id === o.id),
+    );
     const adminDb = createAdminClient();
     const todayStr = new Date().toISOString().split("T")[0];
     const isRegionalArtsBody =

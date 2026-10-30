@@ -2,8 +2,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { MemberRow } from "@/app/partner/members/MembersManager";
 
 export interface PublicOwner {
+  id: string;
   username: string;
   full_name: string;
+  avatar_url: string | null;
+  medium: string[] | null;
 }
 
 /**
@@ -16,18 +19,33 @@ export async function getPublicOrgOwners(orgId: string): Promise<PublicOwner[]> 
   const admin = createAdminClient();
   const { data } = await admin
     .from("partner_members")
-    .select("created_at, profile:user_id!inner(username, full_name, role, is_active, is_minor)")
+    .select("created_at, profile:user_id!inner(id, username, full_name, avatar_url, medium, role, is_active, is_minor)")
     .eq("partner_id", orgId)
     .order("created_at", { ascending: true });
 
-  type P = { username: string; full_name: string | null; role: string; is_active: boolean | null; is_minor: boolean | null };
+  type P = {
+    id: string;
+    username: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    medium: string[] | null;
+    role: string;
+    is_active: boolean | null;
+    is_minor: boolean | null;
+  };
   return ((data ?? []) as unknown as Array<{ profile: P | P[] | null }>)
     .map((r) => (Array.isArray(r.profile) ? r.profile[0] : r.profile))
     .filter(
       (p): p is P =>
         !!p && !!p.full_name?.trim() && p.role !== "reviewer" && p.is_active !== false && !p.is_minor,
     )
-    .map((p) => ({ username: p.username, full_name: p.full_name!.trim() }));
+    .map((p) => ({
+      id: p.id,
+      username: p.username,
+      full_name: p.full_name!.trim(),
+      avatar_url: p.avatar_url,
+      medium: p.medium,
+    }));
 }
 
 /**

@@ -167,7 +167,7 @@ interface PartnerProps {
   roster: OrgRoster;
   /** The people who run this organisation, named only when they have a real
    *  public profile. */
-  owners?: Array<{ username: string; full_name: string }>;
+  owners?: ArtistTileData[];
   /** Set only for a regional arts body with a region. The artists of that
    *  region are not this organisation's to list, so the page points at the
    *  region rather than reproducing it. */
@@ -485,18 +485,19 @@ export function PartnerProfileView({
 
       {/* ── The people who run it ── */}
       {owners.length > 0 && (
-        <div className="border-b border-border">
+        <div className="border-b border-border bg-feed-bg">
           <div className={`${INNER} py-9`}>
-            <h2 className={`${SECTION_LABEL} mb-[14px]`}>Run by</h2>
-            <ul className="flex flex-wrap gap-x-6 gap-y-2">
+            <div className="mb-[18px] flex items-baseline justify-between">
+              <h2 className={SECTION_LABEL}>Run by</h2>
+              <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
+                {owners.length} {owners.length !== 1 ? "people" : "person"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-[2px] sm:grid-cols-3 lg:grid-cols-6">
               {owners.map((o) => (
-                <li key={o.username}>
-                  <Link href={`/${o.username}`} className="text-[15px] transition-colors hover:text-[color:var(--brand)]">
-                    {o.full_name}
-                  </Link>
-                </li>
+                <ArtistTile key={o.id} a={o} />
               ))}
-            </ul>
+            </div>
           </div>
         </div>
       )}
