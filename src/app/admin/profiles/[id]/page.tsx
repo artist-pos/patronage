@@ -3,6 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminProfileEditor } from "@/components/admin/AdminProfileEditor";
+import { getServerUser } from "@/lib/supabase/get-server-user";
+import { loadOrgMembers } from "@/lib/partner-members";
+import { MembersManager } from "@/app/partner/members/MembersManager";
 
 export const metadata = { title: "Edit profile — Admin" };
 
@@ -39,6 +42,9 @@ export default async function AdminProfileEditPage({ params }: Props) {
     }
   }
 
+  const { user } = await getServerUser();
+  const members = profile.role === "partner" ? await loadOrgMembers(profile.id, user?.id ?? "") : null;
+
   return (
     <div className="max-w-2xl space-y-6">
       <div className="space-y-1">
@@ -68,6 +74,17 @@ export default async function AdminProfileEditPage({ params }: Props) {
           username: profile.username,
         }}
       />
+      {profile.role === "partner" && members && (
+        <section className="space-y-3 border-t border-border pt-6">
+          <h2 className="text-sm font-semibold">Owners</h2>
+          <p className="max-w-xl text-xs text-muted-foreground">
+            Add anyone, by email, who should manage this organisation. If they already have a Patronage account
+            (an artist, for example) it is linked and keeps its own profile; otherwise one is made. They are emailed
+            a sign-in link that opens this organisation&rsquo;s dashboard.
+          </p>
+          <MembersManager orgId={profile.id} orgName={members.orgName} members={members.members} />
+        </section>
+      )}
     </div>
   );
 }
