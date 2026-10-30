@@ -5,7 +5,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
  * (Font, Waiheke Art Gallery, Grace Butler): the subject names the listing, the
  * opening is one plain line about what was added, the claim link comes early,
  * and the pitch for the application tool names how they take applications today
- * instead of describing it in the abstract.
+ * instead of describing it in the abstract. "Free to claim" is spelled out
+ * because Playmarket read the first version as a fee request.
  */
 
 export interface TemplateVars {
@@ -63,7 +64,7 @@ export function buildClaimOnlyBody(vars: TemplateVars): string {
 
 Just letting you know I've added ${vars.opportunityTitle} to Patronage, a platform connecting creatives in Aotearoa with opportunities.${vars.engagement ? ` ${vars.engagement}` : ""}
 
-You can claim the listing here if you'd like to manage it directly. You'll be able to edit the details, update the deadline and see how many creatives are viewing it. The listing stays live either way.
+You can claim the listing here if you'd like to manage it directly. You'll be able to edit the details, update the deadline and see how many creatives are viewing it. It's free to claim, and the listing stays live either way.
 
 ${vars.claimUrl}
 
@@ -79,7 +80,7 @@ export function buildClaimPipelineBody(vars: TemplateVars): string {
 
 Just letting you know I've added ${vars.opportunityTitle} to Patronage, a platform connecting creatives in Aotearoa with opportunities.${vars.engagement ? ` ${vars.engagement}` : ""}
 
-You can claim the listing here if you'd like to manage it directly. The listing stays live either way.
+You can claim the listing here if you'd like to manage it directly. It's free to claim, and the listing stays live either way.
 
 ${vars.claimUrl}
 
