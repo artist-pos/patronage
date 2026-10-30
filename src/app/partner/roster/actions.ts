@@ -1,6 +1,7 @@
 "use server";
 
-import { getActingOrg } from "@/lib/partner-org";
+import { getActingOrg, isOrgMember } from "@/lib/partner-org";
+import { isAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { canKeepRoster, defaultRelationship, orgCategory } from "@/lib/org-categories";
@@ -32,11 +33,21 @@ interface Caller {
  * Checked inside every action rather than at the page: a server action is a
  * public endpoint, and this one publishes claims about named people.
  */
-async function requireRosterOrg(): Promise<{ caller?: Caller; error?: string }> {
-  const { user, orgId } = await getActingOrg();
-  if (!user || !orgId) return { error: "Not authenticated." };
+async function requireRosterOrg(forOrgId?: string): Promise<{ caller?: Caller; error?: string }> {
+  const { supabase, user, orgId: acting } = await getActingOrg();
+  if (!user) return { error: "Not authenticated." };
 
-  // getActingOrg only returns an organisation the caller belongs to.
+  // getActingOrg only returns an organisation the caller belongs to. Naming another
+  // organisation explicitly (the admin screen) is allowed for admins and its members.
+  let orgId = acting;
+  if (forOrgId && forOrgId !== acting) {
+    if (!(await isAdmin()) && !(await isOrgMember(supabase, user.id, forOrgId))) {
+      return { error: "Not authorised." };
+    }
+    orgId = forOrgId;
+  }
+  if (!orgId) return { error: "Not authenticated." };
+
   const admin = createAdminClient();
   const { data } = await admin
     .from("profiles")
@@ -110,13 +121,24 @@ async function ensureRoster(caller: Caller): Promise<string | null> {
   return (created as { id: string } | null)?.id ?? null;
 }
 
-export async function inviteArtistToRoster(input: {
-  artistId: string;
-  startYear?: number | null;
-  endYear?: number | null;
-}): Promise<{ error?: string }> {
-  const { caller, error } = await requireRosterOrg();
+export async function inviteArtistToRoster(
+  input: {
+    artistId: string;
+    startYear?: number | null;
+    endYear?: number | null;
+    /** Admin only: the artist has already agreed, so list them straight away
+     *  instead of waiting for them to accept. */
+    listNow?: boolean;
+  },
+  forOrgId?: string,
+): Promise<{ error?: string }> {
+  const { caller, error } = await requireRosterOrg(forOrgId);
   if (!caller) return { error };
+
+  // Skipping acceptance is the admin's word that consent was given elsewhere, so
+  // nobody else may ask for it.
+  const listNow = !!input.listNow;
+  if (listNow && !(await isAdmin())) return { error: "Only an admin can list someone without their confirmation." };
 
   const rosterId = await ensureRoster(caller);
   if (!rosterId) return { error: "Could not open your roster." };
@@ -141,8 +163,9 @@ export async function inviteArtistToRoster(input: {
     collective_id: rosterId,
     user_id: input.artistId,
     role: "member",
-    // Pending until the artist accepts. Nothing renders publicly before that.
-    status: "pending",
+    // Pending until the artist accepts. Nothing renders publicly before that,
+    // unless an admin vouches that they have already agreed.
+    status: listNow ? "accepted" : "pending",
     start_year: years.startYear,
     end_year: years.endYear,
   });
@@ -152,11 +175,17 @@ export async function inviteArtistToRoster(input: {
     return { error: insertError.message };
   }
 
-  await notifyArtist(caller, input.artistId, rosterId);
+  await notifyArtist(caller, input.artistId, rosterId, listNow);
   // The bell reaches under-18s too, who cannot receive the DM.
-  notifyRosterArtist(input.artistId, caller.name, caller.relationship, "roster_invite").catch(console.error);
+  if (!listNow) {
+    notifyRosterArtist(input.artistId, caller.name, caller.relationship, "roster_invite").catch(console.error);
+  } else {
+    const { data: u } = await admin.from("profiles").select("username").eq("id", caller.id).maybeSingle();
+    if (u?.username) revalidatePath(`/${u.username}`);
+  }
 
   revalidatePath("/partner/roster");
+  revalidatePath(`/admin/profiles/${caller.id}`);
   return {};
 }
 
@@ -182,7 +211,7 @@ function normaliseYears(
 }
 
 /** A DM, because an invitation the artist never sees is not consent. */
-async function notifyArtist(caller: Caller, artistId: string, rosterId: string) {
+async function notifyArtist(caller: Caller, artistId: string, rosterId: string, alreadyListed = false) {
   const admin = createAdminClient();
   const claim =
     caller.category === "school"
@@ -218,7 +247,9 @@ async function notifyArtist(caller: Caller, artistId: string, rosterId: string) 
   await admin.from("messages").insert({
     conversation_id: convId,
     sender_id: caller.id,
-    content: `${claim} on their Patronage page. Nothing appears until you accept, in your collectives settings.`,
+    content: alreadyListed
+      ? `${claim.replace("would like to list you", "has listed you")} on their Patronage page, as agreed with them. If that's not right, email hello@patronage.nz and we'll take it down.`
+      : `${claim} on their Patronage page. Nothing appears until you accept, in your collectives settings.`,
     is_read: false,
     message_type: "text",
     is_system_message: true,
@@ -229,9 +260,10 @@ async function notifyArtist(caller: Caller, artistId: string, rosterId: string) 
 export async function updateRosterYears(
   membershipId: string,
   startYear: number | null,
-  endYear: number | null
+  endYear: number | null,
+  forOrgId?: string,
 ): Promise<{ error?: string }> {
-  const { caller, error } = await requireRosterOrg();
+  const { caller, error } = await requireRosterOrg(forOrgId);
   if (!caller) return { error };
 
   const years = normaliseYears(startYear, endYear);
@@ -260,11 +292,12 @@ export async function updateRosterYears(
   if (updateError) return { error: updateError.message };
 
   revalidatePath("/partner/roster");
+  revalidatePath(`/admin/profiles/${caller.id}`);
   return {};
 }
 
-export async function removeFromRoster(membershipId: string): Promise<{ error?: string }> {
-  const { caller, error } = await requireRosterOrg();
+export async function removeFromRoster(membershipId: string, forOrgId?: string): Promise<{ error?: string }> {
+  const { caller, error } = await requireRosterOrg(forOrgId);
   if (!caller) return { error };
 
   const admin = createAdminClient();
@@ -301,14 +334,16 @@ export async function removeFromRoster(membershipId: string): Promise<{ error?: 
   }
 
   revalidatePath("/partner/roster");
+  revalidatePath(`/admin/profiles/${caller.id}`);
   return {};
 }
 
 /** Type-to-search for the add form. Artists only, and never the caller. */
 export async function searchArtists(
-  query: string
+  query: string,
+  forOrgId?: string,
 ): Promise<Array<{ id: string; username: string; full_name: string | null; avatar_url: string | null; city: string | null }>> {
-  const { caller } = await requireRosterOrg();
+  const { caller } = await requireRosterOrg(forOrgId);
   if (!caller) return [];
 
   const q = query.trim();

@@ -115,8 +115,8 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   // An organisation with people running it is claimed, so stop showing "Claim this page".
   if (org.account_status === "shadow") {
     await admin.from("profiles").update({ account_status: "active" }).eq("id", orgId);
-    revalidatePath(`/${org.username}`);
   }
+  revalidatePath(`/${org.username}`);
 
   revalidatePath("/partner/members");
   revalidatePath(`/admin/profiles/${orgId}`);
@@ -187,5 +187,7 @@ export async function removeMember(orgId: string, memberUserId: string): Promise
 
   revalidatePath("/partner/members");
   revalidatePath(`/admin/profiles/${orgId}`);
+  const { data: org } = await createAdminClient().from("profiles").select("username").eq("id", orgId).maybeSingle();
+  if (org?.username) revalidatePath(`/${org.username}`);
   return {};
 }

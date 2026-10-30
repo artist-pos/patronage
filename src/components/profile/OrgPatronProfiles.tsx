@@ -165,6 +165,9 @@ interface PartnerProps {
    *  programmes show who has been through, with years. Empty for every other
    *  category, which keeps no roster at all. */
   roster: OrgRoster;
+  /** The people who run this organisation, named only when they have a real
+   *  public profile. */
+  owners?: Array<{ username: string; full_name: string }>;
   /** Set only for a regional arts body with a region. The artists of that
    *  region are not this organisation's to list, so the page points at the
    *  region rather than reproducing it. */
@@ -177,7 +180,7 @@ interface PartnerProps {
 export function PartnerProfileView({
   profile, displayName, isOwner, canMessage, messageHint, verified, unclaimed = false,
   isAuthenticated = false, activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
-  regionLink, regionArtists = [],
+  owners = [], regionLink, regionArtists = [],
 }: PartnerProps) {
   const cover = profile.featured_image_url
     ? profile.featured_image_url
@@ -476,6 +479,24 @@ export function PartnerProfileView({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── The people who run it ── */}
+      {owners.length > 0 && (
+        <div className="border-b border-border">
+          <div className={`${INNER} py-9`}>
+            <h2 className={`${SECTION_LABEL} mb-[14px]`}>Run by</h2>
+            <ul className="flex flex-wrap gap-x-6 gap-y-2">
+              {owners.map((o) => (
+                <li key={o.username}>
+                  <Link href={`/${o.username}`} className="text-[15px] transition-colors hover:text-[color:var(--brand)]">
+                    {o.full_name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

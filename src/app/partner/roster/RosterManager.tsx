@@ -28,6 +28,11 @@ interface Props {
   isAlumni: boolean;
   /** "represented artist" or "participant", for the copy. */
   rosterNoun: string;
+  /** Set when managing another organisation's roster (the admin screen). */
+  orgId?: string;
+  /** Admin only: offer "they've already agreed", which lists someone without
+   *  waiting for them to accept. */
+  canListNow?: boolean;
 }
 
 interface Candidate {
@@ -38,7 +43,8 @@ interface Candidate {
   city: string | null;
 }
 
-export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
+export function RosterManager({ entries, isAlumni, rosterNoun, orgId, canListNow = false }: Props) {
+  const [listNow, setListNow] = useState(false);
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [picked, setPicked] = useState<Candidate | null>(null);
@@ -55,7 +61,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
       setCandidates([]);
       return;
     }
-    setCandidates(await searchArtists(value));
+    setCandidates(await searchArtists(value, orgId));
   }
 
   function flash(message: string) {
@@ -67,16 +73,25 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
     if (!picked) return;
     setError(null);
     start(async () => {
-      const result = await inviteArtistToRoster({
-        artistId: picked.id,
-        startYear: startYear ? Number(startYear) : null,
-        endYear: endYear ? Number(endYear) : null,
-      });
+      const result = await inviteArtistToRoster(
+        {
+          artistId: picked.id,
+          startYear: startYear ? Number(startYear) : null,
+          endYear: endYear ? Number(endYear) : null,
+          listNow: canListNow && listNow,
+        },
+        orgId,
+      );
       if (result.error) {
         setError(result.error);
         return;
       }
-      flash(`Invitation sent to ${picked.full_name ?? picked.username}.`);
+      flash(
+        canListNow && listNow
+          ? `${picked.full_name ?? picked.username} is now listed.`
+          : `Invitation sent to ${picked.full_name ?? picked.username}.`,
+      );
+      setListNow(false);
       setPicked(null);
       setQuery("");
       setCandidates([]);
@@ -156,6 +171,21 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
               </div>
             )}
 
+            {canListNow && (
+              <label className="flex max-w-md items-start gap-2 text-[13px]">
+                <input
+                  type="checkbox"
+                  checked={listNow}
+                  onChange={(e) => setListNow(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  They&rsquo;ve already agreed. List them now, without waiting for them to accept. They&rsquo;re
+                  messaged to let them know.
+                </span>
+              </label>
+            )}
+
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -163,7 +193,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
                 disabled={pending}
                 className="bg-brand px-[22px] py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-50"
               >
-                {pending ? "Sending…" : "Send invitation"}
+                {pending ? "Saving…" : canListNow && listNow ? "List now" : "Send invitation"}
               </button>
               <button
                 type="button"
@@ -199,7 +229,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
           </h2>
           <ul className="divide-y divide-border border-y border-border">
             {accepted.map((e) => (
-              <Row key={e.membershipId} entry={e} isAlumni={isAlumni} onFlash={flash} />
+              <Row key={e.membershipId} entry={e} isAlumni={isAlumni} onFlash={flash} orgId={orgId} />
             ))}
           </ul>
         </div>
@@ -212,7 +242,7 @@ export function RosterManager({ entries, isAlumni, rosterNoun }: Props) {
           </h2>
           <ul className="divide-y divide-border border-y border-border">
             {waiting.map((e) => (
-              <Row key={e.membershipId} entry={e} isAlumni={isAlumni} onFlash={flash} />
+              <Row key={e.membershipId} entry={e} isAlumni={isAlumni} onFlash={flash} orgId={orgId} />
             ))}
           </ul>
         </div>
@@ -265,10 +295,12 @@ function Row({
   entry,
   isAlumni,
   onFlash,
+  orgId,
 }: {
   entry: RosterEntry;
   isAlumni: boolean;
   onFlash: (m: string) => void;
+  orgId?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [startYear, setStartYear] = useState(entry.startYear?.toString() ?? "");
@@ -328,7 +360,8 @@ function Row({
                 const result = await updateRosterYears(
                   entry.membershipId,
                   startYear ? Number(startYear) : null,
-                  endYear ? Number(endYear) : null
+                  endYear ? Number(endYear) : null,
+                  orgId,
                 );
                 if (result.error) {
                   setError(result.error);
@@ -349,7 +382,7 @@ function Row({
           disabled={pending}
           onClick={() => {
             start(async () => {
-              const result = await removeFromRoster(entry.membershipId);
+              const result = await removeFromRoster(entry.membershipId, orgId);
               if (result.error) {
                 setError(result.error);
                 return;

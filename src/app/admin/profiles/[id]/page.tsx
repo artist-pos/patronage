@@ -6,6 +6,9 @@ import { AdminProfileEditor } from "@/components/admin/AdminProfileEditor";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { loadOrgMembers } from "@/lib/partner-members";
 import { MembersManager } from "@/app/partner/members/MembersManager";
+import { RosterManager, type RosterEntry } from "@/app/partner/roster/RosterManager";
+import { canKeepRoster, orgCategory } from "@/lib/org-categories";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Edit profile — Admin" };
 
@@ -42,6 +45,50 @@ export default async function AdminProfileEditPage({ params }: Props) {
     }
   }
 
+  // The organisation's roster, when its type keeps one. Entries start pending: the
+  // artist confirms before they appear on the public page.
+  let rosterEntries: RosterEntry[] = [];
+  const keepsRoster = profile.role === "partner" && canKeepRoster(profile.org_category);
+  const category = orgCategory(profile.org_category);
+  if (keepsRoster) {
+    const admin = createAdminClient();
+    const { data: rosterRow } = await admin
+      .from("collectives")
+      .select("id")
+      .eq("org_profile_id", profile.id)
+      .limit(1)
+      .maybeSingle();
+    if (rosterRow) {
+      const { data: memberRows } = await admin
+        .from("collective_members")
+        .select(
+          "id, user_id, status, start_year, end_year, profiles!collective_members_user_id_fkey(username, full_name, avatar_url, city)",
+        )
+        .eq("collective_id", (rosterRow as { id: string }).id)
+        .order("start_year", { ascending: false, nullsFirst: false });
+      rosterEntries = (
+        (memberRows ?? []) as unknown as Array<{
+          id: string;
+          user_id: string;
+          status: string;
+          start_year: number | null;
+          end_year: number | null;
+          profiles: { username: string; full_name: string | null; avatar_url: string | null; city: string | null } | null;
+        }>
+      ).map((m) => ({
+        membershipId: m.id,
+        artistId: m.user_id,
+        username: m.profiles?.username ?? "",
+        fullName: m.profiles?.full_name ?? null,
+        avatarUrl: m.profiles?.avatar_url ?? null,
+        city: m.profiles?.city ?? null,
+        accepted: m.status === "accepted",
+        startYear: m.start_year,
+        endYear: m.end_year,
+      }));
+    }
+  }
+
   const { user } = await getServerUser();
   const members = profile.role === "partner" ? await loadOrgMembers(profile.id, user?.id ?? "") : null;
 
@@ -74,6 +121,34 @@ export default async function AdminProfileEditPage({ params }: Props) {
           username: profile.username,
         }}
       />
+      {profile.role === "partner" && (
+        <section className="space-y-3 border-t border-border pt-6">
+          <h2 className="text-sm font-semibold">
+            {category?.hasMembers ? "Members" : category?.hasAlumni ? "Participants and alumni" : "Represented artists"}
+          </h2>
+          {keepsRoster ? (
+            <>
+              <p className="max-w-xl text-xs text-muted-foreground">
+                Add the artists who belong on this page. By default each one is sent an invitation and only appears
+                publicly once they accept. Tick &ldquo;they&rsquo;ve already agreed&rdquo; to list someone straight
+                away.
+              </p>
+              <RosterManager
+                orgId={profile.id}
+                canListNow
+                entries={rosterEntries}
+                isAlumni={category?.hasAlumni ?? false}
+                rosterNoun={category?.rosterNoun ?? "artist"}
+              />
+            </>
+          ) : (
+            <p className="max-w-xl text-xs text-muted-foreground">
+              This organisation type doesn&rsquo;t keep an artist list. Set it to a gallery, residency, art society
+              or school above to add one.
+            </p>
+          )}
+        </section>
+      )}
       {profile.role === "partner" && members && (
         <section className="space-y-3 border-t border-border pt-6">
           <h2 className="text-sm font-semibold">Owners</h2>

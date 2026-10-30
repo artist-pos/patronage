@@ -24,6 +24,7 @@ import {
   type CollectedWorkTile,
 } from "@/components/profile/OrgPatronProfiles";
 import { getArtistAffiliations, getOrgRoster, type OrgRoster } from "@/lib/affiliations";
+import { getPublicOrgOwners, type PublicOwner } from "@/lib/partner-members";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignForProfile } from "@/components/profile/CampaignsSection";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
@@ -518,10 +519,12 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   // Galleries and residency programmes only. Every other category keeps no
   // roster (186), so this comes back empty and the section does not render.
   let partnerRoster: OrgRoster = { relationship: null, artists: [] };
+  let partnerOwners: PublicOwner[] = [];
   let partnerRegionLink: { slug: string; name: string } | null = null;
   let partnerRegionArtists: Array<{ artist: ProfileWithImage; location: string | null }> = [];
   if (!isArtistProfile && profile.role === "partner") {
     partnerRoster = await getOrgRoster(profile.id);
+    partnerOwners = await getPublicOrgOwners(profile.id);
     const adminDb = createAdminClient();
     const todayStr = new Date().toISOString().split("T")[0];
     const isRegionalArtsBody =
@@ -1182,6 +1185,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           listedCount={partnerListedCount}
           selectedTotal={partnerSelectedTotal}
           roster={partnerRoster}
+          owners={partnerOwners}
           regionLink={partnerRegionLink}
           regionArtists={partnerRegionArtists}
         />

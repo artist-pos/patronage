@@ -1,6 +1,35 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { MemberRow } from "@/app/partner/members/MembersManager";
 
+export interface PublicOwner {
+  username: string;
+  full_name: string;
+}
+
+/**
+ * The people shown as running an organisation on its public page. Only members
+ * with a real, active, adult profile and a name: guest accounts made from an
+ * email address have neither, so they are never named. The organisation's own
+ * login is the page itself, so it is not repeated here.
+ */
+export async function getPublicOrgOwners(orgId: string): Promise<PublicOwner[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("partner_members")
+    .select("created_at, profile:user_id!inner(username, full_name, role, is_active, is_minor)")
+    .eq("partner_id", orgId)
+    .order("created_at", { ascending: true });
+
+  type P = { username: string; full_name: string | null; role: string; is_active: boolean | null; is_minor: boolean | null };
+  return ((data ?? []) as unknown as Array<{ profile: P | P[] | null }>)
+    .map((r) => (Array.isArray(r.profile) ? r.profile[0] : r.profile))
+    .filter(
+      (p): p is P =>
+        !!p && !!p.full_name?.trim() && p.role !== "reviewer" && p.is_active !== false && !p.is_minor,
+    )
+    .map((p) => ({ username: p.username, full_name: p.full_name!.trim() }));
+}
+
 /**
  * Everyone who can manage an organisation: its own login first, then the people
  * added as members. Emails live in auth.users, so they are looked up one by one.
