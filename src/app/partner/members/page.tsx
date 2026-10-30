@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getActingOrg } from "@/lib/partner-org";
-import { MembersManager, type MemberRow } from "./MembersManager";
+import { loadOrgMembers } from "@/lib/partner-members";
+import { MembersManager } from "./MembersManager";
 
 export const metadata: Metadata = {
   title: "Members",
@@ -18,42 +18,9 @@ export default async function PartnerMembersPage() {
   const { user, orgId } = await getActingOrg();
   if (!user || !orgId) redirect("/auth/login?next=/partner/members");
 
-  const admin = createAdminClient();
-  const { data: org } = await admin
-    .from("profiles")
-    .select("id, role, full_name, username")
-    .eq("id", orgId)
-    .single();
-  if (!org || org.role !== "partner") redirect("/dashboard");
-
-  const { data: rows } = await admin
-    .from("partner_members")
-    .select("user_id, created_at, profile:user_id(full_name, username)")
-    .eq("partner_id", orgId)
-    .order("created_at", { ascending: true });
-
-  type Row = {
-    user_id: string;
-    profile: { full_name: string | null; username: string } | { full_name: string | null; username: string }[] | null;
-  };
-
-  const people = [
-    { userId: orgId, name: (org.full_name ?? org.username) as string, isPrimary: true },
-    ...((rows ?? []) as unknown as Row[]).map((r) => {
-      const p = Array.isArray(r.profile) ? r.profile[0] : r.profile;
-      return { userId: r.user_id, name: (p?.full_name ?? p?.username ?? "Member") as string, isPrimary: false };
-    }),
-  ];
-
-  // Emails live in auth.users, not profiles.
-  const members: MemberRow[] = await Promise.all(
-    people.map(async (p) => {
-      const { data } = await admin.auth.admin.getUserById(p.userId);
-      return { ...p, email: data?.user?.email ?? null, isYou: p.userId === user.id };
-    }),
-  );
-
-  const orgName = (org.full_name ?? org.username) as string;
+  const loaded = await loadOrgMembers(orgId, user.id);
+  if (!loaded) redirect("/dashboard");
+  const { orgName, members } = loaded;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-10 sm:px-6">

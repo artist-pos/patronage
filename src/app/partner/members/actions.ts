@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { findAuthUserIdByEmail } from "@/lib/supabase/find-user-by-email";
 import { isOrgMember } from "@/lib/partner-org";
+import { isAdmin } from "@/lib/admin";
 import { sendOrgMemberInvite } from "@/lib/email";
 import { slugify } from "@/lib/slugify";
 
@@ -19,6 +20,15 @@ async function usernameFromEmail(admin: ReturnType<typeof createAdminClient>, em
     if (!data) return username;
     username = `${base}-${suffix++}`;
   }
+}
+
+/** Members manage each other. Admins can too, so they can attach people to an organisation. */
+async function canManageMembers(
+  supabase: Parameters<typeof isOrgMember>[0],
+  userId: string,
+  orgId: string,
+): Promise<boolean> {
+  return (await isOrgMember(supabase, userId, orgId)) || (await isAdmin());
 }
 
 /** A sign-in link that lands the new member on the organisation's dashboard. */
@@ -45,7 +55,7 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   const email = rawEmail.trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address." };
 
-  if (!(await isOrgMember(supabase, user.id, orgId))) return { error: "Not authorised." };
+  if (!(await canManageMembers(supabase, user.id, orgId))) return { error: "Not authorised." };
 
   const admin = createAdminClient();
   const [{ data: org }, { data: inviter }] = await Promise.all([
@@ -91,6 +101,7 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   }
 
   revalidatePath("/partner/members");
+  revalidatePath(`/admin/profiles/${orgId}`);
 
   const orgName = (org.full_name ?? org.username) as string;
   const inviterName = (inviter?.full_name ?? inviter?.username ?? "Someone") as string;
@@ -117,7 +128,7 @@ export async function removeMember(orgId: string, memberUserId: string): Promise
   const { supabase, user } = await getServerUser();
   if (!user) return { error: "Please sign in again." };
 
-  if (!(await isOrgMember(supabase, user.id, orgId))) return { error: "Not authorised." };
+  if (!(await canManageMembers(supabase, user.id, orgId))) return { error: "Not authorised." };
   if (memberUserId === orgId) return { error: "The organisation's own login can't be removed." };
 
   const { error } = await createAdminClient()
@@ -128,5 +139,6 @@ export async function removeMember(orgId: string, memberUserId: string): Promise
   if (error) return { error: error.message };
 
   revalidatePath("/partner/members");
+  revalidatePath(`/admin/profiles/${orgId}`);
   return {};
 }
