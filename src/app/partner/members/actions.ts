@@ -52,12 +52,24 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   const { supabase, user } = await getServerUser();
   if (!user) return { error: "Please sign in again." };
 
-  const email = rawEmail.trim().toLowerCase();
-  if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address." };
-
   if (!(await canManageMembers(supabase, user.id, orgId))) return { error: "Not authorised." };
 
   const admin = createAdminClient();
+
+  // "@handle" adds an existing member of Patronage; anything else is an email.
+  let email = rawEmail.trim().toLowerCase();
+  if (email.startsWith("@")) {
+    const { data: target } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", email.slice(1))
+      .maybeSingle();
+    const { data: authRes } = target ? await admin.auth.admin.getUserById(target.id) : { data: null };
+    if (!authRes?.user?.email) return { error: "No one on Patronage has that handle." };
+    email = authRes.user.email.toLowerCase();
+  }
+  if (!EMAIL_RE.test(email)) return { error: "Enter an email address, or @ and a username." };
+
   const [{ data: org }, { data: inviter }] = await Promise.all([
     admin.from("profiles").select("id, role, full_name, username").eq("id", orgId).single(),
     admin.from("profiles").select("full_name, username").eq("id", user.id).single(),
@@ -117,6 +129,35 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   }
 
   return { created };
+}
+
+export interface ProfileSuggestion {
+  id: string;
+  username: string;
+  full_name: string | null;
+}
+
+/** Type-ahead for "@handle": people on Patronage who aren't already part of the organisation. */
+export async function searchProfiles(orgId: string, rawQuery: string): Promise<ProfileSuggestion[]> {
+  const { supabase, user } = await getServerUser();
+  if (!user || !(await canManageMembers(supabase, user.id, orgId))) return [];
+
+  // Keep the characters PostgREST filter syntax treats specially out of the pattern.
+  const q = rawQuery.replace(/^@/, "").replace(/[^\p{L}\p{N} _-]/gu, "").trim().toLowerCase();
+  if (q.length < 2) return [];
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("partner_members").select("user_id").eq("partner_id", orgId);
+  const skip = new Set([orgId, ...(existing ?? []).map((r) => r.user_id as string)]);
+
+  const { data } = await admin
+    .from("profiles")
+    .select("id, username, full_name")
+    .or(`username.ilike.${q}%,full_name.ilike.%${q}%`)
+    .neq("role", "partner")
+    .limit(12);
+
+  return ((data ?? []) as ProfileSuggestion[]).filter((p) => !skip.has(p.id)).slice(0, 6);
 }
 
 /**

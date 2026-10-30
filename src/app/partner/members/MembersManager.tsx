@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { inviteMember, removeMember } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import { inviteMember, removeMember, searchProfiles, type ProfileSuggestion } from "./actions";
 
 export interface MemberRow {
   userId: string;
@@ -23,6 +23,23 @@ export function MembersManager({ orgId, orgName, members }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [suggestions, setSuggestions] = useState<ProfileSuggestion[]>([]);
+  const isHandleQuery = email.trim().startsWith("@") && email.trim().length >= 3;
+
+  // Type "@" and a few letters to find someone already on Patronage.
+  useEffect(() => {
+    const q = email.trim();
+    if (!q.startsWith("@") || q.length < 3) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const found = await searchProfiles(orgId, q);
+      if (!cancelled) setSuggestions(found);
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [email, orgId]);
 
   function flash(message: string) {
     setToast(message);
@@ -80,14 +97,36 @@ export function MembersManager({ orgId, orgName, members }: Props) {
             invite();
           }}
         >
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@example.com"
-            className="h-10 flex-1 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-black"
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              required
+              autoComplete="off"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="@username or name@example.com"
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-black"
+            />
+            {isHandleQuery && suggestions.length > 0 && (
+              <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-white shadow-md">
+                {suggestions.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail(`@${s.username}`);
+                        setSuggestions([]);
+                      }}
+                      className="flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50"
+                    >
+                      <span className="font-medium">@{s.username}</span>
+                      {s.full_name && <span className="truncate text-xs text-stone-500">{s.full_name}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button
             type="submit"
             disabled={pending || !email.trim()}
