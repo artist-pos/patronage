@@ -71,7 +71,7 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
   if (!EMAIL_RE.test(email)) return { error: "Enter an email address, or @ and a username." };
 
   const [{ data: org }, { data: inviter }] = await Promise.all([
-    admin.from("profiles").select("id, role, full_name, username").eq("id", orgId).single(),
+    admin.from("profiles").select("id, role, full_name, username, account_status").eq("id", orgId).single(),
     admin.from("profiles").select("full_name, username").eq("id", user.id).single(),
   ]);
   if (!org || org.role !== "partner") return { error: "Only organisations can have members." };
@@ -110,6 +110,12 @@ export async function inviteMember(orgId: string, rawEmail: string): Promise<{ e
     .insert({ partner_id: orgId, user_id: inviteeId, added_by: user.id });
   if (insertError) {
     return { error: insertError.code === "23505" ? "They are already a member." : insertError.message };
+  }
+
+  // An organisation with people running it is claimed, so stop showing "Claim this page".
+  if (org.account_status === "shadow") {
+    await admin.from("profiles").update({ account_status: "active" }).eq("id", orgId);
+    revalidatePath(`/${org.username}`);
   }
 
   revalidatePath("/partner/members");
