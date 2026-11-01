@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
+import { slugForPublish } from "@/lib/opportunity-publish";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { notifyOpportunitySubmission } from "@/lib/email";
@@ -140,16 +141,32 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
 
   const isPipeline = opp.routing_type === "pipeline";
 
-  // An admin listing someone else's opportunity: it belongs to nobody until the
-  // organisation claims it, and needs claim outreach details at review.
+  // An admin listing someone else's opportunity: no review step, it goes live
+  // now. It belongs to nobody until the organisation claims it; add outreach
+  // details from /admin/opportunities so the claim email can reach them.
   if (!isPipeline && (await isAdmin())) {
-    const { error: adminError } = await createAdminClient()
+    const admin = createAdminClient();
+    const { data: full } = await admin
       .from("opportunities")
-      .update({ status: "pending", origin: "admin", profile_id: null })
+      .select("id, slug, title, organiser, deadline, status")
+      .eq("id", id)
+      .single();
+    // Publish with the slug a pending listing would get on approval.
+    const slug = full ? await slugForPublish(admin, { ...full, status: "pending" }) : null;
+    const { error: adminError } = await admin
+      .from("opportunities")
+      .update({
+        status: "published",
+        is_active: true,
+        origin: "admin",
+        profile_id: null,
+        ...(slug ? { slug } : {}),
+      })
       .eq("id", id);
     if (adminError) return { error: adminError.message };
-    revalidatePath("/admin/submissions");
-    return { redirectTo: "/admin/submissions" };
+    revalidatePath("/admin/opportunities");
+    revalidatePath("/opportunities");
+    return { redirectTo: `/opportunities/${slug ?? full?.slug ?? id}` };
   }
 
   const { error: updateError } = await supabase

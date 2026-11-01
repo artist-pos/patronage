@@ -18,6 +18,8 @@ import { isSubmittedTooFast } from "@/lib/form-timing";
 import { isTorExit, recordBlocked } from "@/lib/bot-guard";
 import { HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { isAdmin } from "@/lib/admin";
+import { slugForPublish } from "@/lib/opportunity-publish";
+import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 
 // ── Admin: update an activation type row ─────────────────────────────────────
@@ -222,6 +224,8 @@ export interface SubmissionState {
   /** Set when the submission requires payment (featured and/or pipeline
    *  beyond the partner's first free round). The form should redirect. */
   checkoutUrl?: string;
+  /** Set when an admin's listing was published straight away (no review). */
+  publishedUrl?: string;
 }
 
 export async function submitOpportunityAction(
@@ -310,7 +314,7 @@ export async function submitOpportunityAction(
   }
 
   // An admin listing someone else's opportunity: it belongs to nobody until the
-  // organisation claims it, and needs claim outreach details at review.
+  // organisation claims it, and skips review (published straight after insert).
   const byAdmin = !!user && !isFeatured && !isPipeline && (await isAdmin());
 
   const { data: inserted, error } = await supabase.from("opportunities").insert({
@@ -358,6 +362,26 @@ export async function submitOpportunityAction(
   }).select("id").single();
 
   if (error || !inserted) return { error: error?.message ?? "Couldn't create listing." };
+
+  if (byAdmin) {
+    // Inserted as pending so the slug trigger runs, then published with the
+    // slug a reviewed listing would get. No admin notification: it's from one.
+    const admin = createAdminClient();
+    const { data: full } = await admin
+      .from("opportunities")
+      .select("id, slug, title, organiser, deadline, status")
+      .eq("id", inserted.id)
+      .single();
+    const slug = full ? await slugForPublish(admin, full) : null;
+    const { error: publishError } = await admin
+      .from("opportunities")
+      .update({ status: "published", is_active: true, ...(slug ? { slug } : {}) })
+      .eq("id", inserted.id);
+    if (publishError) return { error: publishError.message };
+    revalidatePath("/opportunities");
+    revalidatePath("/admin/opportunities");
+    return { success: true, publishedUrl: `/opportunities/${slug ?? full?.slug ?? inserted.id}` };
+  }
 
   notifyOpportunitySubmission({
     title,

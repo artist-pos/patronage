@@ -192,6 +192,18 @@ export function OpportunitySubmissionForm({
         </div>
       );
     }
+    if (state.publishedUrl) {
+      return (
+        <div className="border border-black p-8 space-y-2">
+          <p className="font-semibold">Published.</p>
+          <p className="text-sm text-muted-foreground">
+            It&apos;s live now.{" "}
+            <a href={state.publishedUrl} className="underline underline-offset-2">View the listing</a>, or add
+            claim outreach details from Admin → Opportunities.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="border border-black p-8 space-y-6">
         <div className="space-y-2">
