@@ -3,7 +3,9 @@
 import { useState } from "react";
 import type { SocialOpp } from "@/app/admin/social/page";
 
-type View = "new" | "closing-soon" | "final-call";
+import { LastCallsBuilder } from "@/components/admin/LastCallsBuilder";
+
+type View = "new" | "closing-soon" | "final-call" | "last-calls";
 
 function getDefaultView(): View {
   const day = new Date().getDay(); // 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat
@@ -144,11 +146,13 @@ export function SocialContentPanel({
   closingIn3Weeks,
   closingSoon,
   finalCall,
+  upcoming,
   today,
 }: {
   closingIn3Weeks: SocialOpp[];
   closingSoon: SocialOpp[];
   finalCall: SocialOpp[];
+  upcoming: SocialOpp[];
   today: string;
 }) {
   const [view, setView] = useState<View>(getDefaultView);
@@ -160,7 +164,8 @@ export function SocialContentPanel({
   const currentOpps =
     view === "new" ? closingIn3Weeks
     : view === "closing-soon" ? closingSoon
-    : finalCall;
+    : view === "final-call" ? finalCall
+    : [];
 
   async function copyAll() {
     const text = currentOpps.map(buildCopyText).join("\n\n---\n\n");
@@ -173,6 +178,7 @@ export function SocialContentPanel({
     { id: "new", label: "Closing in 3 Weeks" },
     { id: "closing-soon", label: "Closing Soon" },
     { id: "final-call", label: "Final Call" },
+    { id: "last-calls", label: "Last Calls Builder" },
   ];
 
   return (
@@ -193,14 +199,18 @@ export function SocialContentPanel({
           </button>
         ))}
 
-        <button
-          onClick={copyAll}
-          disabled={currentOpps.length === 0}
-          className="ml-auto text-xs font-medium px-4 py-2 rounded-lg border border-border hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {allCopied ? "Copied!" : `Copy All (${currentOpps.length})`}
-        </button>
+        {view !== "last-calls" && (
+          <button
+            onClick={copyAll}
+            disabled={currentOpps.length === 0}
+            className="ml-auto text-xs font-medium px-4 py-2 rounded-lg border border-border hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {allCopied ? "Copied!" : `Copy All (${currentOpps.length})`}
+          </button>
+        )}
       </div>
+
+      {view === "last-calls" && <LastCallsBuilder opportunities={upcoming} />}
 
       {/* View: Closing in 3 Weeks */}
       {view === "new" && (

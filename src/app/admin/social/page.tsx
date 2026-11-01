@@ -54,7 +54,17 @@ export default async function SocialPage() {
   threeDaysLater.setDate(today.getDate() + 3);
   const threeDaysLaterStr = threeDaysLater.toISOString().split("T")[0];
 
-  const [closingIn3WeeksRes, soonRes, finalRes] = await Promise.all([
+  const [closingIn3WeeksRes, soonRes, finalRes, upcomingRes] = await Promise.all([
+    // All open opportunities with a deadline, for the Last Calls picker
+    supabase
+      .from("opportunities")
+      .select(FIELDS)
+      .eq("is_active", true)
+      .eq("status", "published")
+      .gte("deadline", todayStr)
+      .order("deadline", { ascending: true })
+      .limit(300),
+
     // Closing in 3 Weeks — deadline between today and 21 days from now
     supabase
       .from("opportunities")
@@ -101,6 +111,7 @@ export default async function SocialPage() {
         closingIn3Weeks={(closingIn3WeeksRes.data ?? []) as unknown as SocialOpp[]}
         closingSoon={(soonRes.data ?? []) as unknown as SocialOpp[]}
         finalCall={(finalRes.data ?? []) as unknown as SocialOpp[]}
+        upcoming={(upcomingRes.data ?? []) as unknown as SocialOpp[]}
         today={todayStr}
       />
     </div>
