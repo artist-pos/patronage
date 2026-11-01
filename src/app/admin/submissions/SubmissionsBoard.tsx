@@ -78,7 +78,7 @@ export function SubmissionsBoard({ pending, priorRounds }: Props) {
     { key: "tip", label: "Tips" },
     { key: "admin", label: "Admin" },
     { key: "open_call", label: "Open calls" },
-    { key: "needs_details", label: "Need outreach details" },
+    { key: "needs_details", label: "No outreach details" }
   ];
 
   if (opps.length === 0) {
@@ -123,7 +123,6 @@ export function SubmissionsBoard({ pending, priorRounds }: Props) {
           const closes = closesLabel(sub.deadline);
           const isOpenCall = sub.routing_type === "pipeline";
           const needsFee = isOpenCall && !sub.pipeline_paid_at;
-          const missing = outreachMissing(sub);
           const rounds = sub.profile_id ? priorRounds[sub.profile_id] ?? 0 : 0;
           const funding = sub.funding_range || (sub.funding_amount ? `$${sub.funding_amount.toLocaleString()}` : null);
           const applyHost = hostOf(sub.url);
@@ -202,7 +201,6 @@ export function SubmissionsBoard({ pending, priorRounds }: Props) {
                 <SubmissionActions
                   id={sub.id}
                   needsFee={needsFee}
-                  blockedReason={missing.length ? `Add the ${missing.join(", ")} first` : null}
                   editing={editing}
                   onEdit={() => setEditingId(editing ? null : sub.id)}
                 />

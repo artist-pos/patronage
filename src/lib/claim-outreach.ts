@@ -23,14 +23,15 @@ export interface OutreachDetails {
 
 /**
  * Aggregated = no organisation behind it yet: scraped, a community tip, or made
- * or submitted by an admin. These need outreach details before approval. An
- * organisation that submits its own listing already has an account, so doesn't.
+ * or submitted by an admin. These are the ones the claim email is for, so they get
+ * the outreach fields (optional at approval). An organisation that submits its own
+ * listing already has an account, so doesn't.
  */
 export function isAggregated(opp: Pick<Opportunity, "origin" | "profile_id">): boolean {
   return opp.origin !== "submission" && !!opp.origin && !opp.profile_id;
 }
 
-/** What a listing still needs before approval: empty for one an organisation sent in itself. */
+/** Outreach details a listing is missing: empty for one an organisation sent in itself. */
 export function outreachMissingFor(
   o: Pick<Opportunity, "origin" | "profile_id" | "claim_email" | "claim_contact_name" | "claim_current_tool">
 ): string[] {

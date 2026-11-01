@@ -7,30 +7,10 @@ import { slugForPublish } from "@/lib/opportunity-publish";
 import { normaliseOpportunityWrite } from "@/lib/opportunity-fields";
 import type { OpportunityPayload } from "@/lib/opportunity-payload";
 import { validPartnerProfileId } from "@/lib/organiser-link";
-import { isAggregated, missingOutreachDetails } from "@/lib/claim-outreach";
-import type { Opportunity } from "@/types/database";
+import { missingOutreachDetails } from "@/lib/claim-outreach";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Not authorised");
-}
-
-interface OutreachRow {
-  id: string;
-  origin: string | null;
-  profile_id: string | null;
-  claim_email: string | null;
-  claim_contact_name: string | null;
-  claim_current_tool: string | null;
-}
-
-/** Aggregated listings can't go live until we know who to contact and how they take applications. */
-function incomplete(r: OutreachRow): string[] {
-  if (!isAggregated({ origin: r.origin as Opportunity["origin"], profile_id: r.profile_id })) return [];
-  return missingOutreachDetails({
-    email: r.claim_email ?? "",
-    contactName: r.claim_contact_name ?? "",
-    currentTool: r.claim_current_tool ?? "",
-  });
 }
 
 export async function saveOutreachDetails(
@@ -64,14 +44,13 @@ export async function approveOpportunity(id: string): Promise<{ error?: string }
   // (e.g. "-2027" — generated back when title/organiser were still blank).
   const { data: opp } = await admin
     .from("opportunities")
-    .select("slug, title, organiser, deadline, id, status, origin, profile_id, claim_email, claim_contact_name, claim_current_tool")
+    .select("slug, title, organiser, deadline, id, status")
     .eq("id", id)
     .single();
 
-  if (opp) {
-    const missing = incomplete(opp as OutreachRow);
-    if (missing.length > 0) return { error: `Add the ${missing.join(", ")} before approving.` };
-  }
+  // Outreach details are optional here: a listing without them goes live, it
+  // just isn't emailed by the claim cron until they're added (the "Needs
+  // outreach details" filter on /admin/opportunities lists those).
 
   const updates: Record<string, unknown> = { status: "published", is_active: true };
   const slug = opp ? await slugForPublish(admin, opp) : null;
@@ -95,21 +74,20 @@ export async function rejectOpportunity(id: string) {
   revalidatePath("/admin/opportunities/queue");
 }
 
-/** Approves everything that has its outreach details; returns the ids left behind. */
-export async function approveAll(ids: string[]): Promise<{ approved: string[]; skipped: string[] }> {
+/** Approves every listing passed in. Outreach details can be added later. */
+export async function approveAll(ids: string[]): Promise<{ approved: string[] }> {
   await guard();
   const admin = createAdminClient();
 
   // Fetch all to generate slugs for any that are missing one.
   const { data: opps } = await admin
     .from("opportunities")
-    .select("id, slug, title, organiser, deadline, status, origin, profile_id, claim_email, claim_contact_name, claim_current_tool")
+    .select("id, slug, title, organiser, deadline, status")
     .in("id", ids);
 
-  const ready = (opps ?? []).filter((o) => incomplete(o as OutreachRow).length === 0);
-  const skipped = (opps ?? []).filter((o) => incomplete(o as OutreachRow).length > 0).map((o) => o.id);
+  const ready = opps ?? [];
   const approved = ready.map((o) => o.id);
-  if (approved.length === 0) return { approved, skipped };
+  if (approved.length === 0) return { approved };
 
   // Publish slugs one at a time, so two listings with the same title can't both
   // claim the same free candidate. Then bulk-approve.
@@ -122,7 +100,7 @@ export async function approveAll(ids: string[]): Promise<{ approved: string[]; s
   revalidatePath("/admin/opportunities/queue");
   revalidatePath("/opportunities");
   revalidatePath("/opportunities/[id]", "page");
-  return { approved, skipped };
+  return { approved };
 }
 
 export async function rejectAll(ids: string[]) {

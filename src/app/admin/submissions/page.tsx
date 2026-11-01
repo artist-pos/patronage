@@ -48,14 +48,14 @@ export default async function AdminSubmissionsPage() {
           <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Review</p>
           <h1 className="text-2xl font-semibold tracking-tight">Submissions</h1>
           <p className="max-w-xl text-sm text-muted-foreground">
-            Listings sent in by organisations, community tips, and listings added by an admin. Tips and admin listings
-            need claim outreach details before they go live, so the claim email has someone to write to.
+            Listings sent in by organisations, community tips, and listings added by an admin. Add claim outreach
+            details to tips and admin listings when you have them, so the daily claim email can reach the organisation.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Waiting" value={pending.length} />
           <Stat label="Tips" value={tips} />
-          <Stat label="Need outreach details" value={needDetails} highlight={needDetails > 0} />
+          <Stat label="No outreach details" value={needDetails} />
           <Stat label="Recently rejected" value={reviewed.length} />
         </div>
       </header>

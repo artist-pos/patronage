@@ -13,7 +13,6 @@ import {
   ListingEditor,
   OutreachFields,
   PreviewLink,
-  outreachMissing,
 } from "@/components/admin/ListingReviewTools";
 import type { Opportunity } from "@/types/database";
 
@@ -70,8 +69,6 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
 
   const sorted = sortOpps(localOpps, sortMode);
   const expiredIds = localOpps.filter((o) => isExpired(o.deadline)).map((o) => o.id);
-  const readyIds = localOpps.filter((o) => outreachMissing(o).length === 0).map((o) => o.id);
-  const blockedCount = localOpps.length - readyIds.length;
 
   function removeIds(ids: string[]) {
     const set = new Set(ids);
@@ -101,12 +98,8 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
   async function handleApproveAll() {
     setLoading("all");
     setNotice(null);
-    const { approved, skipped } = await approveAll(readyIds);
+    const { approved } = await approveAll(localOpps.map((o) => o.id));
     removeIds(approved);
-    if (skipped.length > 0) setNotice(`${skipped.length} skipped: add their outreach details first.`);
-    else if (blockedCount > 0) {
-      setNotice(`${blockedCount} still need outreach details, so they were left in the queue.`);
-    }
     setLoading(null);
   }
 
@@ -143,14 +136,10 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
             <>
               <button
                 onClick={handleApproveAll}
-                disabled={!!loading || readyIds.length === 0}
+                disabled={!!loading}
                 className="border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-40"
               >
-                {loading === "all"
-                  ? "Approving…"
-                  : blockedCount > 0
-                    ? `Approve ${readyIds.length} ready (${blockedCount} need details)`
-                    : `Approve all ${localOpps.length}`}
+                {loading === "all" ? "Approving…" : `Approve all ${localOpps.length}`}
               </button>
               <button
                 onClick={handleRejectAll}
@@ -274,8 +263,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                   <>
                     <button
                       onClick={() => handleApprove(opp.id)}
-                      disabled={loading === opp.id || outreachMissing(opp).length > 0}
-                      title={outreachMissing(opp).length ? `Add the ${outreachMissing(opp).join(", ")} first` : undefined}
+                      disabled={loading === opp.id}
                       className="text-xs border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-40 whitespace-nowrap"
                     >
                       {loading === opp.id ? "…" : "Approve"}
@@ -308,8 +296,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                 ) : (
                   <button
                     onClick={() => handleApprove(opp.id)}
-                    disabled={loading === opp.id || outreachMissing(opp).length > 0}
-                    title={outreachMissing(opp).length ? `Add the ${outreachMissing(opp).join(", ")} first` : undefined}
+                    disabled={loading === opp.id}
                     className="text-xs border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-40"
                   >
                     {loading === opp.id ? "…" : "Restore"}

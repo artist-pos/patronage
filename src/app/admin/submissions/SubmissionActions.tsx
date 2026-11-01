@@ -9,8 +9,6 @@ interface Props {
   id: string;
   /** An open call that has neither paid nor had its fee waived. */
   needsFee?: boolean;
-  /** Why it can't be approved yet, e.g. missing outreach details. */
-  blockedReason?: string | null;
   onEdit?: () => void;
   editing?: boolean;
 }
@@ -18,7 +16,7 @@ interface Props {
 const PRIMARY = "rounded-lg bg-black px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-black/80 disabled:opacity-40";
 const SECONDARY = "rounded-lg border border-border bg-background px-3.5 py-1.5 text-xs transition-colors hover:border-black disabled:opacity-40";
 
-export function SubmissionActions({ id, needsFee = false, blockedReason = null, onEdit, editing = false }: Props) {
+export function SubmissionActions({ id, needsFee = false, onEdit, editing = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -94,7 +92,7 @@ export function SubmissionActions({ id, needsFee = false, blockedReason = null, 
       <div className="flex flex-wrap gap-2 sm:justify-end">
         {needsFee ? (
           <>
-            <button disabled={isPending || !!blockedReason} title={blockedReason ?? undefined} className={PRIMARY}
+            <button disabled={isPending} className={PRIMARY}
               onClick={() => act(() => approveSubmission(id, { waiveFee: true }))}>
               {isPending ? "Working…" : "Approve, fee waived"}
             </button>
@@ -104,7 +102,7 @@ export function SubmissionActions({ id, needsFee = false, blockedReason = null, 
             </button>
           </>
         ) : (
-          <button disabled={isPending || !!blockedReason} title={blockedReason ?? undefined} className={PRIMARY}
+          <button disabled={isPending} className={PRIMARY}
             onClick={() => act(() => approveSubmission(id))}>
             {isPending ? "Approving…" : "Approve"}
           </button>

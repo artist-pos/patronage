@@ -7,8 +7,6 @@ import { createNotification } from "@/lib/notifications";
 import { isAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { slugForPublish } from "@/lib/opportunity-publish";
-import { isAggregated, missingOutreachDetails } from "@/lib/claim-outreach";
-import type { Opportunity } from "@/types/database";
 import { resolveRejectionReasons, summariseRejection, type RejectionReason } from "@/lib/listing-rejection";
 
 async function guard() {
@@ -64,21 +62,13 @@ export async function approveSubmission(submissionId: string, options: { waiveFe
   // Fetch current state so the slug can be rebuilt from the edited details.
   const { data: opp } = await supabase
     .from("opportunities")
-    .select("id, slug, title, organiser, deadline, status, routing_type, pipeline_paid_at, origin, profile_id, claim_email, claim_contact_name, claim_current_tool")
+    .select("id, slug, title, organiser, deadline, status, routing_type, pipeline_paid_at")
     .eq("id", submissionId)
     .eq("status", "pending")
     .single();
 
-  // Tips and admin listings have nobody behind them yet: the claim email needs
-  // someone to write to before they go live.
-  if (opp && isAggregated(opp as Pick<Opportunity, "origin" | "profile_id">)) {
-    const missing = missingOutreachDetails({
-      email: opp.claim_email ?? "",
-      contactName: opp.claim_contact_name ?? "",
-      currentTool: opp.claim_current_tool ?? "",
-    });
-    if (missing.length > 0) return { error: `Add the ${missing.join(", ")} before approving.` };
-  }
+  // Outreach details are optional: a tip or admin listing without them goes
+  // live, it just isn't emailed by the claim cron until they're added.
 
   // Pipeline listings must have the activation fee paid before they can go live —
   // the partner is routed to /activate when they submit, but that doesn't block

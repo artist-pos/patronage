@@ -51,8 +51,8 @@ export function PreviewLink({ id, className }: { id: string; className?: string 
 
 /**
  * Who to contact about a listing nobody has claimed, and how they take
- * applications today. Required before approval: it feeds the claim CSV, the
- * invite panel and the daily claim emails.
+ * applications today. Optional: approval doesn't wait for it, but the claim
+ * CSV, the invite panel and the daily claim emails only reach listings that have it.
  */
 export function OutreachFields({
   opp,
@@ -92,11 +92,11 @@ export function OutreachFields({
   }
 
   return (
-    <div className={`rounded-lg border p-3 ${missing.length ? "border-amber-300 bg-amber-50/50" : "border-border bg-stone-50/60"}`}>
+    <div className="rounded-lg border border-border bg-stone-50/60 p-3">
       <p className="mb-2 text-xs font-medium">
         Claim outreach{" "}
         <span className="font-normal text-muted-foreground">
-          {missing.length ? `· needed before approval: ${missing.join(", ")}` : "· saved, ready for the claim email"}
+          {missing.length ? "· optional, add them so the daily claim email can reach this listing" : "· saved, ready for the claim email"}
         </span>
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
