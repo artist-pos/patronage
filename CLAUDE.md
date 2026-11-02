@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Application pipeline** — artists apply directly to pipeline opportunities; partners review submissions
 - **Role-based dashboards** — artists, patrons, partners, admins
 
+**Product principle**: Patronage is a tool for doing things, not a place for appearing to do things. Social features serve the loop on the About page (organisation creates an opportunity → artists apply → the work gets made → the record makes the next one easier). Engagement numbers go privately to the person they're about, never as public counts or rankings. Roadmap: `docs/social-phase-1.md`, `docs/social-phase-2-3.md`.
+
 **Language**: Always use NZ/British spelling in all user-facing text: organise, colour, honour, behaviour, centre, travelling, cancelled, analyse, favour, programme (arts context). Never US spellings.
 
 ---
