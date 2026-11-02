@@ -8,6 +8,8 @@ import { NotesSection } from "@/components/projects/NotesSection";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import { ArtistProfileLink } from "@/components/projects/ArtistProfileLink";
 import { ThreadScrollTo } from "@/components/projects/ThreadScrollTo";
+import { AppreciateButton } from "@/components/feed/AppreciateButton";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import type { CollaboratorProfile } from "@/types/database";
 
 interface Props {
@@ -45,6 +47,17 @@ export default async function ThreadModal({ params, searchParams }: Props) {
 
   const { project, posts } = thread;
   const artistName = project.artist_full_name ?? project.artist_username;
+  const isOwner = user?.id === project.artist_id;
+
+  // The viewer's own appreciations on this thread's posts (225).
+  const { data: myAppreciations } = user && !isOwner && posts.length > 0
+    ? await supabase
+        .from("update_appreciations")
+        .select("update_id")
+        .eq("user_id", user.id)
+        .in("update_id", posts.map((p) => p.id))
+    : { data: [] };
+  const appreciatedIds = new Set((myAppreciations ?? []).map((r) => r.update_id));
 
   return (
     <ModalShell>
@@ -95,6 +108,8 @@ export default async function ThreadModal({ params, searchParams }: Props) {
                 post={post}
                 isFirst={i === 0}
                 canNote={canNote}
+                canAppreciate={!isOwner}
+                appreciated={appreciatedIds.has(post.id)}
                 currentUserId={user?.id}
                 currentUserName={currentUserName}
                 currentUserUsername={currentUserUsername}
@@ -112,6 +127,8 @@ function ModalThreadPost({
   post,
   isFirst,
   canNote,
+  canAppreciate,
+  appreciated,
   currentUserId,
   currentUserName,
   currentUserUsername,
@@ -120,6 +137,8 @@ function ModalThreadPost({
   post: ThreadPost;
   isFirst: boolean;
   canNote: boolean;
+  canAppreciate: boolean;
+  appreciated: boolean;
   currentUserId?: string;
   currentUserName?: string;
   currentUserUsername?: string;
@@ -144,9 +163,17 @@ function ModalThreadPost({
       </div>
 
       <div className="space-y-3">
-        <p className="text-xs font-mono text-muted-foreground pt-1">
-          {formatTimestamp(post.created_at)}
-        </p>
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <p className="text-xs font-mono text-muted-foreground">
+            {formatTimestamp(post.created_at)}
+          </p>
+          {canAppreciate && (
+            <div className="flex shrink-0 items-center gap-1">
+              <AppreciateButton updateId={post.id} appreciated={appreciated} isAuthenticated={!!currentUserId} />
+              <SaveToBoard itemType="update" itemId={post.id} isAuthenticated={!!currentUserId} />
+            </div>
+          )}
+        </div>
 
         {post.image_url && (
           <div className="border border-black overflow-hidden bg-muted">

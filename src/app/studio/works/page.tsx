@@ -37,7 +37,7 @@ export default async function StudioWorksPage({ searchParams }: PageProps) {
     : "all";
   const initialWorksView: "list" | "grid" = params.view === "grid" ? "grid" : "list";
 
-  const [worksResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult, seriesArtworkIdsResult] =
+  const [worksResult, featuredRows, engagementRows, pendingConfirmationCount, seriesResult, seriesArtworkIdsResult, saveCountsResult] =
     await Promise.all([
       supabase
         .from("artworks")
@@ -76,6 +76,8 @@ export default async function StudioWorksPage({ searchParams }: PageProps) {
             )
           )
         ),
+      // Saves of this artist's work on other people's boards (224): counts only.
+      supabase.rpc("board_save_counts"),
     ]);
 
   const featuredIds = new Set(
@@ -109,11 +111,16 @@ export default async function StudioWorksPage({ searchParams }: PageProps) {
     artworkCount: (s.series_artworks as unknown as [{ count: number }])?.[0]?.count ?? 0,
   }));
 
-  const engagementMap: Record<string, { view: number; play: number }> = {};
+  const engagementMap: Record<string, { view: number; play: number; saves?: number }> = {};
   for (const row of ((engagementRows as { data: { work_id: string; event_type: string }[] | null } | null)?.data ?? [])) {
     if (!engagementMap[row.work_id]) engagementMap[row.work_id] = { view: 0, play: 0 };
     if (row.event_type === "view") engagementMap[row.work_id].view++;
     if (row.event_type === "play") engagementMap[row.work_id].play++;
+  }
+  for (const row of (saveCountsResult.data ?? []) as Array<{ item_type: string; item_id: string; saves: number }>) {
+    if (row.item_type !== "artwork") continue;
+    if (!engagementMap[row.item_id]) engagementMap[row.item_id] = { view: 0, play: 0 };
+    engagementMap[row.item_id].saves = Number(row.saves);
   }
 
   return (

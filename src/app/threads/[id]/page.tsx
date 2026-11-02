@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { AppreciateButton } from "@/components/feed/AppreciateButton";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { EditProjectHeader } from "@/components/projects/EditProjectHeader";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
@@ -71,6 +73,16 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   const { project, posts } = thread;
   const isOwner = currentUserProfile?.id === project.artist_id;
   const artistName = project.artist_full_name ?? project.artist_username;
+
+  // The viewer's own appreciations on this thread's posts (225).
+  const { data: myAppreciations } = user && !isOwner && posts.length > 0
+    ? await supabase
+        .from("update_appreciations")
+        .select("update_id")
+        .eq("user_id", user.id)
+        .in("update_id", posts.map((p) => p.id))
+    : { data: [] };
+  const appreciatedIds = new Set((myAppreciations ?? []).map((r) => r.update_id));
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 space-y-10">
@@ -159,6 +171,8 @@ export default async function ThreadPage({ params, searchParams }: Props) {
               artistName={artistName}
               canEdit={isOwner || isAdmin}
               canNote={canNote}
+              canAppreciate={!isOwner}
+              appreciated={appreciatedIds.has(post.id)}
               currentUserId={user?.id}
               currentUserName={currentUserName}
               currentUserUsername={currentUserUsername}
@@ -180,6 +194,8 @@ function ThreadPostItem({
   artistName,
   canEdit,
   canNote,
+  canAppreciate,
+  appreciated,
   currentUserId,
   currentUserName,
   currentUserUsername,
@@ -191,6 +207,8 @@ function ThreadPostItem({
   artistName: string;
   canEdit: boolean;
   canNote: boolean;
+  canAppreciate: boolean;
+  appreciated: boolean;
   currentUserId?: string;
   currentUserName?: string;
   currentUserUsername?: string;
@@ -231,6 +249,16 @@ function ThreadPostItem({
                 initialCaption={post.caption ?? null}
                 initialTextContent={post.text_content ?? null}
               />
+            )}
+            {canAppreciate && (
+              <AppreciateButton
+                updateId={post.id}
+                appreciated={appreciated}
+                isAuthenticated={!!currentUserId}
+              />
+            )}
+            {canAppreciate && (
+              <SaveToBoard itemType="update" itemId={post.id} isAuthenticated={!!currentUserId} />
             )}
             <ShareTrigger
               variant="icon"

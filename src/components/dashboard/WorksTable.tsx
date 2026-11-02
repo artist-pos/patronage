@@ -306,7 +306,7 @@ function SortableItem({
   view: "list" | "grid";
   draggable: boolean;
   busy: boolean;
-  stats?: { view: number; play: number };
+  stats?: { view: number; play: number; saves?: number };
   handlers: ItemHandlers;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: !draggable });
@@ -380,6 +380,8 @@ function SortableItem({
         <div className="hidden sm:flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
           {stats.view > 0 && <span>👁 {stats.view}</span>}
           {isMedia && stats.play > 0 && <span>▶ {stats.play}</span>}
+          {/* Saves to other people's boards (224). Only the artist sees this. */}
+          {(stats.saves ?? 0) > 0 && <span title="Saved to boards — only you can see this">Saved {stats.saves}×</span>}
         </div>
       )}
       <div className="flex items-center gap-1.5 shrink-0">{pills}</div>
@@ -394,7 +396,7 @@ interface Props {
   works: WorkItem[];
   seriesItems: SeriesRow[];
   featuredCount: number;
-  engagementMap?: Record<string, { view: number; play: number }>;
+  engagementMap?: Record<string, { view: number; play: number; saves?: number }>;
   filter: WorksFilter;
   view: "list" | "grid";
 }

@@ -16,7 +16,7 @@ interface Props {
   missingFields: { key: string; label: string; href: string }[];
   works: WorkItem[];
   featuredCount: number;
-  engagementMap: Record<string, { view: number; play: number }>;
+  engagementMap: Record<string, { view: number; play: number; saves?: number }>;
   pendingConfirmationCount: number;
   seriesList: Array<{ id: string; title: string; slug: string; hero_image_url: string | null; artworkCount: number; is_featured: boolean; position: number }>;
   stripeConnectEnabled: boolean;

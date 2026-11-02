@@ -201,6 +201,8 @@ export interface Opportunity {
   /** Set when the organiser archives a finished opportunity (migration 197). The page stays up. */
   archived_at?: string | null;
   featured_until?: string | null;
+  /** Migration 223: when followers of the organiser were alerted. Null = not yet. */
+  followers_alerted_at?: string | null;
 }
 
 export type RecurrencePattern =
@@ -271,7 +273,8 @@ export interface Notification {
   user_id: string;
   type:
     | 'sale' | 'support' | 'transfer_request' | 'transfer_accepted' | 'note'
-    | 'roster_invite' | 'roster_accepted' | 'roster_declined' | 'roster_left' | 'roster_removed';
+    | 'roster_invite' | 'roster_accepted' | 'roster_declined' | 'roster_left' | 'roster_removed'
+    | 'org_opportunity' | 'opportunity_invite';
   title: string;
   body: string | null;
   link: string | null;
@@ -412,6 +415,8 @@ export interface Profile {
   deadline_reminders?: boolean;
   /** Migration 220: weekly "your profile was viewed N times" email. Defaults on. */
   profile_view_emails?: boolean;
+  /** Migration 223: email me when an organisation I follow posts an opportunity. Defaults on. */
+  opportunity_alerts?: boolean;
   /** Secret in the digest footer link, so a signed-out account holder can
    *  unsubscribe (migration 185). Since 185 weekly_digest above is the only
    *  record of the subscription; the subscribers table holds addresses with
@@ -1151,6 +1156,30 @@ export interface NoteWithSender extends ProjectNote {
   sender_name: string;
   sender_username: string;
   sender_avatar_url: string | null;
+}
+
+/** Migration 224. Private by default; 'link' boards open by share token. */
+export interface Board {
+  id: string;
+  owner_id: string;
+  title: string;
+  description: string | null;
+  visibility: 'private' | 'link' | 'public';
+  share_token: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BoardItemType = 'artwork' | 'update' | 'artist';
+
+export interface BoardItem {
+  id: string;
+  board_id: string;
+  item_type: BoardItemType;
+  item_id: string;
+  artist_id: string;
+  position: number;
+  created_at: string;
 }
 
 export interface Follow {

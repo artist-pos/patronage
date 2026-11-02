@@ -7,6 +7,8 @@ import type { ProjectUpdateWithArtist } from "@/types/database";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { AdminHideToggle } from "@/components/feed/AdminHideToggle";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
+import { AppreciateButton } from "@/components/feed/AppreciateButton";
 import { gridImageSrc } from "@/lib/image";
 
 /* Minimal video pin — native `controls` brings the full browser control bar
@@ -151,6 +153,8 @@ interface FeedCardProps {
   currentUserId?: string;
   /** admins/owners can edit any post */
   isAdmin?: boolean;
+  /** The viewer has appreciated this update (225) — their own mark only. */
+  appreciated?: boolean;
 }
 
 /**
@@ -159,9 +163,10 @@ interface FeedCardProps {
  * All other types: white surface on the feed bg, teal mono kicker, footer
  * attribution row with a border-top divider. No borders, no radius, no shadow.
  */
-export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false }: FeedCardProps) {
+export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false, appreciated = false }: FeedCardProps) {
   const name = u.artist_full_name ?? u.artist_username;
   const canEdit = !!currentUserId && (u.artist_id === currentUserId || isAdmin);
+  const isOwnPost = !!currentUserId && u.artist_id === currentUserId;
   const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`;
 
   const SITE_URL = "https://patronage.nz";
@@ -200,6 +205,20 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           onDark={onDark}
         />
       )}
+      {!isOwnPost && (
+        <AppreciateButton
+          updateId={u.id}
+          appreciated={appreciated}
+          isAuthenticated={currentUserId ? true : undefined}
+          onDark={onDark}
+        />
+      )}
+      <SaveToBoard
+        itemType="update"
+        itemId={u.id}
+        isAuthenticated={currentUserId ? true : undefined}
+        onDark={onDark}
+      />
       <ShareTrigger
         payload={sharePayload}
         variant="icon"

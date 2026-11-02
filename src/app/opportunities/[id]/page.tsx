@@ -9,6 +9,7 @@ import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { AdminEditOpportunityModal } from "@/components/opportunities/AdminEditOpportunityModalDynamic";
 import { AdminRejectButton } from "@/components/opportunities/AdminRejectButton";
 import { SaveButton } from "@/components/opportunities/SaveButton";
+import { FollowButton } from "@/components/profile/FollowButton";
 import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ExitIntentPrompt } from "@/components/opportunities/ExitIntentPrompt";
 import { RemindMeCapture } from "@/components/opportunities/RemindMeCapture";
@@ -20,6 +21,7 @@ import { StructuredDescription } from "@/components/opportunities/DescriptionAcc
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
 import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
 import { OpportunityShareMenu } from "@/components/opportunities/OpportunityShareMenu";
 import {
@@ -299,6 +301,81 @@ async function SaveAction({ opp }: { opp: Opportunity }) {
   );
 }
 
+// ─── Island 1c: Follow the organiser (beside its name) ────────────────────────
+// Following an organisation means an email when it posts the next one (223).
+
+async function OrganiserFollow({ organiserId }: { organiserId: string }) {
+  const { supabase, user } = await getServerUser();
+  if (user?.id === organiserId) return null;
+  let following = false;
+  if (user) {
+    const { data } = await supabase
+      .from("follows")
+      .select("id")
+      .eq("follower_id", user.id)
+      .eq("following_id", organiserId)
+      .maybeSingle();
+    following = !!data;
+  }
+  return (
+    <FollowButton
+      followingId={organiserId}
+      initialIsFollowing={following}
+      isAuthenticated={!!user}
+      variant="inline"
+    />
+  );
+}
+
+// ─── Island 1d: How it went (outcome reports, 226) ────────────────────────────
+// Totals only, behind thresholds the database enforces: nothing below 3
+// reports, response figures from 5 applicants, 1–2 shown as "a few".
+
+async function OutcomeSummary({ opp, isClosed }: { opp: Opportunity; isClosed: boolean }) {
+  const supabase = createPublicClient();
+  const [{ data: aggRows }, { data: tipRows }] = await Promise.all([
+    supabase.rpc("get_opportunity_outcomes", { opp_id: opp.id }),
+    supabase.rpc("get_opportunity_tips", { opp_id: opp.id }),
+  ]);
+  const agg = (aggRows as Array<{ reports: number | null; applied: number | null; heard_back: number | null; typical_weeks: number | null }> | null)?.[0];
+  const tips = (tipRows ?? []) as Array<{ tip: string; created_at: string }>;
+  const reportHref = `/opportunities/${opp.slug ?? opp.id}/outcome`;
+  const hasFigures = !!agg?.reports;
+
+  if (!hasFigures && !isClosed) return null;
+
+  const few = (n: number) => (n === -1 ? "a few" : String(n));
+  const figures: string[] = [];
+  if (agg?.reports) figures.push(`Reported by ${few(agg.reports)} artists`);
+  if (agg?.applied != null && agg.heard_back != null) figures.push(`${few(agg.heard_back)} of ${agg.applied} applicants heard back`);
+  if (agg?.typical_weeks != null) figures.push(`typical reply ${agg.typical_weeks} week${agg.typical_weeks === 1 ? "" : "s"} after the deadline`);
+
+  return (
+    <section className="mb-9 border-y border-border py-5">
+      <h2 className="mb-2 font-mono text-xs uppercase tracking-[0.1em] text-[color:var(--fg-subtle)]">How it went</h2>
+      {hasFigures ? (
+        <p className="text-sm">{figures.join(" · ")}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">No reports yet from artists who applied.</p>
+      )}
+      {tips.length > 0 && (
+        <ul className="mt-4 space-y-3">
+          {tips.map((t, i) => (
+            <li key={i} className="border-l-2 border-border pl-3 text-sm text-[color:var(--fg-muted)]">
+              {t.tip}
+            </li>
+          ))}
+        </ul>
+      )}
+      {isClosed && (
+        <Link href={reportHref} className="mt-3 inline-block font-mono text-xs underline underline-offset-2 hover:text-foreground">
+          Applied? Share how it went →
+        </Link>
+      )}
+    </section>
+  );
+}
+
 // ─── Island 2: Social proof (save count + view count + trending badge) ─────────
 // Separate from HeaderActions so the count query isn't duplicated.
 
@@ -442,14 +519,14 @@ export default async function OpportunityPage({ params }: Props) {
       .order("deadline", { ascending: true, nullsFirst: false }).limit(300),
     // The explicitly linked organiser wins; otherwise fall back to whoever posted it.
     (opp.organiser_profile_id ?? opp.profile_id)
-      ? adminDb.from("profiles").select("username, full_name, avatar_url, role").eq("id", (opp.organiser_profile_id ?? opp.profile_id)!).single()
+      ? adminDb.from("profiles").select("id, username, full_name, avatar_url, role").eq("id", (opp.organiser_profile_id ?? opp.profile_id)!).single()
       : Promise.resolve({ data: null }),
     isClosed ? getSimilarOpenOpportunities(opp, 6) : Promise.resolve([]),
   ]);
   // Only link to the profile if it belongs to a dedicated partner account.
   // Admins, owners, and artists who submitted on behalf of an org should
   // not have their personal profile linked as the organiser.
-  const rawPartner = partnerProfileRes.data as { username: string; full_name: string | null; avatar_url: string | null; role: string } | null;
+  const rawPartner = partnerProfileRes.data as { id: string; username: string; full_name: string | null; avatar_url: string | null; role: string } | null;
   const partnerProfile = rawPartner && rawPartner.role === "partner" ? rawPartner : null;
   // Best matches from every other open listing. Ties keep soonest-deadline
   // order (the query is sorted by deadline and Array.sort is stable).
@@ -756,23 +833,28 @@ export default async function OpportunityPage({ params }: Props) {
       {/* ── Title + organiser — STATIC ──────────────────────────────────── */}
       <h1 className="mb-1.5 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em]">{opp.title}</h1>
       {partnerProfile ? (
-        <Link
-          href={`/${partnerProfile.username}`}
-          className="mb-6 inline-flex items-center gap-2 text-[14.5px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
-        >
-          {partnerProfile.avatar_url && (
-            <div className="relative w-5 h-5 shrink-0 overflow-hidden">
-              <Image
-                src={partnerProfile.avatar_url}
-                alt={opp.organiser}
-                fill
-                className="object-cover"
-                sizes="20px"
-              />
-            </div>
-          )}
-          {opp.organiser}
-        </Link>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/${partnerProfile.username}`}
+            className="inline-flex items-center gap-2 text-[14.5px] text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
+          >
+            {partnerProfile.avatar_url && (
+              <div className="relative w-5 h-5 shrink-0 overflow-hidden">
+                <Image
+                  src={partnerProfile.avatar_url}
+                  alt={opp.organiser}
+                  fill
+                  className="object-cover"
+                  sizes="20px"
+                />
+              </div>
+            )}
+            {opp.organiser}
+          </Link>
+          <Suspense fallback={null}>
+            <OrganiserFollow organiserId={partnerProfile.id} />
+          </Suspense>
+        </div>
       ) : (
         <p className="mb-6 text-[14.5px] text-[color:var(--fg-muted)]">{opp.organiser}</p>
       )}
@@ -873,6 +955,11 @@ export default async function OpportunityPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* ── How it went — DYNAMIC (outcome reports, 226) ─────────────────── */}
+      <Suspense fallback={null}>
+        <OutcomeSummary opp={opp} isClosed={isClosed} />
+      </Suspense>
 
       {/* ── At a glance — the facts as plain sentences, quotable on their own ── */}
       <div className="mb-8 max-w-[62ch] space-y-1">

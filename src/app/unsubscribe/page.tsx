@@ -14,6 +14,8 @@ export default async function UnsubscribePage({ searchParams }: Props) {
   const remindersOnly = list === "reminders";
   // ?list=views stops only the Monday profile-views email.
   const viewsOnly = list === "views";
+  // ?list=alerts stops only alerts from organisations they follow (223).
+  const alertsOnly = list === "alerts";
 
   let status: "success" | "missing" | "not_found" | "error" = "missing";
 
@@ -49,17 +51,20 @@ export default async function UnsubscribePage({ searchParams }: Props) {
             ? { deadline_reminders: false }
             : viewsOnly
               ? { profile_view_emails: false }
-              : {
-                  weekly_digest: false,
-                  marketing_subscription: false,
-                  deadline_reminders: false,
-                  profile_view_emails: false,
-                }
+              : alertsOnly
+                ? { opportunity_alerts: false }
+                : {
+                    weekly_digest: false,
+                    marketing_subscription: false,
+                    deadline_reminders: false,
+                    profile_view_emails: false,
+                    opportunity_alerts: false,
+                  }
         )
         .eq("id", (profile as { id: string }).id);
       status = flagErr ? "error" : "success";
-    } else if (viewsOnly) {
-      // Profile-view emails belong to account holders; there is no other list to leave.
+    } else if (viewsOnly || alertsOnly) {
+      // Profile-view emails and organisation alerts belong to account holders; there is no other list to leave.
       status = "not_found";
     } else if (remindersOnly) {
       // Email-only reminders (219): the token stops every reminder for that address.
@@ -114,7 +119,9 @@ export default async function UnsubscribePage({ searchParams }: Props) {
                 ? "You won't get deadline reminders for saved opportunities any more. The weekly digest is unchanged."
                 : viewsOnly
                   ? "You won't get the weekly profile-views email any more. Everything else is unchanged."
-                  : "You've been removed from the weekly digest, deadline reminders and profile-view emails. You won't receive any further marketing emails."}
+                  : alertsOnly
+                    ? "You won't get emails when organisations you follow post opportunities. You'll still follow them, and everything else is unchanged."
+                    : "You've been removed from the weekly digest, deadline reminders, profile-view emails and organisation alerts. You won't receive any further marketing emails."}
             </p>
           )}
 

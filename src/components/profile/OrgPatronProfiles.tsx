@@ -175,12 +175,15 @@ interface PartnerProps {
   /** The region's most complete artist profiles, already capped, for a regional
    *  arts body's page. They are in the region, not on this organisation's list. */
   regionArtists?: Array<{ artist: ProfileWithImage; location: string | null }>;
+  alreadyFollowing?: boolean;
+  /** Owner only. Follower numbers are never shown publicly (016). */
+  followerCount?: number | null;
 }
 
 export function PartnerProfileView({
   profile, displayName, isOwner, canMessage, messageHint, verified, unclaimed = false,
   isAuthenticated = false, activeOpps, pastOpps, commissionedArtists, listedCount, selectedTotal, roster,
-  owners = [], regionLink, regionArtists = [],
+  owners = [], regionLink, regionArtists = [], alreadyFollowing = false, followerCount = null,
 }: PartnerProps) {
   const cover = profile.featured_image_url
     ? profile.featured_image_url
@@ -284,6 +287,11 @@ export function PartnerProfileView({
               {profile.organisation_type === "charity" && (
                 <span className={BADGE_NEUTRAL}>Registered charity</span>
               )}
+              {isOwner && followerCount !== null && (
+                <span className="font-mono text-xs text-[color:var(--fg-subtle)]">
+                  {followerCount} follower{followerCount !== 1 ? "s" : ""} · only you can see this
+                </span>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -294,6 +302,14 @@ export function PartnerProfileView({
               >
                 Edit Profile
               </Link>
+            )}
+            {/* Following an organisation means hearing when it posts an opportunity (223). */}
+            {!isOwner && (
+              <FollowButton
+                followingId={profile.id}
+                initialIsFollowing={alreadyFollowing}
+                isAuthenticated={isAuthenticated}
+              />
             )}
             {!isOwner && !regionLink && (unclaimed || canMessage || !isAuthenticated) && (
               <PartnerEnquireButton

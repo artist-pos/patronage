@@ -4,6 +4,7 @@ import { getProfileById } from "@/lib/profiles";
 import { DigestToggle } from "@/components/profile/DigestToggle";
 import { ReminderToggle } from "@/components/profile/ReminderToggle";
 import { ProfileViewsToggle } from "@/components/profile/ProfileViewsToggle";
+import { OrgAlertsToggle } from "@/components/profile/OrgAlertsToggle";
 import { TerminateAccountButton } from "@/components/profile/TerminateAccountButton";
 import type { Metadata } from "next";
 
@@ -30,6 +31,7 @@ export default async function StudioAccountPage() {
           autoSync={fullProfile.weekly_digest === null}
         />
         <ReminderToggle initial={fullProfile.deadline_reminders ?? true} />
+        <OrgAlertsToggle initial={fullProfile.opportunity_alerts ?? true} />
         <ProfileViewsToggle initial={fullProfile.profile_view_emails ?? true} />
       </section>
 

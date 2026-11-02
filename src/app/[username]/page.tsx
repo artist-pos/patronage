@@ -16,6 +16,7 @@ import { ProfileViewLogger } from "@/components/profile/ProfileViewLogger";
 import { TrackedLink } from "@/components/profile/TrackedLink";
 import { LazyCreateUpdateModal } from "@/components/feed/LazyCreateUpdateModal";
 import { FollowButton } from "@/components/profile/FollowButton";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import {
   PartnerProfileView,
   PatronProfileView,
@@ -522,6 +523,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
   let partnerOwners: PublicOwner[] = [];
   let partnerRegionLink: { slug: string; name: string } | null = null;
   let partnerRegionArtists: Array<{ artist: ProfileWithImage; location: string | null }> = [];
+  let partnerFollowerCount: number | null = null;
   if (!isArtistProfile && profile.role === "partner") {
     partnerRoster = await getOrgRoster(profile.id);
     // Owners already on the roster appear there, so they aren't shown twice.
@@ -580,6 +582,14 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
       isRegionalArtsBody ? getCitiesForRegion(profile.region_id!) : Promise.resolve([]),
     ]);
     partnerRoster = rosterRes;
+    // Only the organisation itself sees how many follow it (016: never public).
+    if (isOwner) {
+      const { count } = await supabase
+        .from("follows")
+        .select("id", { count: "exact", head: true })
+        .eq("following_id", profile.id);
+      partnerFollowerCount = count ?? 0;
+    }
     partnerRegionLink = (regionRes.data as { slug: string; name: string } | null) ?? null;
     if (partnerRegionLink) {
       const cityNameById = new Map(regionCities.map((c) => [c.id, c.name]));
@@ -1048,6 +1058,15 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       CV
                     </TrackedLink>
                   )}
+                  {/* Organisations shortlist artists; patrons keep artists to follow up. */}
+                  {!isOwner && !profile.is_minor && (
+                    <SaveToBoard
+                      itemType="artist"
+                      itemId={profile.id}
+                      isAuthenticated={!!user}
+                      className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+                    />
+                  )}
                   <ShareTrigger
                     variant="icon"
                     className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
@@ -1191,6 +1210,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
           owners={partnerOwners}
           regionLink={partnerRegionLink}
           regionArtists={partnerRegionArtists}
+          alreadyFollowing={alreadyFollowing}
+          followerCount={partnerFollowerCount}
         />
       ) : (
         <PatronProfileView

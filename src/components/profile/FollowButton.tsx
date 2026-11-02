@@ -9,9 +9,11 @@ interface Props {
   initialIsFollowing: boolean;
   /** When false, clicking routes to login instead of toggling */
   isAuthenticated?: boolean;
+  /** "inline" sits beside a name (an opportunity's organiser) rather than in an action bar. */
+  variant?: "default" | "inline";
 }
 
-export function FollowButton({ followingId, initialIsFollowing, isAuthenticated = true }: Props) {
+export function FollowButton({ followingId, initialIsFollowing, isAuthenticated = true, variant = "default" }: Props) {
   const [following, setFollowing] = useState(initialIsFollowing);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -29,6 +31,22 @@ export function FollowButton({ followingId, initialIsFollowing, isAuthenticated 
       }
       setFollowing((f) => !f);
     });
+  }
+
+  if (variant === "inline") {
+    return (
+      <button
+        onClick={toggle}
+        disabled={pending}
+        className={`inline-flex h-7 items-center border px-2.5 font-mono text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+          following
+            ? "border-border text-[color:var(--fg-muted)] hover:border-foreground hover:text-foreground"
+            : "border-foreground text-foreground hover:bg-foreground hover:text-background"
+        }`}
+      >
+        {following ? "Following" : "Follow"}
+      </button>
+    );
   }
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { renderExplorePin, type ExplorePin } from "@/components/feed/ExplorePinCards";
+import { getMyAppreciations } from "@/actions/appreciations";
 import type { ProjectUpdateWithArtist } from "@/types/database";
 
 /* Only used to decide whether "All updates loaded." is worth showing — the
@@ -100,6 +101,19 @@ export function InfiniteFeed({
   const router = useRouter();
   const params = useSearchParams();
 
+  // The viewer's own appreciations (225), fetched for whatever has loaded.
+  const [appreciated, setAppreciated] = useState<Set<string>>(new Set());
+  const checkedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!currentUserId) return;
+    const unchecked = updates.map((u) => u.id).filter((id) => !checkedRef.current.has(id));
+    if (unchecked.length === 0) return;
+    unchecked.forEach((id) => checkedRef.current.add(id));
+    getMyAppreciations(unchecked).then((ids) => {
+      if (ids.length) setAppreciated((prev) => new Set([...prev, ...ids]));
+    }).catch(() => {});
+  }, [updates, currentUserId]);
+
   // Reset when initial updates change (audience switch causes page re-render)
   useEffect(() => {
     setUpdates(initialUpdates);
@@ -168,6 +182,7 @@ export function InfiniteFeed({
           priority={eager()}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
+          appreciated={appreciated.has(u.id)}
         />
       );
       if ((i + 1) % 4 === 0 && extras.length > 0) {

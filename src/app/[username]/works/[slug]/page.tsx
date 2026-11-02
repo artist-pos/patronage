@@ -9,6 +9,7 @@ import { AvailableWorkPill } from "@/components/profile/AvailableWorkPill";
 import { WorkEngagementTracker } from "@/components/profile/WorkEngagementTracker";
 import { ProjectThread } from "@/components/works/ProjectThread";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import type { WorkImage } from "@/types/database";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
@@ -290,6 +291,9 @@ export default async function WorkDetailPage({ params }: Props) {
                     shareUrl: `${SITE_URL}/${username}/works/${work.slug ?? work.id}`,
                   }}
                 />
+                {!isOwner && !profile.is_minor && (
+                  <SaveToBoard itemType="artwork" itemId={work.id} isAuthenticated={!!viewer} />
+                )}
                 {isAvailable && (
                   <AvailableWorkPill
                     artistId={profile.id}

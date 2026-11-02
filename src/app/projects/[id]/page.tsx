@@ -9,6 +9,8 @@ import { getVisibleNotes } from "@/lib/notes";
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { ShareTrigger } from "@/components/share/ShareTrigger";
+import { AppreciateButton } from "@/components/feed/AppreciateButton";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
 import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
@@ -167,6 +169,17 @@ export default async function ProjectPage({ params }: Props) {
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
   const isAdmin = currentUserProfile?.role === "admin" || currentUserProfile?.role === "owner";
   const canEdit = currentUserProfile?.id === update.artist_id || isAdmin;
+  const isOwnUpdate = user?.id === update.artist_id;
+
+  // The viewer's own appreciation only (225).
+  const { data: myAppreciation } = user && !isOwnUpdate
+    ? await supabase
+        .from("update_appreciations")
+        .select("update_id")
+        .eq("update_id", id)
+        .eq("user_id", user.id)
+        .maybeSingle()
+    : { data: null };
 
   const canNote = !!user;
 
@@ -280,6 +293,22 @@ export default async function ProjectPage({ params }: Props) {
                 initialTextContent={update.text_content ?? null}
               />
             ) : null}
+            {!isOwnUpdate && (
+              <AppreciateButton
+                updateId={id}
+                appreciated={!!myAppreciation}
+                isAuthenticated={!!user}
+                variant="button"
+              />
+            )}
+            {!isOwnUpdate && (
+              <SaveToBoard
+                itemType="update"
+                itemId={id}
+                isAuthenticated={!!user}
+                className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+              />
+            )}
             <ShareTrigger
               variant="icon"
               className="p-2 border border-border hover:bg-muted transition-colors"

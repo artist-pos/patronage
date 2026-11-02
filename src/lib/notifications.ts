@@ -10,7 +10,9 @@ export type NotificationType =
   | "roster_accepted"
   | "roster_declined"
   | "roster_left"
-  | "roster_removed";
+  | "roster_removed"
+  | "org_opportunity"
+  | "opportunity_invite";
 
 export interface Notification {
   id: string;

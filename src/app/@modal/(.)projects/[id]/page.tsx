@@ -8,6 +8,8 @@ import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
 import { ModalShell } from "@/components/projects/ModalShell";
 import { ArtistProfileLink } from "@/components/projects/ArtistProfileLink";
+import { AppreciateButton } from "@/components/feed/AppreciateButton";
+import { SaveToBoard } from "@/components/boards/SaveToBoard";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -26,6 +28,17 @@ export default async function ProjectModal({ params }: Props) {
   const currentUserUsername = currentUserProfile?.username;
   const currentUserAvatarUrl = currentUserProfile?.avatar_url ?? null;
   const canNote = !!user;
+  const isOwnUpdate = user?.id === update.artist_id;
+
+  // The viewer's own appreciation only (225).
+  const { data: myAppreciation } = user && !isOwnUpdate
+    ? await supabase
+        .from("update_appreciations")
+        .select("update_id")
+        .eq("update_id", id)
+        .eq("user_id", user.id)
+        .maybeSingle()
+    : { data: null };
 
   const name = update.artist_full_name ?? update.artist_username;
   const date = new Date(update.created_at).toLocaleDateString("en-NZ", {
@@ -133,6 +146,22 @@ export default async function ProjectModal({ params }: Props) {
               </ArtistProfileLink>
               <p className="text-xs text-muted-foreground">{date}</p>
             </div>
+            {!isOwnUpdate && (
+              <div className="ml-auto flex items-center gap-2">
+                <AppreciateButton
+                  updateId={update.id}
+                  appreciated={!!myAppreciation}
+                  isAuthenticated={!!user}
+                  variant="button"
+                />
+                <SaveToBoard
+                  itemType="update"
+                  itemId={update.id}
+                  isAuthenticated={!!user}
+                  className="flex h-9 w-9 items-center justify-center border border-border transition-colors hover:bg-muted"
+                />
+              </div>
+            )}
           </div>
 
           {update.collaborators && update.collaborators.length > 0 && (

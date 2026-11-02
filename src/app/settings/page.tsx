@@ -13,6 +13,7 @@ import { TerminateAccountButton } from "@/components/profile/TerminateAccountBut
 import { DigestToggle } from "@/components/profile/DigestToggle";
 import { ReminderToggle } from "@/components/profile/ReminderToggle";
 import { ProfileViewsToggle } from "@/components/profile/ProfileViewsToggle";
+import { OrgAlertsToggle } from "@/components/profile/OrgAlertsToggle";
 import { PrivacySection } from "@/components/profile/PrivacySection";
 import type { Metadata } from "next";
 
@@ -244,6 +245,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                   autoSync={isArtist && profile.weekly_digest === null}
                 />
                 <ReminderToggle initial={profile.deadline_reminders ?? true} />
+                <OrgAlertsToggle initial={profile.opportunity_alerts ?? true} />
                 {isArtist && <ProfileViewsToggle initial={profile.profile_view_emails ?? true} />}
               </section>
 

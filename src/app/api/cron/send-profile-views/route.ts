@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResultEmails } from "@/lib/email";
-import { MIN_WEEKLY_VIEWS, buildProfileViewsEmail, type WeeklyProfileStats } from "@/lib/profile-views-email";
+import { buildProfileViewsEmail, hasWeeklyNews, type WeeklyProfileStats } from "@/lib/profile-views-email";
 
 const DAY_MS = 86_400_000;
 const EVENT_TYPES = ["profile_view", "cv_click", "website_click", "artwork_view"];
@@ -26,7 +26,11 @@ interface ProfileRow {
   digest_unsubscribe_token: string;
 }
 
-/** Monday morning in NZ (Sunday 19:00 UTC): tells artists how many people viewed their profile last week. */
+/**
+ * Monday morning in NZ (Sunday 19:00 UTC): tells artists how their work was
+ * received last week — appreciations, saves and profile views. Private numbers,
+ * one email, skipped in a week with nothing to say.
+ */
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -61,7 +65,9 @@ export async function GET(req: NextRequest) {
     if (!data || data.length < PAGE) break;
   }
 
-  const empty = (): WeeklyProfileStats => ({ views: 0, prevViews: 0, cvClicks: 0, websiteClicks: 0, artworkViews: 0 });
+  const empty = (): WeeklyProfileStats => ({
+    views: 0, prevViews: 0, cvClicks: 0, websiteClicks: 0, artworkViews: 0, appreciations: 0, saves: 0,
+  });
   const stats = new Map<string, WeeklyProfileStats>();
   for (const e of events) {
     const id = e.payload?.profile_id;
@@ -79,7 +85,64 @@ export async function GET(req: NextRequest) {
     stats.set(id, s);
   }
 
-  const candidates = [...stats.entries()].filter(([, s]) => s.views >= MIN_WEEKLY_VIEWS);
+  // Appreciations (225) and saves (224) this week. Private counts for the
+  // artist only; a failure here just leaves them out of this week's email.
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await admin
+      .from("update_appreciations")
+      .select("artist_id")
+      .gte("created_at", sinceWeek)
+      .range(from, from + PAGE - 1);
+    if (error) {
+      results.errors.push(`appreciations: ${error.message}`);
+      break;
+    }
+    for (const r of (data ?? []) as Array<{ artist_id: string }>) {
+      const s = stats.get(r.artist_id) ?? empty();
+      s.appreciations++;
+      stats.set(r.artist_id, s);
+    }
+    if (!data || data.length < PAGE) break;
+  }
+
+  const saveRows: Array<{ artist_id: string; board_id: string }> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await admin
+      .from("board_items")
+      .select("artist_id, board_id")
+      .gte("created_at", sinceWeek)
+      .range(from, from + PAGE - 1);
+    if (error) {
+      results.errors.push(`saves: ${error.message}`);
+      break;
+    }
+    saveRows.push(...((data ?? []) as typeof saveRows));
+    if (!data || data.length < PAGE) break;
+  }
+  if (saveRows.length > 0) {
+    // Same rule as board_save_counts(): own saves and organisation shortlists don't count.
+    const boardIds = [...new Set(saveRows.map((r) => r.board_id))];
+    const owners = new Map<string, string>();
+    for (let i = 0; i < boardIds.length; i += 200) {
+      const { data } = await admin.from("boards").select("id, owner_id").in("id", boardIds.slice(i, i + 200));
+      for (const b of data ?? []) owners.set(b.id, b.owner_id);
+    }
+    const ownerIds = [...new Set(owners.values())];
+    const partners = new Set<string>();
+    for (let i = 0; i < ownerIds.length; i += 200) {
+      const { data } = await admin.from("profiles").select("id").eq("role", "partner").in("id", ownerIds.slice(i, i + 200));
+      for (const p of data ?? []) partners.add(p.id);
+    }
+    for (const r of saveRows) {
+      const owner = owners.get(r.board_id);
+      if (!owner || owner === r.artist_id || partners.has(owner)) continue;
+      const s = stats.get(r.artist_id) ?? empty();
+      s.saves++;
+      stats.set(r.artist_id, s);
+    }
+  }
+
+  const candidates = [...stats.entries()].filter(([, s]) => hasWeeklyNews(s));
   results.profilesWithViews = candidates.length;
   if (candidates.length === 0) return NextResponse.json(results);
 

@@ -57,6 +57,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                 <Link href="/studio">{workspaceLabel}</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href="/boards">Boards</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/messages" className="flex items-center gap-2">
                   Messages
                   {unreadCount > 0 && (
@@ -132,6 +135,9 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
                   )}
                   <Link href="/studio" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                     {workspaceLabel}
+                  </Link>
+                  <Link href="/boards" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Boards
                   </Link>
                   <Link
                     href="/messages"
