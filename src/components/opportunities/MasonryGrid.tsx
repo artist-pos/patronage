@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { OpportunityCard } from "./OpportunityCard";
 import { OpportunitySignupModalTrigger } from "./OpportunitySignupModalTrigger";
 import { OpportunityGate, type LockedSummary } from "./OpportunityGate";
+import { PostSelectToggle } from "./AdminPostTray";
 import type { Opportunity, OpportunityWithMatch } from "@/types/database";
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   /** Opportunities withheld from a signed-out visitor. When set, the gate replaces the signup popup. */
   lockedCount?: number;
   lockedSummary?: LockedSummary;
+  /** Admin only: adds a tick to each card for picking listings for a social post. */
+  selectable?: boolean;
 }
 
 // Roughly the 5th row of a 3-column grid — deep enough to be a deliberate
@@ -21,12 +24,15 @@ interface Props {
 // couple of cards.
 const SIGNUP_MODAL_TRIGGER_AFTER = 15;
 
-export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false, lockedCount = 0, lockedSummary }: Props) {
+export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 0, isAuthenticated = false, lockedCount = 0, lockedSummary, selectable = false }: Props) {
   if (view === "list") {
     return (
       <div className="border-t border-black">
         {opportunities.map((opp, i) => (
-          <OpportunityCard key={opp.id} opp={opp} view="list" priority={i < 6} isAuthenticated={isAuthenticated} />
+          <div key={opp.id} className="relative">
+            {selectable && <PostSelectToggle id={opp.id} />}
+            <OpportunityCard opp={opp} view="list" priority={i < 6} isAuthenticated={isAuthenticated} />
+          </div>
         ))}
         {lockedCount > 0 && <OpportunityGate lockedCount={lockedCount} summary={lockedSummary} />}
       </div>
@@ -39,7 +45,8 @@ export function MasonryGrid({ opportunities, view = "gallery", priorityOffset = 
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {opportunities.map((opp, i) => (
         <Fragment key={opp.id}>
-          <div>
+          <div className="relative">
+            {selectable && <PostSelectToggle id={opp.id} />}
             <OpportunityCard opp={opp} view="gallery" priority={i + priorityOffset < 3} isAuthenticated={isAuthenticated} />
           </div>
           {showSignupModalTrigger && i === SIGNUP_MODAL_TRIGGER_AFTER - 1 && <OpportunitySignupModalTrigger />}

@@ -6,6 +6,7 @@ import { getOpportunities, getMarketplaceStats, getMatchedOpportunities, getArti
 import { sortOpportunities, type OppSort, OPP_SORTS } from "@/lib/opportunity-sort";
 import { ForYouTeaser } from "@/components/opportunities/ForYouTeaser";
 import { MasonryGrid } from "@/components/opportunities/MasonryGrid";
+import { AdminPostTray } from "@/components/opportunities/AdminPostTray";
 import { OpportunityFilters } from "@/components/opportunities/OpportunityFilters";
 import { OpportunityViewToggle } from "@/components/opportunities/OpportunityViewToggle";
 import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
@@ -88,6 +89,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     hasDisciplines = isArtist && Array.isArray(profile?.disciplines) && profile.disciplines.length > 0;
   }
 
+  const isAdmin = profile?.role === "admin" || profile?.role === "owner";
   const tab = params.tab === "for-you" ? "for-you" : "all";
   const hasQueryFilters = !!(type || country || discipline || eligibility || careerStage || freeEntry || search);
   const hasManualFilters = hasQueryFilters || closingWeek;
@@ -303,7 +305,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                       </p>
                     </div>
                   ) : (
-                    <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={true} />
+                    <MasonryGrid opportunities={gridOpps} view={view} isAuthenticated={true} selectable={isAdmin} />
                   )}
                 </>
               )}
@@ -342,13 +344,14 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                     No opportunities match those filters. New listings are added regularly.
                   </p>
                 ) : (
-                  <MasonryGrid opportunities={gatedOpps} view={view} isAuthenticated={!!user} lockedCount={lockedCount} lockedSummary={lockedSummary} />
+                  <MasonryGrid opportunities={gatedOpps} view={view} isAuthenticated={!!user} lockedCount={lockedCount} lockedSummary={lockedSummary} selectable={isAdmin} />
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+      {isAdmin && <AdminPostTray />}
     </div>
   );
 }

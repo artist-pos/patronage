@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { SocialOpp } from "@/app/admin/social/page";
 
-import { LastCallsBuilder } from "@/components/admin/LastCallsBuilder";
+import { LastCallsBuilder, type PostFormat } from "@/components/admin/LastCallsBuilder";
 
 type View = "new" | "closing-soon" | "final-call" | "last-calls";
 
@@ -147,15 +147,19 @@ export function SocialContentPanel({
   closingSoon,
   finalCall,
   upcoming,
+  initialIds,
+  initialFormat,
   today,
 }: {
+  initialIds: string[];
+  initialFormat: PostFormat;
   closingIn3Weeks: SocialOpp[];
   closingSoon: SocialOpp[];
   finalCall: SocialOpp[];
   upcoming: SocialOpp[];
   today: string;
 }) {
-  const [view, setView] = useState<View>(getDefaultView);
+  const [view, setView] = useState<View>(() => (initialIds.length > 0 ? "last-calls" : getDefaultView()));
   const [allCopied, setAllCopied] = useState(false);
 
   const closingToday = finalCall.filter((o) => o.deadline === today);
@@ -178,7 +182,7 @@ export function SocialContentPanel({
     { id: "new", label: "Closing in 3 Weeks" },
     { id: "closing-soon", label: "Closing Soon" },
     { id: "final-call", label: "Final Call" },
-    { id: "last-calls", label: "Last Calls Builder" },
+    { id: "last-calls", label: "Post Builder" },
   ];
 
   return (
@@ -210,7 +214,9 @@ export function SocialContentPanel({
         )}
       </div>
 
-      {view === "last-calls" && <LastCallsBuilder opportunities={upcoming} />}
+      {view === "last-calls" && (
+        <LastCallsBuilder opportunities={upcoming} initialIds={initialIds} initialFormat={initialFormat} />
+      )}
 
       {/* View: Closing in 3 Weeks */}
       {view === "new" && (

@@ -3,7 +3,13 @@
 import { useMemo, useState } from "react";
 import type { SocialOpp } from "@/app/admin/social/page";
 
-const MAX_PICKS = 5;
+export type PostFormat = "weekly" | "recent" | "final";
+
+const FORMATS: Record<PostFormat, { label: string; max: number; title: string; subtitle: string; callout: string }> = {
+  weekly: { label: "Weekly digest", max: 5, title: "LAST CALLS — NZ", subtitle: "WEEKLY DIGEST", callout: "CLOSING SOON." },
+  recent: { label: "Recently open", max: 5, title: "NEWLY OPEN — NZ", subtitle: "RECENTLY OPEN", callout: "NOW OPEN." },
+  final: { label: "Final call", max: 3, title: "FINAL CALL — NZ", subtitle: "CLOSING THIS WEEK", callout: "CLOSING VERY SOON." },
+};
 
 function currencyOf(opp: SocialOpp): string {
   return opp.country === "AUS" ? "AUD" : "NZD";
@@ -70,13 +76,14 @@ function totalValue(opps: SocialOpp[]): number {
   return opps.reduce((sum, o) => sum + (o.funding_amount ?? 0), 0);
 }
 
-function buildCover(opps: SocialOpp[]): string {
+function buildCover(opps: SocialOpp[], format: PostFormat): string {
   const total = totalValue(opps);
+  const f = FORMATS[format];
   const lines = [
-    "LAST CALLS — NZ",
-    "WEEKLY DIGEST",
+    f.title,
+    f.subtitle,
     "",
-    `${opps.length} CLOSING SOON.`,
+    `${opps.length} ${f.callout}`,
     total > 0 ? `$${total.toLocaleString("en-NZ")}+ ON THE BOARD. →` : "→",
     "",
   ];
@@ -106,8 +113,14 @@ function buildSlide(opp: SocialOpp, ai?: AiCopy): string {
   return lines.join("\n");
 }
 
-function buildCaption(opps: SocialOpp[], copy: Record<string, AiCopy>): string {
-  const lines = [`Here are ${opps.length} opportunities closing in the next few weeks:`];
+const CAPTION_INTRO: Record<PostFormat, (n: number) => string> = {
+  weekly: (n) => `Here are ${n} opportunities closing in the next few weeks:`,
+  recent: (n) => `Here are ${n} opportunities that have just opened:`,
+  final: (n) => `Final call. Here are ${n} opportunities closing in the next few days:`,
+};
+
+function buildCaption(opps: SocialOpp[], copy: Record<string, AiCopy>, format: PostFormat): string {
+  const lines = [CAPTION_INTRO[format](opps.length)];
   for (const o of opps) {
     lines.push(o.title);
     lines.push(summary(o, copy[o.id]));
@@ -145,8 +158,20 @@ function Block({ title, text }: { title: string; text: string }) {
   );
 }
 
-export function LastCallsBuilder({ opportunities }: { opportunities: SocialOpp[] }) {
-  const [selected, setSelected] = useState<string[]>([]);
+export function LastCallsBuilder({
+  opportunities,
+  initialIds = [],
+  initialFormat = "weekly",
+}: {
+  opportunities: SocialOpp[];
+  initialIds?: string[];
+  initialFormat?: PostFormat;
+}) {
+  const [format, setFormat] = useState<PostFormat>(initialFormat);
+  const [selected, setSelected] = useState<string[]>(() =>
+    initialIds.filter((id) => opportunities.some((o) => o.id === id)).slice(0, FORMATS[initialFormat].max)
+  );
+  const MAX_PICKS = FORMATS[format].max;
   const [query, setQuery] = useState("");
   const [copy, setCopy] = useState<Record<string, AiCopy>>({});
   const [generating, setGenerating] = useState(false);
@@ -175,6 +200,11 @@ export function LastCallsBuilder({ opportunities }: { opportunities: SocialOpp[]
     );
   }
 
+  function changeFormat(next: PostFormat) {
+    setFormat(next);
+    setSelected((prev) => prev.slice(0, FORMATS[next].max));
+  }
+
   const full = selected.length >= MAX_PICKS;
   const needsCopy = picked.some((o) => !copy[o.id]);
 
@@ -200,6 +230,23 @@ export function LastCallsBuilder({ opportunities }: { opportunities: SocialOpp[]
   }
 
   return (
+    <div className="space-y-4">
+    <div className="flex items-center gap-2 flex-wrap">
+      {(Object.keys(FORMATS) as PostFormat[]).map((id) => (
+        <button
+          key={id}
+          onClick={() => changeFormat(id)}
+          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            format === id ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+          }`}
+        >
+          {FORMATS[id].label} (up to {FORMATS[id].max})
+        </button>
+      ))}
+      <span className="text-xs text-muted-foreground">
+        Tip: tick listings on /opportunities and hit &ldquo;Build post&rdquo;.
+      </span>
+    </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -271,14 +318,15 @@ export function LastCallsBuilder({ opportunities }: { opportunities: SocialOpp[]
                 Showing a quick draft from the stored text. Write copy with Haiku for tidier summaries.
               </p>
             )}
-            <Block title="Caption" text={buildCaption(picked, copy)} />
-            <Block title="Slide 1 — Cover" text={buildCover(picked)} />
+            <Block title="Caption" text={buildCaption(picked, copy, format)} />
+            <Block title="Slide 1 — Cover" text={buildCover(picked, format)} />
             {picked.map((o, i) => (
               <Block key={o.id} title={`Slide ${i + 2}`} text={buildSlide(o, copy[o.id])} />
             ))}
           </>
         )}
       </section>
+    </div>
     </div>
   );
 }

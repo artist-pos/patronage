@@ -32,7 +32,17 @@ const FIELDS = [
   "sub_categories", "tags", "url", "slug",
 ].join(", ");
 
-export default async function SocialPage() {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function SocialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ids?: string; format?: string }>;
+}) {
+  const params = await searchParams;
+  const initialIds = (params.ids ?? "").split(",").filter((id) => UUID.test(id)).slice(0, 5);
+  const initialFormat = params.format === "final" || params.format === "recent" ? params.format : "weekly";
+
   const supabase = await createClient();
 
   const today = new Date();
@@ -54,7 +64,7 @@ export default async function SocialPage() {
   threeDaysLater.setDate(today.getDate() + 3);
   const threeDaysLaterStr = threeDaysLater.toISOString().split("T")[0];
 
-  const [closingIn3WeeksRes, soonRes, finalRes, upcomingRes] = await Promise.all([
+  const [closingIn3WeeksRes, soonRes, finalRes, upcomingRes, pickedRes] = await Promise.all([
     // All open opportunities with a deadline, for the Last Calls picker
     supabase
       .from("opportunities")
@@ -97,7 +107,16 @@ export default async function SocialPage() {
       .lte("deadline", threeDaysLaterStr)
       .order("deadline", { ascending: true })
       .limit(6),
+
+    // Listings picked on /opportunities, whatever their deadline
+    initialIds.length > 0
+      ? supabase.from("opportunities").select(FIELDS).in("id", initialIds)
+      : Promise.resolve({ data: [] as unknown[] }),
   ]);
+
+  const upcomingList = (upcomingRes.data ?? []) as unknown as SocialOpp[];
+  const pickedList = (pickedRes.data ?? []) as unknown as SocialOpp[];
+  const upcoming = [...pickedList, ...upcomingList.filter((o) => !pickedList.some((p) => p.id === o.id))];
 
   return (
     <div className="space-y-6">
@@ -111,7 +130,9 @@ export default async function SocialPage() {
         closingIn3Weeks={(closingIn3WeeksRes.data ?? []) as unknown as SocialOpp[]}
         closingSoon={(soonRes.data ?? []) as unknown as SocialOpp[]}
         finalCall={(finalRes.data ?? []) as unknown as SocialOpp[]}
-        upcoming={(upcomingRes.data ?? []) as unknown as SocialOpp[]}
+        upcoming={upcoming}
+        initialIds={initialIds}
+        initialFormat={initialFormat}
         today={todayStr}
       />
     </div>
