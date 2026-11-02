@@ -8,7 +8,6 @@ import { Bookmark, Check, X } from "lucide-react";
 import {
   createBoard,
   listBoardsForItem,
-  quickSave,
   setBoardItem,
   type BoardOption,
 } from "@/actions/boards";
@@ -30,7 +29,7 @@ interface Props {
 /**
  * Save something to one of your boards (224). A save is intent — a shortlist,
  * not applause — so it opens a small sheet to choose where it goes. With no
- * boards yet, the first save makes "Saved" and files it there.
+ * boards yet, it suggests "Saved" as a name and waits for the person to add it.
  */
 export function SaveToBoard({ itemType, itemId, isAuthenticated, variant = "icon", onDark = false, className }: Props) {
   const router = useRouter();
@@ -60,12 +59,9 @@ export function SaveToBoard({ itemType, itemId, isAuthenticated, variant = "icon
       }
       setOpen(true);
       if (res.error) return setError(res.error);
-      let list = res.boards ?? [];
-      if (list.length === 0) {
-        const made = await quickSave(itemType, itemId);
-        if (made.error || !made.boardId) return setError(made.error ?? "Couldn't save that.");
-        list = [{ id: made.boardId, title: "Saved", contains: true }];
-      }
+      const list = res.boards ?? [];
+      // No boards yet: suggest a name, but make nothing until they press Add.
+      if (list.length === 0) setNewTitle("Saved");
       setBoards(list);
     });
   }
@@ -147,7 +143,13 @@ export function SaveToBoard({ itemType, itemId, isAuthenticated, variant = "icon
 
               {boards === null && !error && <p className="py-4 text-sm text-muted-foreground">Loading…</p>}
 
-              {boards && (
+              {boards && boards.length === 0 && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Name your first board. You can rename it or add more later.
+                </p>
+              )}
+
+              {boards && boards.length > 0 && (
                 <ul className="mb-4 max-h-64 overflow-y-auto border-y border-border">
                   {boards.map((b) => (
                     <li key={b.id}>

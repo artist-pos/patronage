@@ -101,15 +101,6 @@ export async function createBoard(
   return { id: data.id };
 }
 
-/** First save with no boards yet: make "Saved" and put the item in it. */
-export async function quickSave(
-  itemType: BoardItemType,
-  itemId: string,
-): Promise<{ boardId?: string; error?: string }> {
-  const res = await createBoard(DEFAULT_BOARD, { itemType, itemId });
-  return { boardId: res.id, error: res.error };
-}
-
 export async function updateBoard(
   boardId: string,
   patch: { title?: string; description?: string | null; visibility?: "private" | "link" },
