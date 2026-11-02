@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkle } from "lucide-react";
+import { Heart } from "lucide-react";
 import { setAppreciation } from "@/actions/appreciations";
 
 interface Props {
@@ -60,7 +60,7 @@ export function AppreciateButton({ updateId, appreciated = false, isAuthenticate
         title={label}
         className="inline-flex h-9 items-center gap-2 border border-border px-3 text-[13px] transition-colors hover:border-foreground disabled:opacity-60"
       >
-        <Sparkle className="h-4 w-4" fill={on ? "currentColor" : "none"} aria-hidden />
+        <Heart className="h-4 w-4" fill={on ? "currentColor" : "none"} aria-hidden />
         {on ? "Appreciated" : "Appreciate"}
       </button>
     );
@@ -78,7 +78,7 @@ export function AppreciateButton({ updateId, appreciated = false, isAuthenticate
         onDark ? "text-white hover:bg-white/15" : "text-muted-foreground hover:bg-muted"
       } ${on ? (onDark ? "text-white" : "text-foreground") : ""}`}
     >
-      <Sparkle className="h-3.5 w-3.5" fill={on ? "currentColor" : "none"} aria-hidden />
+      <Heart className="h-3.5 w-3.5" fill={on ? "currentColor" : "none"} aria-hidden />
     </button>
   );
 }
