@@ -21,6 +21,9 @@ export default async function NewOpportunityWizardPage({ params, searchParams }:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
+  const { data: viewer } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isAdminUser = viewer?.role === "admin" || viewer?.role === "owner";
+
   const [oppResult, criteriaResult, docsResult] = await Promise.all([
     supabase
       .from("opportunities")
@@ -31,7 +34,8 @@ export default async function NewOpportunityWizardPage({ params, searchParams }:
     getPartnerDocuments(id),
   ]);
 
-  if (!oppResult.data || !(await isOrgMember(supabase, user.id, oppResult.data.profile_id))) redirect("/studio");
+  // Admins list on behalf of an org they are not a member of
+  if (!oppResult.data || (!isAdminUser && !(await isOrgMember(supabase, user.id, oppResult.data.profile_id)))) redirect("/studio");
 
   const opp = oppResult.data as Opportunity;
   const isPipeline = typeParam === "pipeline" || opp.routing_type === "pipeline";
