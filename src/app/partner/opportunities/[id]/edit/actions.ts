@@ -33,7 +33,7 @@ async function getOpportunityForPartner(id: string) {
     .single();
 
   if (!opp) throw new Error("Listing not found");
-  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) throw new Error("Not authorised");
+  if (!(await isAdmin()) && !(await isOrgMember(supabase, user.id, opp.profile_id))) throw new Error("Not authorised");
 
   return { supabase, user, opp };
 }

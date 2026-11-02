@@ -132,7 +132,9 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
     .maybeSingle();
 
   if (!opp) return { error: "Listing not found" };
-  if (!(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
+  // Tagging an org hands the draft to that org, so an admin is no longer a member of it
+  const adminUser = await isAdmin();
+  if (!adminUser && !(await isOrgMember(supabase, user.id, opp.profile_id))) return { error: "Not authorised" };
   if (opp.status !== "draft" && opp.status !== "draft_unclaimed") {
     return { error: "This listing has already been submitted." };
   }
@@ -144,7 +146,7 @@ export async function submitDraftForReview(id: string): Promise<{ error?: string
   // An admin listing someone else's opportunity: no review step, it goes live
   // now. It belongs to nobody until the organisation claims it; add outreach
   // details from /admin/opportunities so the claim email can reach them.
-  if (!isPipeline && (await isAdmin())) {
+  if (!isPipeline && adminUser) {
     const admin = createAdminClient();
     const { data: full } = await admin
       .from("opportunities")
