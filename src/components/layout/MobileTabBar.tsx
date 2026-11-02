@@ -51,23 +51,19 @@ function MasonryIcon({ active }: { active: boolean }) {
   );
 }
 
-function SearchIcon({ active }: { active: boolean }) {
+function FundingIcon({ active }: { active: boolean }) {
   if (active) {
     return (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="8" cy="8" r="5.5" fill="var(--brand)" />
-        <circle cx="8" cy="8" r="3" fill="var(--surface)" />
-        <line x1="12.5" y1="12.5" x2="18.5" y2="18.5" stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="square" />
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="9" fill="var(--brand)" />
+        <text x="10" y="14.5" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--surface)">$</text>
       </svg>
     );
   }
   return (
-    <svg
-      width="20" height="20" viewBox="0 0 20 20" fill="none"
-      stroke="var(--fg-muted)" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter"
-    >
-      <circle cx="8" cy="8" r="5.5" />
-      <line x1="12.5" y1="12.5" x2="18.5" y2="18.5" />
+    <svg width="20" height="20" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="8.75" fill="none" stroke="var(--fg-muted)" strokeWidth="1.5" />
+      <text x="10" y="14.5" textAnchor="middle" fontSize="13" fontWeight="600" fill="var(--fg-muted)">$</text>
     </svg>
   );
 }
@@ -153,9 +149,9 @@ export function MobileTabBar({ isLoggedIn, username, role }: Props) {
             <MasonryIcon active={exploreActive} />
             <span className={labelCls(exploreActive)}>Explore</span>
           </Link>
-          <Link href="/opportunities" aria-label="Opportunities" className="flex flex-col items-center gap-0.5 px-2 py-1">
-            <SearchIcon active={oppsActive} />
-            <span className={labelCls(oppsActive)}>Find</span>
+          <Link href="/opportunities" aria-label="Funding" className="flex flex-col items-center gap-0.5 px-2 py-1">
+            <FundingIcon active={oppsActive} />
+            <span className={labelCls(oppsActive)}>Funding</span>
           </Link>
           <Link href="/artists" aria-label="Artists" className="flex flex-col items-center gap-0.5 px-2 py-1">
             <PersonIcon active={artistsActive} />
