@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import type { ScrapedOpportunity } from "../types.js";
 import { normTitle, normOrganiser, isLikelyDuplicate } from "./dedupe.js";
+import { buildPartnerIndex, matchOrganiser } from "./organiser-link.js";
 
 const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -37,6 +38,7 @@ export interface DedupeCache {
     urls: Map<string, DedupeMeta>; // normalised URL → scraper metadata
     titleKeys: Set<string>;        // normalised "title||organiser" keys
     fuzzy: FuzzyRecord[];          // for cross-source near-duplicate matching
+    partners?: Map<string, string | null>; // folded partner name → id, for organiser links
 }
 
 /** Run-wide tally of fuzzy-collapsed duplicates — reported in the run summary. */
@@ -142,8 +144,16 @@ export async function loadDedupeCache(): Promise<DedupeCache> {
         from += PAGE;
     }
 
-    console.log(`  [dedup] Cache loaded — ${urls.size} URLs, ${titleKeys.size} title keys, ${fuzzy.length} fuzzy records`);
-    return { urls, titleKeys, fuzzy };
+    // Partner accounts, so new listings can be linked to their organiser (195).
+    const { data: partnerRows, error: partnerErr } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("role", "partner");
+    if (partnerErr) console.error(`  [organiser] Partner load error: ${partnerErr.message}`);
+    const partners = buildPartnerIndex((partnerRows ?? []) as Array<{ id: string; full_name: string | null }>);
+
+    console.log(`  [dedup] Cache loaded — ${urls.size} URLs, ${titleKeys.size} title keys, ${fuzzy.length} fuzzy records, ${partners.size} partner names`);
+    return { urls, titleKeys, fuzzy, partners };
 }
 
 export async function upsertOpportunity(
@@ -250,9 +260,18 @@ export async function upsertOpportunity(
 
     // ── Insert new ────────────────────────────────────────────────────────────
     const record = buildRecord(opp, sourceUrl, ogImage, sourceMeta);
+    // Exact organiser-name match → link the partner account, so its followers
+    // hear about the listing once an admin publishes it.
+    const organiserProfileId = matchOrganiser(opp.organiser, cache?.partners);
     let { data: inserted, error } = await supabase
         .from("opportunities")
-        .insert({ ...record, status: "pending", is_active: true, origin: "scraper" })
+        .insert({
+            ...record,
+            status: "pending",
+            is_active: true,
+            origin: "scraper",
+            ...(organiserProfileId ? { organiser_profile_id: organiserProfileId } : {}),
+        })
         .select("id")
         .single();
 

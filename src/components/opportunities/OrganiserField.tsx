@@ -19,20 +19,63 @@ interface Props {
   allowLink?: boolean;
 }
 
+/** Same folding as the scraper's organiser-link: case, macrons, punctuation. */
+function fold(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The organiser text without a trailing "(NZFC)"-style alias. */
+const withoutAlias = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, "").trim();
+
 /**
  * Organiser text input. Type a plain name as before, or start with "@" to
  * search partner accounts and link the listing to one. The text stays the
- * display name either way.
+ * display name either way. When the typed name matches a partner account
+ * exactly, it offers the link, so followers of that organisation hear about
+ * the listing (223) without anyone having to remember the "@".
  */
 export function OrganiserField({ value, linkedProfileId, onChange, className, allowLink = true }: Props) {
   const [hits, setHits] = useState<PartnerHit[]>([]);
   const [open, setOpen] = useState(false);
   const [searched, setSearched] = useState(false);
   const [linkedHandle, setLinkedHandle] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<PartnerHit | null>(null);
+  const [dismissed, setDismissed] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const query = value.startsWith("@") ? value.slice(1).trim() : null;
+
+  // Offer a link when the plain organiser name matches a partner exactly.
+  useEffect(() => {
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    const name = withoutAlias(value);
+    if (!allowLink || linkedProfileId || query !== null || name.length < 3) {
+      setSuggestion(null);
+      return;
+    }
+    suggestTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search/partners?q=${encodeURIComponent(name)}`);
+        const data = (await res.json()) as { partners?: PartnerHit[] };
+        const keys = new Set([fold(value), fold(name)]);
+        setSuggestion((data.partners ?? []).find((p) => keys.has(fold(p.name))) ?? null);
+      } catch {
+        setSuggestion(null);
+      }
+    }, 400);
+    return () => {
+      if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    };
+  }, [value, query, linkedProfileId, allowLink]);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -71,6 +114,13 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     setLinkedHandle(hit.username);
     setOpen(false);
     onChange(hit.name, hit.id);
+  }
+
+  // Keep the organiser's own wording ("… (NZFC)") when accepting a suggestion.
+  function acceptSuggestion(hit: PartnerHit) {
+    setLinkedHandle(hit.username);
+    setSuggestion(null);
+    onChange(value, hit.id);
   }
 
   if (!allowLink) {
@@ -129,6 +179,26 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
         autoComplete="off"
         className={className}
       />
+      {suggestion && dismissed !== suggestion.id && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Matches a partner account:</span>
+          <button
+            type="button"
+            onClick={() => acceptSuggestion(suggestion)}
+            className="inline-flex items-center gap-1.5 border border-foreground px-2 py-1 font-medium transition-colors hover:bg-foreground hover:text-background"
+          >
+            <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+            Link to {suggestion.name} (@{suggestion.username})
+          </button>
+          <button
+            type="button"
+            onClick={() => setDismissed(suggestion.id)}
+            className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Not this one
+          </button>
+        </div>
+      )}
       {open && query !== null && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto border border-black bg-background shadow-md">
           {hits.map((h) => (
