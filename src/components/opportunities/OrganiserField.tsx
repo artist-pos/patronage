@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { BadgeCheck, X } from "lucide-react";
-import { createShadowProfile } from "@/app/admin/claim-tokens/actions";
+import { useEffect, useRef, useState } from "react";
+import { BadgeCheck, Plus, X } from "lucide-react";
+import { NewOrganisationModal } from "@/components/admin/NewOrganisationModal";
 
 interface PartnerHit {
   id: string;
@@ -18,8 +18,8 @@ interface Props {
   className: string;
   /** Off: a plain text input, and any existing link is left untouched. */
   allowLink?: boolean;
-  /** Admins only: offer to create an unclaimed organisation account when no
-   *  partner account matches, and link the listing to it. */
+  /** Admins only: the "@" search also offers to create the organisation's
+   *  unclaimed (shadow) account and link the listing to it. */
   allowCreate?: boolean;
 }
 
@@ -41,11 +41,9 @@ const withoutAlias = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, "").trim();
 /**
  * Organiser text input. Type a plain name as before, or start with "@" to
  * search partner accounts and link the listing to one. The text stays the
- * display name either way. When the typed name matches a partner account
- * exactly, it offers the link, so followers of that organisation hear about
- * the listing (223) without anyone having to remember the "@". For admins,
- * when nothing matches, it offers to create the organisation's (unclaimed)
- * account there and then.
+ * display name either way. When the name matches a partner account exactly,
+ * it offers the link. For admins, the "@" search also offers "Create … as a
+ * new organisation", the same shadow-profile setup as Admin → Claim tokens.
  */
 export function OrganiserField({ value, linkedProfileId, onChange, className, allowLink = true, allowCreate = false }: Props) {
   const [hits, setHits] = useState<PartnerHit[]>([]);
@@ -54,11 +52,7 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
   const [linkedHandle, setLinkedHandle] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<PartnerHit | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
-  // The name the last lookup finished for, and near (not exact) matches from it.
-  const [checkedName, setCheckedName] = useState<string | null>(null);
-  const [similar, setSimilar] = useState<PartnerHit[]>([]);
-  const [creating, startCreating] = useTransition();
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [creatingName, setCreatingName] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,20 +65,14 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     const name = withoutAlias(value);
     if (!allowLink || linkedProfileId || query !== null || name.length < 3) {
       setSuggestion(null);
-      setCheckedName(null);
       return;
     }
-    setCheckedName(null);
     suggestTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search/partners?q=${encodeURIComponent(name)}`);
         const data = (await res.json()) as { partners?: PartnerHit[] };
         const keys = new Set([fold(value), fold(name)]);
-        const partners = data.partners ?? [];
-        const exact = partners.find((p) => keys.has(fold(p.name))) ?? null;
-        setSuggestion(exact);
-        setSimilar(exact ? [] : partners.slice(0, 3));
-        setCheckedName(name);
+        setSuggestion((data.partners ?? []).find((p) => keys.has(fold(p.name))) ?? null);
       } catch {
         setSuggestion(null);
       }
@@ -105,7 +93,7 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     setSearched(false);
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search/partners?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/search/partners?q=${encodeURIComponent(withoutAlias(query))}`);
         const data = (await res.json()) as { partners?: PartnerHit[] };
         setHits(data.partners ?? []);
       } catch {
@@ -140,23 +128,17 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     onChange(value, hit.id);
   }
 
-  // Create the organisation's unclaimed account under its plain name (no
-  // "(NZFC)" alias) and link this listing to it. Category, region, logo and
-  // website can be filled in later from the admin profile editor.
-  function createAndLink() {
-    const name = withoutAlias(value);
-    setCreateError(null);
-    startCreating(async () => {
-      const res = await createShadowProfile({ name, entityType: "partner" });
-      if (res.error || !res.profileId) return setCreateError(res.error ?? "Couldn't create the account.");
-      setLinkedHandle(res.username ?? null);
-      onChange(value, res.profileId);
-    });
-  }
-
-  const name = withoutAlias(value);
-  const showCreate =
-    allowCreate && !linkedProfileId && query === null && !suggestion && checkedName === name && name.length >= 3;
+  const modal = creatingName !== null && (
+    <NewOrganisationModal
+      initialName={creatingName}
+      onClose={() => setCreatingName(null)}
+      onCreated={(p) => {
+        setCreatingName(null);
+        setLinkedHandle(p.username);
+        onChange(p.name, p.id);
+      }}
+    />
+  );
 
   if (!allowLink) {
     return (
@@ -234,37 +216,6 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
           </button>
         </div>
       )}
-      {showCreate && (
-        <div className="mt-1.5 space-y-1.5 text-xs">
-          {similar.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">Similar accounts:</span>
-              {similar.map((h) => (
-                <button
-                  key={h.id}
-                  type="button"
-                  onClick={() => acceptSuggestion(h)}
-                  className="border border-border px-2 py-1 transition-colors hover:border-foreground"
-                >
-                  {h.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">No account for &ldquo;{name}&rdquo; yet.</span>
-            <button
-              type="button"
-              onClick={createAndLink}
-              disabled={creating}
-              className="border border-foreground px-2 py-1 font-medium transition-colors hover:bg-foreground hover:text-background disabled:opacity-50"
-            >
-              {creating ? "Creating…" : "Create it and link"}
-            </button>
-          </div>
-          {createError && <p className="text-red-700">{createError}</p>}
-        </div>
-      )}
       {open && query !== null && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto border border-black bg-background shadow-md">
           {hits.map((h) => (
@@ -289,7 +240,7 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
               </span>
             </button>
           ))}
-          {searched && hits.length === 0 && (
+          {searched && hits.length === 0 && !allowCreate && (
             <p className="px-3 py-2 text-xs text-muted-foreground">
               No partner account found. Remove the @ to type the organiser&rsquo;s name instead.
             </p>
@@ -297,8 +248,29 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
           {!searched && hits.length === 0 && (
             <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
           )}
+          {/* Shown even with matches: the right organisation may not be among them. */}
+          {searched && allowCreate && query.length >= 2 && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setOpen(false);
+                setCreatingName(withoutAlias(query));
+              }}
+              className="flex w-full items-center gap-3 border-t border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-dashed border-black">
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-medium">Create &ldquo;{withoutAlias(query)}&rdquo;</span>
+                <span className="block truncate text-xs text-muted-foreground">New organisation (shadow profile), linked to this listing</span>
+              </span>
+            </button>
+          )}
         </div>
       )}
+      {modal}
     </div>
   );
 }
