@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { BadgeCheck, X } from "lucide-react";
+import { createShadowProfile } from "@/app/admin/claim-tokens/actions";
 
 interface PartnerHit {
   id: string;
@@ -17,6 +18,9 @@ interface Props {
   className: string;
   /** Off: a plain text input, and any existing link is left untouched. */
   allowLink?: boolean;
+  /** Admins only: offer to create an unclaimed organisation account when no
+   *  partner account matches, and link the listing to it. */
+  allowCreate?: boolean;
 }
 
 /** Same folding as the scraper's organiser-link: case, macrons, punctuation. */
@@ -39,15 +43,22 @@ const withoutAlias = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, "").trim();
  * search partner accounts and link the listing to one. The text stays the
  * display name either way. When the typed name matches a partner account
  * exactly, it offers the link, so followers of that organisation hear about
- * the listing (223) without anyone having to remember the "@".
+ * the listing (223) without anyone having to remember the "@". For admins,
+ * when nothing matches, it offers to create the organisation's (unclaimed)
+ * account there and then.
  */
-export function OrganiserField({ value, linkedProfileId, onChange, className, allowLink = true }: Props) {
+export function OrganiserField({ value, linkedProfileId, onChange, className, allowLink = true, allowCreate = false }: Props) {
   const [hits, setHits] = useState<PartnerHit[]>([]);
   const [open, setOpen] = useState(false);
   const [searched, setSearched] = useState(false);
   const [linkedHandle, setLinkedHandle] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<PartnerHit | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  // The name the last lookup finished for, and near (not exact) matches from it.
+  const [checkedName, setCheckedName] = useState<string | null>(null);
+  const [similar, setSimilar] = useState<PartnerHit[]>([]);
+  const [creating, startCreating] = useTransition();
+  const [createError, setCreateError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,14 +71,20 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     const name = withoutAlias(value);
     if (!allowLink || linkedProfileId || query !== null || name.length < 3) {
       setSuggestion(null);
+      setCheckedName(null);
       return;
     }
+    setCheckedName(null);
     suggestTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search/partners?q=${encodeURIComponent(name)}`);
         const data = (await res.json()) as { partners?: PartnerHit[] };
         const keys = new Set([fold(value), fold(name)]);
-        setSuggestion((data.partners ?? []).find((p) => keys.has(fold(p.name))) ?? null);
+        const partners = data.partners ?? [];
+        const exact = partners.find((p) => keys.has(fold(p.name))) ?? null;
+        setSuggestion(exact);
+        setSimilar(exact ? [] : partners.slice(0, 3));
+        setCheckedName(name);
       } catch {
         setSuggestion(null);
       }
@@ -122,6 +139,24 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
     setSuggestion(null);
     onChange(value, hit.id);
   }
+
+  // Create the organisation's unclaimed account under its plain name (no
+  // "(NZFC)" alias) and link this listing to it. Category, region, logo and
+  // website can be filled in later from the admin profile editor.
+  function createAndLink() {
+    const name = withoutAlias(value);
+    setCreateError(null);
+    startCreating(async () => {
+      const res = await createShadowProfile({ name, entityType: "partner" });
+      if (res.error || !res.profileId) return setCreateError(res.error ?? "Couldn't create the account.");
+      setLinkedHandle(res.username ?? null);
+      onChange(value, res.profileId);
+    });
+  }
+
+  const name = withoutAlias(value);
+  const showCreate =
+    allowCreate && !linkedProfileId && query === null && !suggestion && checkedName === name && name.length >= 3;
 
   if (!allowLink) {
     return (
@@ -197,6 +232,37 @@ export function OrganiserField({ value, linkedProfileId, onChange, className, al
           >
             Not this one
           </button>
+        </div>
+      )}
+      {showCreate && (
+        <div className="mt-1.5 space-y-1.5 text-xs">
+          {similar.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground">Similar accounts:</span>
+              {similar.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => acceptSuggestion(h)}
+                  className="border border-border px-2 py-1 transition-colors hover:border-foreground"
+                >
+                  {h.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground">No account for &ldquo;{name}&rdquo; yet.</span>
+            <button
+              type="button"
+              onClick={createAndLink}
+              disabled={creating}
+              className="border border-foreground px-2 py-1 font-medium transition-colors hover:bg-foreground hover:text-background disabled:opacity-50"
+            >
+              {creating ? "Creating…" : "Create it and link"}
+            </button>
+          </div>
+          {createError && <p className="text-red-700">{createError}</p>}
         </div>
       )}
       {open && query !== null && (

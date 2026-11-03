@@ -1146,6 +1146,7 @@ export function OpportunityForm({
         <Field label="Organisation / Funder *">
           <OrganiserField
             allowLink={canLinkOrganiser}
+            allowCreate={mode === "admin"}
             value={value.organiser}
             linkedProfileId={value.organiserProfileId}
             onChange={(organiser, organiserProfileId) =>
