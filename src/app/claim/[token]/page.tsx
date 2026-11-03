@@ -70,7 +70,9 @@ export default async function ClaimPage({ params }: Props) {
       const { count } = await admin
         .from("opportunities")
         .select("*", { count: "exact", head: true })
-        .eq("profile_id", profile.id);
+        // Listings it posted, and listings linked to it as organiser — both
+        // become its own once claimed.
+        .or(`profile_id.eq.${profile.id},organiser_profile_id.eq.${profile.id}`);
       opportunityCount = count ?? 0;
     }
 

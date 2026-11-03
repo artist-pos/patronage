@@ -8,9 +8,9 @@ import { isAdmin } from "@/lib/admin";
 import { isOrgCategory } from "@/lib/org-categories";
 import { SHADOW_EMAIL_DOMAIN } from "@/lib/shadow";
 import { slugify } from "@/lib/slugify";
+import { buildShadowClaimEmail, shadowClaimUrl } from "@/lib/shadow-claims";
 import type { ClaimToken, ClaimEntityType } from "@/types/database";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
 const FROM = "Blake Aitken <blake@patronage.nz>";
 
 function getResend() {
@@ -217,21 +217,12 @@ export async function sendClaimTokenEmail(tokenId: string): Promise<{ error?: st
     .single();
 
   const entityLabel = profile?.full_name ?? tokenRow.entity_type;
-  const claimUrl = `${SITE_URL}/claim/${tokenRow.token}`;
-  const recipientName = tokenRow.recipient_name ?? "there";
-  const entityTypeLabel = tokenRow.entity_type === "partner" ? "organisation" : "artist profile";
-
-  const subject = `Claim your ${entityTypeLabel} on Patronage`;
-  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111;font-size:14px;line-height:1.7">
-<p>Hi ${recipientName},</p>
-<p>We've created a <strong>${entityTypeLabel}</strong> page for <strong>${entityLabel}</strong> on Patronage — New Zealand's platform connecting artists with grants, residencies, and commissions.</p>
-<p>Claim it to edit your profile, add your logo, and manage your presence on the platform.</p>
-<div style="margin:28px 0">
-  <a href="${claimUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 28px;font-size:14px;font-weight:600">Claim your listing →</a>
-</div>
-<p style="font-size:12px;color:#888">This link expires in 90 days. If you have any questions, reply to this email or contact <a href="mailto:hello@patronage.nz" style="color:#888">hello@patronage.nz</a>.</p>
-<p style="font-size:12px;color:#888">— Blake, Patronage</p>
-</body></html>`;
+  const { subject, html } = buildShadowClaimEmail({
+    recipientName: tokenRow.recipient_name,
+    entityLabel,
+    entityType: tokenRow.entity_type === "partner" ? "partner" : "artist",
+    claimUrl: shadowClaimUrl(tokenRow.token),
+  });
 
   const resend = getResend();
   const { error: sendError } = await resend.emails.send({

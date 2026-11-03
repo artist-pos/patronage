@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { issueEmailVerification } from "@/lib/email-verification";
 import { isShadowEmail } from "@/lib/shadow";
+import { adoptLinkedListings } from "@/lib/shadow-claims";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type TokenRow = {
@@ -124,6 +125,8 @@ export async function claimShadowAccount(input: {
 
   if (!proved) issueEmailVerification(tokenRow.entity_id).catch(console.error);
   logCrmClaim(admin, tokenRow).catch(console.error);
+  // Listings linked to this organisation become its own, so they're in its dashboard.
+  if (tokenRow.entity_type === "partner") await adoptLinkedListings(admin, tokenRow.entity_id);
 
   return { redirectTo: tokenRow.entity_type === "partner" ? "/dashboard" : "/dashboard" };
 }
@@ -203,6 +206,10 @@ export async function claimEntity(
     .eq("id", tokenRow.id);
 
   await logCrmClaim(admin, tokenRow);
+  // A shadow profile's id has just moved to the claimant; otherwise it kept its own.
+  if (tokenRow.entity_type === "partner") {
+    await adoptLinkedListings(admin, profile.account_status === "shadow" ? userId : profile.id);
+  }
 
   const redirectTo = tokenRow.entity_type === "partner" ? "/dashboard" : "/dashboard";
   return { redirectTo };

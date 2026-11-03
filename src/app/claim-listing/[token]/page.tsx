@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { claimListing } from "./actions";
 import { TrackClaimOpen } from "./TrackClaimOpen";
+import { getOrCreateShadowClaimToken, unclaimedShadowPartner } from "@/lib/shadow-claims";
 import { formatFunding } from "@/components/opportunities/OpportunityCard";
 import { StructuredDescription } from "@/components/opportunities/DescriptionAccordion";
 
@@ -29,12 +30,27 @@ export default async function ClaimListingPage({ params }: Props) {
       sub_categories, career_stage,
       artist_payment_type, travel_support, travel_support_details,
       grant_type, recipients_count,
-      status, profile_id, claim_token_expires_at
+      status, profile_id, claim_token_expires_at,
+      organiser_profile_id, claim_email, claim_invite_email, claim_contact_name
     `)
     .eq("claim_token", token)
     .single();
 
   if (!opp) notFound();
+
+  // One organisation, one account. If the organiser already has an unclaimed
+  // account, claiming this listing means claiming that account, so its
+  // followers and other listings come too, rather than starting a second one.
+  if (!opp.profile_id) {
+    const shadow = await unclaimedShadowPartner(admin, opp.organiser_profile_id);
+    if (shadow) {
+      const claim = await getOrCreateShadowClaimToken(admin, shadow.id, {
+        email: opp.claim_invite_email ?? opp.claim_email,
+        name: opp.claim_contact_name,
+      });
+      if (claim) redirect(`/claim/${claim.token}`);
+    }
+  }
 
   const isExpired = opp.claim_token_expires_at
     ? new Date(opp.claim_token_expires_at) < new Date()
