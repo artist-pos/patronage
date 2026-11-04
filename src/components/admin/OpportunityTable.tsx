@@ -11,7 +11,7 @@ import {
   generateClaimToken,
   regenerateOpportunitySlug,
 } from "@/app/admin/opportunities/actions";
-import { isSlugBad } from "@/lib/opportunity-slug";
+import { isSlugBad, isSlugStale } from "@/lib/opportunity-slug";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -534,7 +534,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                         </button>
                       )}
                     </span>
-                    {isSlugBad(o.slug) && (
+                    {(isSlugBad(o.slug) || isSlugStale(o.slug, o.title, o.organiser ?? null, o.deadline ?? null)) && (
                       <span className="flex items-center gap-1.5 text-destructive">
                         <span className="truncate">Bad slug: {o.slug ?? "(none)"}</span>
                         <button

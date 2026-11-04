@@ -351,8 +351,10 @@ export async function touchOpportunity(
 }
 
 function toSlug(title: string, organiser: string | null, deadline: string | null): string {
+    // Fold macrons/diacritics ("Pūkenga" -> "pukenga"); keep in sync with src/lib/opportunity-slug.ts
     const slugify = (s: string) =>
-        s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "")
+            .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
     const organiserPart = organiser ? slugify(organiser).slice(0, 40).replace(/-+$/, "") : "";
     const titlePart = slugify(title).slice(0, 60).replace(/-+$/, "");
@@ -360,7 +362,8 @@ function toSlug(title: string, organiser: string | null, deadline: string | null
 
     const parts = [organiserPart, titlePart].filter(Boolean);
     const base = parts.join("-");
-    return year ? `${base}-${year}` : base;
+    if (!year || Number.isNaN(year) || base.endsWith(`-${year}`)) return base;
+    return `${base}-${year}`;
 }
 
 function mapCountry(raw: string): string {
