@@ -3,11 +3,12 @@
 import { startTransition, useActionState, useMemo, useState } from "react";
 import { ArrowDownUp, Check, Copy } from "lucide-react";
 import type { ArtistInvite } from "@/lib/rabobank/invites";
-import type { SizeCost } from "@/lib/rabobank/artist-admin";
+import type { Extra, SizeCost } from "@/lib/rabobank/artist-admin";
 import { closeSelection, saveArtistSettings, saveInvite, setShortlisted, type AdminResult } from "./actions";
 
 const input = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
-const nzd = (n: number | null) => (n === null ? "–" : "$" + n.toLocaleString("en-NZ", { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+/** Whole dollars, for comparing quotes at a glance (GST conversions produce cents nobody quoted). */
+const dollars = (n: number | null) => (n === null ? "–" : "$" + Math.round(n).toLocaleString("en-NZ"));
 
 function Note({ state, pending }: { state: AdminResult; pending: boolean }) {
   if (pending) return <span className="text-xs text-stone-500">Saving…</span>;
@@ -252,21 +253,36 @@ function SortHeader({ active, right, onClick, children }: { active: boolean; rig
 type QuoteRowView = {
   id: string;
   name: string;
-  gst: string;
-  framing: string | null;
-  install: string | null;
+  /** How the artist entered their amounts: plus GST, incl. GST, or not GST registered. */
+  gst: string | null;
+  enteredIncl: boolean;
+  entered: { big: number | null; small: number | null };
+  basedIn: string | null;
+  scale: string | null;
+  altSize: string | null;
   ready: { label: string; sort: string };
-  workType: string | null;
   big: SizeCost;
   small: SizeCost;
 };
-type SortKey = "name" | "bigFee" | "bigTotal" | "smallFee" | "smallTotal" | "ready";
-const WHO: Record<string, string> = { self: "Artist", other: "Patronage", unsure: "Not sure" };
+type SortKey = "name" | "bigFee" | "smallFee" | "bigTotal" | "ready";
+const WHO: Record<string, string> = { self: "Artist does it", other: "We arrange it", unsure: "Not sure yet" };
+
+/** Framing or installation: who does it, then the cost or that there isn't one yet. */
+function ExtraCell({ e, label }: { e: Extra; label: string }) {
+  return (
+    <td className="px-3 py-2.5">
+      <span className="block">{e.who ? WHO[e.who] : "–"}</span>
+      <span className={`block text-xs ${e.cost === null ? "text-amber-700" : "text-stone-500"}`}>
+        {e.cost !== null ? `${dollars(e.cost)}${e.costFrom === "framer" ? " (your framer)" : ""}` : `No ${label} cost yet`}
+      </span>
+    </td>
+  );
+}
 
 export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "bigTotal", dir: 1 });
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "bigFee", dir: 1 });
   const value = (r: QuoteRowView, k: SortKey): number | string | null =>
-    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "bigTotal" ? r.big.total : k === "smallFee" ? r.small.fee : k === "smallTotal" ? r.small.total : r.ready.sort;
+    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "smallFee" ? r.small.fee : k === "bigTotal" ? r.big.total : r.ready.sort;
   const sorted = useMemo(
     () =>
       [...rows].sort((a, b) => {
@@ -284,20 +300,24 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
       {label}
     </SortHeader>
   );
-  const cost = (c: SizeCost) =>
-    c.fee === null ? null : `${nzd(c.fee)} + ${c.framing === null ? "frame ?" : `${nzd(c.framing)} frame${c.framingSource === "artist" ? " (artist)" : ""}`}${c.install !== null ? ` + ${nzd(c.install)} install` : ""}`;
+  const fee = (exGst: number | null, entered: number | null, incl: boolean) => (
+    <td className="px-3 py-2.5 text-right tabular-nums">
+      <span className="block font-medium">{dollars(exGst)}</span>
+      {incl && entered !== null && <span className="block text-xs text-stone-400">entered {dollars(entered)} incl.</span>}
+    </td>
+  );
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-white">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[860px] text-sm">
         <thead className="bg-stone-50 text-xs text-stone-500">
           <tr>
             {th("name", "Artist")}
-            {th("bigFee", "1800 fee", true)}
-            {th("bigTotal", "1800 total", true)}
-            {th("smallFee", "1600 fee", true)}
-            {th("smallTotal", "1600 total", true)}
-            <th className="px-3 py-2 text-left font-medium">Frame / install</th>
+            {th("bigFee", "Artwork 1800 × 900", true)}
+            {th("smallFee", "Artwork 1600 × 800", true)}
+            <th className="px-3 py-2 text-left font-medium">Framing</th>
+            <th className="px-3 py-2 text-left font-medium">Installation</th>
+            {th("bigTotal", "Known total, 1800", true)}
             {th("ready", "Ready by", true)}
           </tr>
         </thead>
@@ -305,21 +325,19 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
           {sorted.map((r) => (
             <tr key={r.id} className="border-t border-border align-top">
               <td className="px-3 py-2.5">
-                <span className="font-medium">{r.name}</span>
-                <span className="block text-xs text-stone-400">{r.gst}{r.workType ? ` · ${r.workType}` : ""}</span>
+                <span className="block font-medium">{r.name}</span>
+                <span className="block text-xs text-stone-400">{[r.gst && (r.gst === "not GST registered" ? "Not GST registered" : `Entered ${r.gst}`), r.basedIn, r.scale].filter(Boolean).join(" · ")}</span>
+                {r.altSize && <span className="mt-1 block max-w-[16rem] text-xs text-stone-500" title={r.altSize}>Size note: {r.altSize.length > 90 ? `${r.altSize.slice(0, 90)}…` : r.altSize}</span>}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{nzd(r.big.fee)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums" title={cost(r.big) ?? ""}>
-                <span className="font-medium">{nzd(r.big.total)}</span>
-                {r.big.total !== null && <span className="block text-xs text-stone-400">indicative</span>}
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{nzd(r.small.fee)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums" title={cost(r.small) ?? ""}>
-                <span className="font-medium">{nzd(r.small.total)}</span>
-                {r.small.total !== null && <span className="block text-xs text-stone-400">indicative</span>}
-              </td>
-              <td className="px-3 py-2.5 text-xs text-stone-600">
-                {WHO[r.framing ?? ""] ?? "–"} / {WHO[r.install ?? ""] ?? "–"}
+              {fee(r.big.fee, r.entered.big, r.enteredIncl)}
+              {fee(r.small.fee, r.entered.small, r.enteredIncl)}
+              <ExtraCell e={r.big.framing} label="framing" />
+              <ExtraCell e={r.big.install} label="install" />
+              <td className="px-3 py-2.5 text-right tabular-nums">
+                <span className="block font-medium">{dollars(r.big.total)}</span>
+                <span className={`block text-xs ${r.big.missing.length ? "text-amber-700" : "text-stone-400"}`}>
+                  {r.big.total === null ? "" : r.big.missing.length ? `plus ${r.big.missing.join(" and ")}` : "everything included"}
+                </span>
               </td>
               <td className="px-3 py-2.5 text-right">{r.ready.label}</td>
             </tr>

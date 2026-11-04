@@ -5,12 +5,22 @@ import { exGst, gstOf } from "@/lib/rabobank/quote";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- rows come straight from Supabase */
 
+/** Framing or installation: who does it, and the cost if anyone has given one (excluding GST). */
+export interface Extra {
+  who: "self" | "other" | "unsure" | null;
+  cost: number | null;
+  /** artist = the artist's own figure; framer = Blake's framer figure from Settings. */
+  costFrom: "artist" | "framer" | null;
+}
+
 export interface SizeCost {
   fee: number | null; // excluding GST
-  framing: number | null;
-  framingSource: "artist" | "framer" | null;
-  install: number | null;
-  total: number | null; // indicative
+  framing: Extra;
+  install: Extra;
+  /** Fee plus every cost that is known, excluding GST. */
+  total: number | null;
+  /** What the total still leaves out: "framing" and/or "installation". */
+  missing: string[];
 }
 
 export interface AdminArtistRow {
@@ -23,18 +33,23 @@ export interface AdminArtistRow {
   sizes: { big: SizeCost; small: SizeCost };
 }
 
-function sizeCost(fee: number | null, q: any, framer: number | null): SizeCost {
-  if (fee === null) return { fee: null, framing: null, framingSource: null, install: null, total: null };
-  const own = q.framing_option === "self" && q.framing_cost !== null ? Number(q.framing_cost) : null;
-  const framing = own ?? framer;
-  const install = q.install_cost !== null && q.install_cost !== undefined ? Number(q.install_cost) : null;
-  return {
-    fee,
-    framing,
-    framingSource: own !== null ? "artist" : framer !== null ? "framer" : null,
-    install,
-    total: Math.round((fee + (framing ?? 0) + (install ?? 0)) * 100) / 100,
-  };
+const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
+
+/** The artist's own figure (normalised to excluding GST like their fee), else Blake's framer figure where one applies. */
+function extra(who: string | null, artistCost: unknown, gst: ReturnType<typeof gstOf>, fallback: number | null): Extra {
+  const w = who === "self" || who === "other" || who === "unsure" ? who : null;
+  const own = exGst(num(artistCost), gst);
+  if (own !== null) return { who: w, cost: own, costFrom: "artist" };
+  if (w !== "self" && fallback !== null) return { who: w, cost: fallback, costFrom: "framer" };
+  return { who: w, cost: null, costFrom: null };
+}
+
+function sizeCost(fee: number | null, q: any, gst: ReturnType<typeof gstOf>, framer: number | null): SizeCost {
+  const framing = extra(q.framing_option ?? null, q.framing_cost, gst, framer);
+  const install = extra(q.install_option ?? null, q.install_cost, gst, null);
+  if (fee === null) return { fee: null, framing, install, total: null, missing: [] };
+  const missing = [framing.cost === null && "framing", install.cost === null && "installation"].filter(Boolean) as string[];
+  return { fee, framing, install, total: Math.round((fee + (framing.cost ?? 0) + (install.cost ?? 0)) * 100) / 100, missing };
 }
 
 export async function loadArtistAdmin(): Promise<{ rows: AdminArtistRow[]; settings: RabobankSettings }> {
@@ -61,7 +76,6 @@ export async function loadArtistAdmin(): Promise<{ rows: AdminArtistRow[]; setti
     const gst = submitted ? gstOf(quote) : null;
     const big = submitted ? exGst(quote.fee_1800x900 === null ? null : Number(quote.fee_1800x900), gst) : null;
     const small = submitted ? exGst(quote.fee_1600x800 === null ? null : Number(quote.fee_1600x800), gst) : null;
-    const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
     return {
       invite,
       quote,
@@ -72,8 +86,8 @@ export async function loadArtistAdmin(): Promise<{ rows: AdminArtistRow[]; setti
       partOne,
       partTwo,
       sizes: {
-        big: sizeCost(big, quote ?? {}, num(settings.framer_quote_1800x900)),
-        small: sizeCost(small, quote ?? {}, num(settings.framer_quote_1600x800)),
+        big: sizeCost(big, submitted ? quote : {}, gst, num(settings.framer_quote_1800x900)),
+        small: sizeCost(small, submitted ? quote : {}, gst, num(settings.framer_quote_1600x800)),
       },
     };
   });

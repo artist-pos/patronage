@@ -120,20 +120,27 @@ export default async function RabobankArtistsAdmin() {
           <section className="space-y-3">
             <h2 className={sectionTitle}>Quote comparison</h2>
             <p className="text-sm text-stone-500">
-              Fees shown excluding GST. Indicative total = fee + framing (the artist&rsquo;s own figure if they frame it, otherwise your framer figure) + the artist&rsquo;s installation cost.
+              Every amount is excluding GST, so the quotes compare like for like. If an artist entered their amounts including GST, the figure they typed is shown underneath. The known total adds the artwork fee to whatever framing and installation costs exist so far, and says what it still leaves out.
+              {settings.framer_quote_1800x900 === null && " Add your framer figures in Settings and they fill the framing gaps where the artist isn't framing it themselves."}
             </p>
             <QuoteTable
-              rows={quoted.map((r) => ({
-                id: r.invite.id,
-                name: r.invite.full_name ?? r.invite.first_name,
-                gst: (() => { const t = gstOf(r.quote); return t ? `entered ${GST_LABEL[t]}` : ""; })(),
-                framing: r.quote.framing_option,
-                install: r.quote.install_option,
-                ready: readyBy(r.quote),
-                workType: ({ often: "made this scale often", some: "made this scale once or twice", largest: "would be their largest" } as Record<string, string>)[r.quote.scale_experience] ?? null,
-                big: r.sizes.big,
-                small: r.sizes.small,
-              }))}
+              rows={quoted.map((r) => {
+                const t = gstOf(r.quote);
+                const amount = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+                return {
+                  id: r.invite.id,
+                  name: r.invite.full_name ?? r.invite.first_name,
+                  gst: t ? GST_LABEL[t] : null,
+                  enteredIncl: t === "incl",
+                  entered: { big: amount(r.quote.fee_1800x900), small: amount(r.quote.fee_1600x800) },
+                  basedIn: r.quote.based_in ?? null,
+                  scale: ({ often: "made this scale often", some: "made this scale once or twice", largest: "would be their largest" } as Record<string, string>)[r.quote.scale_experience] ?? null,
+                  altSize: r.quote.alt_size_note ?? null,
+                  ready: readyBy(r.quote),
+                  big: r.sizes.big,
+                  small: r.sizes.small,
+                };
+              })}
             />
           </section>
         </div>
