@@ -264,7 +264,7 @@ type QuoteRowView = {
   big: SizeCost;
   small: SizeCost;
 };
-type SortKey = "name" | "bigFee" | "smallFee" | "bigTotal" | "ready";
+type SortKey = "name" | "bigFee" | "smallFee" | "bigTotal" | "smallTotal" | "ready";
 const WHO: Record<string, string> = { self: "Artist does it", other: "We arrange it", unsure: "Not sure yet" };
 
 /** Framing or installation: who does it, then the cost or that there isn't one yet. */
@@ -279,10 +279,22 @@ function ExtraCell({ e, label }: { e: Extra; label: string }) {
   );
 }
 
+/** Fee plus known costs for one size, and what it still leaves out. A size the artist didn't quote shows a dash. */
+function TotalCell({ c }: { c: SizeCost }) {
+  return (
+    <td className="px-3 py-2.5 text-right tabular-nums">
+      <span className="block font-medium">{dollars(c.total)}</span>
+      <span className={`block text-xs ${c.missing.length ? "text-amber-700" : "text-stone-400"}`}>
+        {c.total === null ? "" : c.missing.length ? `plus ${c.missing.join(" and ")}` : "everything included"}
+      </span>
+    </td>
+  );
+}
+
 export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "bigFee", dir: 1 });
   const value = (r: QuoteRowView, k: SortKey): number | string | null =>
-    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "smallFee" ? r.small.fee : k === "bigTotal" ? r.big.total : r.ready.sort;
+    k === "name" ? r.name : k === "bigFee" ? r.big.fee : k === "smallFee" ? r.small.fee : k === "bigTotal" ? r.big.total : k === "smallTotal" ? r.small.total : r.ready.sort;
   const sorted = useMemo(
     () =>
       [...rows].sort((a, b) => {
@@ -309,7 +321,7 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-white">
-      <table className="w-full min-w-[860px] text-sm">
+      <table className="w-full min-w-[980px] text-sm">
         <thead className="bg-stone-50 text-xs text-stone-500">
           <tr>
             {th("name", "Artist")}
@@ -318,6 +330,7 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
             <th className="px-3 py-2 text-left font-medium">Framing</th>
             <th className="px-3 py-2 text-left font-medium">Installation</th>
             {th("bigTotal", "Known total, 1800", true)}
+            {th("smallTotal", "Known total, 1600", true)}
             {th("ready", "Ready by", true)}
           </tr>
         </thead>
@@ -333,12 +346,8 @@ export function QuoteTable({ rows }: { rows: QuoteRowView[] }) {
               {fee(r.small.fee, r.entered.small, r.enteredIncl)}
               <ExtraCell e={r.big.framing} label="framing" />
               <ExtraCell e={r.big.install} label="install" />
-              <td className="px-3 py-2.5 text-right tabular-nums">
-                <span className="block font-medium">{dollars(r.big.total)}</span>
-                <span className={`block text-xs ${r.big.missing.length ? "text-amber-700" : "text-stone-400"}`}>
-                  {r.big.total === null ? "" : r.big.missing.length ? `plus ${r.big.missing.join(" and ")}` : "everything included"}
-                </span>
-              </td>
+              <TotalCell c={r.big} />
+              <TotalCell c={r.small} />
               <td className="px-3 py-2.5 text-right">{r.ready.label}</td>
             </tr>
           ))}
