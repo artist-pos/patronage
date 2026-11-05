@@ -5,6 +5,7 @@ import { loadArtistAdmin, type SizeCost } from "@/lib/rabobank/artist-admin";
 import { getArtistCards, type ArtistCard } from "@/lib/rabobank/shortlist";
 import { gstOf, readyBy } from "@/lib/rabobank/quote";
 import { Gallery } from "../../_components/Gallery";
+import { WallViewer } from "@/components/rabobank/WallViewer";
 import { Costs, type Receipt } from "./Costs";
 
 export const dynamic = "force-dynamic";
@@ -136,6 +137,24 @@ export default async function Presentation() {
               };
             })}
           />
+        </section>
+
+        {/* The two sizes against the wall, to scale. */}
+        <section className="border-t border-stone-200 py-16" aria-labelledby="wall">
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400">To scale</p>
+          <h2 id="wall" className="mb-6 mt-2 text-3xl font-medium">The two sizes on the wall</h2>
+          <div className="max-w-5xl">
+            <WallViewer
+              initialSize="small"
+              table={false}
+              heading=""
+              intro="The wall is dark blue, 3600mm long and 2400mm high. Switch between the two sizes, turn the table on to see it in the room, or choose a work to hang it on the wall."
+              choices={people.map(({ card }) => ({
+                artist: card.name,
+                works: card.works.map((w) => ({ id: w.id, title: w.title, url: w.image_url })),
+              }))}
+            />
+          </div>
         </section>
       </div>
     </div>

@@ -24,6 +24,11 @@
 .wv-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .wv-seg label:has(input:checked) { background: var(--wv-ink); border-color: var(--wv-ink); color: #fff; }
 .wv-seg label:has(input:focus-visible), .wv-btn:focus-visible, .wv-chk input:focus-visible, .wv-paint:focus-visible { outline: 3px solid #000faa; outline-offset: 3px; }
+/* One dropdown per artist: pick a work to hang. */
+.wv-picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.6rem 1rem; margin: 0 0 1rem; }
+.wv-pick { display: grid; gap: 0.25rem; font-size: 0.8rem; color: var(--wv-muted); }
+.wv-pick select { font: inherit; font-size: 0.95rem; color: var(--wv-ink); background: #fff; border: 1px solid var(--wv-line); border-radius: 10px; padding: 0.45rem 0.6rem; min-width: 0; }
+.wv-pick:has(option:checked:not([value=""])) select { border-color: var(--wv-ink); }
 .wv-chk { display: flex; gap: 0.45rem; align-items: center; font-size: 0.95rem; color: #57534e; cursor: pointer; }
 .wv-chk input { width: 1.05rem; height: 1.05rem; accent-color: #000; }
 .wv-btn { font: inherit; font-size: 0.9rem; border: 0; background: none; color: #78716c; padding: 0.4rem 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #d6d3d1; }

@@ -8,7 +8,7 @@
  * URL in this browser only: it is never uploaded, stored or logged.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./wall-viewer.css";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -19,7 +19,7 @@ type Attrs = Record<string, string | number>;
 
 const Y = (mm: number) => FLOOR - mm;
 
-function mount(root: HTMLElement): () => void {
+function mount(root: HTMLElement, initialSize: Size, addLabel: string): () => void {
   const svg = root.querySelector("svg") as SVGSVGElement;
   const file = root.querySelector(".wv-file") as HTMLInputElement;
   const add = root.querySelector(".wv-paint") as HTMLButtonElement;
@@ -28,8 +28,9 @@ function mount(root: HTMLElement): () => void {
   const cap = root.querySelector(".wv-cap") as HTMLElement;
   const table = root.querySelector(".wv-table") as HTMLInputElement;
   const person = root.querySelector(".wv-person") as HTMLInputElement;
-  let size: Size = "big";
+  let size: Size = initialSize;
   let imgUrl: string | null = null;
+  let imgOwned = false; // an object URL we made (revoke it), not an artist's stored image
   const uid = "wvclip" + Math.floor(Math.random() * 1e6);
 
   const el = (t: string, a: Attrs, p?: Element) => {
@@ -114,7 +115,7 @@ function mount(root: HTMLElement): () => void {
       height: `${(s.h / 3500) * 100}%`,
     });
     add.dataset.filled = imgUrl ? "true" : "false";
-    add.querySelector("span")!.textContent = imgUrl ? "Change artwork" : "Try your own artwork";
+    add.querySelector("span")!.textContent = imgUrl ? "Change artwork" : addLabel;
     if (imgUrl) {
       const d = E("defs", {}), cp = E("clipPath", { id: uid }, d);
       E("rect", { x: px, y: py, width: s.w, height: s.h }, cp);
@@ -152,15 +153,17 @@ function mount(root: HTMLElement): () => void {
   }
 
   function clearImage() {
-    if (imgUrl) { URL.revokeObjectURL(imgUrl); imgUrl = null; }
+    if (imgUrl && imgOwned) URL.revokeObjectURL(imgUrl);
+    imgUrl = null;
     clr.hidden = true;
     draw();
   }
   function setFile(f: File | null | undefined) {
     if (!f) return;
     if (!/^image\//.test(f.type)) { msg.textContent = "Please choose an image file."; return; }
-    if (imgUrl) URL.revokeObjectURL(imgUrl);
+    if (imgUrl && imgOwned) URL.revokeObjectURL(imgUrl);
     imgUrl = URL.createObjectURL(f);
+    imgOwned = true;
     clr.hidden = false;
     msg.textContent = "Showing your image, cropped to fill the painting area. It stays on your device.";
     draw();
@@ -177,40 +180,85 @@ function mount(root: HTMLElement): () => void {
   ["dragenter", "dragover"].forEach((ev) => on(root, ev, (e) => { e.preventDefault(); root.classList.add("wv-drop"); }));
   ["dragleave", "drop"].forEach((ev) => on(root, ev, (e) => { e.preventDefault(); root.classList.remove("wv-drop"); }));
   on(root, "drop", (e) => setFile((e as DragEvent).dataTransfer?.files[0]));
+  // The work picker sends a stored image URL (or null to clear) as a "wv-pick" event.
+  on(root, "wv-pick", (e) => {
+    if (imgUrl && imgOwned) URL.revokeObjectURL(imgUrl);
+    imgUrl = (e as CustomEvent<string | null>).detail;
+    imgOwned = false;
+    msg.textContent = "";
+    draw();
+  });
   draw();
 
   return () => {
     offs.forEach((off) => off());
-    if (imgUrl) URL.revokeObjectURL(imgUrl);
+    if (imgUrl && imgOwned) URL.revokeObjectURL(imgUrl);
   };
 }
 
-export function WallViewer() {
+export interface WallChoice {
+  artist: string;
+  works: { id: string; title: string | null; url: string }[];
+}
+
+/**
+ * The wall to scale. Options let the presentation start on 1600 x 800 with the
+ * table off and its own intro. With `choices`, one dropdown per artist picks a
+ * work to hang instead of uploading an image.
+ */
+export function WallViewer({
+  initialSize = "big",
+  table = true,
+  heading = "See the work on the wall",
+  addLabel = "Try your own artwork",
+  intro = "The wall is dark blue, 3600mm long and 2400mm high, above a 1050mm high table. Switch between the two sizes, or add one of your own images to see how it sits.",
+  choices,
+}: { initialSize?: Size; table?: boolean; heading?: string; intro?: string; addLabel?: string; choices?: WallChoice[] }) {
   const ref = useRef<HTMLElement>(null);
-  useEffect(() => (ref.current ? mount(ref.current) : undefined), []);
+  const [picked, setPicked] = useState<{ artist: number; work: string } | null>(null);
+  useEffect(() => (ref.current ? mount(ref.current, initialSize, addLabel) : undefined), [initialSize, addLabel]);
+
+  function pick(artist: number, workId: string) {
+    const work = choices?.[artist]?.works.find((w) => w.id === workId);
+    setPicked(work ? { artist, work: work.id } : null);
+    ref.current?.dispatchEvent(new CustomEvent("wv-pick", { detail: work?.url ?? null }));
+  }
   return (
     <section className="wv" ref={ref} aria-label="Wall viewer">
       <div className="wv-head">
-        <h3>See the work on the wall</h3>
-        <p>
-          The wall is dark blue, 3600mm long and 2400mm high, above a 1050mm high table. Switch between the two sizes, or add one
-          of your own images to see how it sits.
-        </p>
+        {heading && <h3>{heading}</h3>}
+        <p>{intro}</p>
       </div>
       <div className="wv-bar">
         <div className="wv-seg" role="radiogroup" aria-label="Painting size">
-          <label><input type="radio" name="wvsize" value="big" defaultChecked /><span>1800 x 900</span></label>
-          <label><input type="radio" name="wvsize" value="small" /><span>1600 x 800</span></label>
+          <label><input type="radio" name="wvsize" value="big" defaultChecked={initialSize === "big"} /><span>1800 x 900</span></label>
+          <label><input type="radio" name="wvsize" value="small" defaultChecked={initialSize === "small"} /><span>1600 x 800</span></label>
         </div>
-        <label className="wv-chk"><input type="checkbox" className="wv-table" defaultChecked /> Show Table</label>
+        <label className="wv-chk"><input type="checkbox" className="wv-table" defaultChecked={table} /> Show Table</label>
         <label className="wv-chk"><input type="checkbox" className="wv-person" defaultChecked /> 1700mm person</label>
         <button type="button" className="wv-btn wv-clear" hidden>Remove image</button>
         <input className="wv-file" type="file" accept="image/*" aria-label="Choose an image of your work" />
       </div>
+      {choices?.length ? (
+        <div className="wv-picks">
+          {choices.map((c, i) => (
+            <label key={c.artist} className="wv-pick">
+              <span>{c.artist}</span>
+              <select value={picked?.artist === i ? picked.work : ""} onChange={(e) => pick(i, e.target.value)}>
+                <option value="">Choose a work…</option>
+                {c.works.map((w, n) => (
+                  <option key={w.id} value={w.id}>{w.title || `Work ${n + 1}`}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      ) : null}
       <div className="wv-canvas">
         <svg viewBox="-900 -200 5500 3500" role="img" aria-label="Scaled drawing of the wall with the painting at the chosen size" />
-        <button type="button" className="wv-paint" data-filled="false">
-          <span>Try your own artwork</span>
+        {/* With the picker there's nothing to upload, so the button on the painting goes. */}
+        <button type="button" className="wv-paint" data-filled="false" style={choices?.length ? { display: "none" } : undefined}>
+          <span>{addLabel}</span>
         </button>
       </div>
       <p className="wv-cap" />

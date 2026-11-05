@@ -57,7 +57,7 @@ export function Gallery({
     <>
       <ul className={LIST[layout]}>
         {works.map((work, i) => (
-          <li key={work.id}>
+          <li key={work.id} className="max-w-full">
             <button
               type="button"
               onClick={() => setIndex(i)}
@@ -71,7 +71,7 @@ export function Gallery({
                 loading="lazy"
                 className="block max-w-none object-cover"
                 // Inline, because the site-wide img rule (height: auto) outranks utility classes.
-                style={layout === "natural" ? { height: "clamp(9rem, 16vw, 15rem)", width: "auto" } : { height: "100%", width: "100%" }}
+                style={layout === "natural" ? { height: "clamp(9rem, 16vw, 15rem)", width: "auto", maxWidth: "100%" } : { height: "100%", width: "100%" }}
               />
             </button>
           </li>
