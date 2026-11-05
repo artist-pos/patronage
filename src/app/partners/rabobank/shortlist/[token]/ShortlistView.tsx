@@ -212,7 +212,7 @@ export function ShortlistView({
             )}
             {artist.other_links && <p className="whitespace-pre-line break-words text-sm text-muted-foreground">{artist.other_links}</p>}
             {quoteLines?.[artist.id] && <p className="text-sm text-muted-foreground">{quoteLines[artist.id]}</p>}
-            <Gallery works={artist.works} artistName={artist.name} />
+            <Gallery works={artist.works} artistName={artist.name} artistPhoto={artist.photo_url} />
             {/* Wait for stored reactions so the buttons start in the right state. */}
             {mine === null && respondentId ? (
               <p className="text-sm text-muted-foreground">Loading your responses…</p>

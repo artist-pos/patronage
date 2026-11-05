@@ -130,7 +130,7 @@ export default async function Presentation() {
                   </blockquote>
                 )}
               </div>
-              <Gallery works={card.works} artistName={card.name} layout="natural" />
+              <Gallery works={card.works} artistName={card.name} artistPhoto={card.photo_url} layout="natural" />
             </div>
           </section>
         ))}
@@ -161,14 +161,7 @@ export default async function Presentation() {
                     </div>
                   </header>
                   {card.bio && <p className="line-clamp-4 text-sm leading-relaxed text-stone-600">{card.bio}</p>}
-                  <ul className="grid grid-cols-4 gap-1.5">
-                    {card.works.slice(0, 8).map((w) => (
-                      <li key={w.id} className="aspect-square overflow-hidden rounded-[3px] bg-stone-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={w.thumb_url || w.image_url} alt={w.title || `Work by ${card.name}`} className="block h-full w-full max-w-none object-cover" />
-                      </li>
-                    ))}
-                  </ul>
+                  <Gallery works={card.works.slice(0, 8)} artistName={card.name} artistPhoto={card.photo_url} layout="thumbs" />
                   <dl className="mt-auto space-y-3 border-t border-stone-100 pt-4 text-sm tabular-nums">
                     {sizes.map(([label, t]) =>
                       t ? <SizePrice key={label} label={label} t={t} artistInstalls={artistInstalls} /> : (
