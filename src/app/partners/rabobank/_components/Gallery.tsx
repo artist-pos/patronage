@@ -32,7 +32,7 @@ export function Gallery({ works, artistName, layout = "squares" }: { works: Work
 
   return (
     <>
-      <ul className={layout === "natural" ? "flex flex-wrap gap-2" : "grid grid-cols-2 gap-2 sm:grid-cols-4"}>
+      <ul className={layout === "natural" ? "flex flex-wrap content-start items-start gap-2" : "grid grid-cols-2 gap-2 sm:grid-cols-4"}>
         {works.map((work, i) => (
           <li key={work.id}>
             <button

@@ -48,23 +48,23 @@ type Total = NonNullable<ReturnType<typeof sizeTotal>>;
 
 /** One size's price: excl. and incl. GST, then what it is made of. */
 function SizePrice({ label, t, artistInstalls }: { label: string; t: Total; artistInstalls: boolean }) {
-  const extra = t.framingPending ? " + framing" : "";
   return (
     <div className="space-y-0.5">
-      <div className="flex justify-between gap-3 font-medium">
-        <dt>{label}</dt>
-        <dd>{range(t.excl)}{extra} <span className="text-xs font-normal text-stone-500">excl.</span></dd>
-      </div>
-      <div className="flex justify-end gap-3 text-stone-600">
-        <dd>{range(t.incl)}{extra} <span className="text-xs text-stone-500">incl. GST</span></dd>
-      </div>
-      <p className="text-xs text-stone-500">
+      <dt className="text-xs font-medium uppercase tracking-widest text-stone-400">{label}</dt>
+      <dd className="flex items-baseline justify-between gap-2">
+        <span className="text-base font-medium">{range(t.excl)}{t.framingPending ? "*" : ""}</span>
+        <span className="text-xs text-stone-500">excl. GST</span>
+      </dd>
+      <dd className="flex items-baseline justify-between gap-2 text-stone-600">
+        <span>{range(t.incl)}{t.framingPending ? "*" : ""}</span>
+        <span className="text-xs text-stone-500">incl. GST</span>
+      </dd>
+      <dd className="pt-0.5 text-xs leading-relaxed text-stone-500">
         Artwork {dollars(t.fee)}
-        {t.framing !== null && ` · framing ${dollars(t.framing)}`}
+        {t.framing !== null ? ` · framing ${dollars(t.framing)}` : " · *framing to be quoted"}
         {t.install && ` · install ${range(t.install)}`}
         {artistInstalls && !t.install && " · artist installs"}
-        {" (excl.)"}
-      </p>
+      </dd>
     </div>
   );
 }
@@ -169,7 +169,7 @@ export default async function Presentation() {
                       </li>
                     ))}
                   </ul>
-                  <dl className="mt-auto space-y-1.5 border-t border-stone-100 pt-4 text-sm tabular-nums">
+                  <dl className="mt-auto space-y-3 border-t border-stone-100 pt-4 text-sm tabular-nums">
                     {sizes.map(([label, t]) =>
                       t ? <SizePrice key={label} label={label} t={t} artistInstalls={artistInstalls} /> : (
                         <div key={label} className="flex justify-between gap-3 text-stone-400">
@@ -189,7 +189,7 @@ export default async function Presentation() {
             })}
           </div>
           <p className="mt-8 max-w-3xl text-sm leading-relaxed text-stone-500">
-            <strong className="font-medium text-stone-700">Excl. GST</strong> is the real cost to Rabobank once GST is claimed back. <strong className="font-medium text-stone-700">Incl. GST</strong> is what is paid out on the invoices. Artists who aren&rsquo;t GST registered add no GST. Installation is estimated at {dollars(INSTALL.min)}–{dollars(INSTALL.max)} plus GST, unless the artist installs it themselves. Framing is the artist&rsquo;s own figure where they frame the work; &ldquo;+ framing&rdquo; means it will be quoted separately.
+            <strong className="font-medium text-stone-700">Excl. GST</strong> is the real cost to Rabobank once GST is claimed back. <strong className="font-medium text-stone-700">Incl. GST</strong> is what is paid out on the invoices. Artists who aren&rsquo;t GST registered add no GST. Installation is estimated at {dollars(INSTALL.min)}–{dollars(INSTALL.max)} plus GST, unless the artist installs it themselves. Framing is the artist&rsquo;s own figure where they frame the work; a figure marked * doesn&rsquo;t include framing yet, which will be quoted separately.
           </p>
         </section>
       </div>
