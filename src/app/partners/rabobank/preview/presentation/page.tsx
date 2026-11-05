@@ -16,6 +16,8 @@ export const metadata: Metadata = {
 
 /** Installation comes from Blake's installer (quoted $300–400): allowed at the top of that, excluding GST. */
 const INSTALL_ALLOWANCE = 400;
+/** Framing by Blake's framer where the artist isn't framing it themselves, excluding GST. */
+const FRAMING_ALLOWANCE = 800;
 const GST_RATE = 0.15;
 /** Rabobank's budget plus the $400 over they agreed to, excluding GST; and Blake's offer from his $2,500 fee. */
 const BUDGET = 5400;
@@ -29,13 +31,15 @@ const SCALE: Record<string, string> = { often: "Works at this scale often", some
  */
 function receipt(c: SizeCost, artistInstalls: boolean, registered: boolean): Receipt | null {
   if (c.fee === null) return null;
-  const framing = c.framing.cost;
+  // The artist's own framing figure, or Blake's framer at the allowance (who charges GST).
+  const artistFrames = c.framing.costFrom === "artist" && c.framing.cost !== null;
+  const framing = artistFrames ? c.framing.cost : FRAMING_ALLOWANCE;
   const install = artistInstalls ? c.install.cost : INSTALL_ALLOWANCE;
-  const artistPart = c.fee + (framing ?? 0) + (artistInstalls ? install ?? 0 : 0);
-  const installerPart = artistInstalls ? 0 : install ?? 0;
-  const excl = artistPart + installerPart;
-  const gst = (registered ? artistPart * GST_RATE : 0) + installerPart * GST_RATE;
-  return { artwork: c.fee, framing, install, artistInstalls, excl, gst, incl: excl + gst };
+  const artistPart = c.fee + (artistFrames ? framing ?? 0 : 0) + (artistInstalls ? install ?? 0 : 0);
+  const othersPart = (artistFrames ? 0 : framing ?? 0) + (artistInstalls ? 0 : install ?? 0);
+  const excl = artistPart + othersPart;
+  const gst = (registered ? artistPart * GST_RATE : 0) + othersPart * GST_RATE;
+  return { artwork: c.fee, framing, framingAllowance: !artistFrames, install, artistInstalls, excl, gst, incl: excl + gst };
 }
 
 /**
@@ -110,6 +114,7 @@ export default async function Presentation() {
           <h2 id="compare" className="mb-6 mt-2 text-3xl font-medium">The artists and their costs</h2>
           <Costs
             installAllowance={INSTALL_ALLOWANCE}
+            framingAllowance={FRAMING_ALLOWANCE}
             contribution={CONTRIBUTION}
             budget={BUDGET}
             artists={people.map(({ row, card }) => {

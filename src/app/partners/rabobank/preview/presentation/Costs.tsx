@@ -8,6 +8,8 @@ import type { Work } from "@/lib/rabobank/shortlist";
 export interface Receipt {
   artwork: number;
   framing: number | null;
+  /** True when framing is Blake's framer allowance rather than the artist's own figure. */
+  framingAllowance: boolean;
   install: number | null;
   artistInstalls: boolean;
   excl: number;
@@ -49,14 +51,16 @@ function Line({ label, value, muted, strong }: { label: string; value: string; m
  * the budget (excluding GST, the figure Rabobank compares).
  */
 function ReceiptView({ r, registered, contribution, budget }: { r: Receipt; registered: boolean; contribution: number; budget: number }) {
-  const gstNote = !registered ? (r.gst ? " (installer only)" : "") : "";
+  // An unregistered artist charges none, so any GST is on the framer and installer.
+  const gstOn = [r.framingAllowance && "framing", !r.artistInstalls && r.install !== null && "installation"].filter(Boolean).join(" and ");
+  const gstNote = !registered && r.gst && gstOn ? ` (on ${gstOn} only)` : "";
   const excl = Math.max(0, r.excl - contribution);
   const incl = Math.max(0, r.incl - contribution);
   const over = excl - budget;
   return (
     <dl className="space-y-1.5 text-sm">
       <Line label="Artwork" value={dollars(r.artwork)} />
-      <Line label="Framing" value={r.framing === null ? "To be quoted" : dollars(r.framing)} muted={r.framing === null} />
+      <Line label={r.framingAllowance ? "Framing (allowance)" : "Framing (by the artist)"} value={r.framing === null ? "To be quoted" : dollars(r.framing)} muted={r.framing === null} />
       <Line label="Installation" value={r.install !== null ? dollars(r.install) : r.artistInstalls ? "Artist installs" : "To be quoted"} muted={r.install === null} />
       {contribution > 0 && (
         <div className="flex items-baseline justify-between gap-3 text-[#000FAA]">
@@ -78,10 +82,8 @@ function ReceiptView({ r, registered, contribution, budget }: { r: Receipt; regi
       {contribution > 0 && (
         <p className={`!mt-3 rounded-md px-2.5 py-1.5 text-xs font-medium ${over <= 0 ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
           {over <= 0 ? `Within the ${dollars(budget)} budget, ${dollars(-over)} to spare` : `${dollars(over)} over the ${dollars(budget)} budget`}
-          {r.framing === null && ", before framing"}
         </p>
       )}
-      {r.framing === null && <p className="pt-1 text-xs text-amber-700">Plus framing, once it&rsquo;s quoted.</p>}
     </dl>
   );
 }
@@ -90,11 +92,13 @@ function ReceiptView({ r, registered, contribution, budget }: { r: Receipt; regi
 export function Costs({
   artists,
   installAllowance,
+  framingAllowance,
   contribution,
   budget,
 }: {
   artists: ArtistCost[];
   installAllowance: number;
+  framingAllowance: number;
   /** Blake's offer from his own fee, shown only when switched on. */
   contribution: number;
   /** Excluding GST: the budget plus what Rabobank agreed to go over by. */
@@ -104,28 +108,18 @@ export function Costs({
   const [withContribution, setWithContribution] = useState(false);
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-full border border-stone-300 bg-white p-1 text-sm" role="group" aria-label="Artwork size">
-          {SIZES.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={size === key}
-              onClick={() => setSize(key)}
-              className={`rounded-full px-4 py-1.5 ${size === key ? "bg-black text-white" : "text-stone-600 hover:text-black"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          aria-pressed={withContribution}
-          onClick={() => setWithContribution((v) => !v)}
-          className={`rounded-full border px-4 py-2 text-sm ${withContribution ? "border-[#000FAA] bg-[#000FAA] text-white" : "border-stone-300 bg-white text-stone-600 hover:text-black"}`}
-        >
-          {withContribution ? "✓ " : ""}With my {dollars(contribution)} contribution
-        </button>
+      <div className="mb-8 inline-flex rounded-full border border-stone-300 bg-white p-1 text-sm" role="group" aria-label="Artwork size">
+        {SIZES.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={size === key}
+            onClick={() => setSize(key)}
+            className={`rounded-full px-4 py-1.5 ${size === key ? "bg-black text-white" : "text-stone-600 hover:text-black"}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -156,11 +150,21 @@ export function Costs({
       <div className="mt-8 max-w-3xl space-y-1.5 text-sm leading-relaxed text-stone-500">
         <p><strong className="font-medium text-stone-700">Cost to Rabobank</strong> is the figure to compare. Rabobank claims the GST back, so this is what the artwork really costs.</p>
         <p><strong className="font-medium text-stone-700">Paid out</strong> is what the invoices add up to, before the GST is claimed back. Artists who aren&rsquo;t GST registered don&rsquo;t charge any.</p>
-        <p>Installation is allowed at {dollars(installAllowance)} plus GST (quoted at $300–400), unless the artist installs it themselves.</p>
+        <p>Installation is allowed at {dollars(installAllowance)} plus GST (quoted at $300–400), unless the artist installs it themselves. Framing is allowed at {dollars(framingAllowance)} plus GST, unless the artist frames it themselves.</p>
         {withContribution && (
           <p>The <strong className="font-medium text-[#000FAA]">Patronage contribution</strong> is {dollars(contribution)} of my curation fee, put towards the artwork. The budget is {dollars(budget)} excluding GST.</p>
         )}
       </div>
+
+      {/* Quiet on purpose: Blake reveals the contribution when the conversation gets there. */}
+      <button
+        type="button"
+        aria-pressed={withContribution}
+        onClick={() => setWithContribution((v) => !v)}
+        className="mt-10 text-xs text-stone-400 underline-offset-4 hover:text-stone-600 hover:underline"
+      >
+        {withContribution ? "Hide contribution" : "Show contribution"}
+      </button>
     </>
   );
 }
