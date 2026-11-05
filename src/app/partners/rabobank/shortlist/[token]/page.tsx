@@ -27,7 +27,9 @@ export default async function StaffShortlist({ params }: { params: Promise<{ tok
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
       <h1 className="mb-3 text-2xl font-semibold">Te Puke event space shortlist</h1>
-      {state === "open" ? (
+      {state === "open" && !artists.length ? (
+        <p className="text-muted-foreground" role="status">The shortlist isn&rsquo;t ready yet. Please check back soon.</p>
+      ) : state === "open" ? (
         <>
           <p className="mb-2 text-muted-foreground">{settings.shortlist_intro?.trim() || DEFAULT_SHORTLIST_INTRO}</p>
           {settings.shortlist_close_at && (

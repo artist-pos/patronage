@@ -31,9 +31,14 @@ export default async function RabobankArtistsAdmin() {
             {rows.length} invited · {rows.filter((r) => r.partOne === "done").length} quotes · {rows.filter((r) => r.partTwo === "done").length} profiles
           </p>
         </div>
-        <Link href="/admin/rabobank/artists/export" prefetch={false} className="inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-foreground">
-          <Download className="size-4" /> Export CSV
-        </Link>
+        <div className="flex items-center gap-4">
+          <a href="/partners/rabobank/preview/presentation" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-sm text-white hover:opacity-85">
+            <Eye className="size-4" /> Present the artists
+          </a>
+          <Link href="/admin/rabobank/artists/export" prefetch={false} className="inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-foreground">
+            <Download className="size-4" /> Export CSV
+          </Link>
+        </div>
       </header>
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">

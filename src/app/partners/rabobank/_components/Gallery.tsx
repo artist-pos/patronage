@@ -8,7 +8,11 @@ function caption(w: Work): string {
   return [w.title, w.size, w.year, w.medium].filter(Boolean).join(" · ");
 }
 
-export function Gallery({ works, artistName }: { works: Work[]; artistName: string }) {
+/**
+ * "squares": cropped tiles in a grid (the staff shortlist). "natural": each work
+ * uncropped at one shared row height, wrapping (for presenting).
+ */
+export function Gallery({ works, artistName, layout = "squares" }: { works: Work[]; artistName: string; layout?: "squares" | "natural" }) {
   const [index, setIndex] = useState<number | null>(null);
   const labelId = useId();
   const open = index !== null;
@@ -28,13 +32,13 @@ export function Gallery({ works, artistName }: { works: Work[]; artistName: stri
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <ul className={layout === "natural" ? "flex flex-wrap gap-2" : "grid grid-cols-2 gap-2 sm:grid-cols-4"}>
         {works.map((work, i) => (
           <li key={work.id}>
             <button
               type="button"
               onClick={() => setIndex(i)}
-              className="block aspect-square w-full overflow-hidden rounded-md bg-stone-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none"
+              className={`block overflow-hidden rounded-[3px] bg-stone-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none ${layout === "natural" ? "" : "aspect-square w-full"}`}
               aria-label={`View ${work.title || "work"} by ${artistName} larger`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -42,7 +46,9 @@ export function Gallery({ works, artistName }: { works: Work[]; artistName: stri
                 src={work.thumb_url || work.image_url}
                 alt={work.title || `Work by ${artistName}`}
                 loading="lazy"
-                className="h-full w-full object-cover"
+                className="block max-w-none object-cover"
+                // Inline, because the site-wide img rule (height: auto) outranks utility classes.
+                style={layout === "natural" ? { height: "clamp(9rem, 16vw, 15rem)", width: "auto" } : { height: "100%", width: "100%" }}
               />
             </button>
           </li>
