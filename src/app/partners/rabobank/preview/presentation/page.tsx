@@ -17,6 +17,9 @@ export const metadata: Metadata = {
 /** Installation comes from Blake's installer (quoted $300–400): allowed at the top of that, excluding GST. */
 const INSTALL_ALLOWANCE = 400;
 const GST_RATE = 0.15;
+/** Rabobank's budget plus the $400 over they agreed to, excluding GST; and Blake's offer from his $2,500 fee. */
+const BUDGET = 5400;
+const CONTRIBUTION = 1250;
 
 const SCALE: Record<string, string> = { often: "Works at this scale often", some: "Has worked at this scale once or twice", largest: "This would be their largest work" };
 
@@ -107,6 +110,8 @@ export default async function Presentation() {
           <h2 id="compare" className="mb-6 mt-2 text-3xl font-medium">The artists and their costs</h2>
           <Costs
             installAllowance={INSTALL_ALLOWANCE}
+            contribution={CONTRIBUTION}
+            budget={BUDGET}
             artists={people.map(({ row, card }) => {
               const artistInstalls = row.quote.install_option === "self";
               const registered = gstOf(row.quote) !== "none";
