@@ -101,7 +101,7 @@ export function Costs({
   framingAllowance: number;
   /** Blake's offer from his own fee, shown only when switched on. */
   contribution: number;
-  /** Excluding GST: the budget plus what Rabobank agreed to go over by. */
+  /** Rabobank's budget, excluding GST. */
   budget: number;
 }) {
   const [size, setSize] = useState<"small" | "big">("small");

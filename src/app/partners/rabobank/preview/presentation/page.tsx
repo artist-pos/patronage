@@ -19,8 +19,8 @@ const INSTALL_ALLOWANCE = 400;
 /** Framing by Blake's framer where the artist isn't framing it themselves, excluding GST. */
 const FRAMING_ALLOWANCE = 800;
 const GST_RATE = 0.15;
-/** Rabobank's budget plus the $400 over they agreed to, excluding GST; and Blake's offer from his $2,500 fee. */
-const BUDGET = 5400;
+/** Rabobank's budget, excluding GST (possibly some movement for the right artist); and Blake's offer from his $2,500 fee. */
+const BUDGET = 5000;
 const CONTRIBUTION = 1250;
 
 const SCALE: Record<string, string> = { often: "Works at this scale often", some: "Has worked at this scale once or twice", largest: "This would be their largest work" };
