@@ -5,6 +5,7 @@ import { loadArtistAdmin, type SizeCost } from "@/lib/rabobank/artist-admin";
 import { getArtistCards, type ArtistCard } from "@/lib/rabobank/shortlist";
 import { gstOf, readyBy } from "@/lib/rabobank/quote";
 import { Gallery } from "../../_components/Gallery";
+import { Costs, type Receipt } from "./Costs";
 
 export const dynamic = "force-dynamic";
 
@@ -13,65 +14,30 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Installation is priced from Blake's installer, not the artists: an estimate range, excluding GST. */
-const INSTALL = { min: 300, max: 400 };
+/** Installation comes from Blake's installer (quoted $300–400): allowed at the top of that, excluding GST. */
+const INSTALL_ALLOWANCE = 400;
+const GST_RATE = 0.15;
 
-const dollars = (n: number) => "$" + Math.round(n).toLocaleString("en-NZ");
 const SCALE: Record<string, string> = { often: "Works at this scale often", some: "Has worked at this scale once or twice", largest: "This would be their largest work" };
 
-const GST = 1.15;
-type Range = { min: number; max: number };
-const range = (r: Range) => (Math.round(r.min) === Math.round(r.max) ? dollars(r.min) : `${dollars(r.min)}–${dollars(r.max)}`);
-
 /**
- * Artwork plus framing plus installation for one size, both excluding GST (the
- * cost once GST is claimed back) and including it (what is paid out). An
- * artist who isn't GST registered adds none; the installer is assumed to add it.
+ * One size, itemised. The artist's parts carry GST only if they're registered;
+ * the installer is assumed to charge it.
  */
-function sizeTotal(c: SizeCost, artistInstalls: boolean, registered: boolean) {
+function receipt(c: SizeCost, artistInstalls: boolean, registered: boolean): Receipt | null {
   if (c.fee === null) return null;
-  const install: Range | null = artistInstalls ? (c.install.cost !== null ? { min: c.install.cost, max: c.install.cost } : null) : INSTALL;
-  const artist = c.fee + (c.framing.cost ?? 0);
-  const artistIncl = registered ? artist * GST : artist;
-  const installIncl = artistInstalls ? (registered ? GST : 1) : GST;
-  return {
-    fee: c.fee,
-    framing: c.framing.cost,
-    install,
-    excl: { min: artist + (install?.min ?? 0), max: artist + (install?.max ?? 0) },
-    incl: { min: artistIncl + (install?.min ?? 0) * installIncl, max: artistIncl + (install?.max ?? 0) * installIncl },
-    framingPending: c.framing.cost === null,
-  };
-}
-
-type Total = NonNullable<ReturnType<typeof sizeTotal>>;
-
-/** One size's price: excl. and incl. GST, then what it is made of. */
-function SizePrice({ label, t, artistInstalls }: { label: string; t: Total; artistInstalls: boolean }) {
-  return (
-    <div className="space-y-0.5">
-      <dt className="text-xs font-medium uppercase tracking-widest text-stone-400">{label}</dt>
-      <dd className="flex items-baseline justify-between gap-2">
-        <span className="text-base font-medium">{range(t.excl)}{t.framingPending ? "*" : ""}</span>
-        <span className="text-xs text-stone-500">excl. GST</span>
-      </dd>
-      <dd className="flex items-baseline justify-between gap-2 text-stone-600">
-        <span>{range(t.incl)}{t.framingPending ? "*" : ""}</span>
-        <span className="text-xs text-stone-500">incl. GST</span>
-      </dd>
-      <dd className="pt-0.5 text-xs leading-relaxed text-stone-500">
-        Artwork {dollars(t.fee)}
-        {t.framing !== null ? ` · framing ${dollars(t.framing)}` : " · *framing to be quoted"}
-        {t.install && ` · install ${range(t.install)}`}
-        {artistInstalls && !t.install && " · artist installs"}
-      </dd>
-    </div>
-  );
+  const framing = c.framing.cost;
+  const install = artistInstalls ? c.install.cost : INSTALL_ALLOWANCE;
+  const artistPart = c.fee + (framing ?? 0) + (artistInstalls ? install ?? 0 : 0);
+  const installerPart = artistInstalls ? 0 : install ?? 0;
+  const excl = artistPart + installerPart;
+  const gst = (registered ? artistPart * GST_RATE : 0) + installerPart * GST_RATE;
+  return { artwork: c.fee, framing, install, artistInstalls, excl, gst, incl: excl + gst };
 }
 
 /**
  * For Blake's meeting with Rabobank: every artist who has responded, one
- * section each, then a side-by-side page with prices. Admin only; reads the
+ * section each, then a side-by-side page with costs. Admin only; reads the
  * artists whether or not they are on the staff shortlist.
  */
 export default async function Presentation() {
@@ -138,52 +104,28 @@ export default async function Presentation() {
         {/* Side by side, with costs */}
         <section className="border-t border-stone-200 py-16" aria-labelledby="compare">
           <p className="text-xs font-medium uppercase tracking-widest text-stone-400">Side by side</p>
-          <h2 id="compare" className="mb-10 mt-2 text-3xl font-medium">The artists and their costs</h2>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {people.map(({ row, card }) => {
+          <h2 id="compare" className="mb-6 mt-2 text-3xl font-medium">The artists and their costs</h2>
+          <Costs
+            installAllowance={INSTALL_ALLOWANCE}
+            artists={people.map(({ row, card }) => {
               const artistInstalls = row.quote.install_option === "self";
-              const gst = gstOf(row.quote);
-              const registered = gst !== "none";
-              const sizes = [
-                ["1600 × 800", sizeTotal(row.sizes.small, artistInstalls, registered)],
-                ["1800 × 900", sizeTotal(row.sizes.big, artistInstalls, registered)],
-              ] as const;
-              return (
-                <article key={card.id} className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5">
-                  <header className="flex items-center gap-3">
-                    {card.photo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={card.photo_url} alt="" className="size-12 shrink-0 rounded-full object-cover" />
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="truncate text-lg font-medium">{card.name}</h3>
-                      <p className="truncate text-xs text-stone-500">{card.region || row.quote.based_in || " "}</p>
-                    </div>
-                  </header>
-                  {card.bio && <p className="line-clamp-4 text-sm leading-relaxed text-stone-600">{card.bio}</p>}
-                  <Gallery works={card.works.slice(0, 8)} artistName={card.name} artistPhoto={card.photo_url} layout="thumbs" />
-                  <dl className="mt-auto space-y-3 border-t border-stone-100 pt-4 text-sm tabular-nums">
-                    {sizes.map(([label, t]) =>
-                      t ? <SizePrice key={label} label={label} t={t} artistInstalls={artistInstalls} /> : (
-                        <div key={label} className="flex justify-between gap-3 text-stone-400">
-                          <dt>{label}</dt>
-                          <dd>Not quoted</dd>
-                        </div>
-                      )
-                    )}
-                    <div className="flex justify-between gap-3 pt-1.5 text-xs text-stone-500">
-                      <dt>Ready</dt>
-                      <dd>{readyBy(row.quote).label}</dd>
-                    </div>
-                    {gst === "none" && <p className="text-xs text-stone-500">Not GST registered, so no GST is added.</p>}
-                  </dl>
-                </article>
-              );
+              const registered = gstOf(row.quote) !== "none";
+              return {
+                id: card.id,
+                name: card.name,
+                photo: card.photo_url,
+                place: card.region || row.quote.based_in || null,
+                bio: card.bio,
+                works: card.works,
+                ready: readyBy(row.quote).label,
+                registered,
+                sizes: {
+                  small: receipt(row.sizes.small, artistInstalls, registered),
+                  big: receipt(row.sizes.big, artistInstalls, registered),
+                },
+              };
             })}
-          </div>
-          <p className="mt-8 max-w-3xl text-sm leading-relaxed text-stone-500">
-            <strong className="font-medium text-stone-700">Excl. GST</strong> is the real cost to Rabobank once GST is claimed back. <strong className="font-medium text-stone-700">Incl. GST</strong> is what is paid out on the invoices. Artists who aren&rsquo;t GST registered add no GST. Installation is estimated at {dollars(INSTALL.min)}–{dollars(INSTALL.max)} plus GST, unless the artist installs it themselves. Framing is the artist&rsquo;s own figure where they frame the work; a figure marked * doesn&rsquo;t include framing yet, which will be quoted separately.
-          </p>
+          />
         </section>
       </div>
     </div>
