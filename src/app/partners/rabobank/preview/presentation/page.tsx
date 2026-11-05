@@ -19,23 +19,55 @@ const INSTALL = { min: 300, max: 400 };
 const dollars = (n: number) => "$" + Math.round(n).toLocaleString("en-NZ");
 const SCALE: Record<string, string> = { often: "Works at this scale often", some: "Has worked at this scale once or twice", largest: "This would be their largest work" };
 
-/** Artwork plus framing plus installation for one size, excluding GST. Installation is a range, so the total is too. */
-function sizeTotal(c: SizeCost, artistInstalls: boolean) {
+const GST = 1.15;
+type Range = { min: number; max: number };
+const range = (r: Range) => (Math.round(r.min) === Math.round(r.max) ? dollars(r.min) : `${dollars(r.min)}–${dollars(r.max)}`);
+
+/**
+ * Artwork plus framing plus installation for one size, both excluding GST (the
+ * cost once GST is claimed back) and including it (what is paid out). An
+ * artist who isn't GST registered adds none; the installer is assumed to add it.
+ */
+function sizeTotal(c: SizeCost, artistInstalls: boolean, registered: boolean) {
   if (c.fee === null) return null;
-  const install = artistInstalls && c.install.cost !== null ? { min: c.install.cost, max: c.install.cost } : artistInstalls ? null : INSTALL;
-  const base = c.fee + (c.framing.cost ?? 0);
+  const install: Range | null = artistInstalls ? (c.install.cost !== null ? { min: c.install.cost, max: c.install.cost } : null) : INSTALL;
+  const artist = c.fee + (c.framing.cost ?? 0);
+  const artistIncl = registered ? artist * GST : artist;
+  const installIncl = artistInstalls ? (registered ? GST : 1) : GST;
   return {
     fee: c.fee,
     framing: c.framing.cost,
     install,
-    min: base + (install?.min ?? 0),
-    max: base + (install?.max ?? 0),
+    excl: { min: artist + (install?.min ?? 0), max: artist + (install?.max ?? 0) },
+    incl: { min: artistIncl + (install?.min ?? 0) * installIncl, max: artistIncl + (install?.max ?? 0) * installIncl },
     framingPending: c.framing.cost === null,
   };
 }
 
 type Total = NonNullable<ReturnType<typeof sizeTotal>>;
-const range = (t: Total) => (Math.round(t.min) === Math.round(t.max) ? dollars(t.min) : `${dollars(t.min)}–${dollars(t.max)}`);
+
+/** One size's price: excl. and incl. GST, then what it is made of. */
+function SizePrice({ label, t, artistInstalls }: { label: string; t: Total; artistInstalls: boolean }) {
+  const extra = t.framingPending ? " + framing" : "";
+  return (
+    <div className="space-y-0.5">
+      <div className="flex justify-between gap-3 font-medium">
+        <dt>{label}</dt>
+        <dd>{range(t.excl)}{extra} <span className="text-xs font-normal text-stone-500">excl.</span></dd>
+      </div>
+      <div className="flex justify-end gap-3 text-stone-600">
+        <dd>{range(t.incl)}{extra} <span className="text-xs text-stone-500">incl. GST</span></dd>
+      </div>
+      <p className="text-xs text-stone-500">
+        Artwork {dollars(t.fee)}
+        {t.framing !== null && ` · framing ${dollars(t.framing)}`}
+        {t.install && ` · install ${range(t.install)}`}
+        {artistInstalls && !t.install && " · artist installs"}
+        {" (excl.)"}
+      </p>
+    </div>
+  );
+}
 
 /**
  * For Blake's meeting with Rabobank: every artist who has responded, one
@@ -110,9 +142,12 @@ export default async function Presentation() {
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {people.map(({ row, card }) => {
               const artistInstalls = row.quote.install_option === "self";
-              const big = sizeTotal(row.sizes.big, artistInstalls);
-              const small = sizeTotal(row.sizes.small, artistInstalls);
               const gst = gstOf(row.quote);
+              const registered = gst !== "none";
+              const sizes = [
+                ["1600 × 800", sizeTotal(row.sizes.small, artistInstalls, registered)],
+                ["1800 × 900", sizeTotal(row.sizes.big, artistInstalls, registered)],
+              ] as const;
               return (
                 <article key={card.id} className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5">
                   <header className="flex items-center gap-3">
@@ -135,23 +170,10 @@ export default async function Presentation() {
                     ))}
                   </ul>
                   <dl className="mt-auto space-y-1.5 border-t border-stone-100 pt-4 text-sm tabular-nums">
-                    {[["1800 × 900", big], ["1600 × 800", small]].map(([label, t]) =>
-                      t ? (
-                        <div key={label as string} className="space-y-0.5">
-                          <div className="flex justify-between gap-3 font-medium">
-                            <dt>{label as string}</dt>
-                            <dd>{range(t as Total)}{(t as Total).framingPending ? " + framing" : ""}</dd>
-                          </div>
-                          <p className="text-xs text-stone-500">
-                            Artwork {dollars((t as Total).fee)}
-                            {(t as Total).framing !== null && ` · framing ${dollars((t as Total).framing!)}`}
-                            {(t as Total).install && ` · install ${range({ ...(t as Total), min: (t as Total).install!.min, max: (t as Total).install!.max })}`}
-                            {artistInstalls && !(t as Total).install && " · artist installs"}
-                          </p>
-                        </div>
-                      ) : (
-                        <div key={label as string} className="flex justify-between gap-3 text-stone-400">
-                          <dt>{label as string}</dt>
+                    {sizes.map(([label, t]) =>
+                      t ? <SizePrice key={label} label={label} t={t} artistInstalls={artistInstalls} /> : (
+                        <div key={label} className="flex justify-between gap-3 text-stone-400">
+                          <dt>{label}</dt>
                           <dd>Not quoted</dd>
                         </div>
                       )
@@ -167,7 +189,7 @@ export default async function Presentation() {
             })}
           </div>
           <p className="mt-8 max-w-3xl text-sm leading-relaxed text-stone-500">
-            All amounts exclude GST. Installation is estimated at {dollars(INSTALL.min)}–{dollars(INSTALL.max)} unless the artist installs it themselves. Framing is the artist&rsquo;s own figure where they frame the work; &ldquo;+ framing&rdquo; means it will be quoted separately.
+            <strong className="font-medium text-stone-700">Excl. GST</strong> is the real cost to Rabobank once GST is claimed back. <strong className="font-medium text-stone-700">Incl. GST</strong> is what is paid out on the invoices. Artists who aren&rsquo;t GST registered add no GST. Installation is estimated at {dollars(INSTALL.min)}–{dollars(INSTALL.max)} plus GST, unless the artist installs it themselves. Framing is the artist&rsquo;s own figure where they frame the work; &ldquo;+ framing&rdquo; means it will be quoted separately.
           </p>
         </section>
       </div>
