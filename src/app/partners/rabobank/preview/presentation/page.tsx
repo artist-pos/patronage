@@ -63,7 +63,7 @@ export default async function Presentation() {
       <div className="mx-auto max-w-[1600px] px-4 sm:px-8">
         {/* Cover */}
         <section className="flex min-h-[80vh] flex-col justify-center gap-8 py-16 lg:flex-row lg:items-center lg:gap-16">
-          <div className="max-w-xl space-y-4">
+          <div className="max-w-xl space-y-4 lg:w-[30rem] lg:shrink-0">
             <p className="text-xs font-medium uppercase tracking-widest text-[#000FAA]">Rabobank Te Puke · Event space artwork</p>
             <h1 className="text-4xl font-medium leading-tight sm:text-5xl">The artists</h1>
             <p className="text-lg leading-relaxed text-stone-600">
@@ -71,7 +71,7 @@ export default async function Presentation() {
             </p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rabobank-pilot/room.webp" alt="The Te Puke event space" className="w-full max-w-3xl rounded-[4px] shadow-xl" />
+          <img src="/rabobank-pilot/room.webp" alt="The Te Puke event space" className="w-full min-w-0 max-w-3xl rounded-[4px] shadow-xl lg:flex-1" />
         </section>
 
         {/* One section per artist */}

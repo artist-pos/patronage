@@ -8,7 +8,7 @@ export const REACTIONS = [
 ] as const;
 export type ReactionKey = (typeof REACTIONS)[number]["key"];
 
-export const DEFAULT_SHORTLIST_INTRO = "Your input informs the recommendation. It is not a vote.";
+export const DEFAULT_SHORTLIST_INTRO = "Thank you for helping to shape the brief. From the artists who responded, three have been shortlisted for the event space. Take your time with their work: your responses will help shape the recommendation, though it isn't a vote.";
 
 export interface Work {
   id: string;
