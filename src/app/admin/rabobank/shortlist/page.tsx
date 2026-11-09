@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { getArtistCards, getCommercial } from "@/lib/rabobank/shortlist";
 import {
-  createArtist, deleteArtist, deleteWork, moveArtist, moveWork, toggleArtist, updateArtist, updateWork,
+  createArtist, deleteArtist, deleteWork, moveArtist, moveWork, toggleArtist, updateWork,
 } from "./actions";
 import { WorkUploader } from "./WorkUploader";
+import { ArtistForm } from "./ArtistForm";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Rabobank shortlist", robots: { index: false, follow: false } };
@@ -43,7 +44,7 @@ export default async function ShortlistAdmin() {
               </div>
             </div>
 
-            <form action={updateArtist} className="grid gap-3 sm:grid-cols-2">
+            <ArtistForm className="grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="id" value={a.id} />
               <label className="space-y-1 text-sm"><span className="font-medium">Name</span><input name="name" defaultValue={a.name} className={input} maxLength={120} required /></label>
               <label className="space-y-1 text-sm"><span className="font-medium">Region</span><input name="region" defaultValue={a.region ?? ""} className={input} maxLength={120} /></label>
@@ -52,8 +53,7 @@ export default async function ShortlistAdmin() {
               <label className="space-y-1 text-sm sm:col-span-2"><span className="font-medium">From Blake <span className="font-normal text-muted-foreground">(shown to staff under the artist&rsquo;s name; a blank line starts a new paragraph)</span></span><textarea name="curator_note" defaultValue={a.curator_note ?? ""} rows={5} className={input} maxLength={800} /></label>
               <label className="space-y-1 text-sm"><span className="font-medium">Indicative fee (client only)</span><input name="fee_indicative" defaultValue={c?.fee_indicative ?? ""} className={input} maxLength={200} /></label>
               <label className="space-y-1 text-sm"><span className="font-medium">Indicative timeline (client only)</span><input name="timeline_indicative" defaultValue={c?.timeline_indicative ?? ""} className={input} maxLength={200} /></label>
-              <div className="sm:col-span-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Save artist</button></div>
-            </form>
+            </ArtistForm>
 
             <div className="space-y-3">
               <h3 className="text-sm font-medium">Works ({a.works.length})</h3>

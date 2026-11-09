@@ -28,28 +28,37 @@ export async function createArtist(fd: FormData): Promise<void> {
   done();
 }
 
-export async function updateArtist(fd: FormData): Promise<void> {
-  await requireAdmin();
+export type SaveResult = { ok?: boolean; error?: string } | null;
+
+/** Saves an artist's details and says so, or says what went wrong (it used to fail silently). */
+export async function updateArtist(_: SaveResult, fd: FormData): Promise<SaveResult> {
+  if (!(await isAdmin())) return { error: "You're signed out. Sign in again and retry." };
   const id = String(fd.get("id"));
   const admin = createAdminClient();
   const name = text(fd, "name", 120);
-  if (!name) return;
-  await admin
+  if (!name) return { error: "Add a name." };
+  // Textareas send line breaks as \r\n; store \n so the length limit counts what you see.
+  const note = text(fd, "curator_note", 1600)?.replace(/\r\n?/g, "\n") ?? null;
+  if (note && note.length > 800) return { error: `The note is ${note.length} characters; the limit is 800.` };
+  const { error } = await admin
     .from("rabobank_artist")
     .update({
       name,
       region: text(fd, "region", 120),
       medium: text(fd, "medium", 200),
-      curator_note: text(fd, "curator_note", 800),
+      curator_note: note,
       website_url: text(fd, "website_url", 300),
     })
     .eq("id", id);
-  await admin.from("rabobank_artist_commercial").upsert({
+  if (error) return { error: error.message };
+  const { error: commercialError } = await admin.from("rabobank_artist_commercial").upsert({
     artist_id: id,
     fee_indicative: text(fd, "fee_indicative", 200),
     timeline_indicative: text(fd, "timeline_indicative", 200),
   });
+  if (commercialError) return { error: commercialError.message };
   done();
+  return { ok: true };
 }
 
 export async function toggleArtist(fd: FormData): Promise<void> {
