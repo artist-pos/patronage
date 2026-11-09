@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { formatNz, windowState } from "@/lib/rabobank/time";
-import { DEFAULT_SHORTLIST_INTRO, getArtistCards } from "@/lib/rabobank/shortlist";
+import { DEFAULT_SHORTLIST_INTRO, getArtistCards, getArtistResponses } from "@/lib/rabobank/shortlist";
 import { StaffShortlist } from "./StaffShortlist";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +32,15 @@ export default async function StaffShortlistPage({ params }: { params: Promise<{
   if (state === "before") return <Notice>The shortlist opens {formatNz(settings.shortlist_open_at)}. Please check back then.</Notice>;
   if (state === "closed") return <Notice>Responses have closed. Thank you to everyone who took part.</Notice>;
 
-  // Shortlisted artists, works and Blake's notes only. Fees and timelines are never loaded here.
+  // Shortlisted artists, works, Blake's notes and their own responses. Fees and timelines are never loaded here.
   const artists = await getArtistCards({ includeHidden: false });
   if (!artists.length) return <Notice>The shortlist isn&rsquo;t ready yet. Please check back soon.</Notice>;
+  const responses = await getArtistResponses(artists);
 
   return (
     <StaffShortlist
       artists={artists}
+      responses={responses}
       token={token}
       nameMode={settings.collect_first_name}
       intro={settings.shortlist_intro?.trim() || DEFAULT_SHORTLIST_INTRO}

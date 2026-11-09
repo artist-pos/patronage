@@ -8,6 +8,11 @@ export const REACTIONS = [
 ] as const;
 export type ReactionKey = (typeof REACTIONS)[number]["key"];
 
+/** The three-way reaction the summaries use, from the staff's 1 to 10 score (migration 220). */
+export function reactionFor(score: number): ReactionKey {
+  return score >= 8 ? "speaks" : score >= 4 ? "unsure" : "not_for_space";
+}
+
 export const DEFAULT_SHORTLIST_INTRO = "Thank you for helping to shape the brief. From the artists who responded, three have been shortlisted for the event space. Take your time with their work: your responses will help shape the recommendation, though it isn't a vote.";
 
 export interface Work {
@@ -95,6 +100,23 @@ export async function getStaffQuoteLines(artists: ArtistCard[]): Promise<Record<
     ].filter(Boolean);
     if (parts.length) out[byInvite.get(q.invite_id)!] = `${parts.join(" · ")} (${gst})`;
   }
+  return out;
+}
+
+/**
+ * Each shortlisted artist's own response to the brief (Part one's "approach"),
+ * by artist id. Reads that one text column only: never fees, never timelines.
+ */
+export async function getArtistResponses(artists: ArtistCard[]): Promise<Record<string, string>> {
+  const byInvite = new Map(artists.filter((a) => a.invite_id).map((a) => [a.invite_id!, a.id]));
+  if (!byInvite.size) return {};
+  const { data } = await createAdminClient()
+    .from("rabobank_quote")
+    .select("invite_id, approach_text")
+    .eq("status", "submitted")
+    .in("invite_id", [...byInvite.keys()]);
+  const out: Record<string, string> = {};
+  for (const q of data ?? []) if (q.approach_text?.trim()) out[byInvite.get(q.invite_id)!] = q.approach_text.trim();
   return out;
 }
 

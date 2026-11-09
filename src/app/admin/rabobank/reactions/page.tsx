@@ -16,7 +16,7 @@ export default async function ReactionsAdmin() {
     getReactionStats(),
     createAdminClient()
       .from("rabobank_reaction")
-      .select("artist_id, first_name, reaction, comment, updated_at")
+      .select("artist_id, first_name, reaction, score, comment, updated_at")
       .order("updated_at", { ascending: false })
       .then((r) => r.data ?? []),
   ]);
@@ -33,16 +33,18 @@ export default async function ReactionsAdmin() {
         {artists.map((a) => {
           const c = stats.counts[a.id] ?? { speaks: 0, unsure: 0, not_for_space: 0 };
           const mine = rows.filter((r) => r.artist_id === a.id);
+          const scores = mine.map((r) => r.score).filter((s): s is number => typeof s === "number");
+          const avg = scores.length ? (scores.reduce((x, y) => x + y, 0) / scores.length).toFixed(1) : null;
           return (
             <article key={a.id} className="space-y-2 rounded-md border border-border p-4 text-sm">
-              <h2 className="font-semibold">{a.name}</h2>
+              <h2 className="font-semibold">{a.name}{avg && <span className="ml-2 font-normal text-muted-foreground">average {avg} / 10 from {scores.length}</span>}</h2>
               <p className="text-muted-foreground">
                 {REACTIONS.map((r) => `${r.label}: ${c[r.key]}`).join(" · ")}
               </p>
               <ul className="space-y-1">
                 {mine.map((r, i) => (
                   <li key={i}>
-                    <strong>{r.first_name ?? "No name"}</strong> · {label[r.reaction]}
+                    <strong>{r.first_name ?? "No name"}</strong> · {r.score ? `${r.score}/10 · ` : ""}{label[r.reaction]}
                     {r.comment && <> — &ldquo;{r.comment}&rdquo;</>}{" "}
                     <span className="text-xs text-muted-foreground">{formatNz(r.updated_at, { weekday: undefined })}</span>
                   </li>

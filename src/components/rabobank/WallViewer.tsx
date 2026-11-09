@@ -225,10 +225,12 @@ export function WallViewer({
   }
   return (
     <section className="wv" ref={ref} aria-label="Wall viewer">
-      <div className="wv-head">
-        {heading && <h3>{heading}</h3>}
-        <p>{intro}</p>
-      </div>
+      {(heading || intro) && (
+        <div className="wv-head">
+          {heading && <h3>{heading}</h3>}
+          {intro && <p>{intro}</p>}
+        </div>
+      )}
       <div className="wv-bar">
         <div className="wv-seg" role="radiogroup" aria-label="Painting size">
           <label><input type="radio" name="wvsize" value="big" defaultChecked={initialSize === "big"} /><span>1800 x 900</span></label>

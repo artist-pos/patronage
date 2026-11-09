@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyToken } from "@/lib/rabobank/tokens";
 import { getSettings } from "@/lib/rabobank/settings";
 import { windowState } from "@/lib/rabobank/time";
-import { REACTIONS } from "@/lib/rabobank/shortlist";
+import { REACTIONS, reactionFor } from "@/lib/rabobank/shortlist";
 
 const RESPONDENT = /^[A-Za-z0-9-]{16,64}$/;
 
@@ -15,7 +15,8 @@ export interface ReactionInput {
   artistId: string;
   respondentId: string;
   firstName: string;
-  reaction: string;
+  /** 1 (not for this space) to 10 (speaks to me). */
+  score: number;
   comment: string;
 }
 
@@ -26,7 +27,10 @@ export async function saveReaction(input: ReactionInput): Promise<ReactionResult
     return { ok: false, error: "This link is no longer active." };
   }
   if (!RESPONDENT.test(input.respondentId ?? "")) return { ok: false, error: "Something went wrong. Please reload the page." };
-  if (!REACTIONS.some((r) => r.key === input.reaction)) return { ok: false, error: "Choose one of the options." };
+  const score = Number(input.score);
+  if (!Number.isInteger(score) || score < 1 || score > 10) return { ok: false, error: "Choose a number from 1 to 10." };
+  const reaction = reactionFor(score);
+  if (!REACTIONS.some((r) => r.key === reaction)) return { ok: false, error: "Choose a number from 1 to 10." };
 
   const settings = await getSettings();
   if (windowState(settings.shortlist_open_at, settings.shortlist_close_at) !== "open") {
@@ -61,7 +65,8 @@ export async function saveReaction(input: ReactionInput): Promise<ReactionResult
       artist_id: artist.id,
       respondent_id: input.respondentId,
       first_name: settings.collect_first_name === "off" ? null : firstName,
-      reaction: input.reaction,
+      reaction,
+      score,
       comment: (input.comment ?? "").trim().slice(0, 500) || null,
       updated_at: new Date().toISOString(),
     },
@@ -78,12 +83,12 @@ export async function saveReaction(input: ReactionInput): Promise<ReactionResult
 export async function loadMyReactions(
   token: string,
   respondentId: string
-): Promise<{ artist_id: string; reaction: string; comment: string | null }[]> {
+): Promise<{ artist_id: string; reaction: string; score: number | null; comment: string | null }[]> {
   if (!(await verifyToken(String(token ?? ""), "staff"))) return [];
   if (!RESPONDENT.test(respondentId ?? "")) return [];
   const { data } = await createAdminClient()
     .from("rabobank_reaction")
-    .select("artist_id, reaction, comment")
+    .select("artist_id, reaction, score, comment")
     .eq("respondent_id", respondentId);
   return data ?? [];
 }

@@ -20,6 +20,7 @@ export async function GET() {
     (reactions ?? []).map((r) => ({
       artist: name[r.artist_id] ?? r.artist_id,
       first_name: r.first_name ?? "",
+      score_out_of_10: r.score ?? "",
       reaction: label[r.reaction] ?? r.reaction,
       comment: r.comment ?? "",
       created_at: r.created_at,
