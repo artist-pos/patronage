@@ -379,7 +379,10 @@ export default async function Home() {
             <div className="mb-10 flex items-end justify-between gap-6">
               <div>
                 <p className="t-section-label mb-3">Artists on Patronage</p>
-                <h2 className="t-display text-[36px] sm:text-[44px]">{artistCount} artists and counting.</h2>
+                {/* The invitation only makes sense to someone who hasn't joined yet. */}
+                <h2 className="t-display text-[36px] sm:text-[44px]">
+                  {user ? `A community of ${artistCount} artists.` : `Join a community of ${artistCount} artists.`}
+                </h2>
               </div>
               <Link
                 href="/artists"
