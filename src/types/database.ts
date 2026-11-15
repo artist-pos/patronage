@@ -274,7 +274,8 @@ export interface Notification {
   type:
     | 'sale' | 'support' | 'transfer_request' | 'transfer_accepted' | 'note'
     | 'roster_invite' | 'roster_accepted' | 'roster_declined' | 'roster_left' | 'roster_removed'
-    | 'org_opportunity' | 'opportunity_invite';
+    | 'org_opportunity' | 'opportunity_invite'
+    | 'note_reply' | 'notice_reply';
   title: string;
   body: string | null;
   link: string | null;
@@ -1114,6 +1115,15 @@ export interface ProjectUpdate {
    * has no UI for it.
    */
   admin_hidden: boolean;
+  /** Migration 227: the artist turned notes off for this post. */
+  notes_off?: boolean;
+  /** Migration 227: set when the update is an event. Dates are NZ local. */
+  event_date?: string | null;
+  event_time?: string | null;
+  event_venue?: string | null;
+  event_region_id?: string | null;
+  /** Answer to the after-the-date "add to your exhibitions?" prompt. */
+  event_cv_status?: 'added' | 'dismissed' | null;
   created_at: string;
 }
 
@@ -1129,6 +1139,8 @@ export interface ProjectUpdateWithArtist extends ProjectUpdate {
   artist_full_name: string | null;
   artist_avatar_url: string | null;
   collaborators: CollaboratorProfile[];
+  /** Newest visible note, for the one-line preview on feed cards. Never a count. */
+  latest_note?: { sender_name: string; content: string } | null;
 }
 
 export interface Project {
@@ -1149,6 +1161,8 @@ export interface ProjectNote {
   sender_id: string;
   content: string;
   is_visible: boolean;
+  /** Migration 227: set on a reply; replies are one level deep. */
+  parent_id?: string | null;
   created_at: string;
 }
 
@@ -1156,6 +1170,40 @@ export interface NoteWithSender extends ProjectNote {
   sender_name: string;
   sender_username: string;
   sender_avatar_url: string | null;
+}
+
+/** Migration 227. Short asks and offers that run for 30 days. */
+export type NoticeKind = 'wanted' | 'offering' | 'studio_space' | 'services' | 'collaborate';
+
+export interface Notice {
+  id: string;
+  author_id: string;
+  kind: NoticeKind;
+  body: string;
+  region_id: string | null;
+  created_at: string;
+  expires_at: string;
+  sorted_at: string | null;
+  admin_hidden: boolean;
+}
+
+export interface NoticeWithAuthor extends Notice {
+  author_name: string;
+  author_username: string;
+  author_role_label: string | null;
+  region_name: string | null;
+  last_reply_at: string | null;
+}
+
+export interface NoticeReply {
+  id: string;
+  notice_id: string;
+  author_id: string;
+  body: string;
+  hidden: boolean;
+  created_at: string;
+  author_name: string;
+  author_username: string;
 }
 
 /** Migration 224. Private by default; 'link' boards open by share token. */

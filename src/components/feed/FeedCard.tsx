@@ -4,12 +4,13 @@ import { memo, useRef, useState } from "react";
 import Link from "next/link";
 import { Play, Maximize2, ExternalLink } from "lucide-react";
 import type { ProjectUpdateWithArtist } from "@/types/database";
-import { ShareTrigger } from "@/components/share/ShareTrigger";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { AdminHideToggle } from "@/components/feed/AdminHideToggle";
 import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import { AppreciateButton } from "@/components/feed/AppreciateButton";
+import { EventRecordPrompt } from "@/components/feed/EventRecordPrompt";
 import { gridImageSrc } from "@/lib/image";
+import { eventDateParts, eventLine, formatEventTime, isEventPast } from "@/lib/events";
 
 /* Minimal video pin — native `controls` brings the full browser control bar
    (scrubber, volume, PiP, cast, its own fullscreen button) which is both
@@ -47,7 +48,7 @@ function InlineVideo({ src }: { src: string }) {
 
   return (
     <div
-      className="relative -mx-5 -mt-5 mb-3.5 bg-black"
+      className="relative -mx-3.5 -mt-3.5 mb-3.5 bg-black sm:-mx-5 sm:-mt-5"
       style={ratio ? { aspectRatio: ratio } : undefined}
       onClick={stop}
     >
@@ -92,18 +93,7 @@ function InlineVideo({ src }: { src: string }) {
   );
 }
 
-function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  const hh = d.getHours().toString().padStart(2, "0");
-  const mm = d.getMinutes().toString().padStart(2, "0");
-  const dd = d.getDate().toString().padStart(2, "0");
-  const mon = d.toLocaleString("en-NZ", { month: "short" });
-  return `${hh}:${mm}, ${dd} ${mon}`;
-}
-
-/* Compact relative form for the footer row — "2d", "3h" — so it never
-   competes with the artist name for space (see formatTimestamp above for
-   the full form, still used in share payloads). */
+/* Compact relative form for the footer row — "2d", "3h". */
 function formatRelativeShort(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(ms / 60_000);
@@ -118,32 +108,53 @@ function formatRelativeShort(iso: string): string {
   return new Date(iso).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
 }
 
-/* Three content voices so the feed is scannable by type:
-   teal kicker = process (studio updates), black chip = finished work,
-   outlined chip = editorial (articles). */
+/* Only the kinds that stand out get a label. Plain process posts carry none:
+   on a page of studio updates, "Studio update" on every card was noise. */
 function TypeKicker({ u }: { u: ProjectUpdateWithArtist }) {
   if (u.embed_provider === "Patronage") {
-    return (
-      <span className="inline-block border border-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em]">
-        Article
-      </span>
-    );
+    return <span className="tag">article</span>;
   }
   if (u.update_tag === "complete") {
-    return (
-      <span className="inline-block bg-foreground px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
-        New work
-      </span>
-    );
+    return <span className="pill-dark">NEW WORK</span>;
   }
   const label =
-    u.content_type === "audio" ? "Audio"
-    : u.content_type === "video" ? "Video"
-    : u.content_type === "embed" ? "Embed"
-    : u.update_tag === "milestone" ? "Milestone"
-    : u.update_tag === "concept" ? "Concept"
-    : "Studio update";
-  return <span className="t-kicker">{label}</span>;
+    u.update_tag === "milestone" ? "Milestone"
+    : u.content_type === "audio" ? "Audio"
+    : null;
+  return label ? <span className="t-kicker">{label}</span> : null;
+}
+
+function hasKicker(u: ProjectUpdateWithArtist): boolean {
+  return u.embed_provider === "Patronage" || u.update_tag === "complete" || u.update_tag === "milestone" || u.content_type === "audio";
+}
+
+/* Event date. A date box with day, time and venue from sm up; one mono line
+   in a two-column phone feed, where the box squeezed the venue to four lines. */
+function EventDate({ u }: { u: ProjectUpdateWithArtist }) {
+  if (!u.event_date) return null;
+  const p = eventDateParts(u.event_date);
+  const past = isEventPast(u.event_date);
+  const time = formatEventTime(u.event_time);
+  return (
+    <div className="mb-3">
+      <p className={`font-mono text-[11px] uppercase tracking-[0.04em] sm:hidden ${past ? "text-[color:var(--fg-subtle)]" : "text-foreground"}`}>
+        {past ? "Was " : ""}{eventLine(u.event_date, u.event_time)}
+        {u.event_venue && <span className="block truncate normal-case tracking-normal text-[color:var(--fg-muted)]">{u.event_venue}</span>}
+      </p>
+      <div className="hidden items-stretch gap-3 sm:flex">
+        <div className={`flex w-12 shrink-0 flex-col border text-center font-mono ${past ? "border-[color:var(--fg-subtle)] text-[color:var(--fg-subtle)]" : "border-foreground"}`}>
+          <span className={`py-0.5 text-[9px] font-semibold tracking-[0.04em] text-white ${past ? "bg-[color:var(--fg-subtle)]" : "bg-black"}`}>{p.month}</span>
+          <span className="flex flex-1 items-center justify-center py-1.5 text-xl font-semibold leading-none">{p.day}</span>
+        </div>
+        <div className="flex min-w-0 flex-col justify-center gap-0.5">
+          <span className={`text-[13px] ${past ? "text-[color:var(--fg-muted)]" : "font-medium"}`}>
+            {past ? `Was on ${p.weekday} ${p.day}` : `${p.weekday}${time ? `, ${time}` : ""}`}
+          </span>
+          {u.event_venue && <span className="truncate font-mono text-[11px] text-[color:var(--fg-muted)]">{u.event_venue}</span>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 interface FeedCardProps {
@@ -155,36 +166,30 @@ interface FeedCardProps {
   isAdmin?: boolean;
   /** The viewer has appreciated this update (225) — their own mark only. */
   appreciated?: boolean;
+  /** Private save total on the viewer's own update (224). Never shown to anyone else. */
+  saves?: number;
 }
 
 /**
  * v2 pin vocabulary — containerless.
- * Image pins: edge-to-edge image, hover dims 0.85 + crisp #000 attribution bar.
- * All other types: white surface on the feed bg, teal mono kicker, footer
- * attribution row with a border-top divider. No borders, no radius, no shadow.
+ * Image pins: edge-to-edge image (hover dims 0.85) over an always-visible name
+ * strip. All other types: white surface on the feed bg, a kicker only for
+ * kinds that stand out, and a footer with the name on its own line above the
+ * date and actions. No borders, no radius, no shadow.
  */
-export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false, appreciated = false }: FeedCardProps) {
+export const FeedCard = memo(function FeedCard({ u, priority = false, currentUserId, isAdmin = false, appreciated = false, saves }: FeedCardProps) {
   const name = u.artist_full_name ?? u.artist_username;
   const canEdit = !!currentUserId && (u.artist_id === currentUserId || isAdmin);
   const isOwnPost = !!currentUserId && u.artist_id === currentUserId;
   const href = u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`;
+  const isEvent = !!u.event_date;
+  const askForRecord = isOwnPost && isEvent && isEventPast(u.event_date) && !u.event_cv_status;
 
-  const SITE_URL = "https://patronage.nz";
-  const sharePayload = {
-    type: "update" as const,
-    title: u.title ?? u.caption?.slice(0, 60) ?? "Studio Update",
-    sub: u.tldr ?? `${name} · ${formatTimestamp(u.created_at)}`,
-    price: null,
-    tag: "STUDIO UPDATE",
-    handle: `@${u.artist_username}`,
-    imageUrl: u.content_type === "image" ? u.image_url : null,
-    shareUrl: `${SITE_URL}${href}`,
-    artistName: name,
-  };
-
-  /* `onDark` = rendered on the image-pin hover bar rather than a light surface. */
-  const renderControls = (onDark = false) => (
-    <span className="flex shrink-0 items-center gap-0.5">
+  /* Heart and save only: share lives on the update's own page. Each button is
+     28px to look at with a 40px tap area (the ::before), spaced so a thumb on a
+     phone doesn't save when it meant to appreciate. */
+  const renderControls = () => (
+    <span className="-mr-1.5 flex shrink-0 items-center gap-2 [&_button]:relative [&_button]:before:absolute [&_button]:before:-inset-1.5 [&_button]:before:content-['']">
       {canEdit && (
         <EditUpdateModal
           updateId={u.id}
@@ -202,7 +207,6 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
         <AdminHideToggle
           updateId={u.id}
           initialHidden={u.admin_hidden ?? false}
-          onDark={onDark}
         />
       )}
       {!isOwnPost && (
@@ -210,57 +214,76 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
           updateId={u.id}
           appreciated={appreciated}
           isAuthenticated={currentUserId ? true : undefined}
-          onDark={onDark}
         />
       )}
       <SaveToBoard
         itemType="update"
         itemId={u.id}
         isAuthenticated={currentUserId ? true : undefined}
-        onDark={onDark}
-      />
-      <ShareTrigger
-        payload={sharePayload}
-        variant="icon"
-        className="flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted"
       />
     </span>
   );
 
-  /* Footer attribution row for surface pins (text/audio/video/embed).
-     Name gets flex-1 min-w-0 (effective priority — it truncates last, not
-     the timestamp) and the timestamp is a short relative form with
-     shrink-0, so a long name and a short "2d" never fight for space. */
+  /* The artist's name has a line to itself, so on a 167px phone column the
+     date and buttons can't squeeze it out. Date and actions share the row below. */
   const attributionRow = (
-    <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
-      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
-        <Link
-          href={`/${u.artist_username}`}
-          prefetch={false}
-          className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground underline-offset-2 hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {name}
-        </Link>
-        <span className="shrink-0 font-mono text-[9px] text-[color:var(--fg-subtle)]">
+    <div className="mt-auto border-t border-border pt-2.5">
+      <Link
+        href={`/${u.artist_username}`}
+        prefetch={false}
+        className="block truncate text-[13px] font-medium text-foreground underline-offset-2 hover:underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {name}
+      </Link>
+      <div className="mt-0.5 flex items-center justify-between gap-2">
+        <span className="font-mono text-[11px] text-[color:var(--fg-subtle)]">
           {formatRelativeShort(u.created_at)}
         </span>
+        {renderControls()}
       </div>
-      {renderControls(false)}
     </div>
   );
 
+  /* Newest note, set apart below the attribution so it can't be read as the
+     artist's words. A line, never a count (227). */
+  const latestNote = u.latest_note && !u.notes_off ? (
+    <Link
+      href={u.project_id ? href : `/projects/${u.id}?from=feed#notes`}
+      scroll={false}
+      prefetch={false}
+      className="mt-2.5 block bg-muted px-2.5 py-2 text-[12.5px] leading-[1.45] text-[color:var(--fg-muted)] transition-colors hover:text-foreground"
+    >
+      <span className="line-clamp-2">
+        <span className="font-medium text-foreground">{u.latest_note.sender_name}</span> {u.latest_note.content}
+      </span>
+    </Link>
+  ) : null;
+
+  /* Private to the artist: saves on an upcoming event, then the one-tap CV
+     question once the day has passed. */
+  const ownEventPanel = isOwnPost && isEvent ? (
+    askForRecord ? (
+      <EventRecordPrompt updateId={u.id} saves={saves} />
+    ) : !isEventPast(u.event_date) && saves ? (
+      <p className="mt-2.5 font-mono text-[11px] text-[color:var(--fg-muted)]">
+        Only you see this · {saves} {saves === 1 ? "save" : "saves"}
+      </p>
+    ) : null
+  ) : null;
+
   /* ── IMAGE PINS ──
-     Without caption: containerless — image edge-to-edge, hover attribution.
-     With caption/title: white surface pin so the words are always visible
-     (captions are content, not chrome — they must not hide behind hover). */
+     Without caption: the image, then a thin strip with the name, heart and
+     save, always visible. They used to appear on hover only, which left phone
+     visitors with no artist and no actions at all.
+     With caption/title: white surface pin so the words are always visible. */
   if (u.content_type === "image" && u.image_url) {
     const hasAspect = u.image_width && u.image_height;
     const hasWords = !!(u.title || u.caption);
 
-    if (!hasWords) {
+    if (!hasWords && !isEvent) {
       return (
-        <div className="pin relative mb-2 break-inside-avoid">
+        <div className="pin relative mb-2 break-inside-avoid bg-card">
           <Link href={href} scroll={false} prefetch={false} className="block">
             <div
               className="overflow-hidden"
@@ -277,26 +300,23 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
                 style={{ width: "100%", height: "auto", display: "block" }}
               />
             </div>
-            <div data-pin-overlay>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-white">
-                  {name}
-                </span>
-                <span className="shrink-0 font-mono text-[9px] text-white/60">
-                  {formatRelativeShort(u.created_at)}
-                </span>
-              </div>
-            </div>
           </Link>
-          {/* Controls — revealed on hover, top-right, over the image */}
-          <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 bg-black/60 opacity-0 transition-opacity duration-200 [.pin:hover_&]:opacity-100 text-white">
-            {renderControls(true)}
+          <div className="flex items-center gap-2 py-1 pl-2.5 pr-2.5 sm:pl-3">
+            <Link
+              href={`/${u.artist_username}`}
+              prefetch={false}
+              className="min-w-0 flex-1 truncate text-[12px] font-medium underline-offset-2 hover:underline"
+            >
+              {name}
+            </Link>
+            {renderControls()}
           </div>
+          {latestNote && <div className="px-2.5 pb-2.5 sm:px-3">{latestNote}</div>}
         </div>
       );
     }
 
-    // Captioned studio update — image on a white surface, caption below
+    // Captioned studio update or event — image on a white surface, words below
     return (
       <div className="mb-2 break-inside-avoid bg-card">
         <Link href={href} scroll={false} prefetch={false} className="pin block">
@@ -315,10 +335,8 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               style={{ width: "100%", height: "auto", display: "block" }}
             />
           </div>
-          <div className="px-4 pb-1 pt-3">
-            <div className="mb-2">
-              <TypeKicker u={u} />
-            </div>
+          <div className="px-3.5 pb-1 pt-3 sm:px-4">
+            {isEvent ? <EventDate u={u} /> : hasKicker(u) && <div className="mb-2"><TypeKicker u={u} /></div>}
             {u.title && (
               <div className="mb-1 text-[15px] font-medium leading-[1.35]">{u.title}</div>
             )}
@@ -329,7 +347,11 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
             )}
           </div>
         </Link>
-        <div className="px-4 pb-4 pt-2">{attributionRow}</div>
+        <div className="px-3.5 pb-3.5 pt-2 sm:px-4 sm:pb-4">
+          {ownEventPanel}
+          {attributionRow}
+          {latestNote}
+        </div>
       </div>
     );
   }
@@ -366,7 +388,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
     if (u.content_type === "video") {
       if (u.embed_url) {
         return (
-          <div className="relative -mx-5 -mt-1 mb-3.5 aspect-video overflow-hidden bg-black">
+          <div className="relative -mx-3.5 -mt-1 mb-3.5 aspect-video overflow-hidden bg-black sm:-mx-5">
             {/* Decorative play overlay — outer Link handles navigation. */}
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
               <div className="flex h-11 w-11 items-center justify-center bg-black/70">
@@ -394,7 +416,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
 
     if (u.content_type === "embed" && u.embed_url) {
       return (
-        <div className="relative -mx-5 -mt-1 mb-3.5 overflow-hidden bg-muted">
+        <div className="relative -mx-3.5 -mt-1 mb-3.5 overflow-hidden bg-muted sm:-mx-5">
           <Link href={href} prefetch={false} className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="flex items-center gap-1.5 border border-border bg-background/90 px-3 py-1.5">
               <ExternalLink className="h-3 w-3" />
@@ -423,19 +445,16 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
 
   return (
     <div className="mb-2 break-inside-avoid">
-      <div className="flex flex-col bg-card p-5">
+      <div className="flex flex-col bg-card p-3.5 sm:p-5">
         <Link href={href} scroll={false} prefetch={false} className="block">
-          {/* Video already reads as a studio update once you see it play —
-              the "Video" kicker sitting above it as a headline was
-              redundant. It still shows, just demoted to below the video
-              alongside the rest of the caption block. */}
-          {u.content_type !== "video" && (
+          {u.content_type !== "video" && !isEvent && hasKicker(u) && (
             <div className="mb-3">
               <TypeKicker u={u} />
             </div>
           )}
           {media}
-          {u.content_type === "video" && (
+          {isEvent && <EventDate u={u} />}
+          {u.content_type === "video" && !isEvent && hasKicker(u) && (
             <div className="mb-2">
               <TypeKicker u={u} />
             </div>
@@ -468,7 +487,9 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
             </span>
           )}
         </Link>
+        {ownEventPanel}
         {attributionRow}
+        {latestNote}
       </div>
     </div>
   );

@@ -21,12 +21,16 @@ const EAGER_COUNT = 5;
 
 type FeedAudience = "everyone" | "following" | "subscribed";
 
-function colsForWidth(width: number): number {
-  if (width >= 1280) return 5;
-  if (width >= 1024) return 4;
+/* With Explore's sidebar (from lg up), four columns at xl and three at lg keep
+   tiles the same width the old five and four columns had without it. */
+function colsForWidth(width: number, withRail: boolean): number {
+  if (width >= 1280) return withRail ? 4 : 5;
+  if (width >= 1024) return withRail ? 3 : 4;
   if (width >= 640) return 3;
   return 2;
 }
+
+const RAIL_MIN_WIDTH = 1024;
 
 /* Reads the real viewport in the state initializer (client-only, so this
    never runs during SSR) instead of defaulting to 2 and correcting via
@@ -41,18 +45,23 @@ function colsForWidth(width: number): number {
    once (server shipped 2 columns, since `window` doesn't exist there) and
    React rebuilds straight into the correct shape — every card mounts once,
    in its final column, with no cancelled fetch. */
-function useColumnCount(): number {
-  const [cols, setCols] = useState(() =>
-    typeof window !== "undefined" ? colsForWidth(window.innerWidth) : 2
+function useColumnCount(withRail: boolean): { cols: number; railVisible: boolean } {
+  const read = () => ({
+    cols: colsForWidth(window.innerWidth, withRail),
+    railVisible: withRail && window.innerWidth >= RAIL_MIN_WIDTH,
+  });
+  const [state, setState] = useState(() =>
+    typeof window !== "undefined" ? read() : { cols: 2, railVisible: false }
   );
   useEffect(() => {
     function update() {
-      setCols(colsForWidth(window.innerWidth));
+      setState(read());
     }
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
-  return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withRail]);
+  return state;
 }
 
 interface Props {
@@ -76,6 +85,14 @@ interface Props {
   /** "v2": sentence-case sans filter tabs ("All · Following · Supporting"),
    *  matching the underline tabs on the v2 browse pages. */
   variant?: "default" | "v2";
+  /** Explore's sidebar holds the audience switch and filters (227): no toolbar here. */
+  withRail?: boolean;
+  /** Sidebar filters, passed on to /api/feed so later pages match page one. */
+  filterQuery?: string;
+  /** Sidebar blocks shown as feed tiles when the sidebar is hidden (below lg). */
+  inlineTiles?: { at: number; node: React.ReactNode }[];
+  /** The viewer's private save totals on their own updates, by update id. */
+  saveCounts?: Record<string, number>;
 }
 
 export function InfiniteFeed({
@@ -91,11 +108,15 @@ export function InfiniteFeed({
   isAdmin = false,
   basePath = "/feed",
   variant = "default",
+  withRail = false,
+  filterQuery = "",
+  inlineTiles = [],
+  saveCounts = {},
 }: Props) {
   const [updates, setUpdates] = useState<ProjectUpdateWithArtist[]>(initialUpdates);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
-  const colCount = useColumnCount();
+  const { cols: colCount, railVisible } = useColumnCount(withRail);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(initialUpdates.length);
   const router = useRouter();
@@ -126,7 +147,7 @@ export function InfiniteFeed({
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/feed?offset=${offsetRef.current}&audience=${audience}`
+        `/api/feed?offset=${offsetRef.current}&audience=${audience}${filterQuery ? `&${filterQuery}` : ""}`
       );
       if (!res.ok) throw new Error("Failed to fetch");
       const { updates: next, hasMore: more } = await res.json();
@@ -138,7 +159,7 @@ export function InfiniteFeed({
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, audience]);
+  }, [loading, hasMore, audience, filterQuery]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -183,6 +204,7 @@ export function InfiniteFeed({
           currentUserId={currentUserId}
           isAdmin={isAdmin}
           appreciated={appreciated.has(u.id)}
+          saves={saveCounts[u.id]}
         />
       );
       if ((i + 1) % 4 === 0 && extras.length > 0) {
@@ -196,6 +218,13 @@ export function InfiniteFeed({
     });
     if (updates.length === 0) {
       extras.forEach((p, i) => items.push(<div key={`r-${i}`} className="mb-2">{renderExplorePin(p)}</div>));
+    }
+    // Without the sidebar, its blocks (This week, the noticeboard) join the
+    // feed as tiles near the top, where people see them in the normal scroll.
+    if (withRail && !railVisible) {
+      [...inlineTiles]
+        .sort((a, b) => b.at - a.at)
+        .forEach((t, i) => items.splice(Math.min(t.at, items.length), 0, <div key={`tile-${i}`} className="mb-2">{t.node}</div>));
     }
   }
 
@@ -215,8 +244,8 @@ export function InfiniteFeed({
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* Toolbar — Explore's sidebar carries these when withRail */}
+      <div className={`flex items-center justify-between gap-4 flex-wrap ${withRail ? "hidden" : ""}`}>
         {/* Audience filter — logged-in only (a lone "all" button is noise) */}
         <div className={`flex items-stretch ${isLoggedIn ? "" : "hidden"}`}>
           {(variant === "v2"
@@ -261,7 +290,9 @@ export function InfiniteFeed({
 
       {isEmpty && (
         <p className="text-sm text-muted-foreground">
-          {audience === "subscribed"
+          {filterQuery
+            ? "No updates match these filters. Try fewer, or clear them."
+            : audience === "subscribed"
             ? "No updates from artists you support yet. Support an artist to see their studio updates here."
             : audience === "following"
               ? "No updates from artists you follow yet. Follow an artist to see their studio updates here."

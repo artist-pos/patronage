@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/impact", label: "Impact" },
   { href: "/admin/followups", label: "Follow-ups" },
   { href: "/admin/outcome-tips", label: "Outcome tips" },
+  { href: "/admin/reports", label: "Reports" },
   { href: "/admin/pipeline-report", label: "Open Call Report" },
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/outreach", label: "Outreach" },

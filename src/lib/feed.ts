@@ -23,6 +23,12 @@ const UPDATE_SELECT = `
   tldr,
   update_tag,
   admin_hidden,
+  notes_off,
+  event_date,
+  event_time,
+  event_venue,
+  event_region_id,
+  event_cv_status,
   created_at,
   profiles!project_updates_artist_id_fkey!inner (
     username,
@@ -30,6 +36,65 @@ const UPDATE_SELECT = `
     avatar_url
   )
 `;
+
+/** Explore's Kind filter (sidebar). Several kinds combine with OR. */
+export const FEED_KINDS = ["process", "new", "event", "milestone", "av", "writing"] as const;
+export type FeedKind = (typeof FEED_KINDS)[number];
+
+export interface FeedFilters {
+  kinds?: FeedKind[];
+  /** A profiles.disciplines value (DisciplineEnum). */
+  discipline?: string;
+  /** Artist's region (profiles.region_id). */
+  regionId?: string;
+}
+
+const KIND_CLAUSE: Record<FeedKind, string> = {
+  process: "and(update_tag.in.(update,concept),content_type.in.(image,embed),event_date.is.null)",
+  new: "update_tag.eq.complete",
+  event: "event_date.not.is.null",
+  milestone: "update_tag.eq.milestone",
+  av: "content_type.in.(audio,video)",
+  writing: "content_type.eq.text",
+};
+
+/** Parses ?kind=a,b from a URL into known kinds. */
+export function parseFeedKinds(raw: string | null | undefined): FeedKind[] {
+  if (!raw) return [];
+  return raw.split(",").filter((k): k is FeedKind => (FEED_KINDS as readonly string[]).includes(k));
+}
+
+/**
+ * Newest visible note per update, for the one-line preview on feed cards.
+ * Skipped for posts with notes off. Two steps because note senders join to
+ * auth.users, not profiles.
+ */
+async function attachLatestNotes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  updates: ProjectUpdateWithArtist[],
+): Promise<ProjectUpdateWithArtist[]> {
+  const ids = updates.filter((u) => !u.notes_off).map((u) => u.id);
+  if (ids.length === 0) return updates;
+  const { data: notes } = await supabase
+    .from("project_notes")
+    .select("update_id, sender_id, content, created_at")
+    .in("update_id", ids)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: false })
+    .limit(ids.length * 4);
+  const latest = new Map<string, { sender_id: string; content: string }>();
+  for (const n of (notes ?? []) as { update_id: string; sender_id: string; content: string }[]) {
+    if (!latest.has(n.update_id)) latest.set(n.update_id, n);
+  }
+  if (latest.size === 0) return updates;
+  const senderIds = [...new Set([...latest.values()].map((n) => n.sender_id))];
+  const { data: senders } = await supabase.from("profiles").select("id, full_name, username").in("id", senderIds);
+  const names = new Map((senders ?? []).map((p: { id: string; full_name: string | null; username: string }) => [p.id, p.full_name ?? p.username]));
+  return updates.map((u) => {
+    const n = latest.get(u.id);
+    return n ? { ...u, latest_note: { sender_name: names.get(n.sender_id) ?? "Someone", content: n.content } } : u;
+  });
+}
 
 function mapRow(row: any): Omit<ProjectUpdateWithArtist, "collaborators"> {
   return {
@@ -58,6 +123,12 @@ function mapRow(row: any): Omit<ProjectUpdateWithArtist, "collaborators"> {
     tldr: row.tldr ?? null,
     update_tag: row.update_tag ?? "update",
     admin_hidden: row.admin_hidden ?? false,
+    notes_off: row.notes_off ?? false,
+    event_date: row.event_date ?? null,
+    event_time: row.event_time ?? null,
+    event_venue: row.event_venue ?? null,
+    event_region_id: row.event_region_id ?? null,
+    event_cv_status: row.event_cv_status ?? null,
   };
 }
 
@@ -72,6 +143,7 @@ export async function getLatestUpdates(
   offset = 0,
   artistIds?: string[],
   includeAdminHidden = false,
+  filters: FeedFilters = {},
 ): Promise<ProjectUpdateWithArtist[]> {
   if (artistIds !== undefined && artistIds.length === 0) return [];
   const supabase = await createClient();
@@ -91,8 +163,40 @@ export async function getLatestUpdates(
     query = query.in("artist_id", artistIds);
   }
 
+  if (filters.kinds && filters.kinds.length > 0) {
+    query = query.or(filters.kinds.map((k) => KIND_CLAUSE[k]).join(","));
+  }
+  if (filters.discipline) {
+    query = query.contains("profiles.disciplines", [filters.discipline]);
+  }
+  if (filters.regionId) {
+    query = query.eq("profiles.region_id", filters.regionId);
+  }
+
   const { data, error } = await query;
   if (error) throw new Error(error.message);
+  const updates = (data ?? []).map((row: any) => ({ ...mapRow(row), collaborators: [] }));
+  return attachLatestNotes(supabase, updates);
+}
+
+/** Upcoming events for Explore's This week block: the next seven NZ days. */
+export async function getWeekEvents(regionId: string | null, limit = 3): Promise<ProjectUpdateWithArtist[]> {
+  const supabase = await createClient();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Pacific/Auckland" });
+  const end = new Date(Date.now() + 6 * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Pacific/Auckland" });
+  let query = supabase
+    .from("project_updates")
+    .select(UPDATE_SELECT)
+    .eq("profiles.is_minor", false)
+    .eq("admin_hidden", false)
+    .gte("event_date", today)
+    .lte("event_date", end)
+    .order("event_date", { ascending: true })
+    .order("event_time", { ascending: true, nullsFirst: false })
+    .limit(limit);
+  if (regionId) query = query.eq("event_region_id", regionId);
+  const { data } = await query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same untyped join rows as the queries above
   return (data ?? []).map((row: any) => ({ ...mapRow(row), collaborators: [] }));
 }
 

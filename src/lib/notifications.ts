@@ -12,7 +12,9 @@ export type NotificationType =
   | "roster_left"
   | "roster_removed"
   | "org_opportunity"
-  | "opportunity_invite";
+  | "opportunity_invite"
+  | "note_reply"
+  | "notice_reply";
 
 export interface Notification {
   id: string;
@@ -35,6 +37,37 @@ export async function createNotification(
 ): Promise<void> {
   const admin = createAdminClient();
   await admin.from("notifications").insert({ user_id: userId, type, title, body, link });
+}
+
+/**
+ * Drops anyone who muted this thread. `table` is the mute table for the thread
+ * kind (227); reads go through the admin client because mutes are private rows.
+ */
+export async function withoutMuted(
+  userIds: string[],
+  table: "update_note_mutes" | "notice_mutes",
+  threadId: string,
+): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const admin = createAdminClient();
+  const column = table === "update_note_mutes" ? "update_id" : "notice_id";
+  const { data } = await admin.from(table).select("user_id").eq(column, threadId).in("user_id", userIds);
+  const muted = new Set((data ?? []).map((r: { user_id: string }) => r.user_id));
+  return userIds.filter((id) => !muted.has(id));
+}
+
+/** Adult profiles named with @username in a note or reply, for mention notifications. */
+export async function mentionedProfileIds(text: string): Promise<string[]> {
+  const handles = [...new Set((text.match(/@([a-z0-9_.-]{2,40})/gi) ?? []).map((h) => h.slice(1).toLowerCase()))];
+  if (handles.length === 0) return [];
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("id, username, is_minor")
+    .in("username", handles.slice(0, 5));
+  return (data ?? [])
+    .filter((p: { is_minor: boolean | null }) => !p.is_minor)
+    .map((p: { id: string }) => p.id);
 }
 
 /** Initial badge count for the Header server component. */

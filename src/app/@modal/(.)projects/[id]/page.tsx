@@ -207,6 +207,8 @@ export default async function ProjectModal({ params }: Props) {
               currentUserName={currentUserName}
               currentUserUsername={currentUserUsername}
               currentUserAvatarUrl={currentUserAvatarUrl}
+              notesOff={update.notes_off}
+              defaultOpen
             />
           </div>
         )}

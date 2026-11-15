@@ -288,6 +288,7 @@ function ModalThreadPost({
               currentUserName={currentUserName}
               currentUserUsername={currentUserUsername}
               currentUserAvatarUrl={currentUserAvatarUrl}
+              notesOff={post.notes_off}
             />
           </div>
         )}

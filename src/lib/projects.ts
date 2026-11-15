@@ -68,6 +68,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
       collaborator_ids,
       title,
       tldr,
+      notes_off,
       admin_hidden,
       created_at,
       profiles!project_updates_artist_id_fkey (
@@ -88,9 +89,9 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
   if (updateIds.length > 0) {
     const { data: notesData } = await supabase
       .from("project_notes")
-      .select("id, update_id, artist_id, sender_id, content, is_visible, created_at")
+      // RLS decides visibility: hidden notes reach the artist only.
+      .select("id, update_id, artist_id, sender_id, content, is_visible, parent_id, created_at")
       .in("update_id", updateIds)
-      .eq("is_visible", true)
       .order("created_at", { ascending: true });
     allNotes = notesData ?? [];
   }
@@ -118,6 +119,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
       sender_avatar_url: profile?.avatar_url ?? null,
       content: n.content,
       is_visible: n.is_visible,
+      parent_id: n.parent_id ?? null,
       created_at: n.created_at,
     };
     if (!acc[n.update_id]) acc[n.update_id] = [];
@@ -164,6 +166,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
     // Carried through to satisfy the shared type; threads never filter on it.
     admin_hidden: u.admin_hidden ?? false,
     update_tag: u.update_tag ?? "update",
+    notes_off: u.notes_off ?? false,
   }));
 
   return {

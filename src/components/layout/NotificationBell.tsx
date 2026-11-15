@@ -36,6 +36,8 @@ const TYPE_ICON: Record<Notification["type"], React.ReactNode> = {
   roster_removed: <UserMinus className="w-3.5 h-3.5 shrink-0" />,
   org_opportunity: <Megaphone className="w-3.5 h-3.5 shrink-0" />,
   opportunity_invite: <Megaphone className="w-3.5 h-3.5 shrink-0" />,
+  note_reply: <MessageSquare className="w-3.5 h-3.5 shrink-0" />,
+  notice_reply: <MessageSquare className="w-3.5 h-3.5 shrink-0" />,
 };
 
 export function NotificationBell({ userId, initialUnreadCount }: Props) {

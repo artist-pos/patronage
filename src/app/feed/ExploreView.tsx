@@ -1,17 +1,42 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
-import { getLatestUpdates } from "@/lib/feed";
+import { getLatestUpdates, getWeekEvents, parseFeedKinds, type FeedFilters } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
+import { getNotices } from "@/lib/noticeboard";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { InfiniteFeed } from "@/components/feed/InfiniteFeed";
+import { ExploreSidebar } from "@/components/feed/ExploreSidebar";
+import { WeekBlock, NoticeboardBlock } from "@/components/feed/ExploreBlocks";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import { WorksControls } from "@/components/feed/WorksControls";
 import { getAvailableWorksForGrid, type WorksSort } from "@/lib/works";
 import { getSellableSellerIds } from "@/lib/commerce/eligibility";
-import { getCitiesWithRegions } from "@/lib/regions";
+import { getCitiesWithRegions, getRegions } from "@/lib/regions";
+import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
+
+/** Open calls closing in the next seven days, for This week. Same for everyone. */
+const getClosingThisWeekCount = unstable_cache(
+  async (): Promise<number> => {
+    const supabase = createPublicClient();
+    const today = new Date().toISOString().split("T")[0];
+    const week = new Date(Date.now() + 7 * 86_400_000).toISOString().split("T")[0];
+    const { count } = await supabase
+      .from("opportunities")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("status", "published")
+      .gte("deadline", today)
+      .lte("deadline", week);
+    return count ?? 0;
+  },
+  ["explore-closing-week"],
+  { revalidate: 300, tags: ["opportunities"] },
+);
 import { TrackedNavLink } from "@/components/analytics/TrackedNavLink";
 import { JoinButton } from "@/components/auth/JoinButton";
 import type { JoinCity } from "@/components/auth/JoinModal";
@@ -52,6 +77,10 @@ export interface ExploreParams {
   wlayout?: string;
   audience?: string;
   filter?: string;
+  /** Explore sidebar (227): comma-separated kinds, a discipline, a region id. */
+  kind?: string;
+  discipline?: string;
+  region?: string;
 }
 
 export async function ExploreView({ tab, params }: { tab: "feed" | "works"; params: ExploreParams }) {
@@ -62,6 +91,21 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
     audience = "everyone",
     filter: rawFilter = "all",
   } = params;
+
+  // Sidebar filters, validated so a hand-edited URL can't reach the query.
+  const feedFilters: FeedFilters = {
+    kinds: parseFeedKinds(params.kind),
+    discipline: DISCIPLINE_OPTIONS.some((d) => d.value === params.discipline) ? params.discipline : undefined,
+    regionId: params.region && /^[0-9a-f-]{36}$/i.test(params.region) ? params.region : undefined,
+  };
+  const filterQuery = new URLSearchParams(
+    Object.entries({
+      kind: feedFilters.kinds?.join(",") || "",
+      discipline: feedFilters.discipline ?? "",
+      region: feedFilters.regionId ?? "",
+    }).filter(([, v]) => v),
+  ).toString();
+  const filtered = !!filterQuery;
 
   const activeTab = tab;
   const filter: ExploreFilter = (EXPLORE_FILTERS as readonly string[]).includes(rawFilter)
@@ -87,7 +131,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
   // user resolves, rather than waiting on the profile round-trip too.
   const everyoneFeedPromise =
     activeTab === "feed" && feedAudience === "everyone" && wantsUpdates
-      ? authPromise.then(({ user }) => getLatestUpdates(INITIAL_COUNT, 0, undefined, !!user))
+      ? authPromise.then(({ user }) => getLatestUpdates(INITIAL_COUNT, 0, undefined, !!user, feedFilters))
       : null;
 
   // ── Public queries — these don't depend on auth at all, so they start
@@ -95,7 +139,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
 
   // ── Explore extras — available works thread through the update masonry so
   // the "All" feed stays visual: studio updates + art for sale, nothing else.
-  const wantExtras = activeTab === "feed" && feedAudience === "everyone" && filter === "all";
+  const wantExtras = activeTab === "feed" && feedAudience === "everyone" && filter === "all" && !filtered;
   const explorePinsPromise: PromiseLike<import("@/components/feed/ExplorePinCards").ExplorePin[]> =
     wantExtras
       ? supabase
@@ -207,8 +251,44 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
       ? await everyoneFeedPromise
       : activeTab === "feed" && feedAudience !== "everyone"
         // following/subscribed are signed-in-only audiences — no admin_hidden filter
-        ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds, !!user)
+        ? await getLatestUpdates(INITIAL_COUNT, 0, subscribedArtistIds, !!user, feedFilters)
         : [];
+
+  // ── Sidebar (227): regions for the filters, This week near the viewer, the
+  // noticeboard region first, and the viewer's private save totals.
+  const viewerRegionId = profile?.region_id ?? null;
+  const [regions, weekEvents, notices, closingCount, saveRows] = activeTab === "feed"
+    ? await Promise.all([
+        getRegions(),
+        getWeekEvents(viewerRegionId),
+        getNotices({ regionFirstId: viewerRegionId, limit: 3 }),
+        getClosingThisWeekCount(),
+        user
+          ? supabase.rpc("board_save_counts").then(({ data }) => (data ?? []) as { item_type: string; item_id: string; saves: number }[])
+          : Promise.resolve([]),
+      ])
+    : [[], [], [], 0, []];
+  const regionOptions = regions.map((r) => ({ id: r.id, name: r.name }));
+  const viewerRegionName = regions.find((r) => r.id === viewerRegionId)?.name ?? null;
+  const saveCounts = Object.fromEntries(
+    saveRows.filter((r) => r.item_type === "update").map((r) => [r.item_id, Number(r.saves)]),
+  );
+  const canPostNotice = !!profile && !profile.is_minor;
+  const weekBlock = (variant: "sidebar" | "tile") => (
+    <WeekBlock events={weekEvents} regionName={viewerRegionName} closingCount={closingCount} variant={variant} />
+  );
+  const noticeBlock = (variant: "sidebar" | "tile") => (
+    <NoticeboardBlock
+      notices={notices}
+      regionName={viewerRegionName}
+      regions={regionOptions}
+      defaultRegionId={viewerRegionId}
+      canPost={canPostNotice}
+      isLoggedIn={!!user}
+      currentUserId={user?.id}
+      variant={variant}
+    />
+  );
 
   const hasMore = activeTab === "feed" && feedUpdates.length === INITIAL_COUNT;
   const artworks = worksResult?.artworks ?? [];
@@ -274,7 +354,37 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
       {activeTab === "feed" ? (
         /* Feed surface — figure-ground: pins sit on #EFEEEC */
         <div className="min-h-screen bg-feed-bg">
-          <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
+          {/* Sidebar + feed, like Funding: a 240px column of tools, then the
+              masonry. Below lg the sidebar folds into a Filters button and
+              its two blocks become tiles in the feed. */}
+          <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-6">
+            <Suspense>
+              <ExploreSidebar
+                isLoggedIn={!!user}
+                regions={regionOptions}
+                postButton={
+                  profile ? (
+                    <CreateUpdateModal
+                      profileId={profile.id}
+                      label="New update +"
+                      className="btn btn-primary"
+                      projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+                      regions={regionOptions}
+                      defaultRegionId={viewerRegionId}
+                      canPostEvent={!profile.is_minor}
+                    />
+                  ) : undefined
+                }
+              >
+                {weekBlock("sidebar")}
+                {noticeBlock("sidebar")}
+                {isAdmin && (
+                  <Link href="/studio/feed" className="block font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
+                    Manage feed →
+                  </Link>
+                )}
+              </ExploreSidebar>
+            </Suspense>
             <InfiniteFeed
               initialUpdates={feedUpdates}
               initialHasMore={hasMore}
@@ -285,26 +395,13 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
               isAdmin={isAdmin}
               basePath="/feed"
               variant="v2"
-              rightSlot={
-                profile ? (
-                  <div className="flex items-center gap-3">
-                    {isAdmin && (
-                      <Link
-                        href="/studio/feed"
-                        className="shrink-0 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        Manage feed →
-                      </Link>
-                    )}
-                    <CreateUpdateModal
-                      profileId={profile.id}
-                      label="New update +"
-                      className="shrink-0 bg-foreground px-5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
-                      projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
-                    />
-                  </div>
-                ) : undefined
-              }
+              withRail
+              filterQuery={filterQuery}
+              saveCounts={saveCounts}
+              inlineTiles={[
+                { at: 1, node: weekBlock("tile") },
+                { at: 6, node: noticeBlock("tile") },
+              ]}
             />
           </div>
         </div>

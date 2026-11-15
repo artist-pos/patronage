@@ -51,12 +51,13 @@ export async function getMyWrittenNotes(senderId: string): Promise<NoteIWrote[]>
 export async function getVisibleNotes(updateId: string): Promise<NoteWithSender[]> {
   const supabase = await createClient();
 
-  // Step 1: fetch notes (no profile join — sender_id → auth.users, not profiles directly)
+  // Step 1: fetch notes (no profile join — sender_id → auth.users, not profiles directly).
+  // No is_visible filter: RLS shows visible notes to everyone and hidden ones to
+  // the artist only, so the artist can see and un-hide what they hid.
   const { data: notesData } = await supabase
     .from("project_notes")
-    .select("id, update_id, artist_id, sender_id, content, is_visible, created_at")
+    .select("id, update_id, artist_id, sender_id, content, is_visible, parent_id, created_at")
     .eq("update_id", updateId)
-    .eq("is_visible", true)
     .order("created_at", { ascending: true });
 
   const notes = notesData ?? [];
@@ -83,6 +84,7 @@ export async function getVisibleNotes(updateId: string): Promise<NoteWithSender[
       sender_avatar_url: profile?.avatar_url ?? null,
       content: row.content,
       is_visible: row.is_visible,
+      parent_id: row.parent_id ?? null,
       created_at: row.created_at,
     };
   });

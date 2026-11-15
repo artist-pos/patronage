@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerUser } from "@/lib/supabase/get-server-user";
-import { getLatestUpdates } from "@/lib/feed";
+import { getLatestUpdates, parseFeedKinds } from "@/lib/feed";
 
 // Larger than the page's INITIAL_COUNT of 10. The first ten are what the user
 // waits on, so keep those tight; every page after that is fetched ahead of the
@@ -46,7 +46,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const updates = await getLatestUpdates(PAGE_SIZE, offset, artistIds, !!user);
+    // Explore sidebar filters (227), the same ones page 1 was rendered with.
+    const filters = {
+      kinds: parseFeedKinds(searchParams.get("kind")),
+      discipline: searchParams.get("discipline") ?? undefined,
+      regionId: searchParams.get("region") ?? undefined,
+    };
+    const updates = await getLatestUpdates(PAGE_SIZE, offset, artistIds, !!user, filters);
     return NextResponse.json(
       { updates, hasMore: updates.length === PAGE_SIZE },
       { headers: { "Cache-Control": "private, no-store" } }

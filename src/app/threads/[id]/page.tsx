@@ -401,6 +401,7 @@ function ThreadPostItem({
               currentUserName={currentUserName}
               currentUserUsername={currentUserUsername}
               currentUserAvatarUrl={currentUserAvatarUrl}
+              notesOff={post.notes_off}
             />
           </div>
         )}

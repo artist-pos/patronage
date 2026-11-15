@@ -43,7 +43,7 @@ const SupportTab = dynamic(() =>
   import("@/components/profile/tabs/SupportTab").then((m) => ({ default: m.SupportTab }))
 );
 import type { ExhibitionEntry, BibliographyEntry, Profile, Opportunity, Artwork, CreativeWork, ProfileAchievement, SupportTier, PortfolioImage, ProfileWithImage } from "@/types/database";
-import { getCitiesForRegion } from "@/lib/regions";
+import { getCitiesForRegion, getRegions } from "@/lib/regions";
 import { byCompleteness, isPresentable } from "@/lib/artist-completeness";
 import { regionalTownLabel } from "@/lib/region-location";
 import type { EditionOption } from "@/components/feed/WorksJustifiedGrid";
@@ -705,6 +705,8 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
 
   // Merge: owner gets projects from phase 1 (for modal), others from phase 2
   const artistProjects = ownerProjects.length > 0 ? ownerProjects : tabProjects;
+  // Regions for an event's location in the owner's update composer (227).
+  const ownerRegions = isOwner ? (await getRegions()).map((r) => ({ id: r.id, name: r.name })) : [];
 
   // Incomplete profiles don't expose available works to the public.
   const publicAvailableWorks = (isOwner || isProfileComplete(profile) ? enrichedAvailableWorks : []) as Artwork[];
@@ -997,6 +999,9 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                       profileId={profile.id}
                       label="Post a studio update +"
                       projects={artistProjects.map((p) => ({ id: p.id, title: p.title }))}
+                      regions={ownerRegions}
+                      defaultRegionId={profile.region_id}
+                      canPostEvent={!profile.is_minor}
                     />
                   )}
                   {!isOwner && (

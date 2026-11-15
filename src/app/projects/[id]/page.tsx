@@ -13,6 +13,8 @@ import { AppreciateButton } from "@/components/feed/AppreciateButton";
 import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import { EditUpdateModal } from "@/components/projects/EditUpdateModal";
 import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
+import { eventDateParts, formatEventTime, isEventPast } from "@/lib/events";
+import { EventRecordPrompt } from "@/components/feed/EventRecordPrompt";
 import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
 
 interface Props {
@@ -254,6 +256,24 @@ export default async function ProjectPage({ params }: Props) {
       <UpdateMedia update={update} name={name} />
 
       <div className="space-y-4">
+        {update.event_date && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-muted p-4">
+            <div>
+              <p className="t-section-label mb-1.5">{isEventPast(update.event_date) ? "Event, now over" : "Event"}</p>
+              <p className="text-[15px] font-medium">
+                {eventDateParts(update.event_date).long}
+                {update.event_time ? `, ${formatEventTime(update.event_time)}` : ""}
+              </p>
+              {update.event_venue && <p className="mt-0.5 font-mono text-xs text-[color:var(--fg-muted)]">{update.event_venue}</p>}
+            </div>
+            {!isEventPast(update.event_date) && (
+              <a href={`/api/updates/${update.id}/ics`} className="btn btn-primary btn-sm">Add to calendar</a>
+            )}
+          </div>
+        )}
+        {isOwnUpdate && update.event_date && isEventPast(update.event_date) && !update.event_cv_status && (
+          <EventRecordPrompt updateId={update.id} />
+        )}
         {showCaption && (
           <p className="text-base leading-relaxed">{update.caption}</p>
         )}
@@ -369,6 +389,8 @@ export default async function ProjectPage({ params }: Props) {
             currentUserName={currentUserName}
             currentUserUsername={currentUserUsername}
             currentUserAvatarUrl={currentUserAvatarUrl}
+            notesOff={update.notes_off}
+            defaultOpen
           />
         </div>
       )}
