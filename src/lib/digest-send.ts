@@ -66,7 +66,8 @@ export function digestHalf(email: string): DigestHalf {
 /** Addresses we know can't be delivered to. One of these in a batch makes
  *  Resend reject all 100 (future-to-do #26), so they never reach it. */
 export function isDeliverableAddress(email: string): boolean {
-  if (!/^[^s@]+@[^s@]+.[^s@]+$/.test(email)) return false;
+  // \s, not s: without the backslash this rejected every address containing the letter "s".
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
   const domain = email.split("@")[1].toLowerCase();
   return !(
     domain === "example.com" || domain === "example.org" || domain === "example.net" ||
