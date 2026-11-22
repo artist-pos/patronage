@@ -1,23 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { submitActivationEnquiry } from "@/app/partners/actions";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { HoneypotField, HONEYPOT_FIELD } from "@/components/HoneypotField";
 import { useFormLoadedAt } from "@/lib/use-form-loaded-at";
 
-const INTERESTS = ["Activations", "Art strategy", "Open call", "Listing", "Other"] as const;
+const INTERESTS = ["Activations", "Art strategy", "Open call", "Listing", "Here Together", "Other"] as const;
 
 const LABEL = "mb-[3px] block font-mono text-[9px] uppercase text-[color:var(--fg-subtle)]";
 const INPUT =
   "w-full border border-border bg-card px-2.5 py-2 text-[12.5px] text-foreground outline-none placeholder:text-[color:var(--fg-subtle)] focus:border-foreground";
 
-export function PartnerContactForm() {
+interface Props {
+  defaultInterest?: (typeof INTERESTS)[number];
+  /** Replaces the message when it changes (e.g. "express interest" on a calendar event). */
+  prefill?: string;
+}
+
+export function PartnerContactForm({ defaultInterest, prefill }: Props = {}) {
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
   const [email, setEmail] = useState("");
-  const [interest, setInterest] = useState<string>(INTERESTS[0]);
+  const [interest, setInterest] = useState<string>(defaultInterest ?? INTERESTS[0]);
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (prefill) setMessage(prefill);
+  }, [prefill]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);

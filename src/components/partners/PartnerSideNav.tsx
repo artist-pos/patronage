@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-const SECTIONS = [
+const DEFAULT_SECTIONS = [
   { id: "proposal",   label: "Proposal" },
   { id: "calculator", label: "Calculator" },
   { id: "explore",    label: "Explore" },
 ];
 
-export function PartnerSideNav() {
-  const [active, setActive] = useState("proposal");
+export function PartnerSideNav({ sections: SECTIONS = DEFAULT_SECTIONS }: { sections?: { id: string; label: string }[] } = {}) {
+  const [active, setActive] = useState(SECTIONS[0].id);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];

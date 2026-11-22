@@ -1,0 +1,71 @@
+{
+  "_readme": "The example week on /partners/here-together. Nothing here is confirmed. Each day has 'daytime' and 'evening' lists. An empty list [] shows 'Open for partner programming'. null means closed for that part of the day. 'closed' on a day replaces both. Each session: time, title, type (making|show|kids|spectacle|community|students), description, audience[], runBy, tags[] (any of: makers, openings, kids, spectacle, students, sponsors).",
+  "types": {
+    "making": { "label": "Making", "swatch": "#A8A29E" },
+    "show": { "label": "Exhibition", "swatch": "#1C1917" },
+    "kids": { "label": "Kids and families", "swatch": "#E3A63B" },
+    "spectacle": { "label": "Spectacle", "swatch": "#ED2100" },
+    "community": { "label": "Evening and community", "swatch": "#5B7C99" },
+    "students": { "label": "Students", "swatch": "#7D8F69" }
+  },
+  "filters": [
+    { "key": "makers", "label": "Makers" },
+    { "key": "openings", "label": "Exhibitions" },
+    { "key": "kids", "label": "Kids and families" },
+    { "key": "spectacle", "label": "Spectacle" },
+    { "key": "students", "label": "Students" },
+    { "key": "sponsors", "label": "Sponsor-hosted" }
+  ],
+  "days": [
+    { "day": "Monday", "closed": "Closed to the public. Changeover between shows." },
+    {
+      "day": "Tuesday",
+      "daytime": [
+        { "time": "10am – 5pm", "title": "Studios open", "type": "making", "description": "Artists work in their studios. The door is open, and anyone can drop in and stay.", "audience": ["Everyone"], "runBy": "Studio artists", "tags": ["makers"] }
+      ],
+      "evening": []
+    },
+    {
+      "day": "Wednesday",
+      "daytime": [
+        { "time": "10am – 5pm", "title": "Studios open", "type": "making", "description": "Artists work in their studios. The door is open, and anyone can drop in and stay.", "audience": ["Everyone"], "runBy": "Studio artists", "tags": ["makers"] }
+      ],
+      "evening": [
+        { "time": "6 – 8pm", "title": "Contracts and IP for freelancers", "type": "community", "description": "A practical evening on contracts, invoicing and copyright for people who make things, hosted by a professional-services partner.", "audience": ["Makers", "Small businesses"], "runBy": "A series partner", "tags": ["sponsors", "makers"] }
+      ]
+    },
+    {
+      "day": "Thursday",
+      "daytime": [
+        { "time": "10am – 5pm", "title": "Studios open", "type": "making", "description": "Artists work in their studios. The door is open, and anyone can drop in and stay.", "audience": ["Everyone"], "runBy": "Studio artists", "tags": ["makers"] }
+      ],
+      "evening": [
+        { "time": "5:30 – 8pm", "title": "Opening night: Soft Hours", "type": "show", "description": "A group show by an artist-run collective opens. A sponsor supplies the food, and the work is for sale.", "audience": ["Everyone", "Collectors"], "runBy": "Exhibiting collective, with a sponsor", "tags": ["openings", "sponsors"] }
+      ]
+    },
+    {
+      "day": "Friday",
+      "daytime": [
+        { "time": "10am – 5pm", "title": "Studios open", "type": "making", "description": "Artists work in their studios. The door is open, and anyone can drop in and stay.", "audience": ["Everyone"], "runBy": "Studio artists", "tags": ["makers"] }
+      ],
+      "evening": [
+        { "time": "6:30 – 9pm", "title": "The Great Oyster-Off", "type": "spectacle", "description": "An oyster-eating competition in the window, put on with a sponsor. A headline, a photo and a crowd that would not otherwise come.", "audience": ["Everyone"], "runBy": "An event sponsor", "tags": ["spectacle", "sponsors"] }
+      ]
+    },
+    {
+      "day": "Saturday",
+      "daytime": [
+        { "time": "10am – 12pm", "title": "Print and play", "type": "kids", "description": "Kids and their grown-ups make simple prints while the show stays on view. Koha entry.", "audience": ["Kids and families"], "runBy": "A host and a workshop leader", "tags": ["kids"] },
+        { "time": "2 – 4pm", "title": "Student showcase", "type": "students", "description": "Architecture students show how the fit-out came together, with models and drawings beside the real thing.", "audience": ["Students", "Everyone"], "runBy": "Students and partners", "tags": ["students", "openings"] }
+      ],
+      "evening": []
+    },
+    {
+      "day": "Sunday",
+      "daytime": [
+        { "time": "11am – 1pm", "title": "Grandparents and grandkids draw", "type": "kids", "description": "A drop-in drawing session for two generations at one table. Materials provided.", "audience": ["Kids and families"], "runBy": "A host", "tags": ["kids"] }
+      ],
+      "evening": null
+    }
+  ]
+}
