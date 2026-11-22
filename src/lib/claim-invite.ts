@@ -55,19 +55,23 @@ export function bodyToHtml(text: string, claimUrl?: string, listingUrl?: string)
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Replace the bare claim URL line with a styled CTA button
+  // Swap the bare claim URL for a placeholder so the auto-linker below can't
+  // touch the button's own href (it would nest an <a> inside the attribute).
+  const CTA_PLACEHOLDER = "@@CLAIM_CTA@@";
   let processed = escaped;
+  let button = "";
   if (claimUrl) {
     const escapedUrl = claimUrl.replace(/&/g, "&amp;");
-    const button = `<div style="margin:24px 0"><a href="${escapedUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;font-size:14px;font-family:sans-serif;letter-spacing:0.01em">Claim listing →</a></div>`;
-    processed = processed.replace(escapedUrl, button);
+    button = `<div style="margin:24px 0"><a href="${escapedUrl}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;font-size:14px;font-family:sans-serif;letter-spacing:0.01em">Claim listing →</a></div>`;
+    processed = processed.replace(escapedUrl, CTA_PLACEHOLDER);
   }
 
   // Auto-link any remaining URLs
-  const linked = processed.replace(
+  let linked = processed.replace(
     /(https?:\/\/[^\s<"]+)/g,
     (url) => `<a href="${url}" style="color:#000;text-decoration:underline">${url}</a>`
   );
+  if (button) linked = linked.replace(CTA_PLACEHOLDER, button);
 
   const footer = listingUrl
     ? `<br><p style="margin:16px 0 0;font-size:12px;color:#888"><a href="${listingUrl}" style="color:#888;text-decoration:underline">View listing on Patronage →</a></p>`
