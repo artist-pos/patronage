@@ -433,6 +433,56 @@ export async function getGrowthMetrics(): Promise<GrowthMetrics> {
   };
 }
 
+// ── Sign-ups over time ───────────────────────────────────────────────────────
+
+export const SIGNUP_ROLES = ["artist", "owner", "patron", "partner"] as const;
+export type SignupRole = (typeof SIGNUP_ROLES)[number];
+
+/** Sign-ups on one NZ calendar day, by role (other roles, e.g. admin, are left out). */
+export interface SignupDay {
+  date: string; // YYYY-MM-DD, Pacific/Auckland
+  counts: Record<SignupRole, number>;
+}
+
+const nzDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland", year: "numeric", month: "2-digit", day: "2-digit" });
+
+/**
+ * Every profile's created_at, bucketed by NZ day. Paginates past PostgREST's
+ * 1,000-row cap. Days with no sign-ups are omitted; the chart fills the gaps.
+ */
+export async function getSignupSeries(): Promise<SignupDay[]> {
+  const admin = createAdminClient();
+  const PAGE = 1000;
+  const rows: { role: string; created_at: string }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await admin
+      .from("profiles")
+      .select("role, created_at")
+      .not("created_at", "is", null)
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("getSignupSeries", error);
+      break;
+    }
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+
+  const byDay = new Map<string, SignupDay>();
+  for (const r of rows) {
+    if (!(SIGNUP_ROLES as readonly string[]).includes(r.role)) continue;
+    const date = nzDay.format(new Date(r.created_at));
+    let day = byDay.get(date);
+    if (!day) {
+      day = { date, counts: { artist: 0, owner: 0, patron: 0, partner: 0 } };
+      byDay.set(date, day);
+    }
+    day.counts[r.role as SignupRole] += 1;
+  }
+  return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 // ── Impact Metrics ───────────────────────────────────────────────────────────
 
 export interface ImpactMetrics {

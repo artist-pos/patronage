@@ -9,7 +9,9 @@ import {
   getOpportunityEngagement,
   getPartnerHealth,
   getGrowthMetrics,
+  getSignupSeries,
 } from "@/lib/admin";
+import { SignupsChart } from "@/components/admin/SignupsChart";
 import type { MediumTrend, GrantPerformance } from "@/lib/admin";
 import { BackfillThumbsButton } from "@/components/admin/BackfillThumbsButton";
 
@@ -55,7 +57,7 @@ function Stat({ label, value, sub }: { label: string; value: number | string; su
 }
 
 export default async function AdminPage() {
-  const [a, grants, mediums, artistQuality, retention, oppEngagement, partnerHealth, growth] =
+  const [a, grants, mediums, artistQuality, retention, oppEngagement, partnerHealth, growth, signups] =
     await Promise.all([
       getAnalytics(),
       getGrantPerformance(),
@@ -65,6 +67,7 @@ export default async function AdminPage() {
       getOpportunityEngagement(),
       getPartnerHealth(),
       getGrowthMetrics(),
+      getSignupSeries(),
     ]);
 
   const typeRows = Object.entries(a.byType).sort((x, y) => y[1] - x[1]);
@@ -299,6 +302,9 @@ export default async function AdminPage() {
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat label="Email subscribers" value={growth.subscriberCount} />
+        </div>
+        <div className="border border-border p-4 sm:p-5">
+          <SignupsChart days={signups} />
         </div>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 mt-4">
           <div className="space-y-3">
