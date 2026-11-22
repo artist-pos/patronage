@@ -773,7 +773,7 @@ export default async function OpportunityPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[2.1fr_1fr] items-start">
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
       <div className="min-w-0">
 
       {/* ── Featured image — STATIC, borderless per v2 ──────────────────── */}
