@@ -1,7 +1,7 @@
 /**
  * The Verified rule in one place: a bio, a profile photo and at least three
  * works. Commerce eligibility (`commerce/eligibility.ts`), the studio banner and
- * the activation nudge emails all read this, so the three can't drift apart.
+ * the weekly profile email's before-and-after all read this, so they can't drift apart.
  *
  * Pure: no server imports, safe in server and client components.
  */

@@ -70,6 +70,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
       tldr,
       notes_off,
       admin_hidden,
+      link_preview,
       created_at,
       profiles!project_updates_artist_id_fkey (
         username,
@@ -167,6 +168,7 @@ export async function getThread(idOrSlug: string): Promise<ProjectThread | null>
     admin_hidden: u.admin_hidden ?? false,
     update_tag: u.update_tag ?? "update",
     notes_off: u.notes_off ?? false,
+    link_preview: u.link_preview ?? null,
   }));
 
   return {

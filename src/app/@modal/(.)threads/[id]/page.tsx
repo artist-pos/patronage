@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { getThread, type ThreadPost } from "@/lib/projects";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
+import { LinkCard } from "@/components/ui/LinkCard";
 import { getProfileById } from "@/lib/profiles";
 import { ModalShell } from "@/components/projects/ModalShell";
 import { NotesSection } from "@/components/projects/NotesSection";
@@ -238,14 +240,15 @@ function ModalThreadPost({
         {post.content_type === "text" && post.text_content && (
           <div className="border border-black p-4 bg-background">
             {post.text_content.split("\n\n").map((para, i) => (
-              <p key={i} className="mb-3 text-sm leading-relaxed last:mb-0">{para}</p>
+              <p key={i} className="mb-3 text-sm leading-relaxed last:mb-0"><LinkifiedText text={para} /></p>
             ))}
           </div>
         )}
 
         {post.caption && (
-          <p className="text-sm leading-relaxed">{post.caption}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-line"><LinkifiedText text={post.caption} /></p>
         )}
+        <LinkCard preview={post.link_preview} />
 
         {post.collaborators && post.collaborators.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">

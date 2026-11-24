@@ -5,6 +5,8 @@ import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getUpdateById } from "@/lib/feed";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
+import { LinkCard } from "@/components/ui/LinkCard";
 import { getVisibleNotes } from "@/lib/notes";
 import { getProfileById } from "@/lib/profiles";
 import { NotesSection } from "@/components/projects/NotesSection";
@@ -143,7 +145,7 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
         <div className="prose prose-sm max-w-none">
           {text_content.split("\n\n").map((para, i) => (
             <p key={i} className="mb-4 leading-relaxed text-base last:mb-0">
-              {para}
+              <LinkifiedText text={para} />
             </p>
           ))}
         </div>
@@ -275,8 +277,9 @@ export default async function ProjectPage({ params }: Props) {
           <EventRecordPrompt updateId={update.id} />
         )}
         {showCaption && (
-          <p className="text-base leading-relaxed">{update.caption}</p>
+          <p className="text-base leading-relaxed whitespace-pre-line"><LinkifiedText text={update.caption!} /></p>
         )}
+        <LinkCard preview={update.link_preview} />
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">

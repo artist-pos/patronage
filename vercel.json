@@ -35,10 +35,6 @@
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/cron/send-activation-nudges",
-      "schedule": "0 21 * * *"
-    },
-    {
       "path": "/api/cron/send-deadline-reminders",
       "schedule": "0 19 * * *"
     },

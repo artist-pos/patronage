@@ -37,6 +37,10 @@ const UPDATE_SELECT = `
   )
 `;
 
+/** Detail pages also need the link card (migration 230). Kept off the shared
+ *  select so the feed lists don't carry it and don't depend on the column. */
+const UPDATE_DETAIL_SELECT = UPDATE_SELECT.replace("  created_at,", "  link_preview,\n  created_at,");
+
 /** Explore's Kind filter (sidebar). Several kinds combine with OR. */
 export const FEED_KINDS = ["process", "new", "event", "milestone", "av", "writing"] as const;
 export type FeedKind = (typeof FEED_KINDS)[number];
@@ -129,6 +133,7 @@ function mapRow(row: any): Omit<ProjectUpdateWithArtist, "collaborators"> {
     event_venue: row.event_venue ?? null,
     event_region_id: row.event_region_id ?? null,
     event_cv_status: row.event_cv_status ?? null,
+    link_preview: row.link_preview ?? null,
   };
 }
 
@@ -228,7 +233,7 @@ export async function getUpdateById(id: string): Promise<ProjectUpdateWithArtist
   const supabase = await createClient();
   const { data } = await supabase
     .from("project_updates")
-    .select(UPDATE_SELECT)
+    .select(UPDATE_DETAIL_SELECT)
     .eq("id", id)
     .single();
 

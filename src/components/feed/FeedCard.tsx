@@ -10,6 +10,7 @@ import { SaveToBoard } from "@/components/boards/SaveToBoard";
 import { AppreciateButton } from "@/components/feed/AppreciateButton";
 import { EventRecordPrompt } from "@/components/feed/EventRecordPrompt";
 import { gridImageSrc } from "@/lib/image";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
 import { eventDateParts, eventLine, formatEventTime, isEventPast } from "@/lib/events";
 
 /* Minimal video pin — native `controls` brings the full browser control bar
@@ -342,7 +343,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
             )}
             {u.caption && (
               <p className="line-clamp-4 text-[13px] leading-[1.55] text-[color:var(--fg-muted)]">
-                {u.caption}
+                <LinkifiedText text={u.caption} inert />
               </p>
             )}
           </div>
@@ -472,7 +473,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
                   : "mb-3 line-clamp-3 text-[13px] leading-[1.55] text-[color:var(--fg-muted)]"
               }
             >
-              {bodyText}
+              <LinkifiedText text={bodyText} inert />
             </p>
           )}
           {u.embed_provider === "Patronage" && u.embed_url && (

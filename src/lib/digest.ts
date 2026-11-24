@@ -1,9 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Opportunity } from "@/types/database";
+import { nzDatePlus } from "@/lib/deadline-reminders";
+import { linkifyToHtml } from "@/lib/linkify";
 
 /** How many listings a digest carries. Curated, not comprehensive — we would
  *  rather send four good ones than seven padded with filler. */
 export const DIGEST_SIZE = 7;
+
+/** Minimum days from now (NZ calendar) a deadline must be to appear in a digest.
+ *  The digest is weekly and read late, so anything closing sooner is gone by the
+ *  time someone could write a decent application. Last-chance nudges belong to
+ *  the saved-listing reminders, not here. */
+export const DIGEST_MIN_LEAD_DAYS = 7;
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 // Design-system tokens resolved to hex. Email clients have no CSS custom
@@ -29,6 +37,8 @@ export interface DigestData {
   /** The curated set, already ordered for the email. At most DIGEST_SIZE. */
   opportunities: Opportunity[];
   generatedAt: string;
+  /** Optional passage from the editor, shown above the picks (migration 229). */
+  note?: string | null;
 }
 
 // ── Selection ────────────────────────────────────────────────────────────────
@@ -67,12 +77,14 @@ function disciplineKey(o: Opportunity): string {
 /**
  * Picks up to `limit` opportunities.
  *
- * Priority is the order given in the brief: closing soonest, then highest
- * value, then geographic spread, then discipline variety. The first two are a
- * sort; the last two are a diversity filter layered on top, applied as
- * widening quotas. Pass one allows a single listing per city and per
- * discipline, pass two allows a second, and so on — so spread is honoured
- * while it can be, and urgency wins once it cannot.
+ * Priority: highest value, then closing soonest, then geographic spread, then
+ * discipline variety. The first two are a sort; the last two are a diversity
+ * filter layered on top, applied as widening quotas. Pass one allows a single
+ * listing per city and per discipline, pass two allows a second, and so on.
+ *
+ * Urgency is a tie-break, not the lead: the pool already excludes anything
+ * closing inside DIGEST_MIN_LEAD_DAYS, and ranking soonest-first would fill
+ * every issue with listings sitting right at that floor.
  *
  * Never pads: if the pool holds four, four are returned.
  */
@@ -81,12 +93,12 @@ export function selectDigestOpportunities(
   limit: number = DIGEST_SIZE
 ): Opportunity[] {
   const ranked = [...pool].sort((a, b) => {
-    const da = daysToDeadline(a);
-    const db = daysToDeadline(b);
-    if (da !== db) return da - db;               // closing soonest
     const va = valueOf(a);
     const vb = valueOf(b);
     if (va !== vb) return vb - va;               // highest value
+    const da = daysToDeadline(a);
+    const db = daysToDeadline(b);
+    if (da !== db) return da - db;               // then closing soonest
     return a.title.localeCompare(b.title);       // stable
   });
 
@@ -121,7 +133,7 @@ export function selectDigestOpportunities(
 export async function getDigestData(): Promise<DigestData> {
   const supabase = await createClient();
   const today = new Date();
-  const minDate = new Date(today.getTime() + 2 * 864e5).toISOString().split("T")[0];
+  const minDate = nzDatePlus(DIGEST_MIN_LEAD_DAYS);
 
   // Everything still open with enough runway. Curation happens in
   // selectDigestOpportunities — the query's job is only to bound the pool.
@@ -286,6 +298,30 @@ function oppCard(o: Opportunity, siteUrl: string, forwardLabel = "Know someone f
     </tr>`;
 }
 
+// ── Editor's note ────────────────────────────────────────────────────────────
+
+/** The note as an email row, or nothing. Plain text only: paragraphs, line
+ *  breaks and links survive; any other markup is escaped. */
+function noteRow(note: string | null | undefined, siteUrl: string): string {
+  const text = note?.trim();
+  if (!text) return "";
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map(
+      (p) =>
+        `<p style="margin:0 0 14px;font-family:${SANS};font-size:15px;line-height:1.65;color:${INK};">${linkifyToHtml(p.trim(), { siteUrl, linkStyle: `color:${BRAND};text-decoration:underline;` })}</p>`
+    )
+    .join("");
+  return `
+          <tr>
+            <td style="padding:26px 0 12px;">
+              <div style="border-left:3px solid ${BRAND};padding:2px 0 0 16px;">
+                ${paragraphs}
+              </div>
+            </td>
+          </tr>`;
+}
+
 // ── Main builder ─────────────────────────────────────────────────────────────
 
 export function buildDigestHtml(
@@ -342,13 +378,15 @@ export function buildDigestHtml(
             </td>
           </tr>
 
+          ${noteRow(data.note, siteUrl)}
+
           <!-- Standfirst -->
           <tr>
             <td style="padding:26px 0 8px;">
               <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${MUTED};">
                 ${opportunities.length === 1
                   ? "one opportunity worth a look this week."
-                  : `${opportunities.length} opportunities worth a look this week. picked for what is closing, what pays, and where they are.`}
+                  : `${opportunities.length} opportunities worth a look this week. picked for what pays, how long you have, and where they are.`}
               </p>
             </td>
           </tr>
@@ -507,6 +545,8 @@ export function buildPartnerDigestHtml(
               </p>
             </td>
           </tr>
+
+          ${noteRow(data.note, siteUrl)}
 
           <tr>
             <td style="padding:26px 0 8px;">

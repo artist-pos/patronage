@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getLinkPreviewForText, type LinkPreview } from "@/lib/link-preview";
 
 interface UpdateUrls {
   image_url?: string | null;
@@ -56,12 +57,20 @@ export async function editUpdate(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const patch: Record<string, string | null> = {};
+  const patch: Record<string, string | null | LinkPreview> = {};
   if (fields.caption !== undefined) patch.caption = fields.caption?.trim() || null;
   if (fields.text_content !== undefined) patch.text_content = fields.text_content?.trim() || null;
   if (fields.title !== undefined) patch.title = fields.title?.trim() || null;
   if (fields.tldr !== undefined) patch.tldr = fields.tldr?.trim() || null;
   if (Object.keys(patch).length === 0) return {};
+
+  // Words changed: the link card follows them (removed link, no card).
+  if (fields.caption !== undefined || fields.text_content !== undefined) {
+    patch.link_preview = await getLinkPreviewForText(
+      fields.text_content !== undefined ? fields.text_content : null,
+      fields.caption !== undefined ? fields.caption : null,
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

@@ -1124,6 +1124,8 @@ export interface ProjectUpdate {
   event_region_id?: string | null;
   /** Answer to the after-the-date "add to your exhibitions?" prompt. */
   event_cv_status?: 'added' | 'dismissed' | null;
+  /** Migration 230: card for the first link in the words. Untrusted — validate with parseStoredPreview. */
+  link_preview?: unknown;
   created_at: string;
 }
 

@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResultEmails } from "@/lib/email";
-import { buildProfileViewsEmail, hasWeeklyNews, type WeeklyProfileStats } from "@/lib/profile-views-email";
+import {
+  MAX_COMPARISON_WEEKS,
+  afterSnapshot,
+  buildFirstLookEmail,
+  buildProfileViewsEmail,
+  hasWeeklyNews,
+  type ProfileComparison,
+  type ProfileSnapshot,
+  type WeeklyProfileStats,
+} from "@/lib/profile-views-email";
+import { computeVerifiedProgress } from "@/lib/verified-progress";
+import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
+import type { DisciplineEnum } from "@/types/database";
 
 const DAY_MS = 86_400_000;
 const EVENT_TYPES = ["profile_view", "cv_click", "website_click", "artwork_view"];
 const PAGE = 1000;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://patronage.nz";
+
+/** New artists get their one first-look email once they are 3 to 14 days old. */
+const FIRST_LOOK_MIN_DAYS = 3;
+const FIRST_LOOK_MAX_DAYS = 14;
 
 interface EventRow {
   event_type: string;
@@ -21,15 +38,73 @@ interface ProfileRow {
   email_verified_at: string | null;
   bio: string | null;
   avatar_url: string | null;
+  disciplines: DisciplineEnum[] | null;
+  country: string | null;
   is_minor: boolean | null;
   profile_view_emails: boolean | null;
   digest_unsubscribe_token: string;
+}
+
+const PROFILE_COLUMNS =
+  "id, username, full_name, email, email_verified_at, bio, avatar_url, disciplines, country, is_minor, profile_view_emails, digest_unsubscribe_token";
+
+type Admin = ReturnType<typeof createAdminClient>;
+
+/** Each profile's work count and first three image URLs. */
+async function loadWorks(admin: Admin, ids: string[]): Promise<Map<string, { count: number; images: string[] }>> {
+  const out = new Map<string, { count: number; images: string[] }>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data } = await admin
+      .from("artworks")
+      .select("profile_id, url, thumb_url")
+      .in("profile_id", ids.slice(i, i + 100))
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    for (const w of (data ?? []) as Array<{ profile_id: string; url: string | null; thumb_url: string | null }>) {
+      const entry = out.get(w.profile_id) ?? { count: 0, images: [] };
+      entry.count++;
+      const img = w.thumb_url ?? w.url;
+      if (img && entry.images.length < 3) entry.images.push(img);
+      out.set(w.profile_id, entry);
+    }
+  }
+  return out;
+}
+
+function toSnapshot(p: ProfileRow, works: { images: string[] } | undefined): ProfileSnapshot {
+  return {
+    name: p.full_name?.trim() || p.username,
+    username: p.username,
+    bio: p.bio,
+    avatarUrl: p.avatar_url,
+    disciplines: (p.disciplines ?? []).map((d) => DISCIPLINE_TO_MEDIUM[d] ?? d.replace(/_/g, " ")),
+    location: p.country,
+    works: works?.images ?? [],
+  };
+}
+
+/** A real, complete profile to compare against (PROFILE_EXAMPLE_USERNAME), if one is set and found. */
+async function loadExample(admin: Admin): Promise<{ snapshot: ProfileSnapshot; url: string } | null> {
+  const username = process.env.PROFILE_EXAMPLE_USERNAME?.trim();
+  if (!username) return null;
+  const { data } = await admin.from("profiles").select(PROFILE_COLUMNS).eq("username", username).maybeSingle();
+  if (!data) return null;
+  const p = data as ProfileRow;
+  const works = await loadWorks(admin, [p.id]);
+  const snapshot = toSnapshot(p, works.get(p.id));
+  // Only a profile that really is complete makes a fair comparison.
+  if (!snapshot.bio?.trim() || !snapshot.avatarUrl || snapshot.works.length < 3) return null;
+  return { snapshot, url: `${SITE_URL}/${p.username}?utm_source=profile_views&utm_medium=email&utm_campaign=example` };
 }
 
 /**
  * Monday morning in NZ (Sunday 19:00 UTC): tells artists how their work was
  * received last week — appreciations, saves and profile views. Private numbers,
  * one email, skipped in a week with nothing to say.
+ *
+ * While a profile has a gap, the email also shows it next to a stronger one
+ * (for at most MAX_COMPARISON_WEEKS emails). New artists with no news yet get a
+ * one-off first-look email instead. Both replace the old day-2/day-7 nudges.
  */
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -41,7 +116,15 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const results = { profilesWithViews: 0, eligible: 0, sent: 0, failed: 0, errors: [] as string[] };
+  const results = {
+    profilesWithViews: 0,
+    eligible: 0,
+    sent: 0,
+    failed: 0,
+    withComparison: 0,
+    firstLook: 0,
+    errors: [] as string[],
+  };
 
   const now = Date.now();
   const sinceWeek = new Date(now - 7 * DAY_MS).toISOString();
@@ -144,16 +227,14 @@ export async function GET(req: NextRequest) {
 
   const candidates = [...stats.entries()].filter(([, s]) => hasWeeklyNews(s));
   results.profilesWithViews = candidates.length;
-  if (candidates.length === 0) return NextResponse.json(results);
 
+  // ── Who gets the weekly email ──────────────────────────────────────────────
   const profiles = new Map<string, ProfileRow>();
   const ids = candidates.map(([id]) => id);
   for (let i = 0; i < ids.length; i += 200) {
     const { data, error } = await admin
       .from("profiles")
-      .select(
-        "id, username, full_name, email, email_verified_at, bio, avatar_url, is_minor, profile_view_emails, digest_unsubscribe_token"
-      )
+      .select(PROFILE_COLUMNS)
       .in("id", ids.slice(i, i + 200))
       .in("role", ["artist", "owner"]);
     if (error) {
@@ -163,24 +244,138 @@ export async function GET(req: NextRequest) {
     for (const p of (data ?? []) as ProfileRow[]) profiles.set(p.id, p);
   }
 
-  const emails = candidates.flatMap(([id, s]) => {
+  const weekly = candidates.filter(([id]) => {
     const p = profiles.get(id);
-    if (!p?.email || !p.email_verified_at || p.is_minor || p.profile_view_emails === false) return [];
+    return !!p?.email && !!p.email_verified_at && !p.is_minor && p.profile_view_emails !== false;
+  });
+
+  // The before-and-after: only for profiles with a gap, and only for the first
+  // few weeks. If the log can't be read, send plain stats rather than risk
+  // repeating it every week.
+  const comparisonSends = new Map<string, number>();
+  let logReadable = true;
+  const needsComparisonCheck = weekly.map(([id]) => id);
+  for (let i = 0; i < needsComparisonCheck.length; i += 200) {
+    const { data, error } = await admin
+      .from("profile_email_sends")
+      .select("profile_id")
+      .eq("kind", "weekly_comparison")
+      .in("profile_id", needsComparisonCheck.slice(i, i + 200));
+    if (error) {
+      results.errors.push(`profile_email_sends (migration 231 run?): ${error.message}`);
+      logReadable = false;
+      break;
+    }
+    for (const r of (data ?? []) as Array<{ profile_id: string }>) {
+      comparisonSends.set(r.profile_id, (comparisonSends.get(r.profile_id) ?? 0) + 1);
+    }
+  }
+
+  const works = logReadable ? await loadWorks(admin, weekly.map(([id]) => id)) : new Map();
+  const exampleData = logReadable ? await loadExample(admin) : null;
+
+  const kindByKey = new Map<string, "weekly_comparison" | "first_look">();
+  const outgoing: Array<{ key: string; to: string; subject: string; html: string }> = [];
+
+  for (const [id, s] of weekly) {
+    const p = profiles.get(id)!;
+    const progress = computeVerifiedProgress(p, works.get(id)?.count ?? 0);
+
+    let comparison: ProfileComparison | null = null;
+    if (logReadable && !progress.verified && (comparisonSends.get(id) ?? 0) < MAX_COMPARISON_WEEKS) {
+      const now = toSnapshot(p, works.get(id));
+      comparison = {
+        now,
+        after: afterSnapshot(now, exampleData?.snapshot ?? null),
+        missing: progress.missing,
+        exampleUrl: exampleData?.url ?? null,
+      };
+      kindByKey.set(id, "weekly_comparison");
+    }
+
     const { subject, html } = buildProfileViewsEmail({
       name: p.full_name,
       username: p.username,
       stats: s,
-      hasBio: !!p.bio?.trim(),
-      hasAvatar: !!p.avatar_url,
+      hasBio: progress.hasBio,
+      hasAvatar: progress.hasAvatar,
       unsubscribeToken: p.digest_unsubscribe_token,
+      comparison,
     });
-    return [{ key: id, to: p.email, subject, html }];
-  });
-  results.eligible = emails.length;
-  if (emails.length === 0) return NextResponse.json(results);
+    outgoing.push({ key: id, to: p.email!, subject, html });
+  }
 
-  const failed = await sendResultEmails(emails);
-  results.failed = failed.length;
-  results.sent = emails.length - failed.length;
+  // ── First look: new artists with a gap and no news yet, once ───────────────
+  if (logReadable) {
+    const newest = new Date(now - FIRST_LOOK_MIN_DAYS * DAY_MS).toISOString();
+    const oldest = new Date(now - FIRST_LOOK_MAX_DAYS * DAY_MS).toISOString();
+    const { data: fresh, error: freshErr } = await admin
+      .from("profiles")
+      .select(PROFILE_COLUMNS)
+      .eq("role", "artist")
+      .eq("is_minor", false)
+      .not("email", "is", null)
+      .not("email_verified_at", "is", null)
+      .gte("created_at", oldest)
+      .lte("created_at", newest);
+    if (freshErr) results.errors.push(`new artists: ${freshErr.message}`);
+
+    const newcomers = ((fresh ?? []) as ProfileRow[]).filter(
+      (p) => p.profile_view_emails !== false && !weekly.some(([id]) => id === p.id),
+    );
+    if (newcomers.length > 0) {
+      const newIds = newcomers.map((p) => p.id);
+      // Already had a first look, or one of the old day-2 / day-7 nudges.
+      const [seenFirst, seenNudge] = await Promise.all([
+        admin.from("profile_email_sends").select("profile_id").eq("kind", "first_look").in("profile_id", newIds),
+        admin.from("activation_nudges").select("profile_id").in("profile_id", newIds),
+      ]);
+      const skip = new Set<string>([
+        ...((seenFirst.data ?? []) as Array<{ profile_id: string }>).map((r) => r.profile_id),
+        ...((seenNudge.data ?? []) as Array<{ profile_id: string }>).map((r) => r.profile_id),
+      ]);
+      const pool = newcomers.filter((p) => !skip.has(p.id));
+      const newWorks = await loadWorks(admin, pool.map((p) => p.id));
+
+      for (const p of pool) {
+        const progress = computeVerifiedProgress(p, newWorks.get(p.id)?.count ?? 0);
+        if (progress.verified) continue;
+        const snapshot = toSnapshot(p, newWorks.get(p.id));
+        const { subject, html } = buildFirstLookEmail({
+          name: p.full_name,
+          username: p.username,
+          unsubscribeToken: p.digest_unsubscribe_token,
+          comparison: {
+            now: snapshot,
+            after: afterSnapshot(snapshot, exampleData?.snapshot ?? null),
+            missing: progress.missing,
+            exampleUrl: exampleData?.url ?? null,
+          },
+        });
+        kindByKey.set(p.id, "first_look");
+        outgoing.push({ key: p.id, to: p.email!, subject, html });
+      }
+    }
+  }
+
+  results.eligible = outgoing.length;
+  if (outgoing.length === 0) return NextResponse.json(results);
+
+  const failed = new Set(await sendResultEmails(outgoing));
+  results.failed = failed.size;
+  results.sent = outgoing.length - failed.size;
+  results.withComparison = outgoing.filter((o) => !failed.has(o.key) && kindByKey.get(o.key) === "weekly_comparison").length;
+  results.firstLook = outgoing.filter((o) => !failed.has(o.key) && kindByKey.get(o.key) === "first_look").length;
+
+  // Remember what went out, so the comparison stops after a few weeks and the
+  // first look never repeats.
+  const logRows = outgoing
+    .filter((o) => !failed.has(o.key) && kindByKey.has(o.key))
+    .map((o) => ({ profile_id: o.key, kind: kindByKey.get(o.key)! }));
+  if (logRows.length > 0) {
+    const { error } = await admin.from("profile_email_sends").insert(logRows);
+    if (error) results.errors.push(`log: ${error.message}`);
+  }
+
   return NextResponse.json(results);
 }

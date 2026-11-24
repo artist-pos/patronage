@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PatronageArticleCard } from "@/components/projects/PatronageArticleCard";
 import type { Metadata } from "next";
 import { getUpdateById } from "@/lib/feed";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
+import { LinkCard } from "@/components/ui/LinkCard";
 import { DISCIPLINE_TO_MEDIUM } from "@/lib/disciplines";
 import type { ProjectUpdateWithArtist, DisciplineEnum } from "@/types/database";
 
@@ -125,7 +127,7 @@ function UpdateMedia({ update, name }: { update: ProjectUpdateWithArtist; name: 
           </p>
         )}
         {text_content.split("\n\n").map((para, i) => (
-          <p key={i} className="mb-4 leading-relaxed text-base last:mb-0">{para}</p>
+          <p key={i} className="mb-4 leading-relaxed text-base last:mb-0"><LinkifiedText text={para} /></p>
         ))}
       </div>
     );
@@ -157,8 +159,9 @@ export default async function UpdatePage({ params }: Props) {
 
       <div className="space-y-4">
         {update.caption && update.content_type !== "text" && (
-          <p className="text-base leading-relaxed">{update.caption}</p>
+          <p className="text-base leading-relaxed whitespace-pre-line"><LinkifiedText text={update.caption} /></p>
         )}
+        <LinkCard preview={update.link_preview} />
 
         <div className="flex items-center gap-3">
           {update.artist_avatar_url && (

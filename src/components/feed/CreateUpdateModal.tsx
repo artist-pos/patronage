@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Camera, ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { createProject } from "@/actions/projects";
+import { resolveLinkPreview } from "@/actions/link-preview";
 import { detectOrientation } from "@/lib/image";
 import { uploadImage } from "@/lib/upload-image";
 import { nzToday } from "@/lib/events";
@@ -301,6 +302,9 @@ export function CreateUpdateModal({
       }
 
       const isEvent = extras.has("event") && canPostEvent;
+      // A link in the words gets a card on the update page. Failing to fetch one
+      // must never stop the post.
+      const link_preview = await resolveLinkPreview(words).catch(() => null);
       const { error: dbErr } = await supabase.from("project_updates").insert({
         artist_id: profileId,
         content_type,
@@ -313,6 +317,7 @@ export function CreateUpdateModal({
         text_content: content_type === "text" ? words : null,
         caption: content_type === "text" ? null : body || null,
         title,
+        link_preview,
         project_id: projectId,
         orientation,
         image_width,

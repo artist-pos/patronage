@@ -6,9 +6,11 @@ import {
   digestSubject,
   partnerDigestSubject,
   selectDigestOpportunities,
+  DIGEST_MIN_LEAD_DAYS,
   type DigestData,
   type PartnerListingStat,
 } from "@/lib/digest";
+import { nzDatePlus } from "@/lib/deadline-reminders";
 import type { Opportunity } from "@/types/database";
 
 /**
@@ -167,17 +169,13 @@ export async function getDigestRecipientCount(): Promise<number> {
 
 // ── Pool and suppression ─────────────────────────────────────────────────────
 
-/** Minimum days from now a deadline must be for us to include it in a digest.
- *  Recipients need time to actually act — same-day and next-day deadlines
- *  arrive too late to be useful. */
-export const DIGEST_MIN_LEAD_DAYS = 2;
+export { DIGEST_MIN_LEAD_DAYS };
 
 /** Every live listing, unranked. Curation happens in selectDigestOpportunities. */
 export async function getDigestPool(): Promise<Opportunity[]> {
   const admin = createAdminClient();
-  const minDate = new Date(Date.now() + DIGEST_MIN_LEAD_DAYS * 864e5)
-    .toISOString()
-    .split("T")[0];
+  // NZ calendar date: deadlines are NZ dates, and the send runs on UTC evenings.
+  const minDate = nzDatePlus(DIGEST_MIN_LEAD_DAYS);
 
   const { data, error } = await admin
     .from("opportunities")
@@ -186,7 +184,9 @@ export async function getDigestPool(): Promise<Opportunity[]> {
     .eq("status", "published")
     .or(`deadline.is.null,deadline.gte.${minDate}`)
     .order("deadline", { ascending: true, nullsFirst: false })
-    .limit(200);
+    // Ranking is by value now, so a tight cut by soonest deadline would drop
+    // valuable later listings before they were ever considered.
+    .limit(500);
 
   if (error) throw new Error(`digest: opportunities query failed — ${error.message}`);
 
@@ -213,6 +213,45 @@ export async function getRecentlySent(): Promise<Map<string, Set<string>>> {
     map.set(key, set);
   }
   return map;
+}
+
+// ── Editor's note (migration 229) ────────────────────────────────────────────
+
+export type DigestNoteAudience = "artist" | "partner";
+
+/** The pending note for an audience, or null. A missing table (migration not
+ *  run yet) reads as "no note" so a send is never blocked by it. */
+export async function getDigestNote(audience: DigestNoteAudience): Promise<string | null> {
+  const { data, error } = await createAdminClient()
+    .from("digest_notes")
+    .select("body")
+    .eq("audience", audience)
+    .maybeSingle();
+  if (error) {
+    console.error("digest: note read failed —", error.message);
+    return null;
+  }
+  return (data as { body: string } | null)?.body?.trim() || null;
+}
+
+export async function saveDigestNote(audience: DigestNoteAudience, body: string): Promise<{ error?: string }> {
+  const text = body.trim();
+  const admin = createAdminClient();
+  if (!text) {
+    const { error } = await admin.from("digest_notes").delete().eq("audience", audience);
+    return error ? { error: error.message } : {};
+  }
+  if (text.length > 2000) return { error: "Keep the note under 2,000 characters." };
+  const { error } = await admin
+    .from("digest_notes")
+    .upsert({ audience, body: text, updated_at: new Date().toISOString() }, { onConflict: "audience" });
+  return error ? { error: error.message } : {};
+}
+
+/** Notes are one-issue: cleared once the issue they were written for has gone. */
+async function clearDigestNote(audience: DigestNoteAudience): Promise<void> {
+  const { error } = await createAdminClient().from("digest_notes").delete().eq("audience", audience);
+  if (error) console.error("digest: note clear failed —", error.message);
 }
 
 // ── Recording ────────────────────────────────────────────────────────────────
@@ -407,8 +446,9 @@ export async function sendWeeklyDigest(
   const toSend = planned.slice(0, DIGEST_DAILY_BUDGET);
   const deferred = planned.length - toSend.length;
 
+  const note = await getDigestNote("artist");
   const mails: OutgoingMail[] = toSend.map(({ recipient, picks }) => {
-    const data: DigestData = { opportunities: picks, generatedAt };
+    const data: DigestData = { opportunities: picks, generatedAt, note };
     return {
       to: recipient.email,
       subject: digestSubject(picks.length),
@@ -430,6 +470,11 @@ export async function sendWeeklyDigest(
   });
 
   await recordDigestSend(recorded, trigger);
+
+  // Half A goes first and half B a day later; the note rides on both, then goes.
+  // (Recipients held back by the daily cap are re-sent after it has cleared,
+  // so they miss it — a one-off announcement isn't worth holding the note for.)
+  if (recorded.length > 0 && note && opts.half !== "a") await clearDigestNote("artist");
 
   const sent = recorded.length;
   const errors = toSend.length - sent;
@@ -535,10 +580,11 @@ export async function sendPartnerDigest(
   const toSend = planned.slice(0, DIGEST_DAILY_BUDGET);
   const deferred = planned.length - toSend.length;
 
+  const note = await getDigestNote("partner");
   const mails: OutgoingMail[] = toSend.map(({ recipient, picks, stats }) => ({
     to: recipient.email,
     subject: partnerDigestSubject(picks.length),
-    html: buildPartnerDigestHtml({ opportunities: picks, generatedAt, stats }, SITE_URL, recipient.unsubscribeToken ?? undefined),
+    html: buildPartnerDigestHtml({ opportunities: picks, generatedAt, stats, note }, SITE_URL, recipient.unsubscribeToken ?? undefined),
   }));
 
   // A different tag keeps partner opens and clicks out of the artist digest's numbers.
@@ -550,6 +596,7 @@ export async function sendPartnerDigest(
     recorded.push({ email: recipient.email, profileId: recipient.profileId, opportunityIds: picks.map((o) => o.id) });
   });
   await recordDigestSend(recorded, trigger);
+  if (recorded.length > 0 && note) await clearDigestNote("partner");
 
   const sent = recorded.length;
   const errors = toSend.length - sent;

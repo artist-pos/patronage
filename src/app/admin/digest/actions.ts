@@ -1,7 +1,19 @@
 "use server";
 
 import { isAdmin } from "@/lib/admin";
-import { sendPartnerDigest, sendWeeklyDigest } from "@/lib/digest-send";
+import { saveDigestNote, sendPartnerDigest, sendWeeklyDigest, type DigestNoteAudience } from "@/lib/digest-send";
+
+/** Save (or, with blank text, remove) the note shown at the top of the next issue. */
+export async function saveDigestNoteAction(
+  audience: DigestNoteAudience,
+  body: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (!(await isAdmin())) return { ok: false, message: "Not authorised." };
+  if (audience !== "artist" && audience !== "partner") return { ok: false, message: "Unknown audience." };
+  const { error } = await saveDigestNote(audience, body);
+  if (error) return { ok: false, message: error };
+  return { ok: true, message: body.trim() ? "Saved. It goes in the next issue." : "Note removed." };
+}
 
 export type DigestAudience = "a" | "b" | "partner";
 

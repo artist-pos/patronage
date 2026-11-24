@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 import { getDigestData, digestSubject, DIGEST_SIZE } from "@/lib/digest";
-import { DIGEST_DAILY_BUDGET, getDigestSplitCounts, getLastDigestSend } from "@/lib/digest-send";
+import { DIGEST_DAILY_BUDGET, getDigestNote, getDigestSplitCounts, getLastDigestSend } from "@/lib/digest-send";
 import { DigestControls } from "./DigestControls";
+import { DigestNoteEditor } from "./DigestNoteEditor";
 
 export const metadata = { title: "Digest — Admin" };
 
@@ -23,10 +24,12 @@ function fmtSent(iso: string) {
 }
 
 export default async function AdminDigestPage() {
-  const [splitCounts, digest, lastSend] = await Promise.all([
+  const [splitCounts, digest, lastSend, artistNote, partnerNote] = await Promise.all([
     getDigestSplitCounts(),
     getDigestData(),
     getLastDigestSend(),
+    getDigestNote("artist"),
+    getDigestNote("partner"),
   ]);
   const subscriberCount = splitCounts.a + splitCounts.b + splitCounts.partner;
   const hasResend = !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
@@ -56,6 +59,8 @@ export default async function AdminDigestPage() {
         hasResend={hasResend}
         isEmpty={isEmpty}
       />
+
+      <DigestNoteEditor initial={{ artist: artistNote ?? "", partner: partnerNote ?? "" }} />
 
       {isEmpty ? (
         <p className="text-sm text-muted-foreground py-8 border-t border-border">
