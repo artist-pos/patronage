@@ -137,7 +137,7 @@ export function OpportunityTipForm() {
         }
         className="btn btn-brand disabled:opacity-40"
       >
-        {submitting ? "Sending…" : "Send the tip →"}
+        {submitting ? "Sending…" : "Send the tip"}
       </button>
     </form>
   );

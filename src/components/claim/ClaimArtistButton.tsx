@@ -44,7 +44,7 @@ export function ClaimArtistButton({ token }: Props) {
           href="mailto:hello@patronage.nz?subject=Artist%20claim%20review"
           className="inline-block underline text-stone-700 hover:text-stone-900"
         >
-          Email Patronage →
+          Email Patronage
         </a>
       </div>
     );

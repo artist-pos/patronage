@@ -188,7 +188,7 @@ function TriagePreview({
           onClick={onOpenFull}
           className="text-sm border border-black px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
         >
-          Full detail →
+          Full detail
         </button>
       </div>
 

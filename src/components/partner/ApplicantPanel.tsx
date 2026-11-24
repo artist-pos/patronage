@@ -562,7 +562,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                     <p className="text-sm text-stone-500">No acceptance recorded (applied before terms were required).</p>
                   )}
                   <a href={opportunity.pipeline_config.terms_pdf_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm underline underline-offset-2">View T&C PDF →</a>
+                    className="text-sm underline underline-offset-2">View T&C PDF</a>
                 </div>
               )}
               {questions.length === 0 && !artist?.bio && (
@@ -625,7 +625,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                   <p className="text-sm font-medium uppercase tracking-widest text-stone-500">Production Asset</p>
                   <button type="button" onClick={handleDownload} disabled={loadingDownload}
                     className="text-sm border border-black px-4 py-2 hover:bg-black hover:text-white transition-colors disabled:opacity-50">
-                    {loadingDownload ? "Generating link…" : "Download High-Res →"}
+                    {loadingDownload ? "Generating link…" : "Download High-Res"}
                   </button>
                   {signedUrl && <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block text-sm underline">Direct link (1 hour)</a>}
                 </div>
@@ -639,7 +639,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
               {artist?.cv_url && (
                 <a href={artist.cv_url} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm border border-black px-4 py-2 hover:bg-muted transition-colors">
-                  Download CV PDF →
+                  Download CV PDF
                 </a>
               )}
               {exhibitionHistory.length > 0 && (
@@ -719,7 +719,7 @@ export function ApplicantPanel({ application, opportunity, onClose, allApps, onN
                           setTimeout(() => setToast(null), 4000);
                         }}
                         className="text-sm border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50">
-                        {markingPaid ? "Saving…" : "Mark as paid →"}
+                        {markingPaid ? "Saving…" : "Mark as paid"}
                       </button>
                     </div>
                   ) : (

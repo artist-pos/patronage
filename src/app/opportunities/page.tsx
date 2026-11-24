@@ -190,7 +190,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             props={{ placement: "opportunities_header" }}
             className="text-[13px] text-[color:var(--fg-muted)] underline decoration-[color:var(--fg-subtle)] underline-offset-4 transition-colors hover:text-foreground max-sm:order-last"
           >
-            Organisation? List an opportunity →
+            Organisation? List an opportunity
           </TrackedNavLink>
         </div>
 

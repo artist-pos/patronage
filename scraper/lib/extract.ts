@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedOpportunity, RssItem } from "../types.js";
 import { withRateLimit, estimateTokens } from "./rate-limiter.js";
+import { cleanEvent } from "./event.js";
 
 /** Extraction can't succeed for any page this run — callers must stop, not skip the page. */
 export class FatalExtractionError extends Error {}
@@ -76,6 +77,10 @@ Each item in the array:
   "country": "NZ" | "AUS" | "Global",
   "opens_at": "YYYY-MM-DD or null — only if a future open date is explicitly stated",
   "deadline": "YYYY-MM-DD or null",
+  "event_date": "YYYY-MM-DD or null — ONLY if the page names a specific public event for the work: an opening night, exhibition opening, launch, artist talk or open studio. Never the application deadline, never the start/end of the whole show or residency, never a decision or notification date.",
+  "event_time": "HH:MM (24h) or null — only if a start time is stated for that event",
+  "event_venue": "string or null — where that event is held, only if stated",
+  "event_label": "string or null — a few words for the event, e.g. 'Opening night', 'Artist talk', 'Launch'",
   "url": "direct link to the opportunity page, or null — if the content includes an outbound link to the organiser's own application page, return that URL instead of the page URL you're reading",
   "funding_range": "e.g. 'Up to $10,000 NZD' or '$5,000–$25,000' or null",
   "full_description": "Structured plain-text description for the detail page. Use short section headings on their own line, always ending with a colon (e.g. 'Eligibility:', 'Prize:', 'How to Apply:', 'About the Residency:', 'Who can apply:'). Headings must be Title Case followed by colon — never ALL CAPS, never without colon. Write content after each heading as plain text on the next line(s). No markdown bold/italic. Max 1500 characters. Null if the source page has no substantive detail beyond the caption.",
@@ -150,6 +155,7 @@ export function applyExtractionFilters(parsed: ParsedOpp[], opts: ExtractOptions
             country: mapCountryForDb(o.country),
             // Same cap as every opportunity form (CAPTION_MAX in src/lib/opportunity-fields.ts)
             caption: o.caption?.slice(0, 300) ?? null,
+            ...cleanEvent(o),
         }));
 }
 

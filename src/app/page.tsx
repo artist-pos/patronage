@@ -332,7 +332,7 @@ export default async function Home() {
               href="/opportunities"
               className="text-[13px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground"
             >
-              All {oppCount}+ →
+              All {oppCount}+
             </Link>
           </div>
           <div className="border-t-2 border-[#B23A2E]">
@@ -388,7 +388,7 @@ export default async function Home() {
                 href="/artists"
                 className="shrink-0 text-[13px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground"
               >
-                All artists →
+                All artists
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-x-20 gap-y-2 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-stretch">
@@ -479,7 +479,7 @@ export default async function Home() {
                 href="/feed"
                 className="shrink-0 text-[13px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground"
               >
-                Explore the feed →
+                Explore the feed
               </Link>
             </div>
             <div className="relative max-h-[460px] overflow-hidden px-6 sm:px-12">

@@ -88,7 +88,7 @@ export function OpportunitySignupModalTrigger() {
               keep your bio, CV and work in one place. I&rsquo;d love to have you in the community.
             </BlakeNote>
           }
-          submitLabel="Sign up free →"
+          submitLabel="Sign up free"
           next={POST_SIGNUP_DESTINATION}
           onClose={close}
         />

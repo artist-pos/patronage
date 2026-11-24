@@ -166,7 +166,7 @@ export function WorkTab({
                   href="/studio/works"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
-                  Manage in Studio →
+                  Manage in Studio
                 </Link>
               </div>
             )}
@@ -349,7 +349,7 @@ export function WorkTab({
                         href="/studio/works"
                         className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                       >
-                        Manage in Studio →
+                        Manage in Studio
                       </Link>
                     </div>
                   )}

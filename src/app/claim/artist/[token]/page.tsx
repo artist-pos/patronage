@@ -56,7 +56,7 @@ export default async function ArtistClaimPage({ params }: Props) {
         {stub.claimed_by_profile_id ? (
           <div className="border border-stone-200 rounded-lg p-6 bg-stone-50 text-sm">
             This claim has already been resolved.{" "}
-            <Link href="/" className="underline">Go to Patronage →</Link>
+            <Link href="/" className="underline">Go to Patronage</Link>
           </div>
         ) : !user ? (
           <div className="border border-stone-200 rounded-lg p-6 bg-stone-50 space-y-3">

@@ -308,11 +308,11 @@ export function OpportunitySubmissionForm({
                     onClick={() => { setShowFullPreview(true); setHasPreviewed(true); }}
                     className="border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
                   >
-                    Preview listing →
+                    Preview listing
                   </button>
                   {isLoggedIn ? (
                     <Button type="submit" disabled={isPending}>
-                      {isPending ? "Publishing…" : "Publish opportunity →"}
+                      {isPending ? "Publishing…" : "Publish opportunity"}
                     </Button>
                   ) : (
                     <div className="space-y-1">
@@ -320,7 +320,7 @@ export function OpportunitySubmissionForm({
                         href="/auth/login?next=/partners"
                         className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
                       >
-                        Sign in to submit →
+                        Sign in to submit
                       </a>
                       <p className="text-xs text-muted-foreground">
                         Don&apos;t have an account?{" "}
@@ -336,7 +336,7 @@ export function OpportunitySubmissionForm({
                   onClick={() => { setShowFullPreview(true); setHasPreviewed(true); }}
                   className="border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
                 >
-                  Preview listing →
+                  Preview listing
                 </button>
                 <button
                   type="button"
@@ -368,7 +368,7 @@ export function OpportunitySubmissionForm({
                   }}
                   className="border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
                 >
-                  Configure pipeline →
+                  Configure pipeline
                 </button>
               </div>
               )
@@ -379,7 +379,7 @@ export function OpportunitySubmissionForm({
                   onClick={() => { setShowFullPreview(true); setHasPreviewed(true); }}
                   className="w-full sm:w-auto border border-black px-6 py-3 text-sm font-semibold hover:bg-muted transition-colors"
                 >
-                  Preview full listing →
+                  Preview full listing
                 </button>
 
                 {hasPreviewed ? (
@@ -394,7 +394,7 @@ export function OpportunitySubmissionForm({
                           href="/auth/login?next=/partners"
                           className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
                         >
-                          Sign in to submit →
+                          Sign in to submit
                         </a>
                         <p className="text-xs text-muted-foreground">
                           Don&apos;t have an account?{" "}
@@ -431,7 +431,7 @@ export function OpportunitySubmissionForm({
             </button>
             {isLoggedIn ? (
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Publishing…" : "Publish opportunity →"}
+                {isPending ? "Publishing…" : "Publish opportunity"}
               </Button>
             ) : (
               <div className="space-y-1">
@@ -439,7 +439,7 @@ export function OpportunitySubmissionForm({
                   href="/auth/login?next=/partners"
                   className="inline-block border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors"
                 >
-                  Sign in to submit →
+                  Sign in to submit
                 </a>
                 <p className="text-xs text-muted-foreground">
                   Don&apos;t have an account?{" "}
@@ -592,7 +592,7 @@ function ListingPreviewModal({
                     disabled
                     className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold opacity-60 cursor-not-allowed"
                   >
-                    Apply with Patronage →
+                    Apply with Patronage
                   </button>
                   {previewQuestions.length > 0 && (
                     <div className="text-xs text-muted-foreground space-y-0.5 pt-1">
@@ -605,7 +605,7 @@ function ListingPreviewModal({
                 </div>
               ) : opp.url ? (
                 <span className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold opacity-60 cursor-not-allowed">
-                  Apply on Official Site →
+                  Apply on Official Site
                 </span>
               ) : null}
             </div>

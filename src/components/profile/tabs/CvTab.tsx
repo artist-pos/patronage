@@ -48,7 +48,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
               href="/profile"
               className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
-              Add these in your profile settings →
+              Add these in your profile settings
             </Link>
           </p>
         )}
@@ -67,7 +67,7 @@ export function CvTab({ exhibitions, bibliography, receivedGrants, achievements,
             eventType="cv_click"
             className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
           >
-            Download CV →
+            Download CV
           </TrackedLink>
         </div>
       )}

@@ -1246,8 +1246,8 @@ export function CampaignConfigPanel({
               : isSubmitted
                 ? "Submitted for approval"
                 : isPartnerCampaign
-                  ? "Submit for approval →"
-                  : "Publish storefront →"}
+                  ? "Submit for approval"
+                  : "Publish storefront"}
         </button>
       </section>
 

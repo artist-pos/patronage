@@ -69,7 +69,7 @@ export default async function JoinPage({ searchParams }: Props) {
           <h1 className="text-xl font-semibold tracking-tight">Invitation unavailable</h1>
           <p className="text-sm text-muted-foreground">{result.error}</p>
           <Link href="/studio/profile" className="inline-block text-sm underline underline-offset-2">
-            View your groups →
+            View your groups
           </Link>
         </div>
       </div>

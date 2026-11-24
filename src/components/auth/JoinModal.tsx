@@ -216,7 +216,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
               onClick={() => goToDetails("artist", { disciplines: disciplines.join(",") })}
               className="mt-6 w-full bg-brand py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
             >
-              Continue →
+              Continue
             </button>
           </>
         )}
@@ -273,7 +273,7 @@ export default function JoinModal({ cities, source, onClose }: Props) {
                 next={next}
                 analyticsSource={source}
                 submitClassName="w-full bg-brand text-white hover:bg-brand/90"
-                submitLabel="Join free →"
+                submitLabel="Join free"
               />
             </div>
           </>

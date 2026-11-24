@@ -115,7 +115,7 @@ export function ClosedOpportunityRecovery({ opportunityId, suggestions }: Props)
         href="/opportunities"
         className="mt-5 inline-flex h-[44px] items-center bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-80"
       >
-        View all opportunities →
+        View all opportunities
       </Link>
     </section>
   );

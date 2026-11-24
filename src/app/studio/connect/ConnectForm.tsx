@@ -61,8 +61,8 @@ export function ConnectForm({ currentStatus }: Props) {
         {isPending
           ? "Redirecting to Stripe…"
           : currentStatus === "pending"
-          ? "Complete Stripe onboarding →"
-          : "Connect bank account →"}
+          ? "Complete Stripe onboarding"
+          : "Connect bank account"}
       </button>
 
       {currentStatus === "pending" && (

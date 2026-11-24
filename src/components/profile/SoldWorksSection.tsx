@@ -257,7 +257,7 @@ function SoldLightbox({
                     href={`/provenance/${work.ledger_id}`}
                     className="text-xs font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
                   >
-                    {work.ledger_id} →
+                    {work.ledger_id}
                   </Link>
                 )}
               </div>

@@ -116,7 +116,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
             onClick={() => router.push("/studio/qr-codes")}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
-            Back to Studio →
+            Back to Studio
           </button>
         </div>
       );
@@ -165,7 +165,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
           disabled={enquirySending || !enquiryMessage.trim()}
           className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {enquirySending ? "Sending…" : "Send enquiry →"}
+          {enquirySending ? "Sending…" : "Send enquiry"}
         </button>
       </div>
     );
@@ -286,7 +286,7 @@ export function NewCampaignForm({ username, projects = [] }: { username: string;
         disabled={!title.trim() || creating}
         className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {creating ? "Creating…" : "Create campaign →"}
+        {creating ? "Creating…" : "Create campaign"}
       </button>
     </div>
   );

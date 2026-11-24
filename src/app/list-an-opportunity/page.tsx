@@ -81,7 +81,7 @@ export default async function ListAnOpportunityPage() {
             it, and it goes live in the directory.
           </p>
           <Link href="/partner/list-free" className="btn btn-brand">
-            List for free →
+            List for free
           </Link>
           <p className="t-caption mt-3">
             You can fill in the whole form before signing up. We only ask for an account
@@ -127,7 +127,7 @@ export default async function ListAnOpportunityPage() {
             href={user ? "/partner/opportunities/new?type=pipeline" : "/partner/list-pipeline"}
             className="btn btn-primary"
           >
-            {pipelineFirstRoundUsed ? "Set up an open call →" : "Start your first round free →"}
+            {pipelineFirstRoundUsed ? "Set up an open call" : "Start your first round free"}
           </Link>
           <p className="t-caption mt-3">
             {pipelineFirstRoundUsed
@@ -192,7 +192,7 @@ export default async function ListAnOpportunityPage() {
           surface project or art strategy, and we work on it with you.
         </p>
         <Link href="/partners#work-with-us" className="btn btn-outline shrink-0">
-          Work with us →
+          Work with us
         </Link>
       </div>
     </div>

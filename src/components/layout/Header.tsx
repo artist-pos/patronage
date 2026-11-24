@@ -30,7 +30,7 @@ export async function Header() {
 
   return (
     <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-lg">
-      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 h-[52px] flex items-stretch gap-4 sm:gap-6">
+      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 h-[52px] flex items-stretch gap-3 sm:gap-4 lg:gap-6">
 
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-2 shrink-0 sm:mr-2 text-[15px] font-semibold tracking-tight">
@@ -51,7 +51,7 @@ export async function Header() {
         </div>
 
         {/* ── Account + mobile hamburger ── */}
-        <div className="flex items-center">
+        <div className="flex shrink-0 items-center">
           <NavBar
             isLoggedIn={!!user}
             username={profile?.username ?? null}

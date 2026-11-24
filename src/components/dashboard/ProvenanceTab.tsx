@@ -246,7 +246,7 @@ export function ProvenanceTab({ artworks, pendingClaims: initialClaims, recentAc
             href="/dashboard/provenance-settings"
             className="text-xs text-stone-400 hover:text-stone-700 transition-colors"
           >
-            Certificate settings →
+            Certificate settings
           </Link>
         </div>
 

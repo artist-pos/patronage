@@ -37,15 +37,15 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
   return (
     <>
       {/* ── Desktop right column ──────────────────────── */}
-      <div className="hidden sm:flex items-center gap-4 text-sm">
+      <div className="hidden shrink-0 items-center gap-3 whitespace-nowrap text-sm sm:flex lg:gap-4">
         {isLoggedIn && userId && (
           <NotificationBell userId={userId} initialUnreadCount={unreadNotifications} />
         )}
         {isLoggedIn ? (
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer">
-              {username ?? "My Account"}
-              <ChevronDown className="h-3.5 w-3.5" />
+            <DropdownMenuTrigger className="flex max-w-[140px] items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground transition-colors outline-none cursor-pointer lg:max-w-[200px]">
+              <span className="truncate">{username ?? "My Account"}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 border border-border">
               {username && (
@@ -74,7 +74,7 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 lg:gap-4">
             <Link
               href="/auth/login"
               className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
@@ -83,7 +83,7 @@ export function NavBar({ isLoggedIn, username, userId, unreadCount, unreadNotifi
             </Link>
             <Link
               href="/auth/signup"
-              className="bg-brand text-white text-[13px] font-medium px-4 py-[7px] hover:opacity-85 transition-opacity"
+              className="bg-brand px-3 py-[7px] text-[13px] font-medium text-white transition-opacity hover:opacity-85 lg:px-4"
             >
               Get started
             </Link>

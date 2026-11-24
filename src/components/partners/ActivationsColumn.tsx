@@ -187,7 +187,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
               className="w-7 h-7 border border-border flex items-center justify-center text-muted-foreground hover:border-black hover:text-foreground transition-colors text-xs"
               aria-label="Scroll right"
             >
-              →
+
             </button>
           </div>
         </div>
@@ -458,7 +458,7 @@ export function ActivationsColumn({ activationTypes: initial, isAdmin, hideHeade
               disabled={sending}
               className="text-sm border border-black bg-black text-white px-5 py-2.5 hover:bg-white hover:text-black transition-colors disabled:opacity-50"
             >
-              {sending ? "Sending…" : "Send enquiry →"}
+              {sending ? "Sending…" : "Send enquiry"}
             </button>
           </form>
         )}

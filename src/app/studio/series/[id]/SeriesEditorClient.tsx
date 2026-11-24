@@ -574,7 +574,7 @@ export function SeriesEditorClient({ profileId, artistUsername, series, initialA
           className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
           target="_blank"
         >
-          View public series page →
+          View public series page
         </Link>
       </div>
 

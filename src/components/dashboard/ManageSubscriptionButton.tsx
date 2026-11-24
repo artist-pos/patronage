@@ -28,7 +28,7 @@ export function ManageSubscriptionButton() {
         disabled={loading}
         className="text-sm border border-stone-200 rounded-lg px-3 py-2 hover:bg-stone-50 transition-colors disabled:opacity-50"
       >
-        {loading ? "Opening…" : "Manage →"}
+        {loading ? "Opening…" : "Manage"}
       </button>
       {error && <p className="text-sm text-red-500">{error}</p>}
     </div>

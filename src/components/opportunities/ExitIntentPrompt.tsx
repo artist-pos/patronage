@@ -96,7 +96,7 @@ export function ExitIntentPrompt({ opportunityId }: Props) {
           I built Patronage to make finding opportunities a little easier. I&rsquo;d love to have you in the community.
         </BlakeNote>
       }
-      submitLabel="Create my free profile →"
+      submitLabel="Create my free profile"
       next="/opportunities?tab=for-you"
       onClose={() => setOpen(false)}
     />

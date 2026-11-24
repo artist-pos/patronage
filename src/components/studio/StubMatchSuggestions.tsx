@@ -38,7 +38,7 @@ export function StubMatchSuggestions({ stubs }: Props) {
               href={`/claim/artist/${stub.claim_token}`}
               className="text-xs underline text-stone-700 hover:text-stone-900"
             >
-              Review →
+              Review
             </Link>
           </li>
         ))}

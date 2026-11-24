@@ -141,7 +141,7 @@ export function WizardChrome({
                 : "border border-brand hover:bg-stone-50"
             }`}
           >
-            {nextLabel ?? (isLastStep ? "Send to us to check →" : "Next →")}
+            {nextLabel ?? (isLastStep ? "Send to us to check" : "Next")}
           </button>
         </div>
       </div>

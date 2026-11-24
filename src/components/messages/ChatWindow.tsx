@@ -234,7 +234,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
                   href={meta.checkout_url}
                   className="inline-flex items-center px-3 py-1.5 bg-black text-white text-xs hover:opacity-80 transition-opacity"
                 >
-                  Pay {saleLabel} →
+                  Pay {saleLabel}
                 </a>
               ) : (
                 <Button
@@ -462,7 +462,7 @@ export function ChatWindow({ conversationId, currentUserId, initialMessages, oth
               </p>
               <p className="text-sm font-medium leading-snug">{meta.title}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                {isMe ? `Sent to ${otherName} →` : "You were featured in this post →"}
+                {isMe ? `Sent to ${otherName}` : "You were featured in this post"}
               </p>
             </div>
             <div className="border-t border-black px-3 py-2">

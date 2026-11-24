@@ -206,6 +206,98 @@ export async function getWeekEvents(regionId: string | null, limit = 3): Promise
 }
 
 /**
+ * Upcoming events for the Explore Events card: the next 60 days, the viewer's
+ * region first, then soonest. Region only orders; events elsewhere still show,
+ * since there are few and an empty card helps nobody.
+ */
+export async function getUpcomingEvents(regionId: string | null, limit = 4): Promise<ExploreEvent[]> {
+  const supabase = await createClient();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Pacific/Auckland" });
+  const end = new Date(Date.now() + 60 * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Pacific/Auckland" });
+
+  // Two sources: events artists post as studio updates, and the opening night /
+  // launch date an organisation put on its listing. Listings carry no region id,
+  // so they sort by date only.
+  const [updates, listings] = await Promise.all([
+    supabase
+      .from("project_updates")
+      .select(UPDATE_SELECT)
+      .eq("profiles.is_minor", false)
+      .eq("admin_hidden", false)
+      .gte("event_date", today)
+      .lte("event_date", end)
+      .order("event_date", { ascending: true })
+      .order("event_time", { ascending: true, nullsFirst: false })
+      .limit(40),
+    supabase
+      .from("opportunities")
+      .select("id, slug, title, organiser, featured_image_url, event_date, event_time, event_venue, event_label")
+      .eq("is_active", true)
+      .eq("status", "published")
+      .gte("event_date", today)
+      .lte("event_date", end)
+      .order("event_date", { ascending: true })
+      .limit(40),
+  ]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same untyped join rows as the queries above
+  const fromUpdates: (ExploreEvent & { region: string | null })[] = (updates.data ?? []).map((row: any) => {
+    const u = mapRow(row);
+    return {
+      id: u.id,
+      href: u.project_id ? `/threads/${u.project_id}?scroll=${u.id}` : `/projects/${u.id}?from=feed`,
+      title: u.title ?? u.caption?.split("\n")[0] ?? "Event",
+      date: row.event_date as string,
+      time: (row.event_time as string | null) ?? null,
+      venue: (row.event_venue as string | null) ?? null,
+      image: u.thumb_url ?? u.image_url ?? null,
+      host: u.artist_full_name,
+      label: null,
+      region: (row.event_region_id as string | null) ?? null,
+    };
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- opportunities rows, untyped select
+  const fromListings: (ExploreEvent & { region: string | null })[] = (listings.data ?? []).map((o: any) => ({
+    id: `opp-${o.id}`,
+    href: `/opportunities/${o.slug ?? o.id}`,
+    title: o.title as string,
+    date: o.event_date as string,
+    time: (o.event_time as string | null) ?? null,
+    venue: (o.event_venue as string | null) ?? null,
+    image: (o.featured_image_url as string | null) ?? null,
+    host: (o.organiser as string | null) ?? null,
+    label: (o.event_label as string | null) || "Event",
+    region: null,
+  }));
+
+  const all = [...fromUpdates, ...fromListings].sort(
+    (a, b) => a.date.localeCompare(b.date) || (a.time ?? "99").localeCompare(b.time ?? "99"),
+  );
+  // Region only orders: the viewer's own region first, then soonest.
+  const ordered = regionId
+    ? [...all.filter((e) => e.region === regionId), ...all.filter((e) => e.region !== regionId)]
+    : all;
+  return ordered.slice(0, limit).map(({ region: _region, ...e }) => e);
+}
+
+/** One row in Explore's Events card, whichever table it came from. */
+export interface ExploreEvent {
+  id: string;
+  href: string;
+  title: string;
+  /** NZ local date, YYYY-MM-DD. */
+  date: string;
+  time: string | null;
+  venue: string | null;
+  image: string | null;
+  /** The artist, or the organisation behind a listing. */
+  host: string | null;
+  /** "Opening night" etc. for events that come from a listing; null for artist events. */
+  label: string | null;
+}
+
+/**
  * Artist's updates — public profile Work tab and the /studio feed section.
  * Deliberately NOT filtered on admin_hidden: the flag only ever hides a post from
  * the landing page and /feed. Everywhere else, signed out included, the post is

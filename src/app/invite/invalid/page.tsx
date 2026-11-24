@@ -22,7 +22,7 @@ export default function InvalidInvitePage() {
           href="/auth/signup?role=artist"
           className="inline-flex items-center bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
         >
-          Create your profile →
+          Create your profile
         </Link>
       </div>
     </div>

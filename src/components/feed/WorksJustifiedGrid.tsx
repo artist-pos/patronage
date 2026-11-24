@@ -553,7 +553,7 @@ function WorksLightbox({
                         rel="noopener noreferrer"
                         className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
                       >
-                        Download COA →
+                        Download COA
                       </a>
                     )}
 
@@ -565,7 +565,7 @@ function WorksLightbox({
                         rel="noopener noreferrer"
                         className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
                       >
-                        Download tear sheet →
+                        Download tear sheet
                       </a>
                     )}
 
@@ -603,7 +603,7 @@ function WorksLightbox({
                           rel="noopener noreferrer"
                           className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
                         >
-                          Download wall label →
+                          Download wall label
                         </a>
                       </div>
                     )}
@@ -662,7 +662,7 @@ function WorksLightbox({
                           rel="noopener noreferrer"
                           className="inline-block text-xs px-3 py-1.5 border border-black bg-black text-white hover:bg-stone-800 transition-colors rounded"
                         >
-                          Download agreement →
+                          Download agreement
                         </a>
                       </div>
                     )}
@@ -678,7 +678,7 @@ function WorksLightbox({
                   href={workHref}
                   className="block text-sm font-medium text-foreground hover:underline"
                 >
-                  View {displayName}&apos;s profile →
+                  View {displayName}&apos;s profile
                 </Link>
               </div>
             )}

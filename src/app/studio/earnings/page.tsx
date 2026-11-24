@@ -106,7 +106,7 @@ export default async function EarningsPage() {
             href="/studio/connect"
             className="shrink-0 text-sm px-4 py-2 border border-border hover:bg-muted/40 transition-colors whitespace-nowrap"
           >
-            {connectEnabled ? "Manage payouts →" : "Connect bank →"}
+            {connectEnabled ? "Manage payouts" : "Connect bank"}
           </a>
         </div>
 
@@ -122,7 +122,7 @@ export default async function EarningsPage() {
               href="/studio/connect"
               className="shrink-0 text-sm px-4 py-2 bg-black text-white rounded-lg hover:opacity-80 transition-opacity whitespace-nowrap"
             >
-              Connect bank →
+              Connect bank
             </a>
           </div>
         )}

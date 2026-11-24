@@ -272,7 +272,7 @@ export function ProfileUpdatesSection({ campaigns, updates, projects, username, 
                       href={href}
                       className="mt-1 self-start text-xs font-medium text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                     >
-                      View →
+                      View
                     </Link>
                   )}
                 </div>

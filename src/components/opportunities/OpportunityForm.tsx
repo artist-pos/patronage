@@ -65,6 +65,11 @@ export interface OpportunityFormData {
   city: string;
   opensAt: string;
   deadline: string;
+  /** Optional opening night / launch / talk; shows in Explore > Events. */
+  eventDate: string;
+  eventTime: string;
+  eventVenue: string;
+  eventLabel: string;
   fundingRange: string;
   featuredImageUrl: string;
   secondaryImageUrl: string;
@@ -122,6 +127,10 @@ export function defaultFormData(partialOrganiser = ""): OpportunityFormData {
     city: "",
     opensAt: "",
     deadline: "",
+    eventDate: "",
+    eventTime: "",
+    eventVenue: "",
+    eventLabel: "",
     fundingRange: "",
     featuredImageUrl: "",
     secondaryImageUrl: "",
@@ -198,6 +207,10 @@ export function oppToFormData(opp: Opportunity): OpportunityFormData {
     city: opp.city ?? "",
     opensAt: opp.opens_at ?? "",
     deadline: opp.deadline ?? "",
+    eventDate: opp.event_date ?? "",
+    eventTime: opp.event_time?.slice(0, 5) ?? "",
+    eventVenue: opp.event_venue ?? "",
+    eventLabel: opp.event_label ?? "",
     fundingRange: opp.funding_range ?? "",
     featuredImageUrl: opp.featured_image_url ?? "",
     secondaryImageUrl: opp.secondary_image_url ?? "",
@@ -356,6 +369,10 @@ interface ParsedOpportunity {
   country?: string;
   opens_at?: string;
   deadline?: string;
+  event_date?: string | null;
+  event_time?: string | null;
+  event_venue?: string | null;
+  event_label?: string | null;
   city?: string;
   funding_range?: string;
   entry_fee?: number | null;
@@ -393,6 +410,12 @@ function mapParsedToFormData(parsed: ParsedOpportunity): Partial<OpportunityForm
   if (parsed.country && ["NZ", "AUS", "Global"].includes(parsed.country)) updates.country = parsed.country;
   if (parsed.opens_at) updates.opensAt = parsed.opens_at;
   if (parsed.deadline) updates.deadline = parsed.deadline;
+  if (parsed.event_date) {
+    updates.eventDate = parsed.event_date;
+    if (parsed.event_time) updates.eventTime = parsed.event_time.slice(0, 5);
+    if (parsed.event_venue) updates.eventVenue = parsed.event_venue;
+    if (parsed.event_label) updates.eventLabel = parsed.event_label;
+  }
   if (parsed.city) updates.city = parsed.city;
   if (parsed.funding_range) updates.fundingRange = parsed.funding_range;
   if (parsed.entry_fee != null) updates.entryFee = String(parsed.entry_fee);
@@ -526,7 +549,7 @@ function OpportunityParser({
                 disabled={!urlInput.trim()}
                 className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
               >
-                Autofill →
+                Autofill
               </button>
             </div>
           )}
@@ -546,7 +569,7 @@ function OpportunityParser({
                 disabled={!textInput.trim()}
                 className="border border-black px-3 py-2 text-xs hover:bg-muted transition-colors disabled:opacity-40"
               >
-                Autofill →
+                Autofill
               </button>
             </div>
           )}
@@ -903,7 +926,7 @@ function PipelinePreviewModal({
                 rel="noopener noreferrer"
                 className="text-xs underline underline-offset-2 text-muted-foreground"
               >
-                Download terms & conditions (PDF) →
+                Download terms & conditions (PDF)
               </a>
             </div>
           )}
@@ -1207,6 +1230,52 @@ export function OpportunityForm({
             />
           </Field>
         </div>
+
+        {/* Optional event: lists the opportunity in Explore > Events too. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2">
+          <Field label="Opening night or event date (optional)">
+            <input
+              type="date"
+              value={value.eventDate}
+              onChange={(e) => set({ eventDate: e.target.value })}
+              className={FIELD}
+            />
+          </Field>
+          {value.eventDate && (
+            <Field label="Event time">
+              <input
+                type="time"
+                value={value.eventTime}
+                onChange={(e) => set({ eventTime: e.target.value })}
+                className={FIELD}
+              />
+            </Field>
+          )}
+        </div>
+        {value.eventDate && (
+          <div className="grid grid-cols-1 sm:grid-cols-2">
+            <Field label="What is it">
+              <input
+                type="text"
+                value={value.eventLabel}
+                onChange={(e) => set({ eventLabel: e.target.value })}
+                maxLength={60}
+                placeholder="Opening night"
+                className={FIELD}
+              />
+            </Field>
+            <Field label="Where">
+              <input
+                type="text"
+                value={value.eventVenue}
+                onChange={(e) => set({ eventVenue: e.target.value })}
+                maxLength={200}
+                placeholder="Venue, town"
+                className={FIELD}
+              />
+            </Field>
+          </div>
+        )}
 
         {showField(value.type, "funding") && (
           <Field label={fundingMeta.label}>
@@ -1787,7 +1856,7 @@ export function OpportunityForm({
             onClick={() => setPreviewOpen(true)}
             className="flex items-center gap-1.5 text-xs border border-black/40 px-3 py-1.5 hover:bg-muted transition-colors text-muted-foreground"
           >
-            Preview as artist →
+            Preview as artist
           </button>
         </div>
         <div className="border-t border-black/10 pt-4 mt-4">
@@ -1854,7 +1923,7 @@ export function OpportunityForm({
             <div className="flex items-center gap-3 mt-2">
               <a href={value.termsPdfUrl} target="_blank" rel="noopener noreferrer"
                 className="text-xs underline underline-offset-2">
-                Preview →
+                Preview
               </a>
               <button
                 type="button"

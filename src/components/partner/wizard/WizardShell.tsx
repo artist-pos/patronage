@@ -313,7 +313,7 @@ export function WizardShell({
         nextDisabled={nextDisabled}
         isLastStep={isLastStep}
         anonymous={anonymous}
-        nextLabel={anonymous && isLastStep ? "Sign in to continue →" : undefined}
+        nextLabel={anonymous && isLastStep ? "Sign in to continue" : undefined}
       />
 
       <main className="ams-comfort max-w-[1280px] mx-auto px-4 sm:px-6 py-10 pb-28">

@@ -116,7 +116,7 @@ function TypeKicker({ u }: { u: ProjectUpdateWithArtist }) {
     return <span className="tag">article</span>;
   }
   if (u.update_tag === "complete") {
-    return <span className="pill-dark">NEW WORK</span>;
+    return <span className="t-kicker">New work</span>;
   }
   const label =
     u.update_tag === "milestone" ? "Milestone"
@@ -484,7 +484,7 @@ export const FeedCard = memo(function FeedCard({ u, priority = false, currentUse
               onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.open(u.embed_url!, "_blank", "noopener,noreferrer"); } }}
               className="mb-3 block cursor-pointer font-mono text-xs text-[color:var(--fg-muted)] underline underline-offset-2 transition-colors hover:text-foreground"
             >
-              Read article →
+              Read article
             </span>
           )}
         </Link>

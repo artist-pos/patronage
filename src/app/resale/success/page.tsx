@@ -115,7 +115,7 @@ export default async function ResaleSuccessPage({ searchParams }: Props) {
                   href={`/provenance/${resaleSummary.ledgerId}`}
                   className="text-sm bg-foreground text-background rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
                 >
-                  View provenance →
+                  View provenance
                 </Link>
               )}
               {resaleSummary.claimUrl && (
@@ -123,7 +123,7 @@ export default async function ResaleSuccessPage({ searchParams }: Props) {
                   href={resaleSummary.claimUrl}
                   className="text-sm border border-stone-200 rounded-lg px-4 py-2 hover:bg-stone-50 transition-colors"
                 >
-                  Claim your Patronage account →
+                  Claim your Patronage account
                 </Link>
               )}
             </div>

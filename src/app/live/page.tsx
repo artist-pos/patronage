@@ -105,7 +105,7 @@ export default async function LivePage() {
                 {featured.artist.region ? ` · ${featured.artist.region}` : ""}
               </p>
               <span className="text-sm text-stone-900 underline underline-offset-2 mt-1">
-                View campaign →
+                View campaign
               </span>
             </div>
           </div>

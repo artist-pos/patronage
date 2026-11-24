@@ -154,7 +154,7 @@ async function ArtistHome({ userId }: { userId: string }) {
             <span className="font-semibold">{pendingConfirmationCount}</span> work{pendingConfirmationCount !== 1 ? "s" : ""} need attribution confirmation.
           </p>
           <Link href="/studio/pending-confirmations" className="text-sm text-amber-900 underline underline-offset-2 shrink-0 ml-4">
-            Review →
+            Review
           </Link>
         </div>
       )}

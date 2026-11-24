@@ -94,7 +94,7 @@ export function StudioUpdatesRow({
           href={`/${username}?tab=studio`}
           className="inline-block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
         >
-          Open studio feed →
+          Open studio feed
         </a>
       )}
     </div>

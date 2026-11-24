@@ -174,7 +174,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             href={`/opportunities?search=${encodeURIComponent(q)}`}
             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-            All opportunities matching &ldquo;{q}&rdquo; →
+            All opportunities matching &ldquo;{q}&rdquo;
           </Link>
         </section>
       )}

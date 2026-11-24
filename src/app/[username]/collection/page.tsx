@@ -53,7 +53,7 @@ export default async function PublicCollectionPage({ params }: Props) {
         <div className="flex items-center gap-4">
           <p className="text-sm text-muted-foreground">
             <Link href={`/${profile.username}`} className="underline underline-offset-2">
-              View profile →
+              View profile
             </Link>
           </p>
           <CopyEmbedButton username={profile.username} />

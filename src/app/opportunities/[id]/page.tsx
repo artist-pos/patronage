@@ -14,6 +14,7 @@ import { ViewTracker } from "@/components/opportunities/ViewTracker";
 import { ExitIntentPrompt } from "@/components/opportunities/ExitIntentPrompt";
 import { RemindMeCapture } from "@/components/opportunities/RemindMeCapture";
 import { summariseOpportunity } from "@/lib/opportunity-summary";
+import { eventLine, nzToday } from "@/lib/events";
 import { ApplyButton } from "@/components/opportunities/ApplyButton";
 import { ExternalApplyCTASection } from "@/components/opportunities/ExternalApplyCTASection";
 import { OpportunityHeroImage } from "@/components/opportunities/OpportunityHeroImage";
@@ -369,7 +370,7 @@ async function OutcomeSummary({ opp, isClosed }: { opp: Opportunity; isClosed: b
       )}
       {isClosed && (
         <Link href={reportHref} className="mt-3 inline-block font-mono text-xs underline underline-offset-2 hover:text-foreground">
-          Applied? Share how it went →
+          Applied? Share how it went
         </Link>
       )}
     </section>
@@ -434,7 +435,7 @@ async function UserCTA({
         props={{ opportunity_id: opp.id, route: "patronage", signed_in: "false" }}
         className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
       >
-        Apply through Patronage →
+        Apply through Patronage
       </TrackedNavLink>
     );
   }
@@ -452,7 +453,7 @@ async function UserCTA({
         <p className="text-sm text-muted-foreground">
           You have already applied to this opportunity.{" "}
           <Link href="/studio/opportunities?of=applied" className="underline">
-            View in dashboard →
+            View in dashboard
           </Link>
         </p>
       </div>
@@ -721,7 +722,7 @@ export default async function OpportunityPage({ params }: Props) {
         href={`mailto:${opp.contact_email}`}
         className="inline-flex items-center gap-2 bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
       >
-        Apply via email →
+        Apply via email
       </a>
     ) : null;
 
@@ -871,6 +872,12 @@ export default async function OpportunityPage({ params }: Props) {
           />
         )}
         {deadline && <Fact label="Deadline" value={deadline} urgent={deadlineUrgent} />}
+        {opp.event_date && opp.event_date >= nzToday() && (
+          <Fact
+            label={opp.event_label || "Event"}
+            value={[eventLine(opp.event_date, opp.event_time), opp.event_venue].filter(Boolean).join(" · ")}
+          />
+        )}
         {location && <Fact label="Location" value={location} />}
         {opp.entry_fee !== null && opp.entry_fee !== undefined && (
           <Fact
@@ -998,7 +1005,7 @@ export default async function OpportunityPage({ params }: Props) {
             rel="noopener noreferrer"
             className="text-sm underline underline-offset-2 text-[color:var(--fg-muted)] hover:text-foreground transition-colors"
           >
-            View documents →
+            View documents
           </a>
         )}
         {!isPipeline && applyLinks.length > 0 && opp.contact_email && (
@@ -1059,7 +1066,7 @@ export default async function OpportunityPage({ params }: Props) {
             href="/opportunities"
             className="mt-3.5 block bg-foreground px-4 py-2.5 text-center text-[13px] font-medium text-white transition-opacity hover:opacity-85"
           >
-            View all {totalOpen} open opportunities →
+            View all {totalOpen} open opportunities
           </Link>
         </aside>
       )}

@@ -70,7 +70,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
             href="/studio/support"
             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-            Manage tiers →
+            Manage tiers
           </a>
           <button
             onClick={handleToggle}
@@ -87,7 +87,7 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
             <p className="text-sm text-muted-foreground">
               No ways to support set up yet.{" "}
               <a href="/studio/support" className="underline underline-offset-2 hover:text-foreground">
-                Add tiers in your profile settings →
+                Add tiers in your profile settings
               </a>
             </p>
           ) : (
@@ -128,14 +128,14 @@ export function SupportTab({ supportEnabled: initialEnabled, isOwner, artistName
                   href="/studio/support"
                   className="inline-block border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
                 >
-                  Configure →
+                  Configure
                 </a>
               ) : tier.tier_type === "service" || tier.tier_type === "project" ? (
                 <a
                   href="/messages"
                   className="inline-block border border-foreground px-4 py-2 font-mono text-xs transition-colors hover:bg-foreground hover:text-white"
                 >
-                  Get in touch →
+                  Get in touch
                 </a>
               ) : stripeConnected ? (
                 <button

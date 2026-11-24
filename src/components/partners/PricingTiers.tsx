@@ -40,7 +40,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
               href="/partner/opportunities/new?type=free"
               className="block w-full text-center border border-black px-4 py-2.5 text-sm font-medium hover:bg-black hover:text-white transition-colors"
             >
-              List for free →
+              List for free
             </a>
           </div>
 
@@ -86,7 +86,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
               href={isLoggedIn ? "/partner/opportunities/new?type=pipeline" : "/auth/signup?intent=partner"}
               className="block w-full text-center bg-black text-white px-4 py-2.5 text-sm font-medium hover:bg-black/80 transition-colors"
             >
-              {pipelineFirstRoundUsed ? "Configure a pipeline →" : "Start your first round free →"}
+              {pipelineFirstRoundUsed ? "Configure a pipeline" : "Start your first round free"}
             </a>
           </div>
 
@@ -118,7 +118,7 @@ export function PricingTiers({ pipelineFirstRoundUsed, isLoggedIn }: Props) {
               href="#activations"
               className="block w-full text-center border border-black px-4 py-2.5 text-sm font-medium hover:bg-black hover:text-white transition-colors"
             >
-              Talk to us →
+              Talk to us
             </a>
           </div>
         </div>

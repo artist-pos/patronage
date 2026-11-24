@@ -76,7 +76,7 @@ export function ManageShell({ opp, isPipeline, opportunityId, children }: Props)
               href={`/partner/dashboard/${opportunityId}`}
               className="text-sm border border-black/20 px-3 py-1.5 hover:border-black transition-colors shrink-0"
             >
-              View applications →
+              View applications
             </Link>
           )}
         </div>

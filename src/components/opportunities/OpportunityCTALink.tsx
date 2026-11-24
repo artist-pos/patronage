@@ -53,7 +53,7 @@ export function OpportunityCTALink({ href, opportunityId, title, organiser, labe
       onClick={handleClick}
       className={className ?? "text-xs underline underline-offset-2 mt-auto hover:text-muted-foreground transition-colors"}
     >
-      {label ?? "View opportunity →"}
+      {label ?? "View opportunity"}
     </a>
   );
 }

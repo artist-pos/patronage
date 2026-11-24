@@ -54,7 +54,7 @@ export default async function LoginPage({ searchParams }: Props) {
               different device.
             </p>
             <Link href="/auth/confirm?status=expired" className="underline underline-offset-2">
-              Resend confirmation email →
+              Resend confirmation email
             </Link>
           </div>
         )}

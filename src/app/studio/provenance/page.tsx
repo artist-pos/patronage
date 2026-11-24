@@ -163,7 +163,7 @@ export default async function StudioProvenancePage() {
                 : "bg-amber-800 text-white hover:bg-amber-900"
             }`}
           >
-            Configure →
+            Configure
           </Link>
         </div>
 

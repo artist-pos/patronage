@@ -64,6 +64,10 @@ export function mergeOpportunity(base: ScrapedOpportunity, rich: ScrapedOpportun
     // The organiser's own page is authoritative for these when it states them.
     opens_at: r.opens_at ?? b.opens_at,
     deadline: r.deadline ?? b.deadline,
+    // An event comes as a set (date, time, venue, label): take the organiser's page's whole set when it has one.
+    ...(r.event_date
+      ? { event_date: r.event_date, event_time: r.event_time ?? null, event_venue: r.event_venue ?? null, event_label: r.event_label ?? null }
+      : {}),
     funding_range: r.funding_range ?? b.funding_range,
     contact_email: r.contact_email ?? b.contact_email,
     disciplines: union(b.disciplines, r.disciplines) ?? [],

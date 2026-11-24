@@ -69,6 +69,11 @@ export function TurnstileWidget({ onVerify, onError, onExpire, resetSignal }: Pr
         ref={containerRef}
         className="cf-turnstile"
         data-sitekey={SITE_KEY}
+        // Hidden unless Cloudflare needs a human to click; otherwise it runs
+        // silently. When it does show, it's light and as wide as the form.
+        data-appearance="interaction-only"
+        data-theme="light"
+        data-size="flexible"
         data-callback={callbackName}
         data-error-callback={errorName}
         data-expired-callback={expiredName}

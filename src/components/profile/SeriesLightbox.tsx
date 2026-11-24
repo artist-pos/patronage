@@ -136,7 +136,7 @@ export function SeriesLightbox({ artworks, initialIndex, artistId, artistName, a
                 href={`/${artistUsername}/works/${work.slug}`}
                 className="block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
-                View full work page →
+                View full work page
               </Link>
             )}
           </div>

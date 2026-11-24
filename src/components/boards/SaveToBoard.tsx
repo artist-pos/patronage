@@ -193,7 +193,7 @@ export function SaveToBoard({ itemType, itemId, isAuthenticated, variant = "icon
               {error && <p className="mt-3 text-xs text-red-700">{error}</p>}
 
               <Link href="/boards" className="mt-4 inline-block font-mono text-xs text-muted-foreground hover:text-foreground">
-                Your boards →
+                Your boards
               </Link>
             </div>
           </div>,

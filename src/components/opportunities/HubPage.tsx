@@ -162,7 +162,7 @@ export async function HubPage({ typeSlug, countrySlug }: Props) {
         />
         <p className="text-sm">
           <Link href="/resources" className="underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
-            Resources for artists →
+            Resources for artists
           </Link>
         </p>
       </div>

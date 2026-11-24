@@ -112,7 +112,7 @@ export default async function PrivateRoomPage({ params }: Props) {
             href={`/${username}`}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap shrink-0"
           >
-            {displayName} →
+            {displayName}
           </Link>
         </div>
       </div>

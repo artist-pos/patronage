@@ -177,7 +177,7 @@ export default async function ResourcesPage() {
             href="/opportunities"
             className="text-xs border border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors"
           >
-            All opportunities →
+            All opportunities
           </Link>
         </div>
       </div>

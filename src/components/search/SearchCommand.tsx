@@ -287,7 +287,7 @@ export function SearchCommand() {
                 }}
                 className="w-full px-4 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors text-left"
               >
-                See all results for &ldquo;{query}&rdquo; →
+                See all results for &ldquo;{query}&rdquo;
               </button>
             </div>
           )}

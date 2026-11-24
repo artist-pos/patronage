@@ -1178,7 +1178,7 @@ export function ApplyForm({
 
           <div className="flex justify-end pt-4">
             <button type="button" onClick={goToWorkOrQuestions} className="btn btn-primary">
-              Continue →
+              Continue
             </button>
           </div>
         </div>
@@ -1208,7 +1208,7 @@ export function ApplyForm({
                   <div className="min-w-0">
                     <p className="text-sm font-medium">CV attached</p>
                     <a href={professionalCvUrl} target="_blank" rel="noopener noreferrer" className="t-mono-sm text-[color:var(--fg-muted)] underline underline-offset-2 hover:text-foreground transition-colors">
-                      Preview →
+                      Preview
                     </a>
                   </div>
                 </div>
@@ -1216,7 +1216,7 @@ export function ApplyForm({
                 <div className="border border-dashed border-border px-4 py-3 space-y-1">
                   <p className="t-body-sm">No professional CV uploaded.</p>
                   <a href="/studio/profile" target="_blank" className="t-mono-sm underline underline-offset-2">
-                    Upload one in Studio →
+                    Upload one in Studio
                   </a>
                 </div>
               )}
@@ -1438,7 +1438,7 @@ export function ApplyForm({
               ← Back
             </button>
             <button type="button" onClick={goFromWorkToQuestions} className="btn btn-primary">
-              Continue →
+              Continue
             </button>
           </div>
         </div>

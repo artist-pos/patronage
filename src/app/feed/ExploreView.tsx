@@ -5,13 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getServerUser } from "@/lib/supabase/get-server-user";
 import { getProfileById } from "@/lib/profiles";
-import { getLatestUpdates, getWeekEvents, parseFeedKinds, type FeedFilters } from "@/lib/feed";
+import { getLatestUpdates, getUpcomingEvents, parseFeedKinds, type FeedFilters } from "@/lib/feed";
 import { getArtistProjects } from "@/lib/projects";
-import { getNotices } from "@/lib/noticeboard";
 import { CreateUpdateModal } from "@/components/feed/CreateUpdateModal";
 import { InfiniteFeed } from "@/components/feed/InfiniteFeed";
 import { ExploreSidebar } from "@/components/feed/ExploreSidebar";
-import { WeekBlock, NoticeboardBlock } from "@/components/feed/ExploreBlocks";
+import { AddEventPrompt } from "@/components/feed/AddEventPrompt";
+import { EventsBlock, ClosingBlock } from "@/components/feed/ExploreBlocks";
 import { WorksJustifiedGrid } from "@/components/feed/WorksJustifiedGrid";
 import { WorksControls } from "@/components/feed/WorksControls";
 import { getAvailableWorksForGrid, type WorksSort } from "@/lib/works";
@@ -257,38 +257,47 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
   // ── Sidebar (227): regions for the filters, This week near the viewer, the
   // noticeboard region first, and the viewer's private save totals.
   const viewerRegionId = profile?.region_id ?? null;
-  const [regions, weekEvents, notices, closingCount, saveRows] = activeTab === "feed"
+  const [regions, upcomingEvents, closingCount, saveRows] = activeTab === "feed"
     ? await Promise.all([
         getRegions(),
-        getWeekEvents(viewerRegionId),
-        getNotices({ regionFirstId: viewerRegionId, limit: 3 }),
+        getUpcomingEvents(viewerRegionId),
         getClosingThisWeekCount(),
         user
           ? supabase.rpc("board_save_counts").then(({ data }) => (data ?? []) as { item_type: string; item_id: string; saves: number }[])
           : Promise.resolve([]),
       ])
-    : [[], [], [], 0, []];
+    : [[], [], 0, []];
   const regionOptions = regions.map((r) => ({ id: r.id, name: r.name }));
   const viewerRegionName = regions.find((r) => r.id === viewerRegionId)?.name ?? null;
   const saveCounts = Object.fromEntries(
     saveRows.filter((r) => r.item_type === "update").map((r) => [r.item_id, Number(r.saves)]),
   );
-  const canPostNotice = !!profile && !profile.is_minor;
-  const weekBlock = (variant: "sidebar" | "tile") => (
-    <WeekBlock events={weekEvents} regionName={viewerRegionName} closingCount={closingCount} variant={variant} />
-  );
-  const noticeBlock = (variant: "sidebar" | "tile") => (
-    <NoticeboardBlock
-      notices={notices}
+  // Anyone can add an event. People with a profile post it as a studio update;
+  // everyone else is asked to join or leave a tip.
+  const addEventModal = (label: string, className: string) =>
+    profile && !profile.is_minor ? (
+      <CreateUpdateModal
+        profileId={profile.id}
+        label={label}
+        className={className}
+        projects={userProjects.map((p) => ({ id: p.id, title: p.title }))}
+        regions={regionOptions}
+        defaultRegionId={viewerRegionId}
+        canPostEvent
+        startWithEvent
+      />
+    ) : (
+      <AddEventPrompt label={label} className={className} cities={joinCities} canJoin={!user} />
+    );
+  const eventsBlock = (
+    <EventsBlock
+      events={upcomingEvents}
       regionName={viewerRegionName}
-      regions={regionOptions}
-      defaultRegionId={viewerRegionId}
-      canPost={canPostNotice}
-      isLoggedIn={!!user}
-      currentUserId={user?.id}
-      variant={variant}
+      addEvent={addEventModal("Add event","font-mono text-[11px] text-[color:var(--fg-muted)] transition-colors hover:text-foreground")}
+      addFirstEvent={addEventModal("Add event","btn btn-outline btn-sm")}
     />
   );
+  const closingBlock = <ClosingBlock closingCount={closingCount} />;
 
   const hasMore = activeTab === "feed" && feedUpdates.length === INITIAL_COUNT;
   const artworks = worksResult?.artworks ?? [];
@@ -343,7 +352,7 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
                   source="explore_tabs"
                   className="shrink-0 bg-brand px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-85"
                 >
-                  Join free →
+                  Join free
                 </JoinButton>
               </div>
             )}
@@ -376,11 +385,11 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
                   ) : undefined
                 }
               >
-                {weekBlock("sidebar")}
-                {noticeBlock("sidebar")}
+                {eventsBlock}
+                {closingBlock}
                 {isAdmin && (
                   <Link href="/studio/feed" className="block font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
-                    Manage feed →
+                    Manage feed
                   </Link>
                 )}
               </ExploreSidebar>
@@ -399,8 +408,8 @@ export async function ExploreView({ tab, params }: { tab: "feed" | "works"; para
               filterQuery={filterQuery}
               saveCounts={saveCounts}
               inlineTiles={[
-                { at: 1, node: weekBlock("tile") },
-                { at: 6, node: noticeBlock("tile") },
+                { at: 1, node: eventsBlock },
+                { at: 6, node: closingBlock },
               ]}
             />
           </div>

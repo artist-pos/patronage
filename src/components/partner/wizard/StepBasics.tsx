@@ -22,6 +22,10 @@ interface ParsedOpportunity {
   country?: string;
   opens_at?: string;
   deadline?: string;
+  event_date?: string | null;
+  event_time?: string | null;
+  event_venue?: string | null;
+  event_label?: string | null;
   city?: string;
   funding_range?: string;
   entry_fee?: number | null;
@@ -53,6 +57,12 @@ function mapParsedToPatch(parsed: ParsedOpportunity): Patch {
     patch.country = parsed.country;
   if (parsed.opens_at) patch.opens_at = parsed.opens_at;
   if (parsed.deadline) patch.deadline = parsed.deadline;
+  if (parsed.event_date) {
+    patch.event_date = parsed.event_date;
+    if (parsed.event_time) patch.event_time = parsed.event_time.slice(0, 5);
+    if (parsed.event_venue) patch.event_venue = parsed.event_venue;
+    if (parsed.event_label) patch.event_label = parsed.event_label;
+  }
   if (parsed.city) patch.city = parsed.city;
   if (parsed.funding_range) patch.funding_range = parsed.funding_range;
   if (parsed.entry_fee != null) patch.entry_fee = parsed.entry_fee;
@@ -152,7 +162,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             disabled={!urlInput.trim()}
             className="border border-black px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-40 whitespace-nowrap"
           >
-            Autofill →
+            Autofill
           </button>
         </div>
       )}
@@ -171,7 +181,7 @@ function OpportunityParser({ onParsed }: { onParsed: (patch: Patch, source: stri
             disabled={!textInput.trim()}
             className="border border-black px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-40"
           >
-            Autofill →
+            Autofill
           </button>
         </div>
       )}
@@ -204,6 +214,10 @@ export interface Patch {
   city?: string | null;
   opens_at?: string | null;
   deadline?: string | null;
+  event_date?: string | null;
+  event_time?: string | null;
+  event_venue?: string | null;
+  event_label?: string | null;
   funding_range?: string | null;
   entry_fee?: number | null;
   entry_fee_currency?: string | null;
@@ -418,6 +432,62 @@ export function StepBasics({ opp, isFree, onChange, canUploadImage = true }: Pro
             />
           </div>
         </div>
+
+        {/* Optional event: also lists this in Explore > Events */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Opening night or event date <span className="text-stone-500">optional</span></label>
+            <input
+              type="date"
+              value={opp.event_date?.slice(0, 10) ?? ""}
+              onChange={(e) =>
+                onChange(
+                  e.target.value
+                    ? { event_date: e.target.value }
+                    : { event_date: null, event_time: null, event_venue: null, event_label: null },
+                )
+              }
+              className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
+          {opp.event_date && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Time <span className="text-stone-500">optional</span></label>
+              <input
+                type="time"
+                value={opp.event_time?.slice(0, 5) ?? ""}
+                onChange={(e) => onChange({ event_time: e.target.value || null })}
+                className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              />
+            </div>
+          )}
+        </div>
+        {opp.event_date && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">What is it</label>
+              <input
+                type="text"
+                maxLength={60}
+                placeholder="Opening night"
+                value={opp.event_label ?? ""}
+                onChange={(e) => onChange({ event_label: e.target.value || null })}
+                className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Where</label>
+              <input
+                type="text"
+                maxLength={200}
+                placeholder="Venue, town"
+                value={opp.event_venue ?? ""}
+                onChange={(e) => onChange({ event_venue: e.target.value || null })}
+                className="w-full border border-black bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Funding + fee row */}
         <div className="grid grid-cols-2 gap-4">

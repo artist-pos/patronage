@@ -406,8 +406,8 @@ export function LiveStorefrontClient({
                         {purchaseSubmitting
                           ? (isFree ? "Claiming…" : "Redirecting to checkout…")
                           : isFree
-                            ? "Claim for free →"
-                            : `Buy now — $${resolvedPricing.price?.toLocaleString()} →`}
+                            ? "Claim for free"
+                            : `Buy now — $${resolvedPricing.price?.toLocaleString()}`}
                       </button>
                     </form>
                     <p className="text-xs text-muted-foreground text-center">
@@ -426,7 +426,7 @@ export function LiveStorefrontClient({
                   </p>
                   <button onClick={() => openEnquiry(`Enquiry about original: ${displayLabel}`)}
                     className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
-                    {resolvedPricing.is_poa ? "Enquire about price →" : "Enquire →"}
+                    {resolvedPricing.is_poa ? "Enquire about price" : "Enquire"}
                   </button>
                   <p className="text-xs text-muted-foreground text-center">Artist responds directly · No obligation</p>
                 </div>
@@ -474,7 +474,7 @@ export function LiveStorefrontClient({
                     {purchaseError && <p className="text-xs text-red-600">{purchaseError}</p>}
                     <button type="submit" disabled={purchaseSubmitting || !purchaseName.trim() || !purchaseEmail.trim()}
                       className="w-full py-3 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40">
-                      {purchaseSubmitting ? "Redirecting to checkout…" : `Buy — ${selectedPrint.size} →`}
+                      {purchaseSubmitting ? "Redirecting to checkout…" : `Buy — ${selectedPrint.size}`}
                     </button>
                     <p className="text-xs text-muted-foreground text-center">Secure checkout via Stripe</p>
                   </form>
@@ -492,7 +492,7 @@ export function LiveStorefrontClient({
           <div className={`px-6 pb-6 ${fade("delay-150")}`}>
             <button onClick={() => openEnquiry("General enquiry")}
               className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors">
-              Get in touch →
+              Get in touch
             </button>
           </div>
         );
@@ -529,7 +529,7 @@ export function LiveStorefrontClient({
           </div>
           <a href={`/${profile.username}`}
             className="text-xs border border-border px-4 py-1.5 rounded-full hover:border-black transition-colors text-muted-foreground hover:text-foreground">
-            View profile →
+            View profile
           </a>
         </div>
         {profile.bio && !statement && (
@@ -585,13 +585,13 @@ export function LiveStorefrontClient({
                   <button
                     onClick={() => openEnquiry(`Enquiry about: ${activeWork.caption ?? activeWork.title ?? "work"}`)}
                     className="flex-1 py-2.5 bg-black text-white text-sm font-medium hover:bg-stone-800 transition-colors">
-                    Enquire →
+                    Enquire
                   </button>
                   <a
                     href={`/${profile.username}/works/${activeWork.slug ?? activeWork.id}`}
                     className="px-4 py-2.5 border border-border text-xs text-muted-foreground hover:border-black hover:text-foreground transition-colors flex items-center"
                   >
-                    View →
+                    View
                   </a>
                 </div>
               </div>
@@ -604,7 +604,7 @@ export function LiveStorefrontClient({
       <div className={`px-6 pb-6 ${fade("delay-500")}`}>
         <a href={`/${profile.username}`}
           className="block w-full text-center py-3.5 border border-border text-sm text-muted-foreground hover:border-black hover:text-foreground transition-colors">
-          View full profile on Patronage →
+          View full profile on Patronage
         </a>
       </div>
 

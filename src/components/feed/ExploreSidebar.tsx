@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DISCIPLINE_OPTIONS } from "@/lib/disciplines";
+import { SideCard } from "@/components/feed/ExploreBlocks";
 
 const KIND_OPTIONS = [
   { value: "process", label: "Process" },
@@ -27,15 +28,15 @@ interface Props {
   regions: { id: string; name: string }[];
   /** "New update +" for signed-in artists; sits at the top of the sidebar. */
   postButton?: React.ReactNode;
-  /** Server-rendered blocks below the filters: This week, then the noticeboard. */
+  /** Server-rendered cards below the filters: Events, then Closing soon. */
   children?: React.ReactNode;
 }
 
 /**
- * Explore's left column, like the filters on Funding: tools that shape the
- * feed first (show, kind, discipline, region), then This week and the
- * noticeboard. From lg up it's a sticky sidebar; below that the filters open
- * from a Filters button and the two blocks become tiles in the feed.
+ * Explore's left column, as separate cards: tools that shape the feed first
+ * (Show, Kind of update, Narrow by), then Events and Closing soon. From lg up
+ * it's a sticky sidebar; below that the filters open from a Filters button and
+ * the Events and Closing soon cards become tiles in the feed.
  */
 export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Props) {
   const router = useRouter();
@@ -76,11 +77,13 @@ export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Pr
   const rowCls = (active: boolean) =>
     `flex w-full items-center gap-2.5 py-1.5 text-left text-sm transition-colors ${active ? "text-foreground" : "text-[color:var(--fg-muted)] hover:text-foreground"}`;
 
+  // One card per job, like X's rail: who you see, what kind, where and which
+  // practice. The same stack fills the sidebar and the mobile drawer.
   const filters = (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {isLoggedIn && (
+        <SideCard title="Show">
         <div role="radiogroup" aria-label="Show">
-          <span className={label}>Show</span>
           <div className="grid grid-cols-3 border border-foreground">
             {([["everyone", "All"], ["following", "Following"], ["subscribed", "Supporting"]] as const).map(([v, l], i) => (
               <button
@@ -96,11 +99,11 @@ export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Pr
             ))}
           </div>
         </div>
+        </SideCard>
       )}
 
-      <div>
-        <span className={label}>Kind</span>
-        <div className="flex flex-col">
+      <SideCard title="Kind of update">
+        <div className="-my-1.5 flex flex-col">
           {KIND_OPTIONS.map((k) => {
             const on = kinds.includes(k.value);
             return (
@@ -113,9 +116,10 @@ export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Pr
             );
           })}
         </div>
-      </div>
+      </SideCard>
 
-      <div className="space-y-3">
+      <SideCard title="Narrow by">
+        <div className="space-y-3">
         <div>
           <span className={label}>Discipline</span>
           <Select value={discipline ?? "all"} onValueChange={(v) => setParam("discipline", v)}>
@@ -140,7 +144,8 @@ export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Pr
             </SelectContent>
           </Select>
         </div>
-      </div>
+        </div>
+      </SideCard>
 
       {activeCount > 0 && (
         <button
@@ -158,7 +163,7 @@ export function ExploreSidebar({ isLoggedIn, regions, postButton, children }: Pr
     <>
       {/* Sidebar from lg up. Scrolls on its own when taller than the screen. */}
       <aside className="hidden lg:sticky lg:top-[72px] lg:block lg:max-h-[calc(100vh-88px)] lg:overflow-y-auto lg:pb-4 scrollbar-hide">
-        <div className="space-y-6">
+        <div className="space-y-3">
           {postButton && <div className="[&>button]:w-full">{postButton}</div>}
           {filters}
           {children}

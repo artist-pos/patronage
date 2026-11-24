@@ -88,7 +88,7 @@ export function ShadowClaimForm({ token, defaultEmail, label }: Props) {
         disabled={isPending}
         className="bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black/80 disabled:opacity-50"
       >
-        {isPending ? "Claiming…" : "Claim profile →"}
+        {isPending ? "Claiming…" : "Claim profile"}
       </button>
     </form>
   );

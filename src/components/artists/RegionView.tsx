@@ -123,7 +123,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities, 
               Artists
             </h2>
             <Link href="/artists" className="font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
-              View all &rarr;
+              View all
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -171,7 +171,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities, 
               Opportunities in {region.name}
             </h2>
             <Link href="/opportunities" className="font-mono text-xs text-[color:var(--fg-muted)] transition-colors hover:text-foreground">
-              View all &rarr;
+              View all
             </Link>
           </div>
           <MasonryGrid opportunities={opportunities} view="gallery" />
@@ -219,7 +219,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities, 
             signupContext={{ source: "regional_page", regionId: region.id }}
             className="inline-flex items-center bg-brand px-[22px] py-3 text-sm font-medium text-white transition-opacity hover:opacity-85"
           >
-            Create your profile →
+            Create your profile
           </RegionTrackedLink>
         </div>
 
@@ -235,7 +235,7 @@ export function RegionView({ region, data, worksCountMap, collectedSet, cities, 
             signupContext={{ source: "regional_page", regionId: region.id }}
             className="inline-flex items-center border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
           >
-            Create a partner organisation profile →
+            Create a partner organisation profile
           </RegionTrackedLink>
         </div>
       </section>

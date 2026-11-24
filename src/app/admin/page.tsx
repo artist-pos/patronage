@@ -43,6 +43,7 @@ const TOOLS = [
   { href: "/admin/opportunities", label: "Manage Opportunities", description: "Activate, deactivate, or delete listings." },
   { href: "/admin/upload", label: "CSV Upload", description: "Bulk-import opportunities from a CSV file." },
   { href: "/admin/digest", label: "Weekly Digest", description: "Preview, export subscribers, and send the digest email." },
+  { href: "/admin/event-tips", label: "Event Tips", description: "Events people have told us about from the Explore page." },
   { href: "/admin/impact", label: "Impact Report", description: "Funding flow, career trajectory, economic multiplier, and annual data export." },
 ];
 
@@ -167,7 +168,7 @@ export default async function AdminPage() {
             href="/admin/opportunities"
             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-            Manage →
+            Manage
           </Link>
         </div>
         {grants.length === 0 ? (
@@ -199,7 +200,7 @@ export default async function AdminPage() {
                         href={`/admin/opportunities/${g.opportunity_id}/report`}
                         className="underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Report →
+                        Report
                       </Link>
                     </td>
                   </tr>

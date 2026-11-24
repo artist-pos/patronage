@@ -33,6 +33,7 @@ RULES:
 - Dates: YYYY-MM-DD format
 - funding values: include currency e.g. "$5,000 - $25,000 NZD"
 - null for missing fields
+- Event: only if the page names a specific public event for the work (an opening night, launch, exhibition opening, artist talk, open studio), give its date as event_date, and time (24h HH:MM), venue and a short label (e.g. "Opening night") if stated. NOT the application deadline, and not a date range for the whole project. null if none is named.
 - For country: output only "NZ", "AUS", or "Global". Map UK/US/EU opportunities that accept international applicants to "Global". Skip entirely if restricted to a single country outside NZ/AUS with no international eligibility.
 - For type: use exactly one of "Grant", "Residency", "Commission", "Open Call", "Prize", "Display", "Job / Employment", "Studio / Space", "Public Art"
 - For disciplines: suggest from this list but allow custom: Painting, Sculpture, Photography, Ceramics, Digital, Printmaking, Drawing, Textile, Jewellery, Glass, Weaving / Fibre, Film & Video, Performance, Installation, Sound, Mixed Media, Poetry, Writing, Music, Architecture, Design, Multidisciplinary, Public Art
@@ -48,6 +49,10 @@ Return ONLY valid JSON, no markdown fences:
   "country": "NZ" | "AUS" | "Global",
   "opens_at": "YYYY-MM-DD or null",
   "deadline": "YYYY-MM-DD or null",
+  "event_date": "YYYY-MM-DD or null",
+  "event_time": "HH:MM or null",
+  "event_venue": "string or null",
+  "event_label": "string or null — e.g. Opening night",
   "city": "string or null",
   "funding_range": "string or null",
   "entry_fee": "number or null",

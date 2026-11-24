@@ -307,7 +307,7 @@ function PipelineInfoPanel({ pipelineFirstRoundUsed }: { pipelineFirstRoundUsed:
           href="mailto:hello@patronage.nz?subject=Pipeline%20enquiry"
           className="inline-block text-xs underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          Enquire about Pipeline →
+          Enquire about Pipeline
         </a>
       </div>
     </div>

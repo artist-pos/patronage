@@ -391,7 +391,7 @@ export function SupportTiersManager({ initialTiers }: Props) {
                                 href={`/${i.profile.username}`}
                                 className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
                               >
-                                View profile →
+                                View profile
                               </a>
                             )}
                           </div>

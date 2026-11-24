@@ -178,7 +178,7 @@ export function ProjectThread({ project, updates, campaignOutcome }: Props) {
                       href={`/live/${campaignOutcome.slug}/${campaignOutcome.artistUsername}`}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      View campaign →
+                      View campaign
                     </Link>
                   </div>
                 </div>

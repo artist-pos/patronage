@@ -64,7 +64,7 @@ export function ArtistDirectorySignupTrigger() {
               free.
             </BlakeNote>
           }
-          submitLabel="Join the directory →"
+          submitLabel="Join the directory"
           next={POST_SIGNUP_DESTINATION}
           onClose={close}
         />

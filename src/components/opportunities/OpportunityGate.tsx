@@ -96,7 +96,7 @@ export function OpportunityGate({ lockedCount, summary }: Props) {
             I built Patronage to make finding opportunities a little easier. I&rsquo;d love to have you in the community.
           </BlakeNote>
         }
-        submitLabel={`Show me all ${lockedCount} →`}
+        submitLabel={`Show me all ${lockedCount}`}
         next="/opportunities?tab=for-you"
         onClose={() => {}}
       />

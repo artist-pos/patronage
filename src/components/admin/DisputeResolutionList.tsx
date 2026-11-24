@@ -125,7 +125,7 @@ function AppealCard({
               rel="noopener noreferrer"
               className="inline-block mt-2 text-xs underline text-stone-700 hover:text-stone-900"
             >
-              View evidence file →
+              View evidence file
             </a>
           )}
         </div>

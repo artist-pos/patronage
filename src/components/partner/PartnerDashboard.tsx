@@ -614,7 +614,7 @@ export async function PartnerDashboard() {
                   <p className="font-medium">{o.title}</p>
                   <p className="text-sm text-stone-500">{o.type}</p>
                 </div>
-                <span className="text-sm text-stone-500">Applications and page kept →</span>
+                <span className="text-sm text-stone-500">Applications and page kept</span>
               </Link>
             ))}
           </div>
@@ -626,7 +626,7 @@ export async function PartnerDashboard() {
         <div className="py-20 text-center space-y-4">
           <p className="text-stone-500 text-sm">No listings yet.</p>
           <Link href="/list-an-opportunity" className="inline-block bg-brand text-brand-foreground text-sm px-5 py-2.5 hover:bg-brand/90 transition-colors">
-            Create your first listing →
+            Create your first listing
           </Link>
         </div>
       )}

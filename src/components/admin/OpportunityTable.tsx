@@ -647,7 +647,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                       href={`/admin/opportunities/${o.id}/report`}
                       className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Report →
+                      Report
                     </Link>
                   </td>
                 </tr>
@@ -752,7 +752,7 @@ export function OpportunityTable({ opps }: { opps: Opportunity[] }) {
                     }}
                     className="w-full text-xs bg-black text-white px-3 py-2 hover:bg-black/80 transition-colors"
                   >
-                    Send email invite →
+                    Send email invite
                   </button>
                 </>
               ) : (

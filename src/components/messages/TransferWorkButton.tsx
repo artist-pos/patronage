@@ -89,7 +89,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
         className="text-xs border-black"
         onClick={() => setOpen(true)}
       >
-        Sell or Give to Someone →
+        Sell or Give to Someone
       </Button>
 
       {toast && (
@@ -150,7 +150,7 @@ export function TransferWorkButton({ conversationId, artistAvailableWorks }: Pro
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" size="sm" onClick={handleClose}>Cancel</Button>
                   <Button size="sm" disabled={!selectedWork} onClick={() => setStep("price")}>
-                    Next →
+                    Next
                   </Button>
                 </div>
               </>

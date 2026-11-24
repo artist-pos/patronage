@@ -103,7 +103,7 @@ function DeclinedSection({ claim }: { claim: HolderAttributionClaim }) {
           onClick={() => setShowForm(true)}
           className="mt-3 text-xs underline text-stone-700 hover:text-stone-900"
         >
-          Appeal this decline →
+          Appeal this decline
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="mt-3 space-y-3">

@@ -89,7 +89,7 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
                 : "inline-flex items-center gap-2 border border-border px-[22px] py-3 text-sm font-medium text-[color:var(--fg-muted)] transition-colors hover:border-foreground hover:text-foreground"
             }
           >
-            {link.label?.trim() || "Apply"} →
+            {link.label?.trim() || "Apply"}
           </a>
         );
       })}
@@ -109,10 +109,10 @@ export function ExternalApplyCTASection({ applyLinks, opportunityId, title, orga
             </div>
           }
           chipsLabel="What do you make?"
-          submitLabel="Create my free profile →"
+          submitLabel="Create my free profile"
           next={POST_SIGNUP_DESTINATION}
           onClose={dismiss}
-          skipLabel="Just apply →"
+          skipLabel="Just apply"
           onSkip={skip}
         />
       )}

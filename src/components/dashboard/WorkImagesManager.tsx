@@ -171,7 +171,7 @@ export function WorkImagesManager({ workId, source, profileId, existingImages }:
                   className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                   aria-label="Move right"
                 >
-                  →
+
                 </button>
                 <button
                   onClick={() => handleSetPrimary(img.id)}

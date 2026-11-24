@@ -36,6 +36,11 @@ export function buildOpportunityPayload(
     city: d.city.trim() || null,
     opens_at: d.opensAt || null,
     deadline: d.deadline || null,
+    // An event is only an event with a date; clear the rest when it's blank.
+    event_date: d.eventDate || null,
+    event_time: d.eventDate ? d.eventTime || null : null,
+    event_venue: d.eventDate ? d.eventVenue.trim() || null : null,
+    event_label: d.eventDate ? d.eventLabel.trim() || null : null,
     funding_range: d.fundingRange.trim() || null,
     featured_image_url: d.featuredImageUrl.trim() || null,
     secondary_image_url: d.secondaryImageUrl.trim() || null,

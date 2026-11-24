@@ -24,7 +24,7 @@ export default async function OpportunityNotFound() {
             href="/opportunities"
             className="inline-flex items-center gap-2 bg-black text-white text-sm px-6 py-3 rounded-lg hover:opacity-80 transition-opacity"
           >
-            View all opportunities →
+            View all opportunities
           </Link>
           <Link
             href="/"

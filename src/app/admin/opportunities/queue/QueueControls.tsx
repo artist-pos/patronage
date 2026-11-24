@@ -289,7 +289,7 @@ export function QueueControls({ opps: initialOpps, tab }: Props) {
                         rel="noopener noreferrer"
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
                       >
-                        Source →
+                        Source
                       </a>
                     )}
                   </>

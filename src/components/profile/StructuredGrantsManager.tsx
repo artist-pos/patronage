@@ -129,7 +129,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    View project →
+                    View project
                   </button>
                 ) : (
                   <button
@@ -138,7 +138,7 @@ export function StructuredGrantsManager({ initialGrants }: Props) {
                     disabled={startingProject === grant.id}
                     className="text-xs border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-colors disabled:opacity-40"
                   >
-                    {startingProject === grant.id ? "Creating…" : "Start a project for this →"}
+                    {startingProject === grant.id ? "Creating…" : "Start a project for this"}
                   </button>
                 )}
               </div>

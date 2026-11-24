@@ -16,7 +16,7 @@ export function PatronageArticleCard({ articleUrl }: Props) {
         <div className="space-y-0.5">
           <p className="text-[9px] uppercase tracking-widest font-mono text-stone-400">Patronage Blog</p>
           <p className="text-sm font-medium group-hover:underline underline-offset-2">
-            Read the full article →
+            Read the full article
           </p>
         </div>
         <div className="w-6 h-6 shrink-0 flex items-center justify-center">

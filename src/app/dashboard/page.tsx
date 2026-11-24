@@ -335,7 +335,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   </p>
                   {(activeOppFilter === "all" || activeOppFilter === "saved" || activeOppFilter === "closing") && (
                     <Link href="/opportunities" className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors">
-                      Browse Opportunities →
+                      Browse Opportunities
                     </Link>
                   )}
                 </div>
@@ -361,7 +361,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 <div className="py-16 text-center border border-dashed border-border space-y-3">
                   <p className="text-sm text-muted-foreground">You haven&apos;t supported any artists yet.</p>
                   <Link href="/feed" className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors">
-                    Browse artists →
+                    Browse artists
                   </Link>
                 </div>
               ) : (

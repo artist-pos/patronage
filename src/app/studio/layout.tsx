@@ -91,7 +91,7 @@ export default async function StudioLayout({
           href={`/${profileRow.username}`}
           className="text-sm underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          View profile →
+          View profile
         </Link>
       </div>
 

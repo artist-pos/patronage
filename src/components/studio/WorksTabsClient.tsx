@@ -72,7 +72,7 @@ export function WorksTabsClient({
             Connect a Stripe account to list works for sale. Any previously listed works have been delisted until you connect.
           </p>
           <Link href="/studio/earnings" className="text-sm text-stone-900 font-medium underline underline-offset-2 shrink-0 ml-4 whitespace-nowrap">
-            Connect Stripe →
+            Connect Stripe
           </Link>
         </div>
       )}
@@ -83,7 +83,7 @@ export function WorksTabsClient({
             <span className="font-semibold">{pendingConfirmationCount}</span> work{pendingConfirmationCount !== 1 ? "s" : ""} need attribution confirmation.
           </p>
           <Link href="/studio/pending-confirmations" className="text-sm text-amber-900 underline underline-offset-2 shrink-0 ml-4">
-            Review →
+            Review
           </Link>
         </div>
       )}

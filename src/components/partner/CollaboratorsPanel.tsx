@@ -272,7 +272,7 @@ export function CollaboratorsPanel({ opportunityId, initialCollaborators, isOwne
 
       {(isOwner || reviewerCount > 0) && (
         <Link href={`/review/${opportunityId}`} className="inline-block border border-brand px-4 py-2 text-sm font-medium hover:bg-brand hover:text-brand-foreground transition-colors">
-          Open the scoring screen →
+          Open the scoring screen
         </Link>
       )}
 

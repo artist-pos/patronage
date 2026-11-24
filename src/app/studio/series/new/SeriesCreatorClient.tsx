@@ -511,7 +511,7 @@ export function SeriesCreatorClient({ profileId }: Props) {
         disabled={saving}
         className="bg-black text-white text-sm px-6 py-2.5 hover:bg-black/80 transition-colors disabled:opacity-50"
       >
-        {saving ? "Creating…" : "Create Series →"}
+        {saving ? "Creating…" : "Create Series"}
       </button>
 
       {/* Artwork picker modal */}

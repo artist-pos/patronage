@@ -1125,7 +1125,7 @@ export default async function ArtistProfilePage({ params, searchParams }: Props)
                           href="#work"
                           className="font-mono text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                         >
-                          {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available →
+                          {publicAvailableWorks.length} work{publicAvailableWorks.length !== 1 ? "s" : ""} available
                         </a>
                       </p>
                     )}

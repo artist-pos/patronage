@@ -157,7 +157,7 @@ function RoleStep({ selected, onSelect, onContinue }: RoleStepProps) {
         onClick={onContinue}
         className="w-full bg-black px-4 py-2.5 text-sm text-white hover:opacity-80 transition-opacity"
       >
-        Continue →
+        Continue
       </button>
     </div>
   );

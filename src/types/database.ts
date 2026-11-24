@@ -133,6 +133,11 @@ export interface Opportunity {
   city: string | null;             // free-text e.g. "Auckland" or "Multiple Locations"
   opens_at: string | null;         // ISO date when applications open e.g. "2026-05-01"
   deadline: string | null;         // ISO date string e.g. "2026-06-30"
+  /** Migration 233: an opening night / launch / talk on the listing. NZ local date. */
+  event_date?: string | null;
+  event_time?: string | null;
+  event_venue?: string | null;
+  event_label?: string | null;
   url: string | null;
   application_links?: ApplicationLink[] | null; // labelled apply links → buttons (migration 164)
   contact_email?: string | null;

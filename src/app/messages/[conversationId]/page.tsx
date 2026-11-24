@@ -109,7 +109,7 @@ export default async function ChatPage({ params }: Props) {
             href={`/${otherProfile.username}`}
             className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
           >
-            View profile →
+            View profile
           </Link>
         )}
         {viewerIsArtist && artistAvailableWorks.length > 0 && (

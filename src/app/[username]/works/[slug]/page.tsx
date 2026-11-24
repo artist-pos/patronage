@@ -368,7 +368,7 @@ export default async function WorkDetailPage({ params }: Props) {
                 href={`/provenance/${work.ledger_id}`}
                 className="hover:text-foreground transition-colors"
               >
-                Recorded on Patronage →
+                Recorded on Patronage
               </Link>
             </div>
           )}

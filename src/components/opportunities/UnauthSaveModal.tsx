@@ -42,7 +42,7 @@ export function UnauthSaveModal({ onClose }: Props) {
               onClick={() => trackEvent("save_signup_modal_click", {})}
               className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
             >
-              Create account →
+              Create account
             </Link>
             <Link
               href={`/auth/login?next=${next}`}

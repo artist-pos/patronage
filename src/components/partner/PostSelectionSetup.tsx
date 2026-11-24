@@ -246,7 +246,7 @@ export function PostSelectionSetup({ opportunityId, opportunityTitle }: Props) {
         disabled={saving}
         className="bg-black text-white text-sm px-6 py-2.5 hover:bg-black/80 transition-colors disabled:opacity-50"
       >
-        {saving ? "Saving…" : "Save & view applications →"}
+        {saving ? "Saving…" : "Save & view applications"}
       </button>
     </div>
   );

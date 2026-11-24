@@ -110,7 +110,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
           href="/opportunities"
           className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
         >
-          Browse Opportunities →
+          Browse Opportunities
         </Link>
       </div>
     );
@@ -152,7 +152,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                     href={`/opportunities/${opp.slug ?? opp.id}/apply`}
                     className="inline-block text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
                   >
-                    Continue application →
+                    Continue application
                   </Link>
                 )}
               </div>
@@ -234,7 +234,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                           onClick={() => setReplyState((prev) => ({ ...prev, [app.id]: { ...rs, confirming: true } }))}
                           className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          Send a reply →
+                          Send a reply
                         </button>
                       ) : (
                         <div className="space-y-2">
@@ -261,7 +261,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                               }}
                               className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50"
                             >
-                              {rs.sending ? "Sending…" : "Send reply →"}
+                              {rs.sending ? "Sending…" : "Send reply"}
                             </button>
                             <button
                               type="button"
@@ -299,7 +299,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                             onClick={() => setPaymentModal({ applicationId: app.id, prefillName: artistName ?? "", prefillGstRegistered: artistGstRegistered, prefillGstNumber: artistGstNumber })}
                             className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
                           >
-                            Re-send →
+                            Re-send
                           </button>
                         </div>
                       ) : (
@@ -308,7 +308,7 @@ export function ApplicationsTab({ initialApplications, userId, initialDrafts = [
                           onClick={() => setPaymentModal({ applicationId: app.id, prefillName: artistName ?? "", prefillGstRegistered: artistGstRegistered, prefillGstNumber: artistGstNumber })}
                           className="text-xs border border-black px-3 py-1.5 hover:bg-muted transition-colors"
                         >
-                          Request payment →
+                          Request payment
                         </button>
                       )}
                     </div>

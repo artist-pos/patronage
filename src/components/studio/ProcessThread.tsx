@@ -75,7 +75,7 @@ export function ProcessThread({ projectId, projectTitle, updates }: Props) {
         href={`/threads/${projectId}`}
         className="inline-block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
       >
-        View full thread →
+        View full thread
       </Link>
     </div>
   );

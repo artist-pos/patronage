@@ -79,7 +79,7 @@ export default async function ClaimListingPage({ params }: Props) {
           This listing has already been claimed by an organisation.
         </p>
         <Link href="/auth/login" className="text-sm underline underline-offset-2">
-          Sign in →
+          Sign in
         </Link>
       </div>
     );
@@ -182,7 +182,7 @@ export default async function ClaimListingPage({ params }: Props) {
             href={signupHref}
             className="inline-block bg-white text-black text-sm font-semibold px-5 py-2.5 text-center hover:bg-stone-100 transition-colors"
           >
-            Claim listing →
+            Claim listing
           </Link>
           <Link
             href={signinHref}
@@ -321,7 +321,7 @@ export default async function ClaimListingPage({ params }: Props) {
             href={signupHref}
             className="inline-block bg-black text-white text-sm font-semibold px-5 py-2.5 text-center hover:bg-black/80 transition-colors"
           >
-            Claim listing →
+            Claim listing
           </Link>
           <Link
             href={signinHref}

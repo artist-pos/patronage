@@ -68,7 +68,7 @@ export default function ActivatePage({ params }: Props) {
             disabled={loading}
             className="w-full bg-black text-white text-sm px-6 py-3 font-medium hover:bg-black/80 transition-colors disabled:opacity-50"
           >
-            {loading ? "Redirecting to payment…" : "Pay and activate →"}
+            {loading ? "Redirecting to payment…" : "Pay and activate"}
           </button>
           <button
             type="button"

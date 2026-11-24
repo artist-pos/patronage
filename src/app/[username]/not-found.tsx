@@ -19,7 +19,7 @@ export default function ProfileNotFound() {
             href="/artists"
             className="inline-flex items-center gap-2 bg-black text-white text-sm px-6 py-3 rounded-lg hover:opacity-80 transition-opacity"
           >
-            Browse artists →
+            Browse artists
           </Link>
           <Link
             href="/"

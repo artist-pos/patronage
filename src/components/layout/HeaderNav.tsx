@@ -31,14 +31,14 @@ export function HeaderNav({ role, isLoggedIn = false }: { role?: string | null; 
   ];
 
   return (
-    <nav className="hidden sm:flex items-stretch h-full">
+    <nav className="hidden h-full shrink-0 items-stretch sm:flex">
       {links.map((l) => {
         const active = pathname === l.href || pathname.startsWith(l.href + "/");
         return (
           <Link
             key={l.href}
             href={l.href}
-            className={`flex items-center border-b-2 -mb-px px-3.5 text-[13px] transition-colors ${
+            className={`flex items-center whitespace-nowrap border-b-2 -mb-px px-2.5 text-[13px] transition-colors lg:px-3.5 ${
               active
                 ? "border-brand text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"

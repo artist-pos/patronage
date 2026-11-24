@@ -42,7 +42,7 @@ export default async function ReviewIndexPage() {
                   <span className="block truncate font-medium">{opp.title}</span>
                   <span className="block text-xs text-stone-500">{opp.organiser}</span>
                 </span>
-                <span className="shrink-0 text-xs text-stone-400">{role === "editor" ? "Review and score" : "View only"} →</span>
+                <span className="shrink-0 text-xs text-stone-400">{role === "editor" ? "Review and score" : "View only"}</span>
               </Link>
             </li>
           ))}

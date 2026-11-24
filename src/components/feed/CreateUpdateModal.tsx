@@ -90,6 +90,8 @@ interface Props {
   defaultRegionId?: string | null;
   /** Events go into This week for other people; off for under-18 accounts. */
   canPostEvent?: boolean;
+  /** Opens with the Event details already showing (the Events card's button). */
+  startWithEvent?: boolean;
 }
 
 /**
@@ -111,13 +113,16 @@ export function CreateUpdateModal({
   regions = [],
   defaultRegionId = null,
   canPostEvent = true,
+  startWithEvent = false,
 }: Props) {
   const [open, setOpen] = useState(openByDefault);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [extras, setExtras] = useState<Set<Extra>>(new Set(defaultProjectId ? ["project"] : []));
+  const [extras, setExtras] = useState<Set<Extra>>(
+    new Set(defaultProjectId ? ["project"] : startWithEvent && canPostEvent ? ["event"] : []),
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState(false);

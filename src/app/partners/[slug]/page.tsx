@@ -84,7 +84,7 @@ export default async function PartnerProposalPage({ params }: Props) {
               href="https://patronage.nz"
               className="shrink-0 inline-flex items-center gap-2 bg-black text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-stone-800 transition-colors"
             >
-              Visit patronage.nz →
+              Visit patronage.nz
             </Link>
           </div>
 

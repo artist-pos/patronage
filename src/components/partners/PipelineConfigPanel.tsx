@@ -206,7 +206,7 @@ export function PipelineConfigPanel({ config, onChange }: Props) {
               rel="noopener noreferrer"
               className="text-xs underline underline-offset-2"
             >
-              Preview →
+              Preview
             </a>
             <button
               type="button"

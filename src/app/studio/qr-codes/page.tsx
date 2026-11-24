@@ -114,7 +114,7 @@ export default async function StudioQrCodesPage() {
             href="/studio/qr-codes/new"
             className="inline-block text-sm border border-black px-4 py-2 hover:bg-muted transition-colors"
           >
-            Create QR labels for your next show →
+            Create QR labels for your next show
           </Link>
         </div>
       ) : (
@@ -140,7 +140,7 @@ export default async function StudioQrCodesPage() {
                   href={`/studio/qr-codes/${c.id}`}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {c.status === "live" ? "View →" : "Configure →"}
+                  {c.status === "live" ? "View" : "Configure"}
                 </Link>
                 <CampaignDeleteButton campaignId={c.id} />
               </div>

@@ -95,7 +95,7 @@ export function FeaturedOpportunityHero({ opportunity: o, compact = false }: Pro
 
           {/* CTA */}
           <div className={`mt-auto border-t border-border pt-4 ${c("", "max-sm:hidden")} font-mono text-xs text-muted-foreground transition-colors group-hover:text-foreground`}>
-            View opportunity →
+            View opportunity
           </div>
         </div>
       </Link>

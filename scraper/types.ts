@@ -32,6 +32,11 @@ export interface ScrapedOpportunity {
   country: string;
   opens_at: string | null; // YYYY-MM-DD — when applications open (null if already open or unknown)
   deadline: string | null; // YYYY-MM-DD
+  /** A named public event for the work (opening night, launch, talk). NZ local date; see cleanEvent(). */
+  event_date?: string | null;
+  event_time?: string | null; // HH:MM
+  event_venue?: string | null;
+  event_label?: string | null; // e.g. "Opening night"
   url: string | null;
   funding_range: string | null;
   full_description: string | null; // structured description with "Heading:" section lines

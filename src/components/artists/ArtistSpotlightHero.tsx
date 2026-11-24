@@ -81,7 +81,7 @@ export function ArtistSpotlightHero({ artist }: Props) {
 
           {/* CTA */}
           <div className="mt-auto border-t border-border pt-4 font-mono text-xs text-muted-foreground transition-colors group-hover:text-foreground">
-            View profile →
+            View profile
           </div>
         </div>
       </Link>

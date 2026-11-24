@@ -14,8 +14,18 @@ import {
 import { OPP_TYPES, TYPE_LABELS, DISCIPLINES, COUNTRIES, CAREER_STAGE_TAGS } from "@/lib/opportunity-constants";
 import { OPP_SORTS, OPP_SORT_LABELS, type OppSort } from "@/lib/opportunity-sort";
 
+/** One card per job (sort, type, narrow down), matching Explore's sidebar. */
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border border-border bg-card p-4">
+      <h2 className="t-section-label mb-3">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 /**
- * A single filter/sort panel — sorting, type, country, discipline, career
+ * Filter/sort panel, as separate cards — sorting, type, country, discipline, career
  * stage, free entry — rendered as a permanent left sidebar from lg up, and
  * behind a "Filters & Sort" trigger + slide-over below that. Previously this
  * was a horizontal tab row plus a second row of dropdowns, stacked directly
@@ -80,12 +90,9 @@ export function OpportunityFilters() {
     }`;
 
   const panel = (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Sort */}
-      <div>
-        <p className="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
-          Sort by
-        </p>
+      <Card title="Sort by">
         <Select value={currentSort} onValueChange={(v) => updateParam("sort", v === "deadline" ? null : v)}>
           <SelectTrigger className="w-full font-mono text-xs">
             <SelectValue />
@@ -96,13 +103,10 @@ export function OpportunityFilters() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Card>
 
       {/* Type */}
-      <div>
-        <p className="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
-          Type
-        </p>
+      <Card title="Type">
         <div className="flex flex-col gap-1">
           <button type="button" onClick={() => updateParam("type", null)} className={typeRowCls(!currentType)}>
             All
@@ -113,9 +117,10 @@ export function OpportunityFilters() {
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Refinement selects */}
+      <Card title="Narrow down">
       <div className="space-y-3">
         <div>
           <p className="mb-1.5 font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
@@ -161,20 +166,21 @@ export function OpportunityFilters() {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Free entry */}
-      <button
-        type="button"
-        onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
-        className={`w-full border px-3 py-2.5 min-h-[44px] text-left font-mono text-sm transition-colors ${
-          currentFreeEntry
-            ? "border-foreground bg-foreground text-white"
-            : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-        }`}
-      >
-        Free entry only
-      </button>
+        {/* Free entry */}
+        <button
+          type="button"
+          onClick={() => updateParam("freeEntry", currentFreeEntry ? null : "1")}
+          className={`w-full border px-3 py-2.5 min-h-[44px] text-left font-mono text-sm transition-colors ${
+            currentFreeEntry
+              ? "border-foreground bg-foreground text-white"
+              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          Free entry only
+        </button>
+      </div>
+      </Card>
 
       {activeCount > 0 && (
         <button

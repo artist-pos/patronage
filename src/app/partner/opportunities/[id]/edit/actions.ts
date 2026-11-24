@@ -14,6 +14,7 @@ const PARTNER_EDITABLE = new Set([
   "title", "organiser", "organiser_profile_id", "caption", "full_description", "url",
   "application_links", "contact_email", "type", "country", "city", "featured_image_url",
   "secondary_image_url", "sub_categories", "career_stage", "tags", "opens_at", "deadline",
+  "event_date", "event_time", "event_venue", "event_label",
   "funding_range", "entry_fee", "entry_fee_currency", "entry_fee_local", "grant_type",
   "recipients_count", "artist_payment_type", "travel_support", "travel_support_details",
   "routing_type", "source", "source_url", "show_badges_in_submission", "pipeline_config",

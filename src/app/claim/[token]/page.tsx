@@ -46,7 +46,7 @@ export default async function ClaimPage({ params }: Props) {
         <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
           <p className="text-sm font-semibold">Already claimed</p>
           <p className="text-sm text-muted-foreground">This profile has already been claimed.</p>
-          <Link href="/auth/login" className="text-sm underline underline-offset-2">Sign in →</Link>
+          <Link href="/auth/login" className="text-sm underline underline-offset-2">Sign in</Link>
         </div>
       );
     }
@@ -175,7 +175,7 @@ export default async function ClaimPage({ params }: Props) {
           )}
           <div className={isPlaceholder ? "hidden" : "flex flex-col sm:flex-row gap-2"}>
             <Link href={signupHref} className="inline-block bg-white text-black text-sm font-semibold px-5 py-2.5 text-center hover:bg-stone-100 transition-colors">
-              Claim {entityTypeLabel} →
+              Claim {entityTypeLabel}
             </Link>
             <Link href={signinHref} className="inline-block border border-white/40 text-white text-sm px-5 py-2.5 text-center hover:border-white transition-colors">
               Sign in
@@ -228,7 +228,7 @@ export default async function ClaimPage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="inline-block text-sm font-medium underline underline-offset-2"
               >
-                View the full profile →
+                View the full profile
               </Link>
             )}
           </div>
@@ -263,7 +263,7 @@ export default async function ClaimPage({ params }: Props) {
           )}
           <div className={isPlaceholder ? "hidden" : "flex flex-col sm:flex-row gap-2"}>
             <Link href={signupHref} className="inline-block bg-black text-white text-sm font-semibold px-5 py-2.5 text-center hover:bg-black/80 transition-colors">
-              Claim {entityTypeLabel} →
+              Claim {entityTypeLabel}
             </Link>
             <Link href={signinHref} className="inline-block border border-black text-sm px-5 py-2.5 text-center hover:bg-muted transition-colors">
               Sign in
@@ -305,7 +305,7 @@ export default async function ClaimPage({ params }: Props) {
       <div className="max-w-sm mx-auto px-6 py-20 text-center space-y-4">
         <p className="text-sm font-semibold">Already claimed</p>
         <p className="text-sm text-muted-foreground">This artwork has already been verified in a collection.</p>
-        <Link href="/" className="text-sm underline underline-offset-2">Go to Patronage →</Link>
+        <Link href="/" className="text-sm underline underline-offset-2">Go to Patronage</Link>
       </div>
     );
   }
@@ -382,7 +382,7 @@ export default async function ClaimPage({ params }: Props) {
             href={`/auth/signup?next=${encodeURIComponent(claimPath)}`}
             className="w-full bg-black text-white text-sm py-2.5 px-4 text-center hover:opacity-80 transition-opacity"
           >
-            Create account →
+            Create account
           </Link>
           <Link
             href={`/auth/login?next=${encodeURIComponent(claimPath)}`}

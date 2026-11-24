@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import type { ScrapedOpportunity } from "../types.js";
 import { normTitle, normOrganiser, isLikelyDuplicate } from "./dedupe.js";
 import { buildPartnerIndex, matchOrganiser } from "./organiser-link.js";
+import { cleanEvent } from "./event.js";
 
 const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -416,8 +417,14 @@ function buildRecord(
     const rawEmail = (opp.contact_email ?? "").trim().toLowerCase();
     const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) && rawEmail.length <= 200 ? rawEmail : null;
 
+    // Same rule as the email: write the event only when this scrape found one, so a
+    // later pass that misses it never blanks a date an admin has confirmed. (Needs
+    // migration 233; rows without an event don't touch the columns.)
+    const ev = cleanEvent(opp);
+
     return {
         ...(contactEmail && { contact_email: contactEmail }),
+        ...(ev.event_date && ev),
         title: opp.title.slice(0, 255),
         organiser: opp.organiser.slice(0, 255),
         caption: opp.caption?.slice(0, 300) ?? null,

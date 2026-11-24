@@ -44,7 +44,7 @@ export default async function StudioSupportPage() {
             href="/studio/connect"
             className="text-sm bg-black text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity whitespace-nowrap text-center"
           >
-            Connect Stripe →
+            Connect Stripe
           </a>
         </div>
       )}

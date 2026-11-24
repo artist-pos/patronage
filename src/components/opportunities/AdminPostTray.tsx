@@ -107,7 +107,7 @@ export function AdminPostTray() {
             href={`/admin/social?format=${format}&ids=${ids.join(",")}`}
             className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white"
           >
-            Build post →
+            Build post
           </Link>
         )}
         <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">

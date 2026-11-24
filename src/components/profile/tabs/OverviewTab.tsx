@@ -122,7 +122,7 @@ export function OverviewTab({
                       href={href}
                       className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1 self-start"
                     >
-                      View →
+                      View
                     </Link>
                   )}
                 </div>
@@ -155,7 +155,7 @@ export function OverviewTab({
                   href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
-                  View full CV →
+                  View full CV
                 </Link>
               )}
             </div>
@@ -186,7 +186,7 @@ export function OverviewTab({
                   href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
-                  View all press →
+                  View all press
                 </Link>
               )}
             </div>
@@ -219,7 +219,7 @@ export function OverviewTab({
                   href="#cv"
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
                 >
-                  View all grants →
+                  View all grants
                 </Link>
               )}
             </div>
@@ -252,9 +252,9 @@ export function OverviewTab({
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 {isFiltered
-                  ? `All works →`
+                  ? `All works`
                   : portfolioImages.length + seriesList.length > 9
-                    ? `View all ${portfolioImages.length} works →`
+                    ? `View all ${portfolioImages.length} works`
                     : null}
               </Link>
             </div>

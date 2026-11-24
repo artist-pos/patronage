@@ -80,14 +80,14 @@ export default async function SupportSuccessPage({ searchParams }: Props) {
               href={`/${summary.artistUsername}`}
               className="text-sm bg-foreground text-background rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
             >
-              Back to {summary.artistName}&rsquo;s profile →
+              Back to {summary.artistName}&rsquo;s profile
             </Link>
           )}
           <Link
             href="/dashboard?tab=subscriptions"
             className="text-sm border border-stone-200 rounded-lg px-4 py-2 hover:bg-stone-50 transition-colors"
           >
-            {summary?.isRecurring ? "Manage your subscriptions →" : "View your support history →"}
+            {summary?.isRecurring ? "Manage your subscriptions" : "View your support history"}
           </Link>
         </div>
       </div>

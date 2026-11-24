@@ -46,7 +46,7 @@ export function TermsUploader({ opportunityId, termsPdfUrl, onChange }: Props) {
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="w-3.5 h-3.5 text-stone-500 shrink-0" />
             <a href={termsPdfUrl} target="_blank" rel="noopener noreferrer" className="truncate underline underline-offset-2">
-              View current PDF →
+              View current PDF
             </a>
           </div>
           <button

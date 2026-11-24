@@ -275,7 +275,7 @@ export function BuyWorkButton({
                       disabled={isPending || !email.trim()}
                       className="text-sm px-5 py-2.5 bg-black text-white hover:opacity-80 transition-opacity disabled:opacity-40"
                     >
-                      {isPending ? "Loading…" : "Buy this edition →"}
+                      {isPending ? "Loading…" : "Buy this edition"}
                     </button>
                   </div>
 

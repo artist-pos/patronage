@@ -163,7 +163,7 @@ export function PaymentRequestModal({
             disabled={submitting}
             className="w-full text-sm bg-black text-white px-4 py-2.5 hover:bg-black/80 transition-colors disabled:opacity-50"
           >
-            {submitting ? "Sending…" : "Send payment request →"}
+            {submitting ? "Sending…" : "Send payment request"}
           </button>
         </form>
       </div>

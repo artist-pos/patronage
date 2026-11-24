@@ -163,7 +163,7 @@ function AdvancedFieldsSection({
               href="/studio/provenance"
               className="text-sm border border-border px-4 py-2 hover:bg-muted/40 transition-colors inline-block"
             >
-              Manage provenance →
+              Manage provenance
             </Link>
           </section>
         )}

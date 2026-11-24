@@ -411,7 +411,7 @@ export default async function ArtistCategoryPage({
         <div className="py-12 text-center space-y-3">
           <p className="text-sm text-muted-foreground">No artists in this category yet.</p>
           <Link href="/artists" className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
-            Browse all artists →
+            Browse all artists
           </Link>
         </div>
       ) : (

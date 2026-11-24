@@ -168,7 +168,7 @@ export default async function PartnersPage() {
                 </span>
                 {i < PROCESS.length - 1 && (
                   <span aria-hidden className="text-[color:var(--fg-subtle)]">
-                    →
+
                   </span>
                 )}
               </li>
@@ -191,7 +191,7 @@ export default async function PartnersPage() {
                 </span>
                 <h3 className="t-heading mt-6">{s.title}</h3>
                 <p className="t-body-sm mt-2 flex-1">{s.body}</p>
-                <span className="mt-5 text-[13px] font-medium text-[color:var(--fg-subtle)]">Learn more →</span>
+                <span className="mt-5 text-[13px] font-medium text-[color:var(--fg-subtle)]">Learn more</span>
               </Link>
             ))}
           </div>

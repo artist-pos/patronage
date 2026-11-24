@@ -68,7 +68,7 @@ export function ApplyButton({ opportunityId, opportunitySlug }: Props) {
       disabled={loading}
       className="inline-flex items-center gap-2 border border-black bg-black text-white px-6 py-3 text-sm font-semibold hover:bg-white hover:text-black transition-colors disabled:opacity-50"
     >
-      {loading ? "Loading…" : "Apply with Patronage →"}
+      {loading ? "Loading…" : "Apply with Patronage"}
     </button>
   );
 }

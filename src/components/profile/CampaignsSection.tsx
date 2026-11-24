@@ -91,7 +91,7 @@ export function CampaignsSection({ campaigns, username }: Props) {
                     href={href}
                     className="text-xs font-medium border border-black px-2 py-1 hover:bg-foreground hover:text-background transition-colors self-start mt-auto"
                   >
-                    View →
+                    View
                   </Link>
                 )}
               </div>
